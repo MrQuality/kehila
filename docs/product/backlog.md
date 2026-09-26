@@ -41,7 +41,7 @@ Within a milestone, independent work may proceed once its own blockers are resol
 <a id="b-002"></a>
 ## B-002 — Investigate and record the first-increment technical path
 
-**Status:** Investigation documented; maintainer disposition pending. **Dependencies:** B-001.
+**Status:** Bounded investigation accepted for the first local task path; implementation remains in B-005 and related items. **Dependencies:** B-001.
 
 **Spike record:** [SP-001](../spikes/SP-001-task-path.md), using the approved [spike procedure and template](../spikes/README.md). Keep experiment cases, run summaries, conclusions, and the next-session handoff there; acceptance criteria remain here.
 
@@ -49,8 +49,9 @@ Within a milestone, independent work may proceed once its own blockers are resol
 suite on Windows/Podman using experimental Python adapters. The concrete design
 and reproduction runner are in [the experiment](../../experiments/SP-001/README.md).
 The 3.125 GiB total container ceilings fit the observed workstation. Explicit
-PostgreSQL replica identity and task-only publication were required. These results
-do not establish the future Go/Rust application or accept a product contract.
+PostgreSQL replica identity and task-only publication were required. [D-016](decisions.md#d-016)
+records the accepted bounded product direction. These results do not establish
+the future Go/Rust application's correctness or resource use.
 
 **Traceability:** [R-001](requirements.md#r-001), [D-015](decisions.md#d-015). **Questions:** [Q-001](open-questions.md#q-001), [Q-002](open-questions.md#q-002), [Q-019](open-questions.md#q-019).
 
@@ -99,7 +100,7 @@ settings.
 <a id="b-005"></a>
 ## B-005 — Build durable local storage and the required delivery path
 
-**Status:** Waiting on B-002 and recovery decisions. **Dependencies:** B-002, B-003; coordinate access boundaries with B-007.
+**Status:** First task-path direction accepted; implementation and recovery decisions remain. **Dependencies:** B-002, B-003; coordinate access boundaries with B-007.
 
 **Traceability:** Supports [R-001](requirements.md#r-001), [R-005](requirements.md#r-005), [R-012](requirements.md#r-012); engineering prerequisites rather than new confirmed product semantics. **Questions:** [Q-001](open-questions.md#q-001), [Q-002](open-questions.md#q-002), [Q-020](open-questions.md#q-020).
 

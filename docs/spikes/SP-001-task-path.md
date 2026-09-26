@@ -2,8 +2,8 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Concluded / bounded Python-adapter path supported; product adoption pending maintainer assessment |
-| Owner / assessor | Codex executed the maintainer-authorized local experiment; maintainer assessment pending |
+| Status / outcome | Concluded / bounded Python-adapter path supported; first-increment direction accepted in D-016 |
+| Owner / assessor | Codex executed the maintainer-authorized local experiment; maintainer assessed the bounded result |
 | Created / last updated | 2026-09-25 / 2026-09-26 |
 | Related work | [B-002](../product/backlog.md#b-002), [R-001](../product/requirements.md#r-001), [D-015](../product/decisions.md#d-015) |
 | Questions | [Q-001](../product/open-questions.md#q-001), [Q-002](../product/open-questions.md#q-002), [Q-019](../product/open-questions.md#q-019) |
@@ -291,8 +291,8 @@ volumes and images remain for reproduction. No CI environment was run.
 
 The reference storage/event stack supported this small task create/update/read
 path on the available 16 GB workstation with constrained containers. Continue
-with the reference stack for the next implementation design, subject to maintainer
-assessment of the provisional save/conflict contracts and replication provisioning.
+with the reference stack for the next implementation design under the accepted
+[D-016](../product/decisions.md#d-016) save/conflict and replication direction.
 The concrete component roles, retry rules, and resource/cost consistency
 prerequisites are in the [design handoff](../../experiments/SP-001/README.md#design-handoff).
 
@@ -305,11 +305,11 @@ Database mapping, CDC, delivery, or projection changes require targeted reruns.
 
 ## Decision and follow-up
 
-No new product/architecture decision is accepted by this result. Q-001 now has
-bounded integration evidence and a proposed contract; Q-002 has local-only
-experimental runtime evidence, not an accepted authentication/deployment model.
-Q-019 remains open for cross-document consistency. Record accepted choices in
-D-records after maintainer assessment; preserve the experiment's limitations.
+The maintainer accepted the bounded first-increment direction in
+[D-016](../product/decisions.md#d-016). Q-001 still requires operation-ledger
+lifecycle design; Q-002 retains authentication, startup, and broader runtime
+questions. Q-019 remains open for cross-document consistency. Preserve the
+experiment's limitations when implementing the actual adapters.
 
 ## Handoff
 
@@ -317,9 +317,9 @@ D-records after maintainer assessment; preserve the experiment's limitations.
   passed. R01-R03 are retained, including the replica-identity failure.
 - Resource result: this bounded prototype fits the observed workstation; no
   memory upgrade was demonstrated necessary. Runtime and containers are stopped.
-- Exact next action: maintainer assessment of the proposed save/conflict contract,
-  table provisioning requirement, and local access scope; then design the Go/Rust
-  implementation against the retained cases. No maintainer approval is inferred.
+- Exact next action: design the durable operation ledger and Go/Rust implementation
+  against the retained cases and [D-016](../product/decisions.md#d-016), with a
+  fresh resource preflight before service execution.
 - Open implementation work: collection lifecycle/schema handling, supported
   authentication/recovery objectives, cross-document consistency, and promotion
   of relevant cases into regression coverage alongside actual product adapters.

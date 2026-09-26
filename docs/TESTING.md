@@ -45,6 +45,17 @@ and request/response behavior. The Python probe also checks the JetStream accoun
 API using a temporary subscription. It creates no streams or application data.
 Connections use three-second deadlines and bounded frame sizes and counts.
 
+The in-progress Go/Rust task path has unit coverage in the default suite. Its
+additional live checks are in `tests/integration/live_task_worker.py` and
+`tests/integration/live_go_rust.py`. They require FerretDB from the disposable
+SP-001 stack, a Rust worker on loopback port 8082 using an installed development
+operation collection, and, for the second check, the Go API on port 8081. The
+second check deliberately expects search to be stopped. They exercise actual
+save, replay, conflict, authoritative read, and search-unavailable behavior, but
+they are not yet an automated production pipeline test. The separate
+`live_task_api.py` checks the Go boundary through the original Python experiment
+adapters while search is running.
+
 Integration results apply to the behavior exercised. A successful handshake does
 not establish durable publication, replay, or recovery. New adapters need tests
 against their actual services for the contracts they introduce. Unit tests and

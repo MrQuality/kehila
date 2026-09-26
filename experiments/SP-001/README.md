@@ -41,8 +41,9 @@ killed. Record sampling intervals; sampled peaks are lower bounds on true peaks.
 The database is authoritative. A successful write returns HTTP 200 with the
 persisted task version and `sync_token: null`; search visibility is pending until
 that version is observed. A stalled indexer does not turn an acknowledged write
-into a failed write. This resolves the contradictory response for this experiment
-only; adoption as a product contract still needs maintainer assessment.
+into a failed write. This result led to the accepted first-increment contract in
+[D-016](../../docs/product/decisions.md#d-016); the evidence remains bounded to
+the experimental adapters.
 
 Each mutation supplies an operation ID and expected version. Retry of identical
 content returns the original operation result; reuse of an ID with changed

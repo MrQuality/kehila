@@ -7,25 +7,25 @@ Backlog IDs link to the [implementation backlog](backlog.md). Proposals below ar
 <a id="q-001"></a>
 ## Q-001 — Technical path for the first usable increment
 
-**Question:** Which parts of the v0.2 design are required in the first increment, and are any concrete changes needed? Validate the selected database mapping and command-to-save-to-read/update path. The design's `CDC_PIPELINE_STALLED` response is contradictory (503 versus 200 with a null token). Resolve the applicable contract before implementing that route.
+**Resolved first-increment choice:** [D-016](decisions.md#d-016) adopts the reference task path, resolves the contradictory `CDC_PIPELINE_STALLED` response in favor of an acknowledged 200 with pending search visibility, and accepts operation IDs, expected versions, distinct conflicts, and explicit replication provisioning. A null synchronization token does not diagnose indexer health. The 30-second experiment deadline is not a product delivery guarantee.
 
 **Known:** The design includes separated write/read paths, independent durable change capture, shared query compilation, single-document mutations, and asynchronous multi-document workflows. The repository lacks a usable API/UI and the full pipeline. No architecture replacement has been approved.
 
-**Next evidence:** Inventory contracts and run targeted real-service experiments. Present any proposed deviation with impact and alternatives. A broker handshake is not evidence of durable delivery or database correctness.
+**Remaining design:** Define the durable operation ledger's ID scope, canonical request comparison, replay-retention period, expiry rejection, and handling of unsuccessful attempts before implementing it. Validate mapping/provisioning drift and measure `REPLICA IDENTITY FULL` WAL cost. Broader schema lifecycle, deletion, WAL retention, and recovery remain open. A broker handshake is not evidence of durable delivery or database correctness.
 
 **Evidence available:** [SP-001-R04](../spikes/SP-001-task-path.md) passed bounded
 save/delivery/replay/conflict cases with Python boundary adapters and the reference
-services. Assess its proposed 200/pending save response and explicit replication
-provisioning before adopting them for the Go/Rust implementation.
+services. The product direction is accepted; Go/Rust implementation correctness and
+long-lived operation retention are not established by the experiment.
 
 **Blocks:** [B-002](backlog.md#b-002), then [B-005](backlog.md#b-005)/[B-006](backlog.md#b-006). Does not block documenting domain rules.
 
 <a id="q-002"></a>
 ## Q-002 — Local runtime and access boundary
 
-**Question:** Browser access only on the host, or also from other devices? Is Kubernetes needed for the supported deployment model? Which supported local runtime, authentication boundary, and startup behavior should be delivered?
+**Resolved first-increment choice:** [D-016](decisions.md#d-016) limits browser-facing access to host loopback. LAN support is deferred. Keep database, broker, and search on internal container networks absent a specific administrative need.
 
-**Known:** Local operation is required and Compose is provided today. The supported application runtime and network-access boundary remain undecided; Kubernetes is not currently required.
+**Remaining question:** What authoritative identity/permission policy, cross-origin and CSRF defenses, startup behavior, and broader supported runtime should be delivered? Host-only networking does not replace authentication. Kubernetes is not currently required.
 
 **Evidence available:** [SP-001-R04](../spikes/SP-001-task-path.md) ran locally on
 Windows/Podman with loopback ports and 3.125 GiB of container ceilings. This does
