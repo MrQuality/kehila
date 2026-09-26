@@ -1,0 +1,62 @@
+﻿[
+    {
+        "names":  [
+                      "docker.io/library/postgres:16.13"
+                  ],
+        "digests":  [
+                        "docker.io/library/postgres@sha256:3102b2114b39383b61fa194e5929734c72a56ce366dbb391509b1f07aef10f9f",
+                        "docker.io/library/postgres@sha256:5d143123fdf80462d1778cd4f24b9f7ca13c87174bca19141fb194c5a1ebca59"
+                    ],
+        "id":  "f7ebf09eb01b02bb9904972705248217baeaed03e2a0a7ed24a77740b0aee98c"
+    },
+    {
+        "names":  [
+                      "ghcr.io/ferretdb/ferretdb:1.24.2"
+                  ],
+        "digests":  [
+                        "ghcr.io/ferretdb/ferretdb@sha256:7515397bbbbc7713dff161fd4a9238e9a5c8696761ab4900e8d8dd9c8e7dc623",
+                        "ghcr.io/ferretdb/ferretdb@sha256:78497e6209865382781ff4d113ae61353f34c5cf2b49359dbd960748437c9c46"
+                    ],
+        "id":  "13c4d0a397464b6d6502fc8bc6244b33c574a87288501f47adfb4418eed02aca"
+    },
+    {
+        "names":  [
+                      "docker.io/library/nats:2.10.26-alpine"
+                  ],
+        "digests":  [
+                        "docker.io/library/nats@sha256:6e0cca2c6da79f0a3542ec5a3319dd10b1b05f5d8e8949afa8e9cdf6314bbf6c",
+                        "docker.io/library/nats@sha256:d69eb29526c1d98afdfb2e2434763bef77b5f3c83e2e24769c13a4d104be475e"
+                    ],
+        "id":  "e556ce07f949f5717c6dc8daabda0e17ded6419df74f43518c1f56c1e329c22b"
+    },
+    {
+        "names":  [
+                      "docker.io/opensearchproject/opensearch:2.19.1"
+                  ],
+        "digests":  [
+                        "docker.io/opensearchproject/opensearch@sha256:72fe2fc84be8295906b8efca020b46c58ed45c8da60cd9b8b49e1991e38e89a4",
+                        "docker.io/opensearchproject/opensearch@sha256:7ad3c515e43fb1642ddf2181dfd03402e42e85a16030e098ed1f3fc1404d7e89"
+                    ],
+        "id":  "731779f1c50424e38335b0af191058642a4964a2b2c62175ebcc8d5734fee13a"
+    },
+    {
+        "names":  [
+                      "docker.io/library/python:3.12.12-slim"
+                  ],
+        "digests":  [
+                        "docker.io/library/python@sha256:42f1689d6d6b906c7e829f9d9ec38491550344ac9adc01e464ff9a08df1ffb48",
+                        "docker.io/library/python@sha256:f3fa41d74a768c2fce8016b98c191ae8c1bacd8f1152870a3f9f87d350920b7c"
+                    ],
+        "id":  "5265ced2e36c835ba9c04ed8be4eea1ec30d9523da97c7797bbc6d9a4b3fcfcb"
+    },
+    {
+        "names":  [
+                      "quay.io/debezium/server:3.2.4.Final"
+                  ],
+        "digests":  [
+                        "quay.io/debezium/server@sha256:680a1fde147d7542825e46ee7909a0c32967ca8a79b7fdf39cf84190fcafc485",
+                        "quay.io/debezium/server@sha256:a00ab3888425eded8861b86ab4212238b677e74b4e9ca7b4b7ebbf248cbbf307"
+                    ],
+        "id":  "7f732bad660aefeb069abedda67dc14abab563d8ba47206ae9fd4c653b8662e3"
+    }
+]

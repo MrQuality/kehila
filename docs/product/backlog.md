@@ -41,9 +41,16 @@ Within a milestone, independent work may proceed once its own blockers are resol
 <a id="b-002"></a>
 ## B-002 — Investigate and record the first-increment technical path
 
-**Status:** Ready to investigate. **Dependencies:** B-001.
+**Status:** Investigation documented; maintainer disposition pending. **Dependencies:** B-001.
 
 **Spike record:** [SP-001](../spikes/SP-001-task-path.md), using the approved [spike procedure and template](../spikes/README.md). Keep experiment cases, run summaries, conclusions, and the next-session handoff there; acceptance criteria remain here.
+
+**Latest evidence:** SP-001-R04 passed the six bounded cases and the full repository
+suite on Windows/Podman using experimental Python adapters. The concrete design
+and reproduction runner are in [the experiment](../../experiments/SP-001/README.md).
+The 3.125 GiB total container ceilings fit the observed workstation. Explicit
+PostgreSQL replica identity and task-only publication were required. These results
+do not establish the future Go/Rust application or accept a product contract.
 
 **Traceability:** [R-001](requirements.md#r-001), [D-015](decisions.md#d-015). **Questions:** [Q-001](open-questions.md#q-001), [Q-002](open-questions.md#q-002), [Q-019](open-questions.md#q-019).
 
@@ -55,7 +62,15 @@ Within a milestone, independent work may proceed once its own blockers are resol
 
 **Bounded cases and assumptions:** Check task create/update/read mapping, durable event delivery, eventual search visibility, duplicate/retried commands, and recovery when a worker or CDC/indexing component stops after a successful database write. Distinguish database acknowledgment, event publication, durable replay, and search visibility in the results. Treat the existing stack as the starting hypothesis, not a proven end-to-end path; document evidence and impact before proposing a different engine or architecture. Decide the stalled-pipeline API response before asserting it in a test.
 
-**Local readiness note (recheck before running):** The Windows workstation has WSL Ubuntu 22.04 and a separate Podman WSL machine; both were stopped at the last check. Start and verify the Podman machine, confirm a Compose provider, and check OpenSearch's `vm.max_map_count` requirement in the container host. The workstation has 15.7 GiB physical memory but only 2.7 GiB was available at the last check, below the roughly 4 GiB guidance for the current development services. Recheck available memory and capacity after adding CDC. Norton antivirus, firewall, and VPN services were running; they may affect image pulls, local connections, or forwarded ports, but no interference was observed. Diagnose an observed failure before changing security settings. No service-level experiment has been run from this workstation yet.
+**Local readiness note (recheck before running):** SP-001-R04 ran the expanded
+stack on the 15.71 GiB Windows workstation using a dedicated Podman WSL machine.
+Its containers have 3.125 GiB of enforced memory ceilings; setup requires at least
+4224 MiB host available RAM after VM startup. The cases observed at least 2691 MiB
+host available RAM and no container OOM flags. These are bounded prototype
+observations, not production minimums. The experiment and its VM are now stopped.
+Recheck resources, provider behavior, image access, connectivity, and OpenSearch
+settings for every rerun. Diagnose observed interference before changing security
+settings.
 
 **Acceptance:** Record a passing preflight before each environment's experiment run; record blockers and defer affected experiments until they are resolved. Identify the roles of browser, API, business logic, storage, event delivery, and search/update delivery. Resolve the contradictory stalled-pipeline response before implementing the affected route. Record observed integration evidence and limitations. Document proposed architecture changes and their impact. Identify prerequisites for consistent future resource releases and cost adjustments. Kubernetes is outside the current release requirements.
 

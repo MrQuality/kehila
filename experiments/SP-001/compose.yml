@@ -1,0 +1,71 @@
+name: yaja-sp001
+services:
+  postgres:
+    image: docker.io/library/postgres:16.13
+    mem_limit: 256m
+    memswap_limit: 256m
+    environment:
+      POSTGRES_DB: yaja
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: disposable-sp001
+    command: [postgres, -c, wal_level=logical, -c, shared_buffers=64MB, -c, max_connections=30]
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["postgres:/var/lib/postgresql/data"]
+  ferretdb:
+    image: ghcr.io/ferretdb/ferretdb:1.24.2
+    mem_limit: 128m
+    memswap_limit: 128m
+    environment:
+      FERRETDB_POSTGRESQL_URL: postgres://postgres:disposable-sp001@postgres:5432/yaja
+      FERRETDB_TELEMETRY: disabled
+    ports: ["127.0.0.1:27017:27017"]
+  nats:
+    image: docker.io/library/nats:2.10.26-alpine
+    mem_limit: 128m
+    memswap_limit: 128m
+    command: [-js, -m, "8222", -sd, /data/jetstream]
+    ports: ["127.0.0.1:4222:4222", "127.0.0.1:8222:8222"]
+    volumes: ["nats:/data/jetstream"]
+  opensearch:
+    image: docker.io/opensearchproject/opensearch:2.19.1
+    mem_limit: 1536m
+    memswap_limit: 1536m
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    ports: ["127.0.0.1:9200:9200"]
+    volumes: ["search:/usr/share/opensearch/data"]
+    ulimits:
+      nofile: {soft: 65536, hard: 65536}
+  cdc:
+    image: localhost/yaja-sp001-cdc:experiment
+    build: {context: ., dockerfile: Containerfile.cdc}
+    mem_limit: 768m
+    memswap_limit: 768m
+    environment:
+      JAVA_OPTS: -Xms128m -Xmx256m
+    volumes: ["cdc:/debezium/data"]
+  worker:
+    image: localhost/yaja-sp001-probe:experiment
+    build: {context: ., dockerfile: Containerfile}
+    mem_limit: 128m
+    memswap_limit: 128m
+    command: [worker]
+  api:
+    image: localhost/yaja-sp001-probe:experiment
+    mem_limit: 128m
+    memswap_limit: 128m
+    command: [api]
+    ports: ["127.0.0.1:8080:8080"]
+  indexer:
+    image: localhost/yaja-sp001-probe:experiment
+    mem_limit: 128m
+    memswap_limit: 128m
+    command: [indexer]
+volumes:
+  postgres: {}
+  nats: {}
+  search: {}
+  cdc: {}

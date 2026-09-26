@@ -13,6 +13,11 @@ Backlog IDs link to the [implementation backlog](backlog.md). Proposals below ar
 
 **Next evidence:** Inventory contracts and run targeted real-service experiments. Present any proposed deviation with impact and alternatives. A broker handshake is not evidence of durable delivery or database correctness.
 
+**Evidence available:** [SP-001-R04](../spikes/SP-001-task-path.md) passed bounded
+save/delivery/replay/conflict cases with Python boundary adapters and the reference
+services. Assess its proposed 200/pending save response and explicit replication
+provisioning before adopting them for the Go/Rust implementation.
+
 **Blocks:** [B-002](backlog.md#b-002), then [B-005](backlog.md#b-005)/[B-006](backlog.md#b-006). Does not block documenting domain rules.
 
 <a id="q-002"></a>
@@ -21,6 +26,10 @@ Backlog IDs link to the [implementation backlog](backlog.md). Proposals below ar
 **Question:** Browser access only on the host, or also from other devices? Is Kubernetes needed for the supported deployment model? Which supported local runtime, authentication boundary, and startup behavior should be delivered?
 
 **Known:** Local operation is required and Compose is provided today. The supported application runtime and network-access boundary remain undecided; Kubernetes is not currently required.
+
+**Evidence available:** [SP-001-R04](../spikes/SP-001-task-path.md) ran locally on
+Windows/Podman with loopback ports and 3.125 GiB of container ceilings. This does
+not establish LAN access, authentication, Linux CI, or supported deployment policy.
 
 **Blocks:** [B-002](backlog.md#b-002), [B-005](backlog.md#b-005), [B-007](backlog.md#b-007), [B-018](backlog.md#b-018).
 
@@ -182,6 +191,10 @@ Backlog IDs link to the [implementation backlog](backlog.md). Proposals below ar
 **Known:** The v0.2 design forbids multi-document transactions and proposes asynchronous sagas. Completion/reopening spans multiple kinds of records. Simply updating them one after another without a recovery design would not establish the agreed behavior.
 
 **Next evidence:** Specify stable operation identities, observable intermediate/failure states, and recovery behavior; verify them against actual services. These are engineering proposals, not prescribed database tables or a chosen algorithm.
+
+**Evidence boundary:** [SP-001's design handoff](../../experiments/SP-001/README.md#design-handoff)
+identifies prerequisites for reservation/cost ledgers and compensating actions.
+Its passing single-task cases do not settle cross-document consistency.
 
 **Blocks:** Architecture disposition in [B-002](backlog.md#b-002), integrated [B-011](backlog.md#b-011)/[B-012](backlog.md#b-012).
 
