@@ -83,8 +83,8 @@ setup aid; it does not establish production provisioning.
 The Go API defaults to loopback and enforces same-origin browser mutations. It
 keeps database-backed reads available when search is down. Its projection route
 now checks an actual OpenSearch query and refuses a result older than the
-requested saved version; the query route has unit coverage but has not yet been
-rerun against live search. A live Go-to-Rust check passed with search deliberately
-stopped. These checks do not validate the production indexer, CDC, browser UI,
+requested saved version. A live Go-to-Python experiment check passed with the
+search projection running; a separate live Go-to-Rust check passed with search
+deliberately stopped. These checks do not validate the production indexer, CDC, browser UI,
 authenticated access, or post-crash durability. The current missing-Origin policy
 is not a supported browser-session CSRF contract.
