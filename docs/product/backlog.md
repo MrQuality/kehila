@@ -78,7 +78,7 @@ settings.
 <a id="b-003"></a>
 ## B-003 — Specify project/task contracts and workflow rules
 
-**Status:** Needs decisions for fields/estimates; phase rules are ready to specify. **Dependencies:** B-001; align persistence contracts with B-002.
+**Status:** Proposed M1 baseline in [Q-008](open-questions.md#q-008) needs contract review before finalizing durable records; estimate and transition details remain open. **Dependencies:** B-001; align persistence contracts with B-002.
 
 **Traceability:** [R-001](requirements.md#r-001), [R-002](requirements.md#r-002), [R-006](requirements.md#r-006), [R-007](requirements.md#r-007). **Questions:** [Q-006](open-questions.md#q-006), [Q-008](open-questions.md#q-008).
 
@@ -106,7 +106,7 @@ settings.
 
 **Deliverable:** Versioned storage representation, durable local configuration, the required command/read/update integrations, and basic backup/restore instructions.
 
-**Proposed engineering acceptance:** Demonstrate actual task writes and reads, persistence through application restart and container recreation, and recovery appropriate to the agreed design. Prove relevant delivery acknowledgments/replay where used; existing connection probes are insufficient. Distinguish authoritative data from rebuildable projections. Use disposable test records until durability is verified. Record schema migration and backup format choices.
+**Proposed engineering acceptance:** Demonstrate actual task writes and reads and no acknowledged-save loss through process crash, application/container recreation, and ordinary machine restart. Test clean-instance restore of configuration and replay records followed by search reconstruction; report automatic daily backup age and failures, and keep an off-machine copy before claiming machine-loss recovery. Check stale browser versions and retry IDs after restoring an older backup. Prove relevant delivery acknowledgments/replay where used; existing connection probes are insufficient. For immutable operation records, prove concurrent next-version exclusion, non-regressing search, safe compaction of inactive tasks, index rebuild during writes, and practical project lists as history grows. Distinguish authoritative data from rebuildable projections. Use disposable test records until durability is verified. Record schema migration, backup format, and an operating budget for task count, memory, disk, startup, and save latency. See [D-017](decisions.md#d-017).
 
 <a id="b-006"></a>
 ## B-006 — Deliver the first local project/task interface
@@ -122,7 +122,7 @@ settings.
 <a id="b-007"></a>
 ## B-007 — Establish identity and permission boundaries
 
-**Status:** Needs decisions. **Dependencies:** B-002, B-003.
+**Status:** One authenticated local owner accepted; onboarding, session expiry/recovery, browser CSRF, CLI access, and enforcement remain to design and implement. **Dependencies:** B-002, B-003.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 

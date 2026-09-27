@@ -1,6 +1,6 @@
 use serde_json::json;
 use std::{env, io::Read};
-use task_worker::{MutationOutcome, MutationRequest, Store};
+use task_worker::{MutationOutcome, MutationRequest, OperationPolicy, Store};
 use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 
 fn reply(request: Request, status: u16, body: serde_json::Value) {
@@ -101,7 +101,18 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let uri = env::var("YAJA_MONGO_URL")?;
     let database = env::var("YAJA_TASK_DB").unwrap_or_else(|_| "yaja".into());
     let collection = env::var("YAJA_TASK_COLLECTION").unwrap_or_else(|_| "task_operations".into());
-    let store = Store::connect(&uri, &database, &collection)?;
+    let policy = OperationPolicy {
+        admission_days: env::var("YAJA_OPERATION_ADMISSION_DAYS")
+            .unwrap_or_else(|_| "90".into())
+            .parse()?,
+        replay_days: env::var("YAJA_OPERATION_REPLAY_DAYS")
+            .unwrap_or_else(|_| "90".into())
+            .parse()?,
+    };
+    if policy.admission_days == 0 || policy.replay_days == 0 {
+        return Err("operation admission and replay periods must be positive".into());
+    }
+    let store = Store::connect(&uri, &database, &collection, policy)?;
     if env::args().nth(1).as_deref() == Some("install-indexes") {
         store.install_indexes()?;
         return Ok(());

@@ -148,36 +148,49 @@ func (s *server) forward(w http.ResponseWriter, r *http.Request, target string, 
 }
 
 func (s *server) projected(w http.ResponseWriter, r *http.Request, id string, minimum int) {
-	request, err := http.NewRequestWithContext(r.Context(), http.MethodGet, s.search+"/sp001/_doc/"+id, nil)
+	// A document GET can see an unrefreshed write. Only a search query proves
+	// that the projection is available to search users.
+	query, _ := json.Marshal(map[string]any{"size": 1, "query": map[string]any{"ids": map[string]any{"values": []string{id}}}})
+	request, err := http.NewRequestWithContext(r.Context(), http.MethodPost, s.search+"/sp001/_search", bytes.NewReader(query))
 	if err != nil {
 		writeJSON(w, 503, map[string]string{"error": "search_unavailable"})
 		return
 	}
+	request.Header.Set("Content-Type", "application/json")
 	response, err := s.client.Do(request)
 	if err != nil {
 		writeJSON(w, 503, map[string]string{"error": "search_unavailable"})
 		return
 	}
 	defer response.Body.Close()
-	if response.StatusCode == http.StatusNotFound {
-		writeJSON(w, 404, map[string]bool{"pending": true})
-		return
-	}
 	if response.StatusCode != http.StatusOK {
 		writeJSON(w, 503, map[string]string{"error": "search_unavailable"})
 		return
 	}
 	var result struct {
-		Source json.RawMessage `json:"_source"`
+		Hits struct {
+			Hits []struct {
+				Source json.RawMessage `json:"_source"`
+			} `json:"hits"`
+		} `json:"hits"`
 	}
-	if err := json.NewDecoder(io.LimitReader(response.Body, 1<<20)).Decode(&result); err != nil || len(result.Source) == 0 {
+	if err := json.NewDecoder(io.LimitReader(response.Body, 1<<20)).Decode(&result); err != nil {
 		writeJSON(w, 503, map[string]string{"error": "search_unavailable"})
+		return
+	}
+	if len(result.Hits.Hits) == 0 {
+		writeJSON(w, 404, map[string]bool{"pending": true})
+		return
+	}
+	source := result.Hits.Hits[0].Source
+	if len(source) == 0 {
+		writeJSON(w, 503, map[string]string{"error": "invalid_projection"})
 		return
 	}
 	var version struct {
 		Version int `json:"version"`
 	}
-	if err := json.Unmarshal(result.Source, &version); err != nil || version.Version < 1 {
+	if err := json.Unmarshal(source, &version); err != nil || version.Version < 1 {
 		writeJSON(w, 503, map[string]string{"error": "invalid_projection"})
 		return
 	}
@@ -187,5 +200,5 @@ func (s *server) projected(w http.ResponseWriter, r *http.Request, id string, mi
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(result.Source)
+	_, _ = w.Write(source)
 }

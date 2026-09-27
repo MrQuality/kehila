@@ -68,18 +68,23 @@ verified both uniqueness constraints and latest-version lookup. This is a new
 mapping, separate from the SP-001 Python fixture, and its physical PostgreSQL
 table has not yet been provisioned for CDC.
 
-The worker uses a provisional 90-day UUIDv7 operation-ID replay window scoped to
-one task. It compares decoded typed fields rather than JSON byte order, returns
+The worker uses provisional, internally configurable 90-day limits for admitting
+an unseen UUIDv7 operation ID and replaying a recorded success after server commit.
+It looks up recorded successes before testing admission age or the current task
+version. It compares decoded typed fields rather than JSON byte order, returns
 the original successful version for an identical replay, rejects changed-content
 reuse, and rejects expired IDs rather than executing them again. Rejected attempts
-are not retained. The retention period is pending maintainer confirmation; old
-operation records are not yet compacted, so this is not a finished lifecycle.
+are not retained. Old operation records are not yet compacted, so physical
+retention and the separate product-history policy remain unfinished.
 The worker also lacks replication-readiness verification and separate supported
 installation credentials. Its current index-install command is a development
 setup aid; it does not establish production provisioning.
 
 The Go API defaults to loopback and enforces same-origin browser mutations. It
-keeps database-backed reads available when search is down and refuses a search
-projection older than the requested saved version. A live Go-to-Rust check passed
-with search deliberately stopped. That check does not validate the production
-indexer, CDC, browser UI, or post-crash durability.
+keeps database-backed reads available when search is down. Its projection route
+now checks an actual OpenSearch query and refuses a result older than the
+requested saved version; the query route has unit coverage but has not yet been
+rerun against live search. A live Go-to-Rust check passed with search deliberately
+stopped. These checks do not validate the production indexer, CDC, browser UI,
+authenticated access, or post-crash durability. The current missing-Origin policy
+is not a supported browser-session CSRF contract.

@@ -12,8 +12,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use task_contract::{decide, Decision, Mutation, SuccessfulOperation, Task};
 use uuid::{Uuid, Version};
 
-const REPLAY_DAYS: u128 = 90;
+const DAY_MS: u128 = 24 * 60 * 60 * 1000;
 const FUTURE_SKEW_MS: u128 = 5 * 60 * 1000;
+
+#[derive(Clone, Copy, Debug)]
+pub struct OperationPolicy {
+    pub admission_days: u64,
+    pub replay_days: u64,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OperationRecord {
@@ -49,6 +55,7 @@ pub enum MutationOutcome {
 
 pub struct Store {
     records: Collection<OperationRecord>,
+    policy: OperationPolicy,
 }
 
 fn now_ms() -> Option<u128> {
@@ -60,7 +67,7 @@ fn now_ms() -> Option<u128> {
     )
 }
 
-pub fn validate(request: &MutationRequest, now: u128) -> Result<(), &'static str> {
+fn validate_new_mutation(request: &MutationRequest) -> Result<(), &'static str> {
     if request.expected_version < 0
         || request.expected_version == i64::MAX
         || request.title.is_empty()
@@ -71,6 +78,10 @@ pub fn validate(request: &MutationRequest, now: u128) -> Result<(), &'static str
     if request.status != "Open" && request.status != "Done" {
         return Err("invalid_status");
     }
+    Ok(())
+}
+
+pub fn validate_operation_id(request: &MutationRequest, now: u128) -> Result<u128, &'static str> {
     let id = Uuid::parse_str(&request.operation_id).map_err(|_| "invalid_operation_id")?;
     if id.get_version() != Some(Version::SortRand) || id.to_string() != request.operation_id {
         return Err("invalid_operation_id");
@@ -80,10 +91,16 @@ pub fn validate(request: &MutationRequest, now: u128) -> Result<(), &'static str
     if issued_ms > now + FUTURE_SKEW_MS {
         return Err("operation_id_from_future");
     }
-    if now.saturating_sub(issued_ms) > REPLAY_DAYS * 24 * 60 * 60 * 1000 {
-        return Err("operation_id_expired");
-    }
-    Ok(())
+    Ok(issued_ms)
+}
+
+fn admission_valid(issued_ms: u128, now: u128, policy: OperationPolicy) -> bool {
+    now.saturating_sub(issued_ms) <= u128::from(policy.admission_days) * DAY_MS
+}
+
+fn replay_valid(committed_ms: i64, now: u128, policy: OperationPolicy) -> bool {
+    committed_ms >= 0
+        && now.saturating_sub(committed_ms as u128) <= u128::from(policy.replay_days) * DAY_MS
 }
 
 fn duplicate_key(error: &mongodb::error::Error) -> bool {
@@ -95,10 +112,12 @@ impl Store {
         uri: &str,
         database: &str,
         collection: &str,
+        policy: OperationPolicy,
     ) -> Result<Self, mongodb::error::Error> {
         let client = Client::with_uri_str(uri)?;
         Ok(Self {
             records: client.database(database).collection(collection),
+            policy,
         })
     }
 
@@ -149,9 +168,10 @@ impl Store {
         let Some(clock) = now_ms() else {
             return MutationOutcome::Unavailable;
         };
-        if let Err(reason) = validate(request, clock) {
-            return MutationOutcome::Invalid(reason);
-        }
+        let issued_ms = match validate_operation_id(request, clock) {
+            Ok(value) => value,
+            Err(reason) => return MutationOutcome::Invalid(reason),
+        };
         let mutation = Mutation {
             operation_id: request.operation_id.clone(),
             expected_version: request.expected_version as u64,
@@ -167,6 +187,9 @@ impl Store {
                 Err(_) => return MutationOutcome::Unavailable,
             };
             if let Some(previous) = previous {
+                if !replay_valid(previous.committed_ms, clock, self.policy) {
+                    return MutationOutcome::Invalid("operation_id_expired");
+                }
                 let original = Mutation {
                     operation_id: previous.operation_id.clone(),
                     expected_version: previous.expected_version as u64,
@@ -187,6 +210,12 @@ impl Store {
                     Decision::Replay { version } => MutationOutcome::Replay(version as i64),
                     _ => MutationOutcome::OperationIdReused,
                 };
+            }
+            if !admission_valid(issued_ms, clock, self.policy) {
+                return MutationOutcome::Invalid("operation_id_expired");
+            }
+            if let Err(reason) = validate_new_mutation(request) {
+                return MutationOutcome::Invalid(reason);
             }
             let current = match self.read(task_id) {
                 Ok(value) => value,
@@ -219,11 +248,14 @@ impl Store {
 
 #[cfg(test)]
 mod tests {
-    use super::{validate, MutationRequest};
+    use super::{
+        admission_valid, replay_valid, validate_operation_id, MutationRequest, OperationPolicy,
+        DAY_MS,
+    };
     use uuid::Uuid;
 
     #[test]
-    fn expired_id_is_rejected_before_it_could_be_reexecuted() {
+    fn admission_and_replay_have_independent_clocks() {
         let id = Uuid::now_v7();
         let (seconds, nanos) = id.get_timestamp().unwrap().to_unix();
         let issued = u128::from(seconds) * 1000 + u128::from(nanos / 1_000_000);
@@ -233,10 +265,25 @@ mod tests {
             title: "Task".into(),
             status: "Open".into(),
         };
-        assert!(validate(&request, issued).is_ok());
+        let policy = OperationPolicy {
+            admission_days: 90,
+            replay_days: 90,
+        };
         assert_eq!(
-            validate(&request, issued + 91 * 24 * 60 * 60 * 1000),
-            Err("operation_id_expired")
+            validate_operation_id(&request, issued + 91 * DAY_MS),
+            Ok(issued)
         );
+        assert!(!admission_valid(issued, issued + 91 * DAY_MS, policy));
+        let committed = issued + 89 * DAY_MS;
+        assert!(replay_valid(
+            committed as i64,
+            committed + 89 * DAY_MS,
+            policy
+        ));
+        assert!(!replay_valid(
+            committed as i64,
+            committed + 91 * DAY_MS,
+            policy
+        ));
     }
 }

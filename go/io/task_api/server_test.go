@@ -2,6 +2,7 @@ package taskapi
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,7 +20,7 @@ func TestSaveAndAuthoritativeReadDoNotDependOnSearch(t *testing.T) {
 	}))
 	defer worker.Close()
 	search := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"hits":{"hits":[]}}`))
 	}))
 	defer search.Close()
 	handler := NewHandler(worker.URL, search.URL)
@@ -66,33 +67,54 @@ func TestCrossOriginMutationRejected(t *testing.T) {
 }
 
 func TestOlderSearchProjectionRemainsPending(t *testing.T) {
-    search := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("Content-Type", "application/json")
-        _, _ = w.Write([]byte(`{"_source":{"id":"task-1","version":1,"title":"Old"}}`))
-    }))
-    defer search.Close()
-    handler := NewHandler("http://127.0.0.1:9001", search.URL)
-    response := httptest.NewRecorder()
-    handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/search/task-1?min_version=2", nil))
-    if response.Code != http.StatusNotFound || !strings.Contains(response.Body.String(), `"pending":true`) {
-        t.Fatalf("old projection: %d %s", response.Code, response.Body.String())
-    }
+	search := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/sp001/_search" {
+			t.Errorf("search visibility must use a query: %s %s", r.Method, r.URL.Path)
+		}
+		body, _ := io.ReadAll(r.Body)
+		if !strings.Contains(string(body), `"values":["task-1"]`) {
+			t.Errorf("search query did not target task: %s", body)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"hits":{"hits":[{"_source":{"id":"task-1","version":1,"title":"Old"}}]}}`))
+	}))
+	defer search.Close()
+	handler := NewHandler("http://127.0.0.1:9001", search.URL)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/search/task-1?min_version=2", nil))
+	if response.Code != http.StatusNotFound || !strings.Contains(response.Body.String(), `"pending":true`) {
+		t.Fatalf("old projection: %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestSearchVisibilityAcceptsNewerProjection(t *testing.T) {
+	search := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"hits":{"hits":[{"_source":{"id":"task-1","version":3,"title":"New"}}]}}`))
+	}))
+	defer search.Close()
+	handler := NewHandler("http://127.0.0.1:9001", search.URL)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/search/task-1?min_version=2", nil))
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"version":3`) {
+		t.Fatalf("new projection: %d %s", response.Code, response.Body.String())
+	}
 }
 
 func TestDistinctWorkerConflictIsPreserved(t *testing.T) {
-    worker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(http.StatusConflict)
-        _, _ = w.Write([]byte(`{"error":"operation_id_reused"}`))
-    }))
-    defer worker.Close()
-    handler := NewHandler(worker.URL, "http://127.0.0.1:9002")
-    req := httptest.NewRequest(http.MethodPost, "/tasks/task-1", strings.NewReader(`{}`))
-    req.Host = "127.0.0.1:8080"
-    req.Header.Set("Content-Type", "application/json")
-    response := httptest.NewRecorder()
-    handler.ServeHTTP(response, req)
-    if response.Code != http.StatusConflict || !strings.Contains(response.Body.String(), `"operation_id_reused"`) {
-        t.Fatalf("conflict: %d %s", response.Code, response.Body.String())
-    }
+	worker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		_, _ = w.Write([]byte(`{"error":"operation_id_reused"}`))
+	}))
+	defer worker.Close()
+	handler := NewHandler(worker.URL, "http://127.0.0.1:9002")
+	req := httptest.NewRequest(http.MethodPost, "/tasks/task-1", strings.NewReader(`{}`))
+	req.Host = "127.0.0.1:8080"
+	req.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, req)
+	if response.Code != http.StatusConflict || !strings.Contains(response.Body.String(), `"operation_id_reused"`) {
+		t.Fatalf("conflict: %d %s", response.Code, response.Body.String())
+	}
 }
