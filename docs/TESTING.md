@@ -1,5 +1,8 @@
 # Testing
 
+The [test strategy](TEST_STRATEGY.md) describes the proposed long-term quality
+approach. This guide records executable commands, current coverage, and limits.
+
 For bounded technical investigations, see the approved [spike procedure and
 register](spikes/README.md). Spike records distinguish planned cases from observed
 results and link experiments to decisions and reusable regression coverage.

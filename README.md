@@ -101,7 +101,9 @@ Use the [project procedure index](docs/procedures/README.md) to find SOPs,
 their approval status, and their enforcement coverage.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution requirements and
-[docs/TESTING.md](docs/TESTING.md) for test commands. Report vulnerabilities as
+[docs/TESTING.md](docs/TESTING.md) for test commands and the
+[test strategy](docs/TEST_STRATEGY.md) for the longer-term quality approach.
+Report vulnerabilities as
 described in [SECURITY.md](SECURITY.md).
 
 Code is licensed under Apache-2.0. The Code of Conduct retains its upstream

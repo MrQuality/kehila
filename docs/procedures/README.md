@@ -25,6 +25,7 @@ approval or claim additional automation.
 | --- | --- | --- |
 | [Contributing](../../CONTRIBUTING.md) | Changes, testing, and merge policy | CI; maintainer inspection of scope, evidence, and limitations |
 | [Testing](../TESTING.md) | Supported checks and their limits | Local verification scripts and CI workflow |
+| [Test strategy](../TEST_STRATEGY.md) | Proposed quality goals, test levels, and future qualification | Planning guidance; not an implemented CI gate |
 | [Security](../../SECURITY.md) | Development exposure and vulnerability reporting | Contributor and maintainer responsibility |
 | [Naming and attribution](../BRANDING.md) | Project identity and attribution | Naming check plus manual review of matters the check cannot establish |
 | [Product planning](../product/README.md) | Requirements, decisions, questions, and backlog | Stable IDs, linked records, and maintainer assessment |

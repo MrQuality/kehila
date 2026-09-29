@@ -20,8 +20,11 @@ Use `python scripts/verify.py --pure` when working on pure logic without the
 development services. Integration changes need the full suite against running
 services. See [the testing guide](docs/TESTING.md) for coverage and limitations.
 
-Add tests for changed behavior and relevant failure cases. Update documentation
-when commands, contracts, or supported behavior change. Run `cargo fmt --all`
+Use the [test strategy](docs/TEST_STRATEGY.md) to identify the evidence relevant
+to a change. It is proposed; [the testing guide](docs/TESTING.md) describes the
+checks currently available. Add tests for changed behavior and relevant failure
+cases. Update documentation when commands, contracts, or supported behavior
+change. Run `cargo fmt --all`
 and `gofmt` on changed Rust and Go files.
 
 Pure Rust code lives in `src/pure/` and adapters in `src/io/`. Go uses `go/pure/`
