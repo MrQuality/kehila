@@ -42,7 +42,11 @@ python scripts/go_test.py
 
 ## Coverage
 
-Unit tests cover the equality grammar and schema-version decisions. Integration
+Unit tests cover the equality grammar, schema-version decisions, and the first
+pure B-003 status/workflow command rules. The latter test configuration
+references, phase derivation, migration restrictions, archival targets, stale
+versions, and replay order; they do not establish persistence or concurrency.
+Integration
 tests use the development NATS server to check its greeting, connection handshake,
 and request/response behavior. The Python probe also checks the JetStream account
 API using a temporary subscription. It creates no streams or application data.

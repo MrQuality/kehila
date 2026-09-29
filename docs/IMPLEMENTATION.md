@@ -11,6 +11,7 @@ YAJA is in early development. The current components are:
 | Go synchronization rules | Provisional evaluation requires matching schema version and a pure query | Table-driven unit test |
 | Go local task API boundary | Proxies authoritative task writes/reads to a worker; keeps version-gated search reads separate; checks loopback origin on mutations | Unit tests and a live boundary check |
 | Rust task mutation worker | Stores each accepted mutation and its replay result as one immutable FerretDB operation record; optimistic version and operation-ID indexes were checked against real services | Pure/policy tests and automated live checks across two worker processes |
+| Rust work-item rules | Pure typed status/workflow decisions validate project configuration references, phase changes, migration restrictions, archival targets, version conflicts, and replay order; not yet used by the worker | Focused pure tests; no storage or API integration claim |
 | TypeScript contracts | Shared declarations | No runtime implementation |
 | Development tools | Staged-source verification and CI base selection | Temporary Git repository tests |
 

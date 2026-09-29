@@ -180,6 +180,55 @@ wire error codes remain to be specified. A rejected operation must expose no
 partial destination state or lifecycle effects. An uncertain transport outcome
 is reconciled using the original operation ID.
 
+### First typed rule slice: status and workflow commands
+
+The Rust `task_contract::work_item` module implements pure decisions for normal
+status changes and explicit workflow migration. Its inputs are a typed project
+configuration, current WorkItem, command, optional recorded success, and the
+caller-provided authorization result. The configuration carries project ID,
+revision, statuses, workflows, and WorkItem types. Each status carries one phase;
+each workflow carries status membership, a New-phase initial status, permitted
+cross-phase changes, and archival state. Each type lists permitted workflows.
+
+The command carries an operation ID, expected item version, expected project
+configuration revision, and one of two actions: change status within the current
+workflow, or migrate to an explicit destination workflow/status. Neither action
+accepts a caller-supplied phase. The result returns the derived phase and one
+of three lifecycle effects: none, completion, or reopening. The phase in the
+result is derived output, not an independently persisted WorkItem field.
+
+The pure decision order is:
+
+1. Reject unauthorized access. This receives an access decision from B-007;
+   the module does not authenticate users or define grants.
+2. If an authoritative success was found for this item and operation ID,
+   replay its original result for an identical command; reject changed-content
+   reuse. Replay precedes current configuration, version, and status rules.
+3. Reject a stale configuration revision, then a stale item version.
+4. Validate the configuration structure and current item references.
+5. Validate target membership, type permission, archival eligibility, and
+   system/workflow phase rules. Migration requires an authorization decision and
+   both workflows' permission for a cross-phase move.
+6. Produce one next-version change with its derived phase and lifecycle effect.
+   The caller is responsible for committing that result atomically with its
+   successful-operation record.
+
+The module rejects duplicate status/workflow/type identities, missing or
+non-New initial statuses, invalid membership, and forbidden phase permissions
+in a proposed configuration snapshot. An archived current status remains valid;
+movement to a different eligible status is permitted. New assignments to an
+archived status or migration into an archived workflow are rejected. Same-phase
+status changes have no lifecycle effect. Entering Done signals completion;
+Done to Active signals reopening; Done to New is forbidden. The module does not
+perform resource, usage, reservation, or cost effects.
+
+The rule tests cover BC-01, BC-03, BC-05, BC-06, BC-11, BC-13, and the pure
+portion of BC-14. They also cover archived-source movement, duplicate config
+IDs, invalid workflow initial phase, missing references, and item-version
+conflict. The existing single-task worker still uses its provisional mutation
+contract. B-005 must integrate the new rules with authoritative configuration
+loading, atomic persistence, and real concurrency checks.
+
 ## Review resolutions
 
 All ten resolutions were accepted by the maintainer on 2026-09-29. C-09 retains
@@ -248,8 +297,9 @@ These are specifications for future checks, not test results.
 
 ## Completion and handoff
 
-B-003 remains open until its blocking choices are decided, the resulting typed
-contracts and errors are reviewed, and the required pure rule checks pass.
+B-003 remains open until its remaining specification details are decided, the
+complete typed contracts and errors are reviewed, and the required pure rule
+checks pass.
 Documentation acceptance alone does not satisfy issue #7's test requirement.
 
 B-005 owns demonstrated commit-time configuration consistency, authoritative
@@ -257,7 +307,8 @@ reference checks, persistence, replay, and recovery. B-007 owns access enforceme
 B-011 owns integrated resource effects. Keep those implementation gates visible
 without claiming they have been satisfied by this contract review.
 
-The current Rust task contract still requires a nonempty title and only accepts
-the status strings Open and Done. It supplies replay/version behavior but does
-not implement this domain contract. The next implementation must replace those
-provisional validation assumptions while retaining successful replay precedence.
+The currently deployed worker still uses the earlier Rust task mutation rules,
+which require a nonempty title and accept only the status strings Open and Done.
+The new `work_item` module does not yet change that worker behavior. Later
+integration must replace those provisional validation assumptions while
+retaining successful replay precedence.

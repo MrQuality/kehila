@@ -1,5 +1,7 @@
 //! Single-task mutation rules, independent of persistence and HTTP.
 
+pub mod work_item;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Mutation {
     pub operation_id: String,
