@@ -41,9 +41,17 @@ Within a milestone, independent work may proceed once its own blockers are resol
 <a id="b-002"></a>
 ## B-002 — Investigate and record the first-increment technical path
 
-**Status:** Ready to investigate. **Dependencies:** B-001.
+**Status:** Bounded investigation accepted for the first local task path; implementation remains in B-005 and related items. **Dependencies:** B-001.
 
 **Spike record:** [SP-001](../spikes/SP-001-task-path.md), using the approved [spike procedure and template](../spikes/README.md). Keep experiment cases, run summaries, conclusions, and the next-session handoff there; acceptance criteria remain here.
+
+**Latest evidence:** SP-001-R04 passed the six bounded cases and the full repository
+suite on Windows/Podman using experimental Python adapters. The concrete design
+and reproduction runner are in [the experiment](../../experiments/SP-001/README.md).
+The 3.125 GiB total container ceilings fit the observed workstation. Explicit
+PostgreSQL replica identity and task-only publication were required. [D-016](decisions.md#d-016)
+records the accepted bounded product direction. These results do not establish
+the future Go/Rust application's correctness or resource use.
 
 **Traceability:** [R-001](requirements.md#r-001), [D-015](decisions.md#d-015). **Questions:** [Q-001](open-questions.md#q-001), [Q-002](open-questions.md#q-002), [Q-019](open-questions.md#q-019).
 
@@ -55,14 +63,22 @@ Within a milestone, independent work may proceed once its own blockers are resol
 
 **Bounded cases and assumptions:** Check task create/update/read mapping, durable event delivery, eventual search visibility, duplicate/retried commands, and recovery when a worker or CDC/indexing component stops after a successful database write. Distinguish database acknowledgment, event publication, durable replay, and search visibility in the results. Treat the existing stack as the starting hypothesis, not a proven end-to-end path; document evidence and impact before proposing a different engine or architecture. Decide the stalled-pipeline API response before asserting it in a test.
 
-**Local readiness note (recheck before running):** The Windows workstation has WSL Ubuntu 22.04 and a separate Podman WSL machine; both were stopped at the last check. Start and verify the Podman machine, confirm a Compose provider, and check OpenSearch's `vm.max_map_count` requirement in the container host. The workstation has 15.7 GiB physical memory but only 2.7 GiB was available at the last check, below the roughly 4 GiB guidance for the current development services. Recheck available memory and capacity after adding CDC. Norton antivirus, firewall, and VPN services were running; they may affect image pulls, local connections, or forwarded ports, but no interference was observed. Diagnose an observed failure before changing security settings. No service-level experiment has been run from this workstation yet.
+**Local readiness note (recheck before running):** SP-001-R04 ran the expanded
+stack on the 15.71 GiB Windows workstation using a dedicated Podman WSL machine.
+Its containers have 3.125 GiB of enforced memory ceilings; setup requires at least
+4224 MiB host available RAM after VM startup. The cases observed at least 2691 MiB
+host available RAM and no container OOM flags. These are bounded prototype
+observations, not production minimums. The experiment and its VM are now stopped.
+Recheck resources, provider behavior, image access, connectivity, and OpenSearch
+settings for every rerun. Diagnose observed interference before changing security
+settings.
 
 **Acceptance:** Record a passing preflight before each environment's experiment run; record blockers and defer affected experiments until they are resolved. Identify the roles of browser, API, business logic, storage, event delivery, and search/update delivery. Resolve the contradictory stalled-pipeline response before implementing the affected route. Record observed integration evidence and limitations. Document proposed architecture changes and their impact. Identify prerequisites for consistent future resource releases and cost adjustments. Kubernetes is outside the current release requirements.
 
 <a id="b-003"></a>
 ## B-003 — Specify project/task contracts and workflow rules
 
-**Status:** Needs decisions for fields/estimates; phase rules are ready to specify. **Dependencies:** B-001; align persistence contracts with B-002.
+**Status:** Proposed M1 baseline in [Q-008](open-questions.md#q-008) needs contract review before finalizing durable records; estimate and transition details remain open. **Dependencies:** B-001; align persistence contracts with B-002.
 
 **Traceability:** [R-001](requirements.md#r-001), [R-002](requirements.md#r-002), [R-006](requirements.md#r-006), [R-007](requirements.md#r-007). **Questions:** [Q-006](open-questions.md#q-006), [Q-008](open-questions.md#q-008).
 
@@ -84,13 +100,13 @@ Within a milestone, independent work may proceed once its own blockers are resol
 <a id="b-005"></a>
 ## B-005 — Build durable local storage and the required delivery path
 
-**Status:** Waiting on B-002 and recovery decisions. **Dependencies:** B-002, B-003; coordinate access boundaries with B-007.
+**Status:** First task-path direction accepted; implementation and recovery decisions remain. **Dependencies:** B-002, B-003; coordinate access boundaries with B-007.
 
 **Traceability:** Supports [R-001](requirements.md#r-001), [R-005](requirements.md#r-005), [R-012](requirements.md#r-012); engineering prerequisites rather than new confirmed product semantics. **Questions:** [Q-001](open-questions.md#q-001), [Q-002](open-questions.md#q-002), [Q-020](open-questions.md#q-020).
 
 **Deliverable:** Versioned storage representation, durable local configuration, the required command/read/update integrations, and basic backup/restore instructions.
 
-**Proposed engineering acceptance:** Demonstrate actual task writes and reads, persistence through application restart and container recreation, and recovery appropriate to the agreed design. Prove relevant delivery acknowledgments/replay where used; existing connection probes are insufficient. Distinguish authoritative data from rebuildable projections. Use disposable test records until durability is verified. Record schema migration and backup format choices.
+**Proposed engineering acceptance:** Demonstrate actual task writes and reads and no acknowledged-save loss through process crash, application/container recreation, and ordinary machine restart. Test clean-instance restore of configuration and replay records followed by search reconstruction; report automatic daily backup age and failures, and keep an off-machine copy before claiming machine-loss recovery. Check stale browser versions and retry IDs after restoring an older backup. Prove relevant delivery acknowledgments/replay where used; existing connection probes are insufficient. For immutable operation records, prove concurrent next-version exclusion, non-regressing search, safe compaction of inactive tasks, index rebuild during writes, and practical project lists as history grows. Distinguish authoritative data from rebuildable projections. Use disposable test records until durability is verified. Record schema migration, backup format, and an operating budget for task count, memory, disk, startup, and save latency. See [D-017](decisions.md#d-017).
 
 <a id="b-006"></a>
 ## B-006 — Deliver the first local project/task interface
@@ -106,7 +122,7 @@ Within a milestone, independent work may proceed once its own blockers are resol
 <a id="b-007"></a>
 ## B-007 — Establish identity and permission boundaries
 
-**Status:** Needs decisions. **Dependencies:** B-002, B-003.
+**Status:** One authenticated local owner accepted; onboarding, session expiry/recovery, browser CSRF, CLI access, and enforcement remain to design and implement. **Dependencies:** B-002, B-003.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 

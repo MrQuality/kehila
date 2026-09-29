@@ -197,7 +197,15 @@ sequenceDiagram
 | `409` | `STALE_SCHEMA_EPOCH` | `X-Schema-Epoch` is behind Server KV Epoch | Flush Wasm cache, refetch schema from KV, prompt retry |
 | `413` | `PAYLOAD_TOO_LARGE` | Mutation exceeds custom-field entity size limits | Abort, prompt user to reduce payload |
 | `429` | `RATE_LIMIT_EXCEEDED` | Request count exceeds tenant tier thresholds | Backoff based on `Retry-After` header |
-| `503` | `CDC_PIPELINE_STALLED` | DB write succeeds, OpenSearch indexer is stalled | Return 200 with `sync_token: null`. UI degrades to Tier 2 Wait |
+
+For the first local task action, an authoritative database acknowledgment returns
+`200` with the persisted version and `sync_token: null`, independently of search
+visibility ([D-016](../product/decisions.md#d-016)). The null token does not itself
+indicate an unhealthy indexer. Show “Saved — search update pending” until the
+projection reaches that version or newer; keep database-backed reads available.
+If the write outcome is uncertain, reconcile with the same operation ID. An
+installation whose replication prerequisites are missing must fail readiness
+before accepting task mutations; it is not a temporary indexing outage.
 
 ---
 

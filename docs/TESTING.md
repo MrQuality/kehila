@@ -45,6 +45,49 @@ and request/response behavior. The Python probe also checks the JetStream accoun
 API using a temporary subscription. It creates no streams or application data.
 Connections use three-second deadlines and bounded frame sizes and counts.
 
+The full suite also runs `python tests/integration/task_path.py`. This builds the
+Rust worker and Go API, installs indexes in a unique `yaja_test_` collection,
+starts two workers sharing that collection and an API on temporary loopback
+ports, and removes its processes and collection on success or failure. It needs
+FerretDB at `mongodb://127.0.0.1:27017`; override `YAJA_TEST_MONGO_URL` with a
+single-host MongoDB URI for a different disposable development instance. It uses
+the `yaja` database. Never point regression tests at a supported user installation.
+No host Python packages or production CDC/indexer are required.
+
+The runner tests 48 competing create/update/identical-retry/changed-content pairs
+across two processes, replay after later updates, direct-worker request guards,
+a stalled request body while other reads proceed, a stalled database connection
+with bounded failure and recovery, and Go-to-Rust saves with search unavailable.
+Concurrent clients reach independent worker processes; the test does not rely on
+a single serial HTTP handler to establish storage exclusion. Finite race tests
+are regression evidence, not exhaustive linearizability proof.
+
+The pure command includes both `yaja_query` and `task_contract`; maintain this
+explicit list when adding a pure crate. Its selection test verifies that a
+failure in `task_contract` propagates. The full suite tests all Rust workspace
+crates, including adapter policy tests.
+
+The older `live_task_worker.py` and `live_go_rust.py` remain manual probes for
+already-running processes. `live_task_api.py` specifically targets the original
+Python experiment adapters with search running; it is not a Rust CDC test.
+
+### Required retesting after task-path changes
+
+During implementation, run the affected pure and boundary tests. After changes
+to the worker, API, storage decisions, dependencies, or verification runner, run
+`python scripts/verify.py` once against running disposable services on the final
+revision. This includes the live task-path runner; do not substitute `--pure` or
+a previous revision's passing CI. Run `cargo fmt --all -- --check` and check
+changed Go files with `gofmt`. Required GitHub CI must pass on the final revision.
+A failed or unavailable live dependency is a failed check, not a skip.
+
+Repeat SP-001 C01-C06 when its Python adapters, physical storage mapping, CDC
+configuration, or projection behavior change, or when new evidence contradicts
+its conclusion. Changes confined to the Go/Rust mutation boundary require fresh
+Go/Rust regression evidence, not a repeat of the unchanged Python experiment.
+The new Rust operation collection still needs separate production CDC and
+recovery verification before a supported installation is claimed.
+
 Integration results apply to the behavior exercised. A successful handshake does
 not establish durable publication, replay, or recovery. New adapters need tests
 against their actual services for the contracts they introduce. Unit tests and

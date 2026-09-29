@@ -7,20 +7,29 @@ Backlog IDs link to the [implementation backlog](backlog.md). Proposals below ar
 <a id="q-001"></a>
 ## Q-001 — Technical path for the first usable increment
 
-**Question:** Which parts of the v0.2 design are required in the first increment, and are any concrete changes needed? Validate the selected database mapping and command-to-save-to-read/update path. The design's `CDC_PIPELINE_STALLED` response is contradictory (503 versus 200 with a null token). Resolve the applicable contract before implementing that route.
+**Resolved first-increment choice:** [D-016](decisions.md#d-016) adopts the reference task path, resolves the contradictory `CDC_PIPELINE_STALLED` response in favor of an acknowledged 200 with pending search visibility, and accepts operation IDs, expected versions, distinct conflicts, and explicit replication provisioning. A null synchronization token does not diagnose indexer health. The 30-second experiment deadline is not a product delivery guarantee.
 
 **Known:** The design includes separated write/read paths, independent durable change capture, shared query compilation, single-document mutations, and asynchronous multi-document workflows. The repository lacks a usable API/UI and the full pipeline. No architecture replacement has been approved.
 
-**Next evidence:** Inventory contracts and run targeted real-service experiments. Present any proposed deviation with impact and alternatives. A broker handshake is not evidence of durable delivery or database correctness.
+**Remaining design:** [D-017](decisions.md#d-017) sets a provisional 90-day post-commit replay period, separate from unseen-ID admission and physical retention. Prove safe compaction, current-task preservation, concurrent next-version writes, non-regressing projection, index rebuild during writes, and practical project lists before real data. Product history needs a separate retention policy. Validate mapping/provisioning drift and measure `REPLICA IDENTITY FULL` WAL cost. Broader schema lifecycle, deletion, WAL retention, and recovery remain open. A broker handshake is not evidence of durable delivery or database correctness.
+
+**Evidence available:** [SP-001-R04](../spikes/SP-001-task-path.md) passed bounded
+save/delivery/replay/conflict cases with Python boundary adapters and the reference
+services. The product direction is accepted; Go/Rust implementation correctness and
+long-lived operation retention are not established by the experiment.
 
 **Blocks:** [B-002](backlog.md#b-002), then [B-005](backlog.md#b-005)/[B-006](backlog.md#b-006). Does not block documenting domain rules.
 
 <a id="q-002"></a>
 ## Q-002 — Local runtime and access boundary
 
-**Question:** Browser access only on the host, or also from other devices? Is Kubernetes needed for the supported deployment model? Which supported local runtime, authentication boundary, and startup behavior should be delivered?
+**Resolved first-increment choice:** [D-016](decisions.md#d-016) limits browser-facing access to host loopback. LAN support is deferred. Keep database, broker, and search on internal container networks absent a specific administrative need.
 
-**Known:** Local operation is required and Compose is provided today. The supported application runtime and network-access boundary remain undecided; Kubernetes is not currently required.
+**Resolved first-supported direction:** One authenticated local owner and Windows/Podman with manual startup. Define onboarding, session expiry, access recovery, protection for reads/configuration, browser CSRF/origin policy, and authenticated CLI behavior before support. The launcher needs start, stop, status, actionable readiness failures, and non-destructive repeatable upgrades. Automatic startup and LAN access are deferred. Broader runtime support remains unverified; Kubernetes is not currently required. See [D-017](decisions.md#d-017).
+
+**Evidence available:** [SP-001-R04](../spikes/SP-001-task-path.md) ran locally on
+Windows/Podman with loopback ports and 3.125 GiB of container ceilings. This does
+not establish LAN access, authentication, Linux CI, or supported deployment policy.
 
 **Blocks:** [B-002](backlog.md#b-002), [B-005](backlog.md#b-005), [B-007](backlog.md#b-007), [B-018](backlog.md#b-018).
 
@@ -77,6 +86,8 @@ Backlog IDs link to the [implementation backlog](backlog.md). Proposals below ar
 **Question:** What minimum fields identify a task and milestone? How is the current task selected? Can multiple tasks be active? Which transitions are allowed? How do cancellation, Done → New, deletion of an in-use status, and remapping a status to another phase behave?
 
 **Known:** New/Active/Done are system phases; phase derives from status. Done → Active has explicit reopening rules. A complete hierarchy, transition-permission matrix, or cancellation state was not agreed.
+
+**Proposed M1 baseline, pending contract review:** Project identity, name, estimation unit, and configurable statuses; task identity, project, title, description, optional estimate, status reference, and version; structured knowledge entries and follow-up origin links; explicit current-work selection independent of Active. Use stable status IDs; permit renaming but initially block deletion of referenced statuses and changes to their phase mapping. Specify reopening and other transitions; leave unresolved transitions unavailable. Finalize this model before a durable record format is committed. M1 includes knowledge and follow-ups; the first release still includes sprint, Gantt, resource, and scheduling commitments.
 
 **Blocks:** [B-003](backlog.md#b-003), [B-004](backlog.md#b-004), parts of [B-011](backlog.md#b-011).
 
@@ -183,6 +194,10 @@ Backlog IDs link to the [implementation backlog](backlog.md). Proposals below ar
 
 **Next evidence:** Specify stable operation identities, observable intermediate/failure states, and recovery behavior; verify them against actual services. These are engineering proposals, not prescribed database tables or a chosen algorithm.
 
+**Evidence boundary:** [SP-001's design handoff](../../experiments/SP-001/README.md#design-handoff)
+identifies prerequisites for reservation/cost ledgers and compensating actions.
+Its passing single-task cases do not settle cross-document consistency.
+
 **Blocks:** Architecture disposition in [B-002](backlog.md#b-002), integrated [B-011](backlog.md#b-011)/[B-012](backlog.md#b-012).
 
 <a id="q-020"></a>
@@ -190,7 +205,7 @@ Backlog IDs link to the [implementation backlog](backlog.md). Proposals below ar
 
 **Question:** What data-loss tolerance, backup destination/frequency, restore workflow, and upgrade/migration behavior should be supported? What resource use and startup time are acceptable for a supported local installation?
 
-**Known:** Current development storage is documented as ephemeral. Keeping real project records requires a deliberate durability design. Persistence and a tested restore are proposed release checks; exact targets remain open.
+**Accepted direction:** No acknowledged-save loss through process crash, container recreation, or ordinary machine restart. Automatic daily backups must show age and failure status. Test clean-instance restore of configuration and replay records, then reconstruct search. Machine-loss recovery requires an off-machine copy. Test stale browser versions and retry IDs against restored data. Daily backups do not guarantee a 24-hour recovery point when the machine sleeps or backup delivery fails. Exact restore/data-loss targets, destination, migration procedure, and operating budget remain open; see [D-017](decisions.md#d-017).
 
 **Blocks:** [B-005](backlog.md#b-005), [B-018](backlog.md#b-018). Disposable-data development can proceed without pretending to meet these gates.
 

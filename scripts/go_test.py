@@ -20,7 +20,9 @@ def main():
     environment["GOTMPDIR"] = str(work)
     try:
         # -work delegates deletion to us; it does not skip compilation or tests.
-        command = ["go", "test", "-count=1", "-work", *(sys.argv[1:] or ["./go/pure/sync_contract/..."])]
+        command = ["go", "test", "-count=1", "-work", *(sys.argv[1:] or [
+            "./go/pure/sync_contract/...", "./go/io/task_api/...",
+        ])]
         result = subprocess.run(command, cwd=ROOT, env=environment, timeout=300, check=False)
         return result.returncode
     finally:

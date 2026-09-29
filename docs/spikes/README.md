@@ -23,7 +23,7 @@ and [testing guide](../TESTING.md).
 
 | ID | Investigation | Status | Linked work | Outcome |
 | --- | --- | --- | --- | --- |
-| [SP-001](SP-001-task-path.md) | First task create/update/read path | Planned | [B-002](../product/backlog.md#b-002) | No experiment results yet |
+| [SP-001](SP-001-task-path.md) | First task create/update/read path | Concluded | [B-002](../product/backlog.md#b-002) | R04: bounded Python-adapter C01-C06 and full suite passed locally; 3.125 GiB container ceilings; first-increment direction accepted in [D-016](../product/decisions.md#d-016) |
 
 Use sequential `SP-NNN` IDs, distinct from the existing acceptance scenario IDs.
 Create each record from [TEMPLATE.md](TEMPLATE.md). Keep its ID and links stable.
