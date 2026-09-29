@@ -1,0 +1,263 @@
+# B-003 project and work-item contract review
+
+**Status:** Contract work in progress. The maintainer accepted the review
+recommendations and the ten review resolutions on 2026-09-29;
+[D-018](decisions.md#d-018) and [D-019](decisions.md#d-019) record those decisions.
+The remaining specification work is listed below. This document does not
+claim implemented behavior or a finalized storage format.
+
+**Tracking:** [Issue #7](https://github.com/MrQuality/yaja/issues/7),
+[B-003](backlog.md#b-003), [Q-008](open-questions.md#q-008), and
+[Q-006](open-questions.md#q-006).
+
+## Accepted contract direction
+
+### Configuration ownership and consistency
+
+Project configuration has explicit revisions. A successful work-item mutation
+must satisfy the configuration governing its commit. Checking an item's version
+alone is insufficient when validation also depends on configuration.
+
+Visibility is separate from authorization. Field validity must distinguish
+missing, null, empty, and invalid values according to field type. Hidden fields
+retain their values and remain readable by authorized clients, but are omitted
+from ordinary editing forms; ordinary writes to hidden fields are rejected.
+Optional fields may be absent. Clearing produces absence rather than a second
+stored null state. Required text contains non-whitespace text. Numeric zero is
+a value. Every supplied value satisfies its declared type and constraints.
+M1 custom-field kinds are text, number, Boolean, date, and single-choice.
+
+A configuration change must not silently invalidate existing items. In
+particular, making a field required needs authoritative evidence that applicable
+items comply, together with protection against concurrent writes invalidating
+that evidence. An eventually consistent search query is insufficient.
+
+Removing workflow membership or revoking a type's permitted workflow requires
+prior migration of affected items. Reject the configuration edit until those
+items no longer depend on the removed membership or permission. B-003 defines
+the invariant; B-005 must establish how the authoritative storage path enforces
+it.
+
+### Conversion and migration
+
+Type conversion validates the complete destination state. When the existing
+workflow is incompatible with the destination type, destination workflow and
+status selection belong to the conversion operation. Validation and acceptance
+must cover the resulting lifecycle transition as well as destination fields.
+
+Workflow migration always obeys the system phase graph. Done to New is
+prohibited, including through conversion or migration. Done to Active is
+reopening and retains [R-018](requirements.md#r-018)'s review requirements.
+For M1 a cross-phase migration requires both source and destination workflows
+to permit the phase change, plus authorization to migrate. A same-phase
+migration still requires authorization and valid destination references.
+
+Conversion must preserve knowledge, follow-up provenance, and lifecycle history.
+Removed source-type values are retained in conversion history even when absent
+from the current representation. Product history is distinct from operation
+replay retention. Physical representation and compaction belong to B-005.
+
+### Archival and reference integrity
+
+Existing references to archived configuration remain valid, and items can move
+away from archived targets. New assignments to archived targets are rejected.
+Before archiving an active default workflow or initial status, configure a valid
+replacement. These rules apply to explicit assignments as well as defaults.
+
+The exact meaning of a new assignment must be specified for each operation:
+retaining an existing status during an unrelated edit must remain possible.
+Archiving a work item clears any current-work selection of it and prevents new
+selection. Archived items are read-only until restored and remain retrievable
+through an explicit archive filter. Their history and relationships survive.
+Archival alone does not complete an item, report usage, or release resources.
+Its interaction with reservations must be specified before resource integration.
+
+### Relationships
+
+Cross-project relationships are allowed when the actor is authorized to access
+both endpoints. Reject self-links and duplicate links of the same relationship
+type between the same endpoints. Store one canonical relationship and derive
+its inverse display. Endpoint archival preserves links. Relationship types have
+stable identities and may be renamed; a referenced type cannot be deleted or
+reinterpreted. Archive it or introduce a new type instead. Generic relationship
+validity does not establish scheduling dependency validity; Q-011 owns those
+additional rules.
+
+### Identity and project history
+
+Title is configurable, not mandatory structural identity. Display a stable
+readable identifier when title is absent: a project prefix plus sequence number,
+backed by a separate internal identity that survives display naming changes.
+Projects have stable identity, name, readable identifier prefix, estimation
+unit, configuration revision, and archival state. Archive projects containing
+records instead of deleting them. Preserve configuration history needed to
+interpret historical operations. Destructive history cleanup is outside B-003.
+
+### Estimates
+
+A task estimate is an independent planning quantity in the project's selected
+unit, hours or story points. Resource demand is recorded separately. Resource
+usage does not automatically rewrite the task estimate, and the estimate does
+not automatically determine resource demand. No points-to-hours conversion or
+sum of heterogeneous resource-hours defines an estimate.
+
+Use exact decimal estimates, allow zero, reject negatives, and distinguish zero
+from absence (not estimated). M1 prohibits changing the project unit once an
+estimate has been recorded, including after that estimate is cleared. Numeric
+precision and bounds remain to specify. Scheduling must obtain explicit resource
+demand; its detailed rules remain with the scheduling questions.
+
+### Replay
+
+Preserve [D-016](decisions.md#d-016) and [D-017](decisions.md#d-017): after access
+checks, an identical recorded success is recognized before current version or
+mutable business-rule validation. A configuration change cannot turn that
+successful retry into a new execution or reject it under new field rules.
+Changed content under the same operation ID remains a distinct conflict.
+
+## Contract structure
+
+The accepted ownership and revision policy guide the typed specification.
+Names describe logical contracts and do not prescribe database collections,
+HTTP routes, serialization, or Rust inheritance.
+
+| Contract | Ownership and responsibility |
+| --- | --- |
+| Project | Stable identity, name, readable identifier prefix, estimate unit, configuration revision, archival state. |
+| Project configuration revision | A coherent set of field rules, type/workflow permissions, workflow membership, defaults, and transition restrictions. |
+| Work item | Stable identity, project and type references, workflow/status references, item version; phase derived from status. |
+| Field definition | Stable identity, owning type, value kind, and validation constraints; display names are not identity. |
+| Status | Stable project-scoped identity and phase mapping; display metadata is separate from identity. |
+| Workflow | Project-scoped status membership, initial status, and phase-transition restrictions. |
+| Current-work selection | User-scoped reference with its own concurrency boundary; selection does not mutate item lifecycle. |
+| Relationship | Stable identity, relationship-type reference, and endpoint identities; informational links do not imply scheduling behavior. |
+
+Reference invariant: an item's type, workflow, and status must resolve
+within its project configuration, and the status must belong to its workflow.
+Cross-project relationships are permitted; they do not weaken
+configuration reference checks.
+
+### Accepted configuration revision policy
+
+Use one logical project configuration revision initially, rather than several
+independently checked revisions. This reduces combinations of configuration
+states a command can observe. It is not a decision to embed all configuration
+or all items in one storage document.
+
+A new command supplies the configuration revision it was prepared against.
+If that revision is no longer current, return a configuration conflict and
+require revalidation as a new intention. Do not silently reinterpret the
+command under different field or workflow rules. This check follows successful
+operation replay and does not replace the item's expected-version check.
+
+The persisted success records which configuration revision governed acceptance.
+The history contract must retain enough information to interpret that state;
+the snapshot or reference representation is still to be designed.
+
+Configuration edits likewise carry an expected configuration revision. For
+changes affecting existing items, B-005 must provide a serialization mechanism
+or another demonstrated protocol that closes the gap between validation and
+commit. A revision recorded in a document, without that protocol, is not proof
+of consistency. The existing single-task uniqueness checks do not establish it.
+
+### Command boundaries proposed for review
+
+| Operation | Required validation and outcome |
+| --- | --- |
+| Create item | Resolve active type, workflow and initial status; validate destination fields; record one accepted item version. |
+| Edit fields | Validate allowed fields and resulting values; preserve workflow and type references. |
+| Change status | Validate target membership and eligibility, phase restrictions, and lifecycle effects. |
+| Convert type | Validate destination fields, workflow/status compatibility, preservation rules, and phase effects together. |
+| Migrate workflow | Validate destination permissions/status and applicable migration restrictions; preserve history. |
+| Change configuration | Check expected configuration revision and the effect on existing items and defaults. |
+| Select current work | Validate selection eligibility and update user context independently of lifecycle. |
+| Create relationship | Validate relationship type and endpoints under the decided integrity policy. |
+
+Proposed failure categories distinguish item-version conflict, configuration
+conflict, operation-ID reuse, invalid reference, archived target, invalid field
+value, prohibited transition, and migration required. HTTP mapping and stable
+wire error codes remain to be specified. A rejected operation must expose no
+partial destination state or lifecycle effects. An uncertain transport outcome
+is reconciled using the original operation ID.
+
+## Review resolutions
+
+All ten resolutions were accepted by the maintainer on 2026-09-29. C-09 retains
+the full configurable model in M1; no capability is deferred by this review.
+
+| ID | Area | Accepted resolution |
+| --- | --- | --- |
+| C-01 | Configuration revision and stale commands | One logical project revision; reject stale new commands, preserving successful replay precedence. |
+| C-02 | Configuration compatibility | Reject invalidating edits until affected items are migrated. |
+| C-03 | Migration | Both workflows permit a cross-phase change; migration also requires authorization. |
+| C-04 | Hidden fields and validity | Authorized reads remain possible; reject ordinary writes, preserve data, normalize clearing to absence, and validate values by type. Five initial custom-field kinds as above. |
+| C-05 | Archival | Clear current selection, preserve links/history, expose archive retrieval, and require restoration before edits. No implicit lifecycle/resource effects. |
+| C-06 | Relationships | Allow authorized cross-project links; reject self-links and duplicates; derive inverse display; preserve referenced identities and meanings. |
+| C-07 | Identity | Configurable title; readable project-prefix/sequence identifier plus stable internal identity. |
+| C-08 | Estimates | Exact nonnegative decimals; zero differs from absence; lock project unit after first recorded estimate. |
+| C-09 | M1 scope | Full configurable model in M1, divided into implementation slices in the backlog. |
+| C-10 | Project/history | Explicit project minimum fields; archive populated projects; retain configuration, conversion, knowledge, provenance, and lifecycle history. |
+
+## Remaining specification work
+
+These are narrower details, not a reopening of C-01 through C-10:
+
+- Set exact decimal precision and maximum values, text limits, date format,
+  single-choice option identity/edit rules, and command payload limits.
+- Specify readable identifier prefix rules, sequence allocation, and behavior
+  when a project prefix changes. Internal identity must remain stable.
+- Specify project archival effects on contained items, current selections, and
+  configuration commands; distinguish item archival from project archival.
+- Complete command payloads, typed results, error precedence and stable codes,
+  field-definition evolution rules, and the full phase-transition table.
+- Specify the consistency boundary for item archival plus selection clearing,
+  and cross-project relationship creation plus endpoint/configuration changes.
+- Implement meaningful pure contract checks and record results. Real-service
+  enforcement is a B-005 obligation, not evidence supplied by these checks.
+
+Routine representation choices should be proposed with concrete limits during
+typed-contract design. Any new behavioral ambiguity must be identified rather
+than silently treated as part of the maintainer's acceptance.
+
+## Acceptance scenarios
+
+These are specifications for future checks, not test results.
+
+| ID | Setup and operation | Required result | Verification boundary |
+| --- | --- | --- | --- |
+| BC-01 | Change between two statuses mapped to New, then enter Active. | Phase derives from status; neither change records usage. | Pure rules; S-01. |
+| BC-02 | Make a field required while a concurrent item edit removes its value. | The pair cannot both commit leaving an applicable item invalid. Either one is rejected/retried, or both are serialized into a valid result. | Pure rejection rules plus real storage contention in B-005. |
+| BC-03 | Retry a successful item command after its field or workflow configuration changes. | Return the original successful result without reapplying the operation; changed payload under the same ID conflicts. | Pure replay precedence plus durable replay check. |
+| BC-04 | Convert an item to a type that forbids its current workflow. | Reject an incomplete conversion; accept only a valid complete destination state. No partial conversion is visible. | Pure validation plus storage atomicity. |
+| BC-05 | Attempt Done to New using a status change, workflow migration, or type conversion. | Reject all three paths. | Pure transition rules. |
+| BC-06 | Migrate Done to Active through an otherwise permitted operation. | Recognize reopening and preserve prior history; resource reservations require review under R-018. | Pure effect classification; resource integration in B-011. |
+| BC-07 | Archive an initial status or a default workflow without replacement. | Reject the configuration change. With valid replacement, existing references remain usable but new assignments to archived targets fail. | Pure configuration rules plus storage consistency. |
+| BC-08 | Remove workflow membership or revoke a type's workflow permission while items still depend on it. | Reject silent invalidation; follow the decided compatibility/migration policy. | Pure rules plus authoritative reference check. |
+| BC-09 | Convert an item with knowledge, follow-up provenance, and completion history. | Required information remains available and attributable to the same item. | Contract checks plus persistence verification. |
+| BC-10 | Record hour estimates in one project and point estimates in another, then report resource usage. | Preserve separate estimate units and resource accounting; perform no implicit conversion. | Pure estimate rules after C-08. |
+| BC-11 | Submit an item with a status outside its workflow or configuration references from another project. | Reject invalid references; never accept independently supplied contradictory phase. | Pure reference validation. |
+| BC-12 | Select current work while another item is Active. | Selection alone changes no lifecycle state, usage, or reservations. | Pure selection rules after C-05. |
+| BC-13 | Submit a new command under an older configuration revision, including an otherwise valid payload. | Configuration conflict; an identical recorded success still replays. | Pure validation order; durable configuration coordination in B-005. |
+| BC-14 | Attempt cross-phase migration when only one workflow permits the change, or migration permission is absent. | Reject; both workflow restrictions and authorization must pass. | Pure rules; authoritative permission enforcement in B-007. |
+| BC-15 | Hide a populated field, read it with authorization, and attempt an ordinary write. | Retain/read its value; reject the write; clearing an optional visible field produces absence. | Pure field rules plus persistence preservation. |
+| BC-16 | Archive a currently selected item, then attempt to edit or select it. | Clear selection; reject edits/new selection until restoration; preserve links and history. | Pure eligibility plus coordinated persistence. |
+| BC-17 | Create a cross-project link, its duplicate, an inverse presentation, and a self-link. | Authorized first link succeeds; duplicate and self-link fail; inverse display does not create a second record. | Pure canonical identity plus storage uniqueness/access checks. |
+| BC-18 | Create an untitled item, rename a display prefix, and inspect history. | Readable fallback remains available; internal identity and history remain stable under the specified naming policy. | Pure identity policy after naming details are specified. |
+| BC-19 | Record zero, omit an estimate, submit a negative estimate, and change units after clearing a recorded estimate. | Zero and absence differ; negative and post-use unit changes fail. | Pure estimate rules. |
+| BC-20 | Convert an item and later expire its operation replay record. | Required history, including removed source-type values, remains available independently of replay retention. | Contract preservation plus B-005 retention/recovery checks. |
+
+## Completion and handoff
+
+B-003 remains open until its blocking choices are decided, the resulting typed
+contracts and errors are reviewed, and the required pure rule checks pass.
+Documentation acceptance alone does not satisfy issue #7's test requirement.
+
+B-005 owns demonstrated commit-time configuration consistency, authoritative
+reference checks, persistence, replay, and recovery. B-007 owns access enforcement.
+B-011 owns integrated resource effects. Keep those implementation gates visible
+without claiming they have been satisfied by this contract review.
+
+The current Rust task contract still requires a nonempty title and only accepts
+the status strings Open and Done. It supplies replay/version behavior but does
+not implement this domain contract. The next implementation must replace those
+provisional validation assumptions while retaining successful replay precedence.

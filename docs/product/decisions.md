@@ -139,6 +139,98 @@ Baseline: 2026-09-23. This record explains the choices behind the [requirements]
 
 **Pending search:** Keep the authoritative saved version and “Saved — search update pending”; offer “Refresh saved task” independently of index repair. Failed event delivery needs bounded retries, durable failure reporting, and a recovery path that accounts for retained PostgreSQL WAL. Define an operating budget for task count, memory, disk growth, startup, and save latency before calling the installation comfortable for daily use. References: [B-003](backlog.md#b-003), [B-005](backlog.md#b-005), [B-007](backlog.md#b-007), [Q-008](open-questions.md#q-008), [Q-020](open-questions.md#q-020), [Q-022](open-questions.md#q-022).
 
+<a id="d-018"></a>
+## D-018 — Establish configuration consistency and work-item contract boundaries
+
+**Status: Direction accepted by the maintainer on 2026-09-29; detailed contract
+choices remain open.** Give project configuration explicit revisions. Accepted
+work-item writes must satisfy the configuration governing their commit; item
+version checks alone do not establish that guarantee. Configuration edits must
+not silently invalidate existing items. Field visibility is separate from
+authorization, and authoritative validation must distinguish missing, null,
+empty, and invalid values by field type.
+
+Type conversion validates a complete destination state, including destination
+workflow/status when needed. Conversion preserves knowledge, follow-up
+provenance, and lifecycle history. Migration and conversion obey system phase
+rules: Done to New is prohibited, and Done to Active is reopening. Additional
+workflow restrictions on migration remain to be decided.
+
+Retain existing references to archived configuration and permit movement away
+from it; reject new assignments to archived targets. Require valid replacements
+before archiving an active default workflow or initial status. Workflow
+membership removal and permission revocation require an explicit compatibility
+or migration policy.
+
+A task estimate is an independent planning quantity in the project's selected
+unit. Resource demand is separate; there is no implicit points-to-hours
+conversion or aggregation of heterogeneous resource-hours into an estimate.
+Numeric representation and changing a project's estimate unit remain open.
+
+**Consequence:** Preserve D-016/D-017 replay precedence even after configuration
+changes. B-003 defines command invariants; B-005 must demonstrate enforcement
+under concurrent configuration and item writes. The existing single-task path
+does not establish this consistency. M1 scope, hidden-field behavior, migration
+restrictions, relationship integrity, and remaining representation choices are
+tracked in the [B-003 contract review](B-003-contract.md). Acceptance of this
+direction does not finalize those proposals or claim implementation.
+
+References: [Q-006](open-questions.md#q-006), [Q-008](open-questions.md#q-008),
+[B-003](backlog.md#b-003), [R-002](requirements.md#r-002),
+[R-005](requirements.md#r-005), [R-006](requirements.md#r-006), and
+[R-018](requirements.md#r-018).
+
+<a id="d-019"></a>
+## D-019 — Resolve the B-003 review and retain the full configurable M1
+
+**Status: Accepted by the maintainer on 2026-09-29.** This decision resolves
+the ten review areas C-01 through C-10 in the
+[B-003 contract](B-003-contract.md), refining D-018. Exact representation limits,
+remaining command details, and implementation evidence are still outstanding.
+
+- Use one logical configuration revision per project. Reject new commands
+  prepared against a stale revision and require revalidation as a new intention.
+  Preserve D-016/D-017 replay precedence for recorded successes.
+- Reject configuration changes that invalidate dependent items until those
+  items are migrated. Cross-phase workflow migration requires permission and
+  both source and destination workflows to permit the phase change.
+- Hidden fields retain data, remain readable by authorized clients, and reject
+  ordinary writes. Optional fields may be absent; clearing normalizes to absence.
+  Required text contains non-whitespace text; zero is a value. Initial custom
+  field kinds are text, number, Boolean, date, and single-choice.
+- Item archival clears current selection, prevents new selection, preserves
+  relationships/history, and permits explicit archive retrieval. Archived items
+  are read-only until restored. Archival has no implicit lifecycle or resource
+  effects; integration with reservations needs later specification.
+- Permit cross-project relationships with authorization for both endpoints.
+  Reject self-links and duplicates; derive inverse display from one canonical
+  relationship. Endpoint archival preserves links. Referenced relationship
+  types may be renamed but not deleted or reinterpreted; archive or replace them.
+- Keep title configurable. Use a readable project-prefix/sequence identifier
+  alongside stable internal identity. Project minimum fields are identity, name,
+  readable prefix, estimation unit, configuration revision, and archival state.
+- Estimates use exact nonnegative decimals. Zero differs from not estimated.
+  M1 prohibits changing the project unit after any estimate has been recorded.
+- Archive populated projects instead of deleting them. Preserve configuration
+  history needed to interpret prior operations, removed source-type values in
+  conversion history, knowledge, provenance, and lifecycle history independently
+  of replay retention. Destructive history cleanup is outside B-003.
+
+**M1 scope:** Implement the full proposed configurable model: Task and Milestone,
+project-defined types and custom fields, configurable field usage, workflows and
+statuses, type conversion, workflow migration, current-work selection, typed
+relationships and relationship-type administration, knowledge, estimates, and
+delegated administration. Split delivery into
+[M1 implementation slices](backlog.md#m1-configurable-model) without deferring
+these capabilities beyond M1. The alternative of a smaller configurable subset
+in M1 was not accepted.
+
+**Consequence:** B-003 remains contract work, with typed definitions and pure
+checks outstanding. B-004/B-005/B-006/B-007 implement and integrate the model.
+Detailed access grants and knowledge structure still require their respective
+questions to be resolved. M1 does not absorb later resource/scheduling features
+merely because configuration and relationships are included.
+
 ## How to change a decision
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.

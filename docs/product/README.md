@@ -10,8 +10,12 @@ sprint and Gantt planning, shared resources, scheduling, time tracking, and
 resource costs. Local use is the initial deployment target; broader hosting
 requirements remain open.
 
-The proposed first increment covers projects, tasks, configurable statuses,
-knowledge records, and durable local storage. The complete first-release scope
+The accepted first increment includes the full configurable project/work-item
+model, custom types and fields, workflows, conversion and migration, relationships,
+delegated administration, estimates, knowledge, and durable local storage.
+[D-019](decisions.md#d-019) records this scope; the
+[M1 implementation slices](backlog.md#m1-configurable-model) divide its delivery.
+The complete first-release scope
 also includes resource management, both planning views, manual and automatic
 scheduling, authorized overrides, manual entries and timers, and the specified
 cost policies. Automatic knowledge capture is outside the first release;
@@ -28,6 +32,7 @@ SOPs, their approval status, and enforcement coverage.
 | [Decisions](decisions.md) | Design choices and their rationale. |
 | [Open questions](open-questions.md) | Unresolved choices and affected work. |
 | [Backlog](backlog.md) | Proposed delivery order, dependencies, and requirement coverage. |
+| [B-003 contract review](B-003-contract.md) | Accepted contract direction, remaining decisions, and acceptance scenarios for projects and work items. |
 | [Spike register and approved procedure](../spikes/README.md) | Bounded investigations, reproducible evidence, and reusable findings. |
 
 **Confirmed** identifies requirements included in this planning baseline.

@@ -65,7 +65,9 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 
 **Question:** Is an hour-based task estimate independent of resource requirements, derived from driving resources, or something else? What should happen when they disagree? How does a point-estimated task acquire resource demand for scheduling?
 
-**Known:** Projects select hours or points, and YAJA uses hours. The relationship between task estimates and resource demand remains unresolved. There is no defined points-to-hours conversion.
+**Accepted direction:** Projects select hours or points, and YAJA uses hours. A task estimate is an independent planning quantity; resource demand is recorded separately. There is no implicit points-to-hours conversion or aggregation of heterogeneous resource-hours into a task estimate. See [D-018](decisions.md#d-018).
+
+**Further resolution, 2026-09-29:** [D-019](decisions.md#d-019) selects exact nonnegative decimals, distinguishes zero from absence, and prohibits M1 project-unit changes after the first recorded estimate. **Remaining:** Exact precision and bounds, and the detailed input of resource demand for scheduling. See C-08 and the remaining specification work in the [B-003 contract](B-003-contract.md).
 
 **Blocks:** Estimate semantics in [B-003](backlog.md#b-003)/[B-004](backlog.md#b-004), scheduling in [B-015](backlog.md#b-015). Status/phase logic can proceed independently.
 
@@ -90,6 +92,20 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 **Proposed M1 baseline, pending contract review:** Project identity, name, estimation unit, and configurable statuses; task identity, project, title, description, optional estimate, status reference, and version; structured knowledge entries and follow-up origin links; explicit current-work selection independent of Active. Use stable status IDs; permit renaming but initially block deletion of referenced statuses and changes to their phase mapping. Specify reopening and other transitions; leave unresolved transitions unavailable. Finalize this model before a durable record format is committed. M1 includes knowledge and follow-ups; the first release still includes sprint, Gantt, resource, and scheduling commitments.
 
 **Blocks:** [B-003](backlog.md#b-003), [B-004](backlog.md#b-004), parts of [B-011](backlog.md#b-011).
+
+**Contract review started, 2026-09-29:** [D-018](decisions.md#d-018) accepts
+configuration revision consistency, complete destination validation for
+conversion, mandatory preservation of knowledge/provenance/lifecycle history,
+archival reference protections, and system phase enforcement across migration
+and conversion. Done to New is prohibited. The earlier M1 baseline above remains
+historical proposal context, not a finalized record format. The
+[B-003 contract review](B-003-contract.md) records review areas C-01 through C-10.
+**Further resolution, 2026-09-29:** [D-019](decisions.md#d-019) accepts all ten
+resolutions, retaining the full configurable model in M1 and splitting its
+implementation. Scenarios BC-01 through BC-20 specify acceptance. Q-008 remains
+open for exact value/identity limits, project archival details, field-definition
+evolution, complete typed commands/errors, and contract checks; the accepted
+review decisions are not pending reconfirmation.
 
 <a id="q-009"></a>
 ## Q-009 — Scheduling demand, windows, and multiple drivers
