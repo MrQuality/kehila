@@ -10,7 +10,7 @@ YAJA is in early development. The current components are:
 | Development services | Four TCP ports and OpenSearch HTTP health | Readiness checks |
 | Go synchronization rules | Provisional evaluation requires matching schema version and a pure query | Table-driven unit test |
 | Go local task API boundary | Proxies authoritative task writes/reads to a worker; keeps version-gated search reads separate; checks loopback origin on mutations | Unit tests and a live boundary check |
-| Rust task mutation worker | Stores each accepted mutation and its replay result as one immutable FerretDB operation record; optimistic version and operation-ID indexes were checked against real services | Unit tests and a bounded live Go/Rust write/read/conflict check |
+| Rust task mutation worker | Stores each accepted mutation and its replay result as one immutable FerretDB operation record; optimistic version and operation-ID indexes were checked against real services | Pure/policy tests and automated live checks across two worker processes |
 | TypeScript contracts | Shared declarations | No runtime implementation |
 | Development tools | Staged-source verification and CI base selection | Temporary Git repository tests |
 
@@ -70,8 +70,12 @@ table has not yet been provisioned for CDC.
 
 The worker uses provisional, internally configurable 90-day limits for admitting
 an unseen UUIDv7 operation ID and replaying a recorded success after server commit.
-It looks up recorded successes before testing admission age or the current task
-version. It compares decoded typed fields rather than JSON byte order, returns
+Each attempt reads the current version and then looks up the operation record;
+only then does it decide replay, admission, validation, or version conflict. This
+ordering recognizes an identical concurrent success before rejecting its version;
+unique insert conflicts reload both observations. The pure task-contract function
+owns replay comparison, task validation, version conflict, and next-version rules.
+It compares decoded typed fields rather than JSON byte order, returns
 the original successful version for an identical replay, rejects changed-content
 reuse, and rejects expired IDs rather than executing them again. Rejected attempts
 are not retained. Old operation records are not yet compacted, so physical
@@ -88,3 +92,38 @@ search projection running; a separate live Go-to-Rust check passed with search
 deliberately stopped. These checks do not validate the production indexer, CDC, browser UI,
 authenticated access, or post-crash durability. The current missing-Origin policy
 is not a supported browser-session CSRF contract.
+
+## Worker boundary and execution limits
+
+The internal Rust HTTP listener rejects non-loopback bind addresses, unexpected
+Host headers, and requests carrying Origin or Sec-Fetch-Site. Mutations require
+`application/json`. Go constructs fresh upstream requests; it does not forward
+browser context headers. Direct CLI probes may omit browser headers. This is a
+transport boundary for disposable development, not owner authentication.
+
+The worker uses the asynchronous MongoDB driver and Axum on two runtime threads,
+with at most 16 active requests, eight in-flight storage operations, and eight
+database pool connections. Excess HTTP requests receive 503 `worker_busy`; request bodies are limited to 4096 bytes and
+three seconds. Waiting for a storage result has a four-second deadline; all
+admitted HTTP handlers, including reads and health, have a five-second deadline. Database
+connection and server-selection timeouts are two seconds. Timeout responses do
+not prove that a write was rejected: reconcile an uncertain outcome using the
+same operation ID. MongoDB 2.x driver futures run to completion in separate tasks;
+a timed-out caller releases its HTTP handler but the storage task retains its capacity permit
+until completion. This avoids unsafe driver cancellation and unbounded abandoned
+work. No further mutation command is started after its deadline, but a command
+already sent may still commit. A fully stalled pool rejects further storage work
+promptly until the dependency recovers; deadlines do not forcibly cancel server
+work. These are development limits, not measured product SLOs.
+
+The default full verification suite now launches independent workers against
+real FerretDB and checks concurrency, direct access rejection, stalled bodies,
+database transport stalls/recovery, and Go-to-Rust behavior with search down.
+See [required retesting](TESTING.md#required-retesting-after-task-path-changes).
+
+Local regression evidence (2026-09-29): the full verification suite and pure
+suite passed on Windows/Podman with PostgreSQL 16.13, FerretDB 1.24.2, NATS
+2.10.26, and OpenSearch 2.19.1. The full run included all 48 cross-process
+contention pairs, worker boundary checks, stalled body and database recovery,
+and the Go-to-Rust search-outage case. SP-001 C01-C06 were not rerun: their
+Python adapters, mapping, CDC configuration, and projection were unchanged.

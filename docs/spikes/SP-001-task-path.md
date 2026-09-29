@@ -27,8 +27,10 @@ consistent resource releases and cost adjustments without implementing that scop
 The experiment retains the reference storage/event stack. Its provisional HTTP
 contract is 200 for an acknowledged database save, with the persisted version and
 `sync_token: null`; search visibility is observed separately. A stalled indexer
-does not invalidate the saved write. This is an experimental recommendation,
-not an accepted product decision or replacement architecture.
+does not invalidate the saved write. This began as an experimental recommendation
+and was subsequently accepted for the first increment in [D-016](../product/decisions.md#d-016). The evidence
+remains bounded to the Python experiment; it does not establish a replacement
+architecture or complete Go/Rust implementation.
 
 ## Cases and latest observations
 
@@ -317,9 +319,11 @@ experiment's limitations when implementing the actual adapters.
   passed. R01-R03 are retained, including the replica-identity failure.
 - Resource result: this bounded prototype fits the observed workstation; no
   memory upgrade was demonstrated necessary. Runtime and containers are stopped.
-- Exact next action: design the durable operation ledger and Go/Rust implementation
-  against the retained cases and [D-016](../product/decisions.md#d-016), with a
-  fresh resource preflight before service execution.
+- Exact next action: continue B-005 from the in-progress immutable-operation
+  Go/Rust boundary, with production replication provisioning, indexing, and
+  recovery still outstanding. Run the automated task-path regression for changes
+  to that boundary; repeat C01-C06 only when the experiment or its evidence
+  boundary changes. See [required retesting](../TESTING.md#required-retesting-after-task-path-changes).
 - Open implementation work: collection lifecycle/schema handling, supported
   authentication/recovery objectives, cross-document consistency, and promotion
   of relevant cases into regression coverage alongside actual product adapters.

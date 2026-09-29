@@ -1,15 +1,23 @@
 //! Immutable task operations on the FerretDB mapping.
 
+use futures_util::TryStreamExt;
 use mongodb::{
     bson::doc,
     error::{ErrorKind, WriteFailure},
-    options::{FindOneOptions, IndexOptions},
-    sync::{Client, Collection},
-    IndexModel,
+    options::{ClientOptions, FindOneOptions, IndexOptions},
+    Client, Collection, IndexModel,
 };
 use serde::{Deserialize, Serialize};
-use std::time::{SystemTime, UNIX_EPOCH};
-use task_contract::{decide, Decision, Mutation, SuccessfulOperation, Task};
+use std::{
+    future::Future,
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
+use task_contract::{decide, Decision, Mutation, SuccessfulOperation};
+use tokio::{
+    sync::Semaphore,
+    time::{timeout, Instant},
+};
 use uuid::{Uuid, Version};
 
 const DAY_MS: u128 = 24 * 60 * 60 * 1000;
@@ -53,9 +61,11 @@ pub enum MutationOutcome {
     Unavailable,
 }
 
+#[derive(Clone)]
 pub struct Store {
     records: Collection<OperationRecord>,
     policy: OperationPolicy,
+    operations: Arc<Semaphore>,
 }
 
 fn now_ms() -> Option<u128> {
@@ -65,20 +75,6 @@ fn now_ms() -> Option<u128> {
             .ok()?
             .as_millis(),
     )
-}
-
-fn validate_new_mutation(request: &MutationRequest) -> Result<(), &'static str> {
-    if request.expected_version < 0
-        || request.expected_version == i64::MAX
-        || request.title.is_empty()
-        || request.title.len() > 128
-    {
-        return Err("invalid_mutation");
-    }
-    if request.status != "Open" && request.status != "Done" {
-        return Err("invalid_status");
-    }
-    Ok(())
 }
 
 pub fn validate_operation_id(request: &MutationRequest, now: u128) -> Result<u128, &'static str> {
@@ -108,21 +104,74 @@ fn duplicate_key(error: &mongodb::error::Error) -> bool {
 }
 
 impl Store {
-    pub fn connect(
+    pub async fn connect(
         uri: &str,
         database: &str,
         collection: &str,
         policy: OperationPolicy,
     ) -> Result<Self, mongodb::error::Error> {
-        let client = Client::with_uri_str(uri)?;
+        let mut options = ClientOptions::parse(uri).await?;
+        options.connect_timeout = Some(Duration::from_secs(2));
+        options.server_selection_timeout = Some(Duration::from_secs(2));
+        options.max_pool_size = Some(8);
+        options.retry_reads = Some(false);
+        options.retry_writes = Some(false);
+        let client = Client::with_options(options)?;
         Ok(Self {
             records: client.database(database).collection(collection),
             policy,
+            operations: Arc::new(Semaphore::new(8)),
         })
     }
 
+    // MongoDB 2.x requires polling driver futures to completion. A timed-out
+    // caller drops only the JoinHandle; the task retains its permit until the
+    // driver completes. This bounds abandoned work as well as active callers.
+    async fn execute<T, F, Fut>(&self, operation: F) -> Result<T, mongodb::error::Error>
+    where
+        T: Send + 'static,
+        F: FnOnce(Store, Instant) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<T, mongodb::error::Error>> + Send + 'static,
+    {
+        let permit = self
+            .operations
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| mongodb::error::Error::custom("worker_busy"))?;
+        let store = self.clone();
+        let budget = Duration::from_secs(4);
+        let deadline = Instant::now() + budget;
+        let task = tokio::spawn(async move {
+            let _permit = permit;
+            operation(store, deadline).await
+        });
+        timeout(budget, task)
+            .await
+            .map_err(|_| mongodb::error::Error::custom("dependency_timeout"))?
+            .map_err(|_| mongodb::error::Error::custom("operation_failed"))?
+    }
+
+    pub async fn install_indexes(&self) -> Result<(), mongodb::error::Error> {
+        self.execute(|store, _| async move { store.install_indexes_inner().await })
+            .await
+    }
+
+    pub async fn check_indexes(&self) -> Result<bool, mongodb::error::Error> {
+        self.execute(|store, _| async move { store.check_indexes_inner().await })
+            .await
+    }
+
+    pub async fn read(
+        &self,
+        task_id: &str,
+    ) -> Result<Option<OperationRecord>, mongodb::error::Error> {
+        let task_id = task_id.to_owned();
+        self.execute(move |store, _| async move { store.read_inner(&task_id).await })
+            .await
+    }
+
     /// Installation uses separate credentials from the serving process.
-    pub fn install_indexes(&self) -> Result<(), mongodb::error::Error> {
+    async fn install_indexes_inner(&self) -> Result<(), mongodb::error::Error> {
         for (keys, unique) in [
             (doc! { "task_id": 1, "operation_id": 1 }, true),
             (doc! { "task_id": 1, "version": -1 }, false),
@@ -131,16 +180,16 @@ impl Store {
                 .keys(keys)
                 .options(IndexOptions::builder().unique(unique).build())
                 .build();
-            self.records.create_index(model, None)?;
+            self.records.create_index(model, None).await?;
         }
         Ok(())
     }
 
-    pub fn check_indexes(&self) -> Result<bool, mongodb::error::Error> {
+    async fn check_indexes_inner(&self) -> Result<bool, mongodb::error::Error> {
         let mut operation = false;
         let mut version = false;
-        for index in self.records.list_indexes(None)? {
-            let index = index?;
+        let mut indexes = self.records.list_indexes(None).await?;
+        while let Some(index) = indexes.try_next().await? {
             if index.keys == doc! { "task_id": 1, "operation_id": 1 } {
                 operation = index
                     .options
@@ -155,77 +204,116 @@ impl Store {
         Ok(operation && version)
     }
 
-    pub fn read(&self, task_id: &str) -> Result<Option<OperationRecord>, mongodb::error::Error> {
-        self.records.find_one(
-            doc! { "task_id": task_id },
-            FindOneOptions::builder()
-                .sort(doc! { "version": -1 })
-                .build(),
-        )
+    async fn read_inner(
+        &self,
+        task_id: &str,
+    ) -> Result<Option<OperationRecord>, mongodb::error::Error> {
+        self.records
+            .find_one(
+                doc! { "task_id": task_id },
+                FindOneOptions::builder()
+                    .sort(doc! { "version": -1 })
+                    .build(),
+            )
+            .await
     }
 
-    pub fn mutate(&self, task_id: &str, request: &MutationRequest) -> MutationOutcome {
-        let Some(clock) = now_ms() else {
-            return MutationOutcome::Unavailable;
-        };
-        let issued_ms = match validate_operation_id(request, clock) {
-            Ok(value) => value,
-            Err(reason) => return MutationOutcome::Invalid(reason),
-        };
+    /// Cleanup is restricted to uniquely named regression collections.
+    pub async fn drop_test_collection(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if !self.records.name().starts_with("yaja_test_") {
+            return Err("cleanup requires a yaja_test_ collection".into());
+        }
+        self.execute(|store, _| async move { store.records.drop(None).await })
+            .await?;
+        Ok(())
+    }
+
+    pub async fn mutate(&self, task_id: &str, request: &MutationRequest) -> MutationOutcome {
+        let task_id = task_id.to_owned();
+        let request = request.clone();
+        self.execute(move |store, deadline| async move {
+            Ok(store.mutate_inner(&task_id, &request, deadline).await)
+        })
+        .await
+        .unwrap_or(MutationOutcome::Unavailable)
+    }
+
+    async fn mutate_inner(
+        &self,
+        task_id: &str,
+        request: &MutationRequest,
+        deadline: Instant,
+    ) -> MutationOutcome {
         let mutation = Mutation {
             operation_id: request.operation_id.clone(),
-            expected_version: request.expected_version as u64,
+            expected_version: request.expected_version,
             title: request.title.clone(),
             status: request.status.clone(),
         };
         for _ in 0..8 {
-            let previous = match self.records.find_one(
-                doc! { "task_id": task_id, "operation_id": &request.operation_id },
-                None,
-            ) {
+            if Instant::now() >= deadline {
+                return MutationOutcome::Unavailable;
+            }
+            // Observe the version BEFORE checking the operation record. If a
+            // competing identical request committed before this version read,
+            // the following lookup sees it. If it commits later, either lookup
+            // sees it or the unique insert fails and we reload both observations.
+            let current = match self.read_inner(task_id).await {
                 Ok(value) => value,
                 Err(_) => return MutationOutcome::Unavailable,
             };
-            if let Some(previous) = previous {
+            if Instant::now() >= deadline {
+                return MutationOutcome::Unavailable;
+            }
+            let previous = match self
+                .records
+                .find_one(
+                    doc! { "task_id": task_id, "operation_id": &request.operation_id },
+                    None,
+                )
+                .await
+            {
+                Ok(value) => value,
+                Err(_) => return MutationOutcome::Unavailable,
+            };
+            if Instant::now() >= deadline {
+                return MutationOutcome::Unavailable;
+            }
+            let Some(clock) = now_ms() else {
+                return MutationOutcome::Unavailable;
+            };
+            let issued_ms = match validate_operation_id(request, clock) {
+                Ok(value) => value,
+                Err(reason) => return MutationOutcome::Invalid(reason),
+            };
+            if let Some(previous) = &previous {
                 if !replay_valid(previous.committed_ms, clock, self.policy) {
                     return MutationOutcome::Invalid("operation_id_expired");
                 }
-                let original = Mutation {
-                    operation_id: previous.operation_id.clone(),
-                    expected_version: previous.expected_version as u64,
-                    title: previous.title.clone(),
-                    status: previous.status.clone(),
-                };
-                let current = Task {
-                    version: previous.version as u64,
-                    title: previous.title.clone(),
-                    status: previous.status.clone(),
-                    successful_operations: vec![SuccessfulOperation {
-                        operation_id: previous.operation_id,
-                        request: original,
-                        result_version: previous.version as u64,
-                    }],
-                };
-                return match decide(Some(&current), &mutation) {
-                    Decision::Replay { version } => MutationOutcome::Replay(version as i64),
-                    _ => MutationOutcome::OperationIdReused,
-                };
-            }
-            if !admission_valid(issued_ms, clock, self.policy) {
+            } else if !admission_valid(issued_ms, clock, self.policy) {
                 return MutationOutcome::Invalid("operation_id_expired");
             }
-            if let Err(reason) = validate_new_mutation(request) {
-                return MutationOutcome::Invalid(reason);
-            }
-            let current = match self.read(task_id) {
-                Ok(value) => value,
-                Err(_) => return MutationOutcome::Unavailable,
-            };
+            let recorded = previous.map(|record| SuccessfulOperation {
+                request: Mutation {
+                    operation_id: record.operation_id,
+                    expected_version: record.expected_version,
+                    title: record.title,
+                    status: record.status,
+                },
+                result_version: record.version,
+            });
             let version = current.as_ref().map_or(0, |record| record.version);
-            if version != request.expected_version {
-                return MutationOutcome::VersionConflict(version);
-            }
-            let next = version + 1;
+            let next = match decide(version, recorded.as_ref(), &mutation) {
+                Decision::Replay { version } => return MutationOutcome::Replay(version),
+                Decision::OperationIdReused => return MutationOutcome::OperationIdReused,
+                Decision::VersionConflict { current_version } => {
+                    return MutationOutcome::VersionConflict(current_version)
+                }
+                Decision::Invalid(reason) => return MutationOutcome::Invalid(reason),
+                Decision::Apply { version } => version,
+            };
             let record = OperationRecord {
                 id: format!("{task_id}:{next}"),
                 task_id: task_id.into(),
@@ -236,7 +324,10 @@ impl Store {
                 status: request.status.clone(),
                 committed_ms: clock as i64,
             };
-            match self.records.insert_one(record, None) {
+            if Instant::now() >= deadline {
+                return MutationOutcome::Unavailable;
+            }
+            match self.records.insert_one(record, None).await {
                 Ok(_) => return MutationOutcome::Saved(next),
                 Err(error) if duplicate_key(&error) => continue,
                 Err(_) => return MutationOutcome::Unavailable,
@@ -253,6 +344,56 @@ mod tests {
         DAY_MS,
     };
     use uuid::Uuid;
+
+    #[tokio::test]
+    async fn cancelled_callers_do_not_cancel_or_unbound_storage_work() {
+        use std::sync::Arc;
+        use tokio::sync::Barrier;
+        let store = super::Store::connect(
+            "mongodb://127.0.0.1:1",
+            "test",
+            "unused",
+            OperationPolicy {
+                admission_days: 90,
+                replay_days: 90,
+            },
+        )
+        .await
+        .unwrap();
+        // This tests task ownership, not database behavior; no command is sent.
+        let started = Arc::new(Barrier::new(9));
+        let release = Arc::new(Barrier::new(9));
+        let mut callers = Vec::new();
+        for _ in 0..8 {
+            let store = store.clone();
+            let started = started.clone();
+            let release = release.clone();
+            callers.push(tokio::spawn(async move {
+                store
+                    .execute(move |_, _| async move {
+                        started.wait().await;
+                        release.wait().await;
+                        Ok(())
+                    })
+                    .await
+            }));
+        }
+        started.wait().await;
+        for caller in callers {
+            caller.abort();
+            let _ = caller.await;
+        }
+        assert!(store.execute(|_, _| async { Ok(()) }).await.is_err());
+        release.wait().await;
+        tokio::time::timeout(std::time::Duration::from_secs(1), async {
+            while store.operations.available_permits() != 8 {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        assert!(store.execute(|_, _| async { Ok(()) }).await.is_ok());
+    }
 
     #[test]
     fn admission_and_replay_have_independent_clocks() {

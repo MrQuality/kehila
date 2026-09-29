@@ -1,15 +1,30 @@
-use serde_json::json;
-use std::{env, io::Read};
+use axum::{
+    body::to_bytes,
+    extract::{Request, State},
+    http::{Method, StatusCode},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
+    routing::any,
+    Json, Router,
+};
+use serde_json::{json, Value};
+use std::{env, net::SocketAddr, sync::Arc, time::Duration};
 use task_worker::{MutationOutcome, MutationRequest, OperationPolicy, Store};
-use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
+use tokio::{net::TcpListener, sync::Semaphore, time::timeout};
 
-fn reply(request: Request, status: u16, body: serde_json::Value) {
-    let response = Response::from_string(body.to_string())
-        .with_status_code(StatusCode(status))
-        .with_header(
-            Header::from_bytes("Content-Type", "application/json").expect("static header"),
-        );
-    let _ = request.respond(response);
+#[derive(Clone)]
+struct App {
+    store: Arc<Store>,
+    authority: String,
+    slots: Arc<Semaphore>,
+}
+
+fn reply(status: u16, body: Value) -> Response {
+    (
+        StatusCode::from_u16(status).expect("static status"),
+        Json(body),
+    )
+        .into_response()
 }
 
 fn task_id(path: &str) -> Option<&str> {
@@ -18,86 +33,95 @@ fn task_id(path: &str) -> Option<&str> {
         || id.len() > 80
         || !id
             .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
     {
         return None;
     }
     Some(id)
 }
 
-fn handle(store: &Store, mut request: Request) {
-    if request.method() == &Method::Get && request.url() == "/health" {
-        match store.check_indexes() {
-            Ok(true) => reply(request, 200, json!({"ready": true})),
-            _ => reply(request, 503, json!({"error": "indexes_unavailable"})),
-        }
-        return;
+async fn bounded(State(app): State<App>, request: Request, next: Next) -> Response {
+    // This listener is an internal Go-to-worker boundary, not a browser API.
+    // Go constructs a fresh request and never forwards browser context headers.
+    if request.headers().get("host").and_then(|h| h.to_str().ok()) != Some(app.authority.as_str())
+        || request.headers().contains_key("origin")
+        || request.headers().contains_key("sec-fetch-site")
+    {
+        return reply(403, json!({"error": "origin_forbidden"}));
     }
-    let Some(id) = task_id(request.url()).map(str::to_owned) else {
-        reply(request, 404, json!({"error": "unknown_path"}));
-        return;
+    let Ok(_permit) = app.slots.try_acquire() else {
+        return reply(503, json!({"error": "worker_busy"}));
     };
-    match request.method() {
-        Method::Get => match store.read(&id) {
+    timeout(Duration::from_secs(5), next.run(request))
+        .await
+        .unwrap_or_else(|_| reply(503, json!({"error": "dependency_unavailable"})))
+}
+
+async fn handle(State(app): State<App>, request: Request) -> Response {
+    if request.method() == Method::GET && request.uri().path() == "/health" {
+        return match app.store.check_indexes().await {
+            Ok(true) => reply(200, json!({"ready": true})),
+            _ => reply(503, json!({"error": "indexes_unavailable"})),
+        };
+    }
+    let Some(id) = task_id(request.uri().path()).map(str::to_owned) else {
+        return reply(404, json!({"error": "unknown_path"}));
+    };
+    match *request.method() {
+        Method::GET => match app.store.read(&id).await {
             Ok(Some(record)) => reply(
-                request,
                 200,
-                json!({
-                    "id": id, "version": record.version,
-                    "title": record.title, "status": record.status,
-                }),
+                json!({"id": id, "version": record.version, "title": record.title, "status": record.status}),
             ),
-            Ok(None) => reply(request, 404, json!({"error": "not_found"})),
-            Err(_) => reply(request, 503, json!({"error": "dependency_unavailable"})),
+            Ok(None) => reply(404, json!({"error": "not_found"})),
+            Err(_) => reply(503, json!({"error": "dependency_unavailable"})),
         },
-        Method::Post => {
-            let mut body = Vec::new();
+        Method::POST => {
             if request
-                .as_reader()
-                .take(4097)
-                .read_to_end(&mut body)
-                .is_err()
-                || body.is_empty()
-                || body.len() > 4096
+                .headers()
+                .get("content-type")
+                .and_then(|h| h.to_str().ok())
+                != Some("application/json")
             {
-                reply(request, 400, json!({"error": "invalid_body_size"}));
-                return;
+                return reply(415, json!({"error": "json_required"}));
             }
+            let body =
+                match timeout(Duration::from_secs(3), to_bytes(request.into_body(), 4096)).await {
+                    Err(_) => return reply(408, json!({"error": "body_timeout"})),
+                    Ok(Err(_)) => return reply(400, json!({"error": "invalid_body_size"})),
+                    Ok(Ok(body)) => body,
+                };
             let mutation: MutationRequest = match serde_json::from_slice(&body) {
                 Ok(value) => value,
-                Err(_) => {
-                    reply(request, 400, json!({"error": "invalid_mutation"}));
-                    return;
-                }
+                Err(_) => return reply(400, json!({"error": "invalid_mutation"})),
             };
-            match store.mutate(&id, &mutation) {
+            match app.store.mutate(&id, &mutation).await {
                 MutationOutcome::Saved(version) | MutationOutcome::Replay(version) => reply(
-                    request,
                     200,
                     json!({"id": id, "version": version, "sync_token": null}),
                 ),
                 MutationOutcome::OperationIdReused => {
-                    reply(request, 409, json!({"error": "operation_id_reused"}))
+                    reply(409, json!({"error": "operation_id_reused"}))
                 }
                 MutationOutcome::VersionConflict(current_version) => reply(
-                    request,
                     409,
                     json!({"error": "version_conflict", "current_version": current_version}),
                 ),
                 MutationOutcome::Invalid("operation_id_expired") => {
-                    reply(request, 409, json!({"error": "operation_id_expired"}))
+                    reply(409, json!({"error": "operation_id_expired"}))
                 }
-                MutationOutcome::Invalid(reason) => reply(request, 400, json!({"error": reason})),
+                MutationOutcome::Invalid(reason) => reply(400, json!({"error": reason})),
                 MutationOutcome::Unavailable => {
-                    reply(request, 503, json!({"error": "dependency_unavailable"}))
+                    reply(503, json!({"error": "dependency_unavailable"}))
                 }
             }
         }
-        _ => reply(request, 405, json!({"error": "method_not_allowed"})),
+        _ => reply(405, json!({"error": "method_not_allowed"})),
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+#[tokio::main(worker_threads = 2)]
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let uri = env::var("YAJA_MONGO_URL")?;
     let database = env::var("YAJA_TASK_DB").unwrap_or_else(|_| "yaja".into());
     let collection = env::var("YAJA_TASK_COLLECTION").unwrap_or_else(|_| "task_operations".into());
@@ -112,18 +136,42 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if policy.admission_days == 0 || policy.replay_days == 0 {
         return Err("operation admission and replay periods must be positive".into());
     }
-    let store = Store::connect(&uri, &database, &collection, policy)?;
-    if env::args().nth(1).as_deref() == Some("install-indexes") {
-        store.install_indexes()?;
-        return Ok(());
+    let store = timeout(
+        Duration::from_secs(5),
+        Store::connect(&uri, &database, &collection, policy),
+    )
+    .await??;
+    match env::args().nth(1).as_deref() {
+        Some("install-indexes") => {
+            timeout(Duration::from_secs(5), store.install_indexes()).await??;
+            return Ok(());
+        }
+        Some("drop-test-collection") => {
+            timeout(Duration::from_secs(5), store.drop_test_collection()).await??;
+            return Ok(());
+        }
+        Some(_) => return Err("unknown command".into()),
+        None => {}
     }
-    if !store.check_indexes()? {
+    if !timeout(Duration::from_secs(5), store.check_indexes()).await?? {
         return Err("required task operation indexes are missing".into());
     }
-    let listen = env::var("YAJA_WORKER_LISTEN_ADDR").unwrap_or_else(|_| "127.0.0.1:8082".into());
-    let server = Server::http(&listen)?;
-    for request in server.incoming_requests() {
-        handle(&store, request);
+    let listen: SocketAddr = env::var("YAJA_WORKER_LISTEN_ADDR")
+        .unwrap_or_else(|_| "127.0.0.1:8082".into())
+        .parse()?;
+    if !listen.ip().is_loopback() {
+        return Err("worker must bind to loopback".into());
     }
+    let listener = TcpListener::bind(listen).await?;
+    let app = App {
+        store: Arc::new(store),
+        authority: listener.local_addr()?.to_string(),
+        slots: Arc::new(Semaphore::new(16)),
+    };
+    let router = Router::new()
+        .fallback(any(handle))
+        .layer(middleware::from_fn_with_state(app.clone(), bounded))
+        .with_state(app);
+    axum::serve(listener, router).await?;
     Ok(())
 }

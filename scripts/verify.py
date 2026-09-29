@@ -17,9 +17,11 @@ def main():
                 [sys.executable, "scripts/check_branding.py"]]
     if not args.pure:
         commands += [[sys.executable, "scripts/healthcheck.py"], [sys.executable, "tests/integration/nats_probe.py"]]
-    commands += [["cargo", "test", "--locked", "-p", "yaja_query"] if args.pure
+    commands += [["cargo", "test", "--locked", "-p", "yaja_query", "-p", "task_contract"] if args.pure
                  else ["cargo", "test", "--locked", "--workspace"],
                  [sys.executable, "scripts/go_test.py"]]
+    if not args.pure:
+        commands.append([sys.executable, "tests/integration/task_path.py"])
     for command in commands:
         print("VERIFY:", " ".join(command), flush=True)
         subprocess.run(command, cwd=ROOT, check=True, timeout=300)
