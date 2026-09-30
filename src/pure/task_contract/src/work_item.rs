@@ -347,6 +347,29 @@ pub fn decide(
 
     let from = source_status.phase;
     let to = target_status.phase;
+    let effect = match classify_transition(source_workflow, target_workflow, from, to, migration) {
+        Ok(effect) => effect,
+        Err(error) => return Decision::Reject(error),
+    };
+    let Some(version) = item.version.checked_add(1) else {
+        return Decision::Reject(Error::VersionOverflow);
+    };
+    Decision::Apply(WorkItemChange {
+        workflow_id: target_workflow_id.clone(),
+        status_id: target_status_id.clone(),
+        phase: to,
+        version,
+        effect,
+    })
+}
+
+pub(crate) fn classify_transition(
+    source_workflow: &Workflow,
+    target_workflow: &Workflow,
+    from: Phase,
+    to: Phase,
+    migration: bool,
+) -> Result<LifecycleEffect, Error> {
     if from != to {
         let phase_change = PhaseChange::new(from, to);
         if (from == Phase::Done && to == Phase::New)
@@ -358,22 +381,12 @@ pub fn decide(
                     .permitted_phase_changes
                     .contains(&phase_change))
         {
-            return Decision::Reject(Error::ProhibitedPhaseChange);
+            return Err(Error::ProhibitedPhaseChange);
         }
     }
-    let Some(version) = item.version.checked_add(1) else {
-        return Decision::Reject(Error::VersionOverflow);
-    };
-    let effect = match (from, to) {
+    Ok(match (from, to) {
         (Phase::New | Phase::Active, Phase::Done) => LifecycleEffect::Completion,
         (Phase::Done, Phase::Active) => LifecycleEffect::Reopening,
         _ => LifecycleEffect::None,
-    };
-    Decision::Apply(WorkItemChange {
-        workflow_id: target_workflow_id.clone(),
-        status_id: target_status_id.clone(),
-        phase: to,
-        version,
-        effect,
     })
 }

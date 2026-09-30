@@ -349,6 +349,27 @@ through commit; B-005 owns that enforcement. The rule does not implement a
 project archive command, since archive changes project state rather than the
 configuration schema.
 
+### Sixth typed rule slice: type conversion
+
+The Rust `task_contract::conversion` module accepts a complete destination
+field-value set alongside explicit destination type, workflow, and status. A
+conversion to another type cannot proceed with an incompatible workflow,
+missing required destination field, archived destination, or prohibited phase
+change. A workflow change also needs migration authorization and both workflows'
+cross-phase permissions. Done to New remains forbidden; Done to Active produces
+the reopening effect. The converted item keeps its stable identity and advances
+one version. The result separates current destination values from a snapshot of
+source values for conversion history. Successful operation replay precedes
+changed configuration and item-version checks.
+
+The source-value snapshot is contract output, not proof of durable retention.
+B-005 must atomically store it with the converted item and keep it independently
+of replay expiration. Knowledge, follow-up provenance, and lifecycle history
+are outside the current pure WorkItem shape and must be preserved by the
+persistence conversion transaction. The pure tests cover BC-04 and BC-05's
+conversion path, the effect portion of BC-06, and the value/replay portions of
+BC-09 and BC-20. Durable preservation remains unverified.
+
 ## Review resolutions
 
 All ten resolutions were accepted by the maintainer on 2026-09-29. C-09 retains
