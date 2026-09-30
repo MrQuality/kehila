@@ -1,13 +1,15 @@
 # B-003 project and work-item contract review
 
-**Status:** Contract work in progress. The maintainer accepted the review
-recommendations and the ten review resolutions on 2026-09-29; the remaining
-project, identifier, field-kind, and M1 representation choices on 2026-09-30.
+**Status:** Typed contract complete for B-003; implementation remains in the
+linked backlog slices. The maintainer accepted the review recommendations and
+ten review resolutions on 2026-09-29, then the project, identifier, field,
+relationship, payload, and knowledge choices on 2026-09-30.
 [D-018](decisions.md#d-018), [D-019](decisions.md#d-019),
-[D-020](decisions.md#d-020), [D-021](decisions.md#d-021), and
-[D-022](decisions.md#d-022) and [D-023](decisions.md#d-023) record those decisions.
-The remaining specification work is listed below. This document does not
-claim implemented behavior or a finalized storage format.
+[D-020](decisions.md#d-020), [D-021](decisions.md#d-021),
+[D-022](decisions.md#d-022), [D-023](decisions.md#d-023), and
+[D-024](decisions.md#d-024) record those decisions. This document specifies
+logical behavior and pure decisions; it does not claim an implemented
+configurable worker or a physical storage format.
 
 **Tracking:** [Issue #7](https://github.com/MrQuality/yaja/issues/7),
 [B-003](backlog.md#b-003), [Q-008](open-questions.md#q-008), and
@@ -171,7 +173,7 @@ HTTP routes, serialization, or Rust inheritance.
 | Workflow | Project-scoped status membership, initial status, and phase-transition restrictions. |
 | Current-work selection | User-scoped reference with its own concurrency boundary; selection does not mutate item lifecycle. |
 | Relationship | Stable identity, relationship-type reference, and endpoint identities; informational links do not imply scheduling behavior. |
-| Knowledge entry | Stable identity, WorkItem identity, one of created file/decision/lesson/insight, validated value, independent version, and archival state. A created file is a labeled external reference. |
+| Knowledge entry | Stable identity, WorkItem identity, one of created file/decision/lesson/insight, validated value, and independent version history. A created file is a labeled external reference. |
 | Follow-up origin | Stable directed WorkItem-to-WorkItem provenance, including cross-project links with Link grants on both endpoints; no scheduling edge. |
 
 Reference invariant: an item's type, workflow, and status must resolve
@@ -193,8 +195,11 @@ command under different field or workflow rules. This check follows successful
 operation replay and does not replace the item's expected-version check.
 
 The persisted success records which configuration revision governed acceptance.
-The history contract must retain enough information to interpret that state;
-the snapshot or reference representation is still to be designed.
+Each accepted project configuration revision is immutable history identified by
+project and revision and retains the complete logical `Configuration` value.
+The operation success refers to that revision. B-005 chooses the physical
+snapshot/reference mapping and proves that replay and historical interpretation
+survive compaction and restore.
 
 Configuration edits likewise carry an expected configuration revision. For
 changes affecting existing items, B-005 must provide a serialization mechanism
@@ -202,7 +207,7 @@ or another demonstrated protocol that closes the gap between validation and
 commit. A revision recorded in a document, without that protocol, is not proof
 of consistency. The existing single-task uniqueness checks do not establish it.
 
-### Command boundaries proposed for review
+### Command boundaries
 
 | Operation | Required validation and outcome |
 | --- | --- |
@@ -646,26 +651,38 @@ endpoints, the child's unique origin, complete ancestry, and the operation
 record. Archival and conversion preserve the origin and endpoint identities;
 restoring an item does not create or remove origins.
 
-## Remaining specification work
+## Contract boundary and downstream implementation
 
-These are narrower details, not a reopening of C-01 through C-10:
+B-003 defines logical identities, values, revisions, authorization inputs,
+replay order, validation, results, and pure effects. The typed commands cover
+item create/edit/status/migration/conversion, project metadata and archival,
+configuration and choice-option administration, current-work selection,
+relationship creation and type administration, knowledge create/edit, and
+follow-up origin creation. Knowledge entries have no independent deletion or
+archival command in M1; WorkItem archival preserves them. The current worker
+does not implement this configurable model.
 
-- Audit command payloads, typed results, and operation-specific error
-  precedence across the completed pure slices. Stable domain codes exist;
-  adapters still need an HTTP mapping in B-004/B-006.
-- B-005 must demonstrate the decided archival and cross-project relationship
-  consistency boundaries against concurrent selection, endpoint, and
-  configuration changes.
-- Implement meaningful pure contract checks and record results. Real-service
-  enforcement is a B-005 obligation, not evidence supplied by these checks.
+Every new command checks current authorization before recorded-success replay;
+the same operation ID with different typed content conflicts. A recorded
+identical success precedes mutable version, archive, schema, and payload checks.
+For a new command, expected project configuration revision precedes dependent
+item/entry versions where applicable. Identity/coherence errors, archived
+targets, invalid values, and operation-specific restrictions then follow the
+order implemented in each pure decision. Stable domain error codes distinguish
+these outcomes; B-004/B-006 map them to transport responses without changing
+their meanings. No rejected command may expose partial effects.
 
-Routine representation choices should be proposed with concrete limits during
-typed-contract design. Any new behavioral ambiguity must be identified rather
-than silently treated as part of the maintainer's acceptance.
+B-005 must demonstrate configuration/item/relationship/selection consistency,
+unique IDs and canonical keys, history retention, operation replay, and restore
+under real contention. B-007 enforces current grants, including cross-project
+checks. B-004/B-006 own encoded HTTP request limits and decoding, while
+preserving the accepted logical command bounds. These are implementation gates
+for supported M1 behavior, not incomplete B-003 policy decisions.
 
 ## Acceptance scenarios
 
-These are specifications for future checks, not test results.
+These scenarios state logical acceptance. The pure checks cover the listed
+pure decisions; the named downstream issues own the service-level evidence.
 
 | ID | Setup and operation | Required result | Verification boundary |
 | --- | --- | --- | --- |
@@ -701,13 +718,20 @@ These are specifications for future checks, not test results.
 | BC-30 | Create a cross-project link while either endpoint project revision or item version changes, then retry a recorded success. | A new stale command identifies the changed project or item and is rejected. Identical success replays after current authorization; changed content under the same operation ID conflicts. No link may commit against an archived endpoint, changed type, or duplicate canonical key. | Pure command checks; B-005 atomic multi-record contention and B-007 current grants. |
 | BC-31 | Archive an item selected by two users, or archive a project with selected and unrelated users, while a selection changes concurrently. | Produce versioned clears only for affected users. The archive, matching Project/Configuration state where applicable, all clears, and success record commit together; otherwise none commit. Replay never reapplies clears. | Pure plan checks; B-005 authoritative selection set, contention, and atomicity. |
 | BC-32 | Submit a complete compatible configuration revision, retry it after later changes, then reuse its operation ID with changed content. | Apply one revision; replay the original result after current authorization; reject changed content. Reject an empty operation ID or a revision-only no-op. | Pure command checks; B-005 durable revision/history and operation record. |
+| BC-33 | Create and edit each knowledge kind, including a labeled file reference. | Keep kind and WorkItem ownership; append attributed versions; reject wrong kind, stale version, and invalid values. | Pure knowledge checks; B-005 retention and B-007 grants. |
+| BC-34 | Create a cross-project follow-up with and without Link grants; attempt a second origin or cycle. | Require both grants; accept one directed acyclic origin; reject duplicate origin and cycle. Preserve provenance through archive/conversion. | Pure provenance checks; B-005 atomic ancestry and B-007 grants. |
+| BC-35 | Rename/archive a historically used relationship type, then change its direction or remove it. | Permit rename/archive; reject reinterpretation and removal until affected links are migrated. | Pure configuration checks; B-005 historical-use evidence. |
+| BC-36 | Exceed complete-configuration count or text budget; retry a recorded success. | Reject a new oversized command with `payload_limit_exceeded`; replay an identical recorded success first. | Pure configuration checks; B-004/B-006 encoded-body limits. |
+| BC-37 | Change project name, prefix, and unit in one command; retry after another revision. | Advance Project and Configuration once; preserve issued IDs; enforce estimate-unit lock and successful replay. | Pure project metadata checks; B-005 atomic persistence. |
 
 ## Completion and handoff
 
-B-003 remains open until its remaining specification details are decided, the
-complete typed contracts and errors are reviewed, and the required pure rule
-checks pass.
-Documentation acceptance alone does not satisfy issue #7's test requirement.
+B-003's typed contract and required pure checks are complete on the contract
+branch. `python scripts/verify.py --pure`, `cargo clippy --locked -p
+task_contract --tests -- -D warnings`, and `cargo fmt --all -- --check`
+passed on 2026-09-30. The pure tests exercise S-01 phase behavior and the
+contract scenarios above at their stated pure boundary. They do not establish
+real-service enforcement.
 
 B-005 owns demonstrated commit-time configuration consistency, authoritative
 reference checks, persistence, replay, and recovery. B-007 owns access enforcement.

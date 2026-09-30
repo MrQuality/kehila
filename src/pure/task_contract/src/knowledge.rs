@@ -37,7 +37,6 @@ pub struct KnowledgeEntry {
     pub kind: KnowledgeKind,
     pub value: KnowledgeValue,
     pub version: i64,
-    pub archived: bool,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

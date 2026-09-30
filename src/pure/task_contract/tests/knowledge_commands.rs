@@ -144,7 +144,6 @@ fn edit_rejects_stale_entry_and_corrupt_history() {
         kind: KnowledgeKind::Lesson,
         value: KnowledgeValue::Text("old".into()),
         version: 2,
-        archived: false,
     };
     let snapshot = KnowledgeSnapshot {
         item: item(),

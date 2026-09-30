@@ -15,7 +15,6 @@ fn entry(kind: KnowledgeKind, value: KnowledgeValue) -> KnowledgeEntry {
         kind,
         value,
         version: 1,
-        archived: false,
     }
 }
 

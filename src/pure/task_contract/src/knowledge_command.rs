@@ -143,7 +143,6 @@ pub fn decide_knowledge(
                 kind: *kind,
                 value: value.clone(),
                 version: 1,
-                archived: false,
             };
             if let Err(error) = entry.validate() {
                 return Reject(E::Value(error));
@@ -171,9 +170,6 @@ pub fn decide_knowledge(
                 return Reject(E::VersionConflict {
                     current_version: current.version,
                 });
-            }
-            if current.archived {
-                return Reject(E::ArchivedTarget);
             }
             if current.version == i64::MAX {
                 return Reject(E::VersionExhausted);

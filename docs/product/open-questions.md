@@ -67,9 +67,9 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 
 **Accepted direction:** Projects select hours or points, and YAJA uses hours. A task estimate is an independent planning quantity; resource demand is recorded separately. There is no implicit points-to-hours conversion or aggregation of heterogeneous resource-hours into a task estimate. See [D-018](decisions.md#d-018).
 
-**Further resolution, 2026-09-29:** [D-019](decisions.md#d-019) selects exact nonnegative decimals, distinguishes zero from absence, and prohibits M1 project-unit changes after the first recorded estimate. [D-021](decisions.md#d-021) fixes M1 precision and bounds. **Remaining:** Detailed resource-demand input for scheduling. See C-08 and the remaining specification work in the [B-003 contract](B-003-contract.md).
+**Further resolution, 2026-09-29:** [D-019](decisions.md#d-019) selects exact nonnegative decimals, distinguishes zero from absence, and prohibits M1 project-unit changes after the first recorded estimate. [D-021](decisions.md#d-021) fixes M1 precision and bounds. **Remaining outside B-003:** Detailed resource-demand input for scheduling. See C-08 in the [B-003 contract](B-003-contract.md).
 
-**Blocks:** Estimate semantics in [B-003](backlog.md#b-003)/[B-004](backlog.md#b-004), scheduling in [B-015](backlog.md#b-015). Status/phase logic can proceed independently.
+**Blocks:** Estimate implementation in [B-004](backlog.md#b-004) and scheduling in [B-015](backlog.md#b-015). B-003 estimate semantics are resolved.
 
 <a id="q-007"></a>
 ## Q-007 — Sprint membership and boundary behavior
@@ -91,7 +91,7 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 
 **Proposed M1 baseline, pending contract review:** Project identity, name, estimation unit, and configurable statuses; task identity, project, title, description, optional estimate, status reference, and version; structured knowledge entries and follow-up origin links; explicit current-work selection independent of Active. Use stable status IDs; permit renaming but initially block deletion of referenced statuses and changes to their phase mapping. Specify reopening and other transitions; leave unresolved transitions unavailable. Finalize this model before a durable record format is committed. M1 includes knowledge and follow-ups; the first release still includes sprint, Gantt, resource, and scheduling commitments.
 
-**Blocks:** [B-003](backlog.md#b-003), [B-004](backlog.md#b-004), parts of [B-011](backlog.md#b-011).
+**Blocks:** Implementation in [B-004](backlog.md#b-004) and parts of [B-011](backlog.md#b-011). B-003 is resolved below.
 
 **Contract review started, 2026-09-29:** [D-018](decisions.md#d-018) accepts
 configuration revision consistency, complete destination validation for
@@ -133,6 +133,12 @@ coordination across those records.
 matching Project/Configuration archive state and versioned current-work
 selection clears. B-005 still must prove complete selection discovery and
 atomic commit under concurrent selection changes.
+**B-003 resolution, 2026-09-30:** [D-024](decisions.md#d-024) and the
+[completed typed contract](B-003-contract.md) fix knowledge and follow-up
+representation, project and relationship administration, logical payloads,
+error precedence, and pure acceptance checks. Q-008 no longer blocks B-003.
+Durable mapping and contention proofs belong to B-005; access enforcement to
+B-007; transport and application behavior to B-004/B-006.
 
 <a id="q-009"></a>
 ## Q-009 — Scheduling demand, windows, and multiple drivers
@@ -214,7 +220,8 @@ the other permissions in this question remain open.
 
 **Known:** All five knowledge categories in R-005 are required and manual entry is sufficient. File upload, automatic scanning, and commit integration are not implied.
 
-**Blocks:** B-004 implementation until B-003 completes its command and history contract.
+**Status:** Resolved for M1 in [D-024](decisions.md#d-024) and the
+[B-003 command contract](B-003-contract.md#knowledge-value-contract).
 
 <a id="q-017"></a>
 ## Q-017 — Usage corrections, overrun, and timers

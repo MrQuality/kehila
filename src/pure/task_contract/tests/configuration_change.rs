@@ -204,6 +204,21 @@ fn complete_configuration_has_count_and_utf8_text_budgets() {
         decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
         ConfigurationChangeDecision::Reject(ConfigurationChangeError::PayloadLimitExceeded)
     );
+    let recorded = SuccessfulConfigurationChange {
+        project_id: previous.project_id.clone(),
+        request: command.clone(),
+        result: command.proposed.clone(),
+    };
+    assert_eq!(
+        decide_configuration_change(
+            &previous,
+            &snapshot(vec![]),
+            Some(&recorded),
+            true,
+            &command
+        ),
+        ConfigurationChangeDecision::Replay(command.proposed.clone())
+    );
 }
 
 #[test]

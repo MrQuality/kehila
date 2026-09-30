@@ -102,15 +102,16 @@ settings.
 <a id="b-003"></a>
 ## B-003 — Specify project/task contracts and workflow rules
 
-**Status:** Contract and decision work in progress. [D-018](decisions.md#d-018)
+**Status:** Typed contract and pure-rule checks complete on the B-003 branch; B-004/B-005/B-006/B-007 implement and verify the behavior. [D-018](decisions.md#d-018)
 records the accepted review direction; [D-019](decisions.md#d-019) resolves the
 ten review areas and retains the full M1 scope. [D-020](decisions.md#d-020) and
 [D-021](decisions.md#d-021) settle project archival, readable IDs, and M1 value
 limits. [D-022](decisions.md#d-022) settles the phase graph, relationship-type
 ownership, and link-creation grants. [D-023](decisions.md#d-023) bounds item
-field payloads. The [contract review](B-003-contract.md)
-tracks remaining specification details and acceptance scenarios. Durable records are not
-finalized, and required pure rule checks remain to implement.
+field payloads; [D-024](decisions.md#d-024) settles knowledge and follow-up
+provenance. The [contract review](B-003-contract.md) records accepted logical
+limits, typed commands, pure-check evidence, and downstream consistency gates.
+Durable records and the configurable worker are not implemented here.
 **Dependencies:** B-001; align persistence contracts with B-002.
 
 **Traceability:** [R-001](requirements.md#r-001), [R-002](requirements.md#r-002), [R-006](requirements.md#r-006), [R-007](requirements.md#r-007). **Questions:** [Q-006](open-questions.md#q-006), [Q-008](open-questions.md#q-008).
