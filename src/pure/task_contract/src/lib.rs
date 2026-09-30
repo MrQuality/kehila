@@ -13,6 +13,7 @@ pub mod knowledge;
 pub mod knowledge_command;
 pub mod payload;
 pub mod project;
+pub mod project_admin;
 pub mod relationship;
 pub mod relationship_command;
 pub mod work_item;

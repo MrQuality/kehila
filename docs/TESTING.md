@@ -50,6 +50,9 @@ Pure project-rule tests cover archive access effects, project-local readable ID
 allocation across prefix changes, exact estimate parsing and unit locking, and
 the populated-field kind-change rule. Their cross-record storage effects are
 still unverified.
+Project metadata command tests cover one coordinated revision, name and unit
+validation, estimate-unit locking, and replay precedence. Atomic persistence
+is B-005 work.
 Pure field-rule tests cover hidden value preservation, optional/required
 validation, typed values and WorkItem type ownership, choice-option archival,
 and calendar boundaries. Required-field changes under concurrent writes still

@@ -187,7 +187,7 @@ pub fn change_prefix(project: &Project, prefix: &str) -> Result<Project, Project
     Ok(next)
 }
 
-fn valid_prefix(prefix: &str) -> bool {
+pub fn valid_prefix(prefix: &str) -> bool {
     (2..=12).contains(&prefix.len())
         && prefix.as_bytes()[0].is_ascii_uppercase()
         && prefix

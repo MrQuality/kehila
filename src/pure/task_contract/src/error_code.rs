@@ -14,6 +14,7 @@ use crate::item_mutation::ItemMutationError;
 use crate::knowledge::KnowledgeError;
 use crate::knowledge_command::KnowledgeError as KnowledgeCommandError;
 use crate::project::ProjectError;
+use crate::project_admin::ProjectMetadataError;
 use crate::relationship::RelationshipError;
 use crate::relationship_command::RelationshipCreateError;
 use crate::work_item::Error as WorkItemError;
@@ -206,6 +207,23 @@ impl StableCode for ProjectError {
             Self::InvalidEstimate => Code::InvalidEstimate,
             Self::EstimateUnitLocked => Code::EstimateUnitLocked,
             Self::FieldMigrationRequired => Code::MigrationRequired,
+        }
+    }
+}
+
+impl StableCode for ProjectMetadataError {
+    fn code(&self) -> Code {
+        match self {
+            Self::Unauthorized => Code::Unauthorized,
+            Self::OperationIdReused => Code::OperationIdReused,
+            Self::ConfigurationConflict { .. } => Code::ConfigurationConflict,
+            Self::InvalidReference => Code::InvalidReference,
+            Self::InvalidOperation => Code::InvalidOperation,
+            Self::InvalidName => Code::InvalidName,
+            Self::InvalidPrefix => Code::InvalidPrefix,
+            Self::ArchivedProject => Code::ArchivedProject,
+            Self::EstimateUnitLocked => Code::EstimateUnitLocked,
+            Self::RevisionExhausted => Code::VersionExhausted,
         }
     }
 }

@@ -212,6 +212,7 @@ of consistency. The existing single-task uniqueness checks do not establish it.
 | Convert type | Validate destination fields, workflow/status compatibility, preservation rules, and phase effects together. |
 | Migrate workflow | Validate destination permissions/status and applicable migration restrictions; preserve history. |
 | Change configuration | Check expected configuration revision and the effect on existing items and defaults. |
+| Change project metadata | Check one shared expected revision, name/prefix/unit rules and prior estimate use; advance Project and Configuration together. |
 | Select current work | Validate selection eligibility and update user context independently of lifecycle. |
 | Create relationship | Supply owner-qualified type and endpoint identities, expected revisions for both projects and versions for both items, operation ID, and trusted record ID; validate grants, current eligibility, and canonical uniqueness. |
 
@@ -617,6 +618,14 @@ relationship-type administration command is a complete configuration revision
 and uses the same bound. HTTP encoded-body limits and decoding budgets are
 transport contracts for B-004/B-006 and may be stricter or use chunked
 administration later; they cannot silently reduce this logical M1 contract.
+
+Project metadata changes replace name, readable-ID prefix, and estimate unit
+together under the same project configuration revision. A name is nonblank,
+free of control characters, and at most 256 UTF-8 bytes. Prefix rules and the
+monotonic estimate-unit lock apply. A no-op is rejected. Project and matching
+Configuration revisions advance once; issued readable IDs stay unchanged.
+Current project configuration authorization is checked before replay. B-005
+must persist both records, revision history, and the success record together.
 
 ### Follow-up origin contract
 
