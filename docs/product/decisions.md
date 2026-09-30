@@ -286,6 +286,30 @@ References: [Q-006](open-questions.md#q-006),
 [Q-008](open-questions.md#q-008), [R-002](requirements.md#r-002), and
 [the contract review](B-003-contract.md).
 
+<a id="d-022"></a>
+## D-022 — Bound the phase graph and scope relationship types and grants
+
+**Status: Accepted by the maintainer on 2026-09-30.** The system allows five
+cross-phase edges: New to Active, New to Done, Active to New, Active to Done,
+and Done to Active. Done to New is forbidden. A workflow may allow a subset of
+those edges. Changing status within the same phase is allowed when the target
+status belongs to the workflow. Cross-phase workflow migration requires both
+workflows to allow the edge and separate migration authorization.
+
+A project-defined relationship type belongs to one project and may link two
+WorkItems only when at least one endpoint belongs to that project. The type's
+identity includes its owning project, so equal local type IDs in different
+projects do not collide. Cross-project links are allowed. Creating a link
+requires permission to use the type in its owning project and explicit Link
+permission on each endpoint item. Administering the type requires project
+configuration permission in its owning project. B-007 defines grants and
+enforces these checks at the access boundary; B-005 enforces endpoint integrity
+and canonical uniqueness under concurrent creation.
+
+**Consequence:** [B-003](backlog.md#b-003) carries these rules in its typed
+contract and pure decision checks. References: [Q-008](open-questions.md#q-008),
+[Q-014](open-questions.md#q-014), [B-003 contract](B-003-contract.md).
+
 ## How to change a decision
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.

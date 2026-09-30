@@ -73,6 +73,11 @@ fn selection_and_relationship_failures_are_distinguishable() {
     );
     assert_eq!(RelationshipError::SelfLink.code(), Code::SelfLink);
     assert_eq!(
+        RelationshipError::UnrelatedTypeOwner.code(),
+        Code::UnrelatedTypeOwner
+    );
+    assert_eq!(Code::UnrelatedTypeOwner.as_str(), "unrelated_type_owner");
+    assert_eq!(
         RelationshipError::Duplicate.code(),
         Code::DuplicateRelationship
     );

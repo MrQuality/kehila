@@ -114,6 +114,9 @@ changes, and rejects in-place value-kind changes for populated fields. The
 open for complete typed commands and remaining administration/checks.
 **Further resolution, 2026-09-30:** [D-021](decisions.md#d-021) fixes the
 project-scoped readable-ID lookup policy and M1 value limits.
+**Further resolution, 2026-09-30:** [D-022](decisions.md#d-022) fixes the full
+M1 phase graph and relationship-type ownership. Q-008 remains open for the
+remaining typed command and representation details in B-003.
 
 <a id="q-009"></a>
 ## Q-009 — Scheduling demand, windows, and multiple drivers
@@ -170,6 +173,12 @@ project-scoped readable-ID lookup policy and M1 value limits.
 **Question:** What identities, project roles, and grants exist? Who can manage statuses, shared resources, rates, usage, and scheduling exceptions? Who may view costs? Which item dates can be fixed and how are overrides removed? Are task-specific scheduling-driver overrides needed?
 
 **Known:** Project administrators define statuses, and scheduling overrides require permission, including in local deployments. Task-specific driver overrides remain an open proposal.
+
+**Further resolution, 2026-09-30:** [D-022](decisions.md#d-022) fixes link
+creation grants: type use in its owning project and Link on each endpoint item.
+Type administration requires project configuration permission in the owner
+project. B-007 still defines grant assignment, revocation, and enforcement;
+the other permissions in this question remain open.
 
 **Blocks:** [B-007](backlog.md#b-007), permissions in [B-008](backlog.md#b-008)/[B-012](backlog.md#b-012)/[B-016](backlog.md#b-016).
 

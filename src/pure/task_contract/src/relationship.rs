@@ -13,6 +13,7 @@ pub enum Direction {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RelationshipType {
+    pub owner_project_id: ProjectId,
     pub id: RelationshipTypeId,
     pub direction: Direction,
     pub archived: bool,
@@ -43,6 +44,7 @@ impl Endpoint {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct RelationshipKey {
+    pub owner_project_id: ProjectId,
     pub type_id: RelationshipTypeId,
     pub from: EndpointIdentity,
     pub to: EndpointIdentity,
@@ -52,10 +54,19 @@ pub struct RelationshipKey {
 pub enum RelationshipError {
     Unauthorized,
     InvalidReference,
+    UnrelatedTypeOwner,
     SelfLink,
     Duplicate,
     ArchivedTarget,
     ArchivedType,
+}
+
+/// Authorization results supplied by the access layer for link creation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct LinkAuthorization {
+    pub can_use_type: bool,
+    pub can_link_from: bool,
+    pub can_link_to: bool,
 }
 
 /// Derive one stored identity. Directed inverse presentation does not create
@@ -65,7 +76,8 @@ pub fn canonical_key(
     from: &Endpoint,
     to: &Endpoint,
 ) -> Result<RelationshipKey, RelationshipError> {
-    if kind.id.0.is_empty()
+    if kind.owner_project_id.0.is_empty()
+        || kind.id.0.is_empty()
         || from.project_id.0.is_empty()
         || from.item_id.0.is_empty()
         || to.project_id.0.is_empty()
@@ -78,10 +90,14 @@ pub fn canonical_key(
     if from == to {
         return Err(RelationshipError::SelfLink);
     }
+    if from.project_id != kind.owner_project_id && to.project_id != kind.owner_project_id {
+        return Err(RelationshipError::UnrelatedTypeOwner);
+    }
     if kind.direction == Direction::Symmetric && from > to {
         std::mem::swap(&mut from, &mut to);
     }
     Ok(RelationshipKey {
+        owner_project_id: kind.owner_project_id.clone(),
         type_id: kind.id.clone(),
         from,
         to,
@@ -94,11 +110,10 @@ pub fn decide_relationship(
     kind: &RelationshipType,
     from: &Endpoint,
     to: &Endpoint,
-    can_access_from: bool,
-    can_access_to: bool,
+    authorization: LinkAuthorization,
     existing: &[RelationshipKey],
 ) -> Result<RelationshipKey, RelationshipError> {
-    if !can_access_from || !can_access_to {
+    if !authorization.can_use_type || !authorization.can_link_from || !authorization.can_link_to {
         return Err(RelationshipError::Unauthorized);
     }
     if kind.archived {

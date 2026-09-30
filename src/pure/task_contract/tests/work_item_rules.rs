@@ -79,6 +79,25 @@ fn configuration() -> Configuration {
     }
 }
 
+#[test]
+fn system_phase_graph_has_five_cross_phase_edges() {
+    let phases = [Phase::New, Phase::Active, Phase::Done];
+    let expected = [
+        [false, true, true],
+        [true, false, true],
+        [false, true, false],
+    ];
+    for (from_index, from) in phases.iter().enumerate() {
+        for (to_index, to) in phases.iter().enumerate() {
+            assert_eq!(
+                PhaseChange::new(*from, *to).is_system_allowed(),
+                expected[from_index][to_index],
+                "unexpected edge {from:?} to {to:?}"
+            );
+        }
+    }
+}
+
 fn item(status: &str, version: u64) -> WorkItem {
     WorkItem {
         id: WorkItemId("item".into()),

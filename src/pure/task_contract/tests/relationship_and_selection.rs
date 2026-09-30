@@ -2,8 +2,8 @@ use task_contract::current_work::{
     decide_selection, CurrentWork, SelectionError, SelectionResult, UserId,
 };
 use task_contract::relationship::{
-    canonical_key, decide_relationship, Direction, Endpoint, RelationshipError, RelationshipKey,
-    RelationshipType, RelationshipTypeId,
+    canonical_key, decide_relationship, Direction, Endpoint, LinkAuthorization, RelationshipError,
+    RelationshipKey, RelationshipType, RelationshipTypeId,
 };
 use task_contract::work_item::{ProjectId, WorkItemId};
 
@@ -18,9 +18,18 @@ fn endpoint(project: &str, item: &str) -> Endpoint {
 
 fn relation_type(direction: Direction) -> RelationshipType {
     RelationshipType {
+        owner_project_id: ProjectId("one".into()),
         id: RelationshipTypeId("related".into()),
         direction,
         archived: false,
+    }
+}
+
+fn grants(type_use: bool, from_link: bool, to_link: bool) -> LinkAuthorization {
+    LinkAuthorization {
+        can_use_type: type_use,
+        can_link_from: from_link,
+        can_link_to: to_link,
     }
 }
 
@@ -30,12 +39,13 @@ fn cross_project_links_require_access_to_both_endpoints() {
     let right = endpoint("two", "b");
     let kind = relation_type(Direction::Directed);
     assert_eq!(
-        decide_relationship(&kind, &left, &right, true, false, &[]),
+        decide_relationship(&kind, &left, &right, grants(true, true, false), &[]),
         Err(RelationshipError::Unauthorized)
     );
     assert_eq!(
-        decide_relationship(&kind, &left, &right, true, true, &[]),
+        decide_relationship(&kind, &left, &right, grants(true, true, true), &[]),
         Ok(RelationshipKey {
+            owner_project_id: kind.owner_project_id.clone(),
             type_id: kind.id.clone(),
             from: left.identity(),
             to: right.identity(),
@@ -44,17 +54,50 @@ fn cross_project_links_require_access_to_both_endpoints() {
 }
 
 #[test]
+fn creating_a_link_requires_type_use_and_link_on_both_endpoints() {
+    let left = endpoint("one", "a");
+    let right = endpoint("two", "b");
+    let kind = relation_type(Direction::Directed);
+    for authorization in [
+        grants(false, true, true),
+        grants(true, false, true),
+        grants(true, true, false),
+    ] {
+        assert_eq!(
+            decide_relationship(&kind, &left, &right, authorization, &[]),
+            Err(RelationshipError::Unauthorized)
+        );
+    }
+}
+
+#[test]
+fn type_owner_must_be_an_endpoint_and_scopes_type_identity() {
+    let one = endpoint("one", "a");
+    let two = endpoint("two", "b");
+    let three = endpoint("three", "c");
+    let mut kind = relation_type(Direction::Directed);
+    assert_eq!(
+        canonical_key(&kind, &two, &three),
+        Err(RelationshipError::UnrelatedTypeOwner)
+    );
+    let one_owned = canonical_key(&kind, &one, &two).unwrap();
+    kind.owner_project_id = ProjectId("two".into());
+    let two_owned = canonical_key(&kind, &one, &two).unwrap();
+    assert_ne!(one_owned, two_owned);
+}
+
+#[test]
 fn self_links_and_duplicate_canonical_links_are_rejected() {
     let left = endpoint("one", "a");
     let right = endpoint("one", "b");
     let kind = relation_type(Direction::Directed);
     assert_eq!(
-        decide_relationship(&kind, &left, &left, true, true, &[]),
+        decide_relationship(&kind, &left, &left, grants(true, true, true), &[]),
         Err(RelationshipError::SelfLink)
     );
-    let first = decide_relationship(&kind, &left, &right, true, true, &[]).unwrap();
+    let first = decide_relationship(&kind, &left, &right, grants(true, true, true), &[]).unwrap();
     assert_eq!(
-        decide_relationship(&kind, &left, &right, true, true, &[first]),
+        decide_relationship(&kind, &left, &right, grants(true, true, true), &[first]),
         Err(RelationshipError::Duplicate)
     );
 }
@@ -68,7 +111,7 @@ fn symmetric_links_use_one_order_independent_identity() {
     let reversed = canonical_key(&kind, &right, &left).unwrap();
     assert_eq!(first, reversed);
     assert_eq!(
-        decide_relationship(&kind, &right, &left, true, true, &[first]),
+        decide_relationship(&kind, &right, &left, grants(true, true, true), &[first]),
         Err(RelationshipError::Duplicate)
     );
 }
@@ -91,13 +134,13 @@ fn archived_targets_and_types_cannot_receive_new_links() {
     let mut kind = relation_type(Direction::Directed);
     right.item_archived = true;
     assert_eq!(
-        decide_relationship(&kind, &left, &right, true, true, &[]),
+        decide_relationship(&kind, &left, &right, grants(true, true, true), &[]),
         Err(RelationshipError::ArchivedTarget)
     );
     right.item_archived = false;
     kind.archived = true;
     assert_eq!(
-        decide_relationship(&kind, &left, &right, true, true, &[]),
+        decide_relationship(&kind, &left, &right, grants(true, true, true), &[]),
         Err(RelationshipError::ArchivedType)
     );
 }

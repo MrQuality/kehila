@@ -4,7 +4,8 @@
 recommendations and the ten review resolutions on 2026-09-29; the remaining
 project, identifier, field-kind, and M1 representation choices on 2026-09-30.
 [D-018](decisions.md#d-018), [D-019](decisions.md#d-019),
-[D-020](decisions.md#d-020), and [D-021](decisions.md#d-021) record those decisions.
+[D-020](decisions.md#d-020), [D-021](decisions.md#d-021), and
+[D-022](decisions.md#d-022) record those decisions.
 The remaining specification work is listed below. This document does not
 claim implemented behavior or a finalized storage format.
 
@@ -50,6 +51,9 @@ must cover the resulting lifecycle transition as well as destination fields.
 Workflow migration always obeys the system phase graph. Done to New is
 prohibited, including through conversion or migration. Done to Active is
 reopening and retains [R-018](requirements.md#r-018)'s review requirements.
+The complete M1 cross-phase graph is New to Active, New to Done, Active to
+New, Active to Done, and Done to Active. Each workflow configures a subset;
+same-phase status changes require valid membership but no cross-phase edge.
 For M1 a cross-phase migration requires both source and destination workflows
 to permit the phase change, plus authorization to migrate. A same-phase
 migration still requires authorization and valid destination references.
@@ -83,14 +87,22 @@ archive and selection changes is a B-005 acceptance requirement.
 
 ### Relationships
 
-Cross-project relationships are allowed when the actor is authorized to access
-both endpoints. Reject self-links and duplicate links of the same relationship
+Cross-project relationships are allowed under the grants below. Reject
+self-links and duplicate links of the same relationship
 type between the same endpoints. Store one canonical relationship and derive
 its inverse display. Endpoint archival preserves links. Relationship types have
 stable identities and may be renamed; a referenced type cannot be deleted or
 reinterpreted. Archive it or introduce a new type instead. Generic relationship
 validity does not establish scheduling dependency validity; Q-011 owns those
 additional rules.
+
+Each relationship type belongs to one project. At least one endpoint of a new
+link must belong to that project; the canonical type identity includes its
+owning project. Creating a link requires permission to use that type in its
+owner project and Link permission on both endpoint items. Type administration
+requires project configuration permission in the owner project. B-007 defines
+grant assignment and authoritative enforcement. The pure decision accepts
+those three creation grants as explicit inputs.
 
 ### Identity and project history
 
@@ -308,7 +320,8 @@ evolve remain distinct contract work.
 ### Fourth typed rule slice: relationships and current work
 
 The Rust `task_contract::relationship` module derives canonical identity from
-a relationship type and two project-qualified WorkItem endpoints. It rejects
+an owner-project-qualified relationship type and two project-qualified WorkItem
+endpoints. It rejects
 self-links, duplicate canonical links, archived types or endpoints, and missing
 access to either endpoint. Symmetric types sort endpoints into one stored key;
 directed types preserve their canonical orientation, from which inverse display
@@ -450,7 +463,8 @@ commands: `unauthorized`, `operation_id_reused`,
 `configuration_conflict`, `item_version_conflict`, `invalid_reference`, and
 `invalid_configuration`. Separate codes preserve meaningful distinctions such
 as `selection_version_conflict`, `required_field`, `archived_option`,
-`duplicate_relationship`, `self_link`, `prohibited_phase_change`,
+`duplicate_relationship`, `self_link`, `unrelated_type_owner`,
+`prohibited_phase_change`,
 `migration_required`, and `estimate_unit_locked`.
 
 For commands with operation replay, authorization is checked first; an
@@ -488,11 +502,10 @@ These are narrower details, not a reopening of C-01 through C-10:
 
 - Specify command payload limits.
 - Complete remaining command payloads, typed results, operation-specific error
-  precedence, field-definition evolution rules, and the full phase-transition
-  table. Stable domain codes exist for the current pure decisions; adapters
+  precedence, and field-definition evolution rules. Stable domain codes exist
+  for the current pure decisions; adapters
   still need an HTTP mapping.
-- Specify ownership and administration of project-defined relationship types,
-  stable relationship record IDs, and the inverse presentation contract.
+- Specify stable relationship record IDs and the inverse presentation contract.
 - Demonstrate the consistency boundary for item/project archival plus selection
   clearing, and specify cross-project relationship creation plus
   endpoint/configuration changes.
@@ -532,6 +545,9 @@ These are specifications for future checks, not test results.
 | BC-21 | Archive a project with active items and current-work selections, then restore it. | Clear selections; preserve readable items, links, and history; prohibit edits while archived; restore editability only for individually unarchived items. No lifecycle or resource effects. | Pure eligibility/effect rules plus B-005 coordinated persistence. |
 | BC-22 | Issue an item ID, change the project prefix, then issue another ID. | The first issued ID remains stable and resolvable; the second uses the new prefix and next project sequence. | Pure allocation rule plus B-005 uniqueness and lookup checks. |
 | BC-23 | Attempt to change a populated custom field from text to number. | Reject in-place kind change; allow an explicit new field and value migration while preserving old field history. | Pure configuration rule plus B-005 authoritative value check. |
+| BC-24 | Configure each possible cross-phase edge and change status within one phase. | Accept only the five system edges when the workflow permits them; reject Done to New and any configured same-phase edge. Same-phase status changes remain valid. | Pure phase graph and workflow checks. |
+| BC-25 | Create a cross-project link using a type owned by either endpoint project, then try a type owned by a third project. | Accept the eligible types; reject the unrelated owner. Equal local type IDs from different owner projects have distinct canonical identities. | Pure relationship identity plus B-005 endpoint integrity. |
+| BC-26 | Attempt link creation without type-use permission or Link permission on either endpoint. | Reject each missing grant; type administration requires project configuration permission in the owner project. | Pure grant inputs; B-007 authoritative enforcement. |
 
 ## Completion and handoff
 

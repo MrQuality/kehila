@@ -38,6 +38,18 @@ impl PhaseChange {
     pub const fn new(from: Phase, to: Phase) -> Self {
         Self { from, to }
     }
+
+    /// The system graph bounds every workflow's configurable subset.
+    pub const fn is_system_allowed(self) -> bool {
+        matches!(
+            (self.from, self.to),
+            (Phase::New, Phase::Active)
+                | (Phase::New, Phase::Done)
+                | (Phase::Active, Phase::New)
+                | (Phase::Active, Phase::Done)
+                | (Phase::Done, Phase::Active)
+        )
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -118,10 +130,7 @@ impl Configuration {
             }
             let mut changes = HashSet::new();
             for change in &workflow.permitted_phase_changes {
-                if !changes.insert((change.from, change.to))
-                    || change.from == change.to
-                    || (change.from == Phase::Done && change.to == Phase::New)
-                {
+                if !changes.insert((change.from, change.to)) || !change.is_system_allowed() {
                     return Err(Error::InvalidConfiguration);
                 }
             }
@@ -398,7 +407,7 @@ pub(crate) fn classify_transition(
 ) -> Result<LifecycleEffect, Error> {
     if from != to {
         let phase_change = PhaseChange::new(from, to);
-        if (from == Phase::Done && to == Phase::New)
+        if !phase_change.is_system_allowed()
             || !source_workflow
                 .permitted_phase_changes
                 .contains(&phase_change)

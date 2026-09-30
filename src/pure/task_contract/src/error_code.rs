@@ -24,6 +24,7 @@ pub enum Code {
     SelectionVersionConflict,
     InvalidConfiguration,
     InvalidReference,
+    UnrelatedTypeOwner,
     InvalidOperation,
     ArchivedProject,
     ArchivedItem,
@@ -62,6 +63,7 @@ impl Code {
             Self::SelectionVersionConflict => "selection_version_conflict",
             Self::InvalidConfiguration => "invalid_configuration",
             Self::InvalidReference => "invalid_reference",
+            Self::UnrelatedTypeOwner => "unrelated_type_owner",
             Self::InvalidOperation => "invalid_operation",
             Self::ArchivedProject => "archived_project",
             Self::ArchivedItem => "archived_item",
@@ -151,6 +153,7 @@ impl StableCode for RelationshipError {
         match self {
             Self::Unauthorized => Code::Unauthorized,
             Self::InvalidReference => Code::InvalidReference,
+            Self::UnrelatedTypeOwner => Code::UnrelatedTypeOwner,
             Self::SelfLink => Code::SelfLink,
             Self::Duplicate => Code::DuplicateRelationship,
             Self::ArchivedTarget => Code::ArchivedTarget,
