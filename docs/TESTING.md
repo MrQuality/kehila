@@ -54,6 +54,10 @@ Pure field-rule tests cover hidden value preservation, optional/required
 validation, typed values and WorkItem type ownership, choice-option archival,
 and calendar boundaries. Required-field changes under concurrent writes still
 need authoritative storage checks.
+Pure relationship and current-work tests cover cross-project access decisions,
+canonical duplicate/self-link rejection, symmetric identity, archival
+eligibility, selection versions, and selection independent of lifecycle.
+Storage uniqueness and authorization enforcement remain unverified.
 
 Integration tests use the development NATS server to check its greeting, connection handshake,
 and request/response behavior. The Python probe also checks the JetStream account

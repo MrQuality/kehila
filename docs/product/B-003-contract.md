@@ -304,6 +304,28 @@ dates in years 1 through 9999. These bounds require review before durable
 storage is finalized. Command payload limits and how archived field definitions
 evolve remain distinct contract work.
 
+### Fourth typed rule slice: relationships and current work
+
+The Rust `task_contract::relationship` module derives canonical identity from
+a relationship type and two project-qualified WorkItem endpoints. It rejects
+self-links, duplicate canonical links, archived types or endpoints, and missing
+access to either endpoint. Symmetric types sort endpoints into one stored key;
+directed types preserve their canonical orientation, from which inverse display
+can be derived. Existing links survive endpoint archival. A relationship's
+stable record identity, project-defined type ownership, and type-specific
+scheduling behavior remain further contract work.
+
+The `current_work` module keeps one versioned selection per user. Choosing or
+clearing it changes only user context. An unchanged selection is an idempotent
+no-op. Selection checks its own version and rejects archived targets and denied
+access; it does not inspect or mutate WorkItem phase, usage, timer, reservations,
+or scheduling. When an item or project is archived, B-005 must coordinate the
+affected selection clear with the archive change.
+
+Pure tests cover BC-12 and the identity/access portion of BC-17. B-005 must
+enforce relationship uniqueness under concurrent creation and valid endpoints
+at commit; B-007 must supply authoritative access decisions for both endpoints.
+
 ## Review resolutions
 
 All ten resolutions were accepted by the maintainer on 2026-09-29. C-09 retains
@@ -334,6 +356,8 @@ These are narrower details, not a reopening of C-01 through C-10:
   effects on contained items and current selections.
 - Complete command payloads, typed results, error precedence and stable codes,
   field-definition evolution rules, and the full phase-transition table.
+- Specify ownership and administration of project-defined relationship types,
+  stable relationship record IDs, and the inverse presentation contract.
 - Specify the consistency boundary for item archival plus selection clearing,
   and cross-project relationship creation plus endpoint/configuration changes.
 - Implement meaningful pure contract checks and record results. Real-service
