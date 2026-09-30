@@ -4,6 +4,7 @@ pub mod configuration_change;
 pub mod conversion;
 pub mod current_work;
 pub mod field;
+pub mod item_mutation;
 pub mod project;
 pub mod relationship;
 pub mod work_item;

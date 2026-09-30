@@ -68,6 +68,10 @@ reopening, source-value history output, and successful replay precedence.
 Durable history, knowledge, and provenance retention remain B-005 checks.
 Pure boundary tests also cover the accepted M1 estimate, prefix, UTF-8 text,
 numeric-field, and Gregorian-date limits and project-scoped readable IDs.
+Pure item-mutation tests cover untitled creation and title display, initial
+status, required/hidden fields, estimate locking, item/configuration versions,
+and replay. Durable sequence allocation and coordinated project/item writes
+remain B-005 checks.
 
 Integration tests use the development NATS server to check its greeting, connection handshake,
 and request/response behavior. The Python probe also checks the JetStream account

@@ -2,17 +2,12 @@
 
 use std::collections::HashSet;
 
-use crate::field::{apply_edit, FieldDefinition, FieldEdit, FieldError, FieldId, FieldValue};
+pub use crate::field::FieldEntry;
+use crate::field::{apply_edit, FieldEdit, FieldError};
 use crate::work_item::{
     classify_transition, Configuration, Error, LifecycleEffect, Phase, StatusId, WorkItem,
     WorkItemId, WorkItemTypeId, WorkflowId,
 };
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct FieldEntry {
-    pub id: FieldId,
-    pub value: FieldValue,
-}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConversionCommand {
@@ -71,10 +66,8 @@ pub enum ConversionDecision {
 
 /// The caller supplies authoritative configuration, source values, and replay
 /// lookup, then commits the returned item, values, history, and operation atomically.
-#[allow(clippy::too_many_arguments)]
 pub fn decide_conversion(
     configuration: &Configuration,
-    definitions: &[FieldDefinition],
     item: &WorkItem,
     source_values: &[FieldEntry],
     previous: Option<&SuccessfulConversion>,
@@ -84,6 +77,7 @@ pub fn decide_conversion(
 ) -> ConversionDecision {
     use ConversionDecision::{Apply, Reject, Replay};
     use ConversionError as C;
+    let definitions = &configuration.fields;
 
     if !authorized {
         return Reject(C::Unauthorized);

@@ -144,7 +144,7 @@ HTTP routes, serialization, or Rust inheritance.
 | Contract | Ownership and responsibility |
 | --- | --- |
 | Project | Stable identity, name, readable identifier prefix, estimate unit, configuration revision, archival state. |
-| Project configuration revision | A coherent set of field rules, type/workflow permissions, workflow membership, type default workflows, initial statuses, and transition restrictions. |
+| Project configuration revision | A coherent set of field definitions, type/workflow permissions, workflow membership, type default workflows, initial statuses, and transition restrictions. Each type may identify a text field for display title. |
 | Work item | Stable identity, project and type references, workflow/status references, item version; phase derived from status. |
 | Field definition | Stable identity, owning type, value kind, and validation constraints; display names are not identity. Once values exist, change of value kind is rejected; migrate to a new field and archive the old one. |
 | Status | Stable project-scoped identity and phase mapping; display metadata is separate from identity. |
@@ -206,7 +206,7 @@ The Rust `task_contract::work_item` module implements pure decisions for normal
 status changes and explicit workflow migration. Its inputs are a typed project
 configuration, current WorkItem, command, optional recorded success, and the
 caller-provided authorization result. The configuration carries project ID,
-revision, statuses, workflows, and WorkItem types. Each status carries one phase;
+revision, statuses, workflows, WorkItem types, and field definitions. Each status carries one phase;
 each workflow carries status membership, a New-phase initial status, permitted
 cross-phase changes, and archival state. Each type lists permitted workflows.
 
@@ -370,6 +370,34 @@ are outside the current pure WorkItem shape and must be preserved by the
 persistence conversion transaction. The pure tests cover BC-04 and BC-05's
 conversion path, the effect portion of BC-06, and the value/replay portions of
 BC-09 and BC-20. Durable preservation remains unverified.
+
+### Seventh typed rule slice: creation and field editing
+
+The Rust `task_contract::item_mutation` module decides item creation and
+ordinary field/estimate editing against one coherent project configuration
+revision. Field definitions now belong to that revision, rather than arriving
+as a separate conversion input. Each type may designate one of its text fields
+as its display title. The title's usage remains configurable; an absent or
+blank title displays the issued readable ID without changing stable identity.
+
+Creation selects the type's default workflow unless an eligible workflow is
+explicitly chosen, then derives its New-phase initial status. It validates all
+initial fields, allocates the next project-scoped readable ID, creates item
+version 1, and records the estimate-unit lock when an estimate is present.
+The returned project state, item, content, ID allocation, and operation record
+must be committed as one accepted result. The pure rule cannot prove durable
+uniqueness or atomicity.
+
+An edit carries sparse field changes, an estimate Keep/Set/Clear action, the
+expected item version, and expected configuration revision. Omitted fields are
+kept, including hidden values; explicit ordinary changes to hidden or archived
+fields fail. The complete resulting values must satisfy required and typed
+field rules. Editing preserves item type, workflow, status, and derived phase;
+it emits no usage or resource effect. Create and edit replay identical recorded
+successes after authorization and before mutable validation. B-005 must make
+the required configuration, item, project, and operation writes coherent under
+concurrency. The pure checks cover the creation/edit portions of BC-03,
+BC-11, BC-13, BC-15, BC-18, and BC-19.
 
 ## Review resolutions
 

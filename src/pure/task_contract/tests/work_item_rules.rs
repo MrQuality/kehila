@@ -72,8 +72,10 @@ fn configuration() -> Configuration {
                 WorkflowId("alternate".into()),
             ],
             default_workflow_id: WorkflowId("development".into()),
+            title_field_id: None,
             archived: false,
         }],
+        fields: vec![],
     }
 }
 

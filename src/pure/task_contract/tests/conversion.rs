@@ -48,15 +48,18 @@ fn config() -> Configuration {
                 id: WorkItemTypeId("task".into()),
                 permitted_workflows: vec![WorkflowId("task-flow".into())],
                 default_workflow_id: WorkflowId("task-flow".into()),
+                title_field_id: None,
                 archived: false,
             },
             WorkItemType {
                 id: WorkItemTypeId("milestone".into()),
                 permitted_workflows: vec![WorkflowId("milestone-flow".into())],
                 default_workflow_id: WorkflowId("milestone-flow".into()),
+                title_field_id: None,
                 archived: false,
             },
         ],
+        fields: definitions(),
     }
 }
 
@@ -106,44 +109,17 @@ fn conversion_requires_a_complete_compatible_destination_and_migration_permissio
     let mut incomplete = command("active");
     incomplete.destination_workflow = WorkflowId("task-flow".into());
     assert_eq!(
-        decide_conversion(
-            &config,
-            &definitions(),
-            &source,
-            &[],
-            None,
-            true,
-            true,
-            &incomplete
-        ),
+        decide_conversion(&config, &source, &[], None, true, true, &incomplete),
         ConversionDecision::Reject(ConversionError::InvalidReference)
     );
     assert_eq!(
-        decide_conversion(
-            &config,
-            &definitions(),
-            &source,
-            &[],
-            None,
-            true,
-            false,
-            &command("active")
-        ),
+        decide_conversion(&config, &source, &[], None, true, false, &command("active")),
         ConversionDecision::Reject(ConversionError::MigrationUnauthorized)
     );
     let mut missing = command("active");
     missing.destination_values.clear();
     assert_eq!(
-        decide_conversion(
-            &config,
-            &definitions(),
-            &source,
-            &[],
-            None,
-            true,
-            true,
-            &missing
-        ),
+        decide_conversion(&config, &source, &[], None, true, true, &missing),
         ConversionDecision::Reject(ConversionError::Field(FieldError::Required))
     );
 }
@@ -153,16 +129,7 @@ fn conversion_uses_both_workflows_phase_rules_and_forbids_done_to_new() {
     let config = config();
     let source = item("done");
     assert_eq!(
-        decide_conversion(
-            &config,
-            &definitions(),
-            &source,
-            &[],
-            None,
-            true,
-            true,
-            &command("new")
-        ),
+        decide_conversion(&config, &source, &[], None, true, true, &command("new")),
         ConversionDecision::Reject(ConversionError::ProhibitedPhaseChange)
     );
     let mut restricted = config.clone();
@@ -170,7 +137,6 @@ fn conversion_uses_both_workflows_phase_rules_and_forbids_done_to_new() {
     assert_eq!(
         decide_conversion(
             &restricted,
-            &definitions(),
             &source,
             &[],
             None,
@@ -180,16 +146,9 @@ fn conversion_uses_both_workflows_phase_rules_and_forbids_done_to_new() {
         ),
         ConversionDecision::Reject(ConversionError::ProhibitedPhaseChange)
     );
-    let ConversionDecision::Apply(result) = decide_conversion(
-        &config,
-        &definitions(),
-        &source,
-        &[],
-        None,
-        true,
-        true,
-        &command("active"),
-    ) else {
+    let ConversionDecision::Apply(result) =
+        decide_conversion(&config, &source, &[], None, true, true, &command("active"))
+    else {
         panic!("valid reopening conversion must apply");
     };
     assert_eq!(result.phase, Phase::Active);
@@ -207,7 +166,6 @@ fn conversion_retains_source_values_in_history_independent_of_current_values() {
     };
     let ConversionDecision::Apply(result) = decide_conversion(
         &config(),
-        &definitions(),
         &source,
         std::slice::from_ref(&old_value),
         None,
@@ -226,16 +184,9 @@ fn conversion_retains_source_values_in_history_independent_of_current_values() {
 fn identical_recorded_conversion_replays_before_new_rules_and_versions() {
     let source = item("active");
     let request = command("active");
-    let ConversionDecision::Apply(result) = decide_conversion(
-        &config(),
-        &definitions(),
-        &source,
-        &[],
-        None,
-        true,
-        true,
-        &request,
-    ) else {
+    let ConversionDecision::Apply(result) =
+        decide_conversion(&config(), &source, &[], None, true, true, &request)
+    else {
         panic!("initial conversion must apply");
     };
     let recorded = SuccessfulConversion {
@@ -249,7 +200,6 @@ fn identical_recorded_conversion_replays_before_new_rules_and_versions() {
     assert_eq!(
         decide_conversion(
             &changed,
-            &definitions(),
             &result.next_item,
             &[],
             Some(&recorded),
@@ -262,16 +212,7 @@ fn identical_recorded_conversion_replays_before_new_rules_and_versions() {
     let mut reused = request.clone();
     reused.destination_values.clear();
     assert_eq!(
-        decide_conversion(
-            &changed,
-            &definitions(),
-            &source,
-            &[],
-            Some(&recorded),
-            true,
-            true,
-            &reused
-        ),
+        decide_conversion(&changed, &source, &[], Some(&recorded), true, true, &reused),
         ConversionDecision::Reject(ConversionError::OperationIdReused)
     );
 }

@@ -102,6 +102,12 @@ pub enum FieldValue {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FieldEntry {
+    pub id: FieldId,
+    pub value: FieldValue,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FieldEdit {
     Keep,
     Set(FieldValue),

@@ -41,8 +41,10 @@ fn config() -> Configuration {
             id: WorkItemTypeId("task".into()),
             permitted_workflows: vec![WorkflowId("flow".into())],
             default_workflow_id: WorkflowId("flow".into()),
+            title_field_id: None,
             archived: false,
         }],
+        fields: vec![],
     }
 }
 

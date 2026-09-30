@@ -17,6 +17,7 @@ YAJA is in early development. The current components are:
 | Rust relationship and current-work rules | Pure canonical relationship identity, duplicate/self-link eligibility, two-endpoint access input, and user-scoped selection decisions; not yet used by the worker | Focused pure tests; storage uniqueness and access enforcement unverified |
 | Rust configuration-change rules | Pure revision, default, and in-use item compatibility decisions; not yet used by the worker | Focused pure tests; authoritative item set and commit-time serialization unverified |
 | Rust type-conversion rules | Pure complete destination, phase, migration, history-snapshot, and replay decisions; not yet used by the worker | Focused pure tests; atomic persistence and non-field history preservation unverified |
+| Rust item creation/edit rules | Pure default/initial status, project-scoped ID, field/estimate, title fallback, version, and replay decisions; not yet used by the worker | Focused pure tests; atomic ID allocation, item writes, and configuration coordination unverified |
 | TypeScript contracts | Shared declarations | No runtime implementation |
 | Development tools | Staged-source verification and CI base selection | Temporary Git repository tests |
 

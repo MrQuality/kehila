@@ -6,6 +6,8 @@
 
 use std::collections::HashSet;
 
+use crate::field::{FieldDefinition, FieldId, FieldKind};
+
 macro_rules! id_type {
     ($name:ident) => {
         #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -59,6 +61,8 @@ pub struct WorkItemType {
     pub id: WorkItemTypeId,
     pub permitted_workflows: Vec<WorkflowId>,
     pub default_workflow_id: WorkflowId,
+    /// Optional configured text field used for display; identity never depends on it.
+    pub title_field_id: Option<FieldId>,
     pub archived: bool,
 }
 
@@ -70,6 +74,7 @@ pub struct Configuration {
     pub statuses: Vec<Status>,
     pub workflows: Vec<Workflow>,
     pub types: Vec<WorkItemType>,
+    pub fields: Vec<FieldDefinition>,
 }
 
 impl Configuration {
@@ -152,6 +157,27 @@ impl Configuration {
                 {
                     return Err(Error::InvalidConfiguration);
                 }
+            }
+            if let Some(title_field_id) = &item_type.title_field_id {
+                let Some(field) = self.fields.iter().find(|field| field.id == *title_field_id)
+                else {
+                    return Err(Error::InvalidConfiguration);
+                };
+                if field.owner_type != item_type.id || field.kind != FieldKind::Text {
+                    return Err(Error::InvalidConfiguration);
+                }
+            }
+        }
+        let mut field_ids = HashSet::new();
+        for field in &self.fields {
+            if !field_ids.insert(&field.id)
+                || field.validate().is_err()
+                || !self
+                    .types
+                    .iter()
+                    .any(|item_type| item_type.id == field.owner_type)
+            {
+                return Err(Error::InvalidConfiguration);
             }
         }
         Ok(())
