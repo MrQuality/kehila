@@ -195,9 +195,12 @@ impl StableCode for ConfigurationChangeError {
     fn code(&self) -> Code {
         match self {
             Self::Unauthorized => Code::Unauthorized,
+            Self::OperationIdReused => Code::OperationIdReused,
             Self::RevisionConflict { .. } => Code::ConfigurationConflict,
             Self::ArchivedProject => Code::ArchivedProject,
             Self::InvalidConfiguration => Code::InvalidConfiguration,
+            Self::InvalidReference => Code::InvalidReference,
+            Self::InvalidOperation => Code::InvalidOperation,
             Self::RevisionOverflow => Code::VersionExhausted,
             Self::MigrationRequired { .. } => Code::MigrationRequired,
             Self::FieldMigrationRequired { .. } => Code::MigrationRequired,

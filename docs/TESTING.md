@@ -66,6 +66,8 @@ Pure configuration-change tests cover active defaults, replacement before
 archival, dependency-preserving edits, phase mapping preservation, and revision
 and authorization gates. They also cover required-field values, historical
 kind/removal protection, and value preservation under rename, hide, and archive.
+The complete-revision command checks replay, changed operation content, and
+revision-only no-ops.
 Concurrent item/configuration writes remain B-005
 integration checks.
 Pure conversion tests cover complete destination validation, migration

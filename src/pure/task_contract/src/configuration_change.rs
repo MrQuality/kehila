@@ -20,14 +20,92 @@ pub struct ConfigurationSnapshot {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ConfigurationChangeCommand {
+    pub operation_id: String,
+    pub expected_revision: u64,
+    /// Complete proposed configuration, not a partial patch.
+    pub proposed: Configuration,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SuccessfulConfigurationChange {
+    pub project_id: crate::work_item::ProjectId,
+    pub request: ConfigurationChangeCommand,
+    pub result: Configuration,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ConfigurationChangeDecision {
+    Replay(Configuration),
+    Apply(Configuration),
+    Reject(ConfigurationChangeError),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ConfigurationChangeError {
     Unauthorized,
+    OperationIdReused,
     RevisionConflict { current_revision: u64 },
     ArchivedProject,
     InvalidConfiguration,
+    InvalidReference,
+    InvalidOperation,
     RevisionOverflow,
     MigrationRequired { item_id: WorkItemId },
     FieldMigrationRequired { field_id: FieldId },
+}
+
+/// A complete configuration replacement is one versioned, replayable command.
+/// B-005 must supply authoritative snapshot and replay lookup, then commit the
+/// new revision, history, and success record under one consistency boundary.
+pub fn decide_configuration_change(
+    previous: &Configuration,
+    snapshot: &ConfigurationSnapshot,
+    recorded: Option<&SuccessfulConfigurationChange>,
+    authorized: bool,
+    command: &ConfigurationChangeCommand,
+) -> ConfigurationChangeDecision {
+    use ConfigurationChangeDecision::{Apply, Reject, Replay};
+    use ConfigurationChangeError as E;
+
+    if !authorized {
+        return Reject(E::Unauthorized);
+    }
+    if let Some(recorded) = recorded {
+        if recorded.project_id != previous.project_id
+            || recorded.request.operation_id != command.operation_id
+        {
+            return Reject(E::InvalidReference);
+        }
+        return if recorded.request == *command {
+            Replay(recorded.result.clone())
+        } else {
+            Reject(E::OperationIdReused)
+        };
+    }
+    if command.expected_revision != previous.revision {
+        return Reject(E::RevisionConflict {
+            current_revision: previous.revision,
+        });
+    }
+    if command.operation_id.is_empty() {
+        return Reject(E::InvalidOperation);
+    }
+    if let Err(error) = validate_change(
+        previous,
+        &command.proposed,
+        command.expected_revision,
+        snapshot,
+        true,
+    ) {
+        return Reject(error);
+    }
+    let mut comparable = command.proposed.clone();
+    comparable.revision = previous.revision;
+    if comparable == *previous {
+        return Reject(E::InvalidOperation);
+    }
+    Apply(command.proposed.clone())
 }
 
 /// `snapshot` must contain every current item and its values, plus all field IDs

@@ -14,6 +14,10 @@ use task_contract::work_item::Error;
 #[test]
 fn shared_conflicts_have_the_same_stable_code_across_commands() {
     assert_eq!(
+        ConfigurationChangeError::OperationIdReused.code(),
+        Code::OperationIdReused
+    );
+    assert_eq!(
         Error::ConfigurationConflict {
             current_revision: 2
         }

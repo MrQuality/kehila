@@ -386,6 +386,16 @@ phase of a status used by an item, which would reinterpret that item's current
 lifecycle state. Archived items remain in the dependency set. A new revision
 cannot be accepted for an archived project.
 
+Configuration administration has a typed command carrying one operation ID,
+expected revision, and a complete proposed configuration. Authorization is
+checked first; identical recorded success replays before current revision or
+compatibility checks, and reuse with changed content conflicts. A new command
+checks its expected revision, validates the proposed complete state against
+the authoritative snapshot, and returns that next revision. An empty operation
+ID or a proposal that only increments the revision is invalid. B-005 must
+atomically persist the new configuration, interpretable history, and successful
+operation record while protecting the item snapshot from concurrent changes.
+
 The same decision checks that every applicable current item satisfies a newly
 required field. Existing values must remain valid under the proposed
 definition; a hidden or archived field retains its value. Archiving a required
@@ -611,6 +621,7 @@ These are specifications for future checks, not test results.
 | BC-29 | Submit 129 field entries or over 1 MiB of aggregate supplied text in a create, edit, or conversion command. | Reject with `payload_limit_exceeded`; 128 entries and exactly 1 MiB pass the aggregate check, subject to other field rules. Identical recorded success replays first. | Pure command checks; transport limits and durable replay in B-004/B-005. |
 | BC-30 | Create a cross-project link while either endpoint project revision or item version changes, then retry a recorded success. | A new stale command identifies the changed project or item and is rejected. Identical success replays after current authorization; changed content under the same operation ID conflicts. No link may commit against an archived endpoint, changed type, or duplicate canonical key. | Pure command checks; B-005 atomic multi-record contention and B-007 current grants. |
 | BC-31 | Archive an item selected by two users, or archive a project with selected and unrelated users, while a selection changes concurrently. | Produce versioned clears only for affected users. The archive, matching Project/Configuration state where applicable, all clears, and success record commit together; otherwise none commit. Replay never reapplies clears. | Pure plan checks; B-005 authoritative selection set, contention, and atomicity. |
+| BC-32 | Submit a complete compatible configuration revision, retry it after later changes, then reuse its operation ID with changed content. | Apply one revision; replay the original result after current authorization; reject changed content. Reject an empty operation ID or a revision-only no-op. | Pure command checks; B-005 durable revision/history and operation record. |
 
 ## Completion and handoff
 

@@ -1,5 +1,7 @@
 use task_contract::configuration_change::{
-    validate_change, ConfigurationChangeError, ConfigurationSnapshot, ItemSnapshot,
+    decide_configuration_change, validate_change, ConfigurationChangeCommand,
+    ConfigurationChangeDecision, ConfigurationChangeError, ConfigurationSnapshot, ItemSnapshot,
+    SuccessfulConfigurationChange,
 };
 use task_contract::field::{
     FieldDefinition, FieldEntry, FieldId, FieldKind, FieldUsage, FieldValue,
@@ -286,5 +288,72 @@ fn archiving_a_required_field_does_not_require_missing_current_values() {
     assert_eq!(
         validate_change(&previous, &proposed, 3, &snapshot(vec![item("new")]), true),
         Ok(())
+    );
+}
+
+#[test]
+fn configuration_command_accepts_a_compatible_revision_and_replays_success() {
+    let previous = config();
+    let mut proposed = next(&previous);
+    proposed.statuses[0].archived = true;
+    proposed.workflows[0].initial_status_id = StatusId("ready".into());
+    let command = ConfigurationChangeCommand {
+        operation_id: "config-1".into(),
+        expected_revision: 3,
+        proposed: proposed.clone(),
+    };
+    let evidence = snapshot(vec![item("ready")]);
+    assert_eq!(
+        decide_configuration_change(&previous, &evidence, None, true, &command),
+        ConfigurationChangeDecision::Apply(proposed.clone())
+    );
+    let recorded = SuccessfulConfigurationChange {
+        project_id: previous.project_id.clone(),
+        request: command.clone(),
+        result: proposed.clone(),
+    };
+    let mut later = proposed.clone();
+    later.revision += 1;
+    assert_eq!(
+        decide_configuration_change(&later, &snapshot(vec![]), Some(&recorded), true, &command),
+        ConfigurationChangeDecision::Replay(proposed.clone())
+    );
+    assert_eq!(
+        decide_configuration_change(&later, &snapshot(vec![]), Some(&recorded), false, &command),
+        ConfigurationChangeDecision::Reject(ConfigurationChangeError::Unauthorized)
+    );
+    let mut reused = command;
+    reused.proposed.statuses[0].archived = false;
+    assert_eq!(
+        decide_configuration_change(&later, &snapshot(vec![]), Some(&recorded), true, &reused),
+        ConfigurationChangeDecision::Reject(ConfigurationChangeError::OperationIdReused)
+    );
+}
+
+#[test]
+fn configuration_command_rejects_stale_and_empty_operations() {
+    let previous = config();
+    let proposed = next(&previous);
+    let mut command = ConfigurationChangeCommand {
+        operation_id: "config-1".into(),
+        expected_revision: 2,
+        proposed,
+    };
+    assert_eq!(
+        decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
+        ConfigurationChangeDecision::Reject(ConfigurationChangeError::RevisionConflict {
+            current_revision: 3
+        })
+    );
+    command.expected_revision = 3;
+    command.operation_id.clear();
+    assert_eq!(
+        decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
+        ConfigurationChangeDecision::Reject(ConfigurationChangeError::InvalidOperation)
+    );
+    command.operation_id = "config-2".into();
+    assert_eq!(
+        decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
+        ConfigurationChangeDecision::Reject(ConfigurationChangeError::InvalidOperation)
     );
 }
