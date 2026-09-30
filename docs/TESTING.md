@@ -77,6 +77,9 @@ and authorization gates. They also cover required-field values, historical
 kind/removal protection, and value preservation under rename, hide, and archive.
 The complete-revision command checks replay, changed operation content, and
 revision-only no-ops.
+Relationship-type configuration tests cover owner scope, duplicate IDs,
+rename/archive compatibility, and rejection of direction changes or removal
+after historical use.
 Concurrent item/configuration writes remain B-005
 integration checks.
 Pure conversion tests cover complete destination validation, migration

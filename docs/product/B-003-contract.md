@@ -104,6 +104,14 @@ requires project configuration permission in the owner project. B-007 defines
 grant assignment and authoritative enforcement. The pure decision accepts
 those three creation grants as explicit inputs.
 
+Relationship types are members of the owning project's single configuration
+revision. A complete-revision command can add, rename, archive, or restore a
+type. Its owner and stable ID cannot change. A type with any historical link
+cannot be removed or change directed/symmetric meaning; archiving preserves
+existing links and blocks new ones. The configuration snapshot includes type
+IDs ever used by links, including links to archived items and other projects.
+B-005 must serialize this evidence with link creation and configuration writes.
+
 ### Identity and project history
 
 Title is configurable, not mandatory structural identity. Display a stable
@@ -156,7 +164,7 @@ HTTP routes, serialization, or Rust inheritance.
 | Contract | Ownership and responsibility |
 | --- | --- |
 | Project | Stable identity, name, readable identifier prefix, estimate unit, configuration revision, archival state. |
-| Project configuration revision | A coherent set of field definitions, type/workflow permissions, workflow membership, type default workflows, initial statuses, and transition restrictions. Each type may identify a text field for display title. |
+| Project configuration revision | A coherent set of field definitions, type/workflow permissions, workflow membership, type default workflows, initial statuses, transition restrictions, and project-owned relationship types. Each type may identify a text field for display title. |
 | Work item | Stable identity, project and type references, workflow/status references, item version; phase derived from status. |
 | Field definition | Stable identity, owning type, value kind, and validation constraints; display names are not identity. Once values exist, change of value kind is rejected; migrate to a new field and archive the old one. |
 | Status | Stable project-scoped identity and phase mapping; display metadata is separate from identity. |

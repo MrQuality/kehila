@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use crate::field::FieldUsage;
 use crate::field::{FieldDefinition, FieldId, FieldKind};
 use crate::payload::MAX_FIELD_ENTRIES;
+use crate::relationship::RelationshipType;
 
 macro_rules! id_type {
     ($name:ident) => {
@@ -89,6 +90,7 @@ pub struct Configuration {
     pub workflows: Vec<Workflow>,
     pub types: Vec<WorkItemType>,
     pub fields: Vec<FieldDefinition>,
+    pub relationship_types: Vec<RelationshipType>,
 }
 
 impl Configuration {
@@ -97,6 +99,17 @@ impl Configuration {
     pub fn validate(&self) -> Result<(), Error> {
         if self.project_id.0.is_empty() || self.revision == 0 {
             return Err(Error::InvalidConfiguration);
+        }
+        let mut relationship_ids = HashSet::new();
+        for relationship_type in &self.relationship_types {
+            if relationship_type.owner_project_id != self.project_id
+                || relationship_type.id.0.is_empty()
+                || relationship_type.name.trim().is_empty()
+                || relationship_type.name.len() > 256
+                || !relationship_ids.insert(&relationship_type.id)
+            {
+                return Err(Error::InvalidConfiguration);
+            }
         }
         let mut ids = HashSet::new();
         for status in &self.statuses {

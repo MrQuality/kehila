@@ -6,6 +6,7 @@ use task_contract::configuration_change::{
 use task_contract::field::{
     FieldDefinition, FieldEntry, FieldId, FieldKind, FieldUsage, FieldValue,
 };
+use task_contract::relationship::{Direction, RelationshipType, RelationshipTypeId};
 use task_contract::work_item::{
     Configuration, Phase, ProjectId, Status, StatusId, WorkItem, WorkItemId, WorkItemType,
     WorkItemTypeId, Workflow, WorkflowId,
@@ -16,6 +17,7 @@ fn config() -> Configuration {
         project_id: ProjectId("project".into()),
         revision: 3,
         project_archived: false,
+        relationship_types: vec![],
         statuses: vec![
             Status {
                 id: StatusId("new".into()),
@@ -83,6 +85,7 @@ fn snapshot(items: Vec<WorkItem>) -> ConfigurationSnapshot {
             })
             .collect(),
         historically_used_field_ids: vec![],
+        historically_used_relationship_type_ids: vec![],
     }
 }
 
@@ -96,6 +99,62 @@ fn field(usage: FieldUsage) -> FieldDefinition {
         archived: false,
         options: vec![],
     }
+}
+
+#[test]
+fn relationship_type_meaning_is_stable_after_use() {
+    let mut previous = config();
+    previous.relationship_types.push(RelationshipType {
+        owner_project_id: previous.project_id.clone(),
+        id: RelationshipTypeId("related".into()),
+        name: "Related".into(),
+        direction: Direction::Directed,
+        archived: false,
+    });
+    let mut proposed = next(&previous);
+    proposed.relationship_types[0].direction = Direction::Symmetric;
+    let mut evidence = snapshot(vec![]);
+    evidence
+        .historically_used_relationship_type_ids
+        .push(RelationshipTypeId("related".into()));
+    assert_eq!(
+        validate_change(&previous, &proposed, previous.revision, &evidence, true),
+        Err(ConfigurationChangeError::RelationshipMigrationRequired {
+            type_id: RelationshipTypeId("related".into())
+        })
+    );
+    proposed.relationship_types[0].direction = Direction::Directed;
+    proposed.relationship_types[0].name = "Renamed".into();
+    proposed.relationship_types[0].archived = true;
+    assert_eq!(
+        validate_change(&previous, &proposed, previous.revision, &evidence, true),
+        Ok(())
+    );
+    proposed.relationship_types.clear();
+    assert_eq!(
+        validate_change(&previous, &proposed, previous.revision, &evidence, true),
+        Err(ConfigurationChangeError::RelationshipMigrationRequired {
+            type_id: RelationshipTypeId("related".into())
+        })
+    );
+}
+
+#[test]
+fn relationship_types_are_scoped_and_unique_in_project_configuration() {
+    let mut configuration = config();
+    configuration.relationship_types.push(RelationshipType {
+        owner_project_id: ProjectId("other".into()),
+        id: RelationshipTypeId("related".into()),
+        name: "Related".into(),
+        direction: Direction::Directed,
+        archived: false,
+    });
+    assert!(configuration.validate().is_err());
+    configuration.relationship_types[0].owner_project_id = configuration.project_id.clone();
+    configuration
+        .relationship_types
+        .push(configuration.relationship_types[0].clone());
+    assert!(configuration.validate().is_err());
 }
 
 #[test]

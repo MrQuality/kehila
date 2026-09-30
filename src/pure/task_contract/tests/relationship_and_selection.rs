@@ -21,6 +21,7 @@ fn relation_type(direction: Direction) -> RelationshipType {
     RelationshipType {
         owner_project_id: ProjectId("one".into()),
         id: RelationshipTypeId("related".into()),
+        name: "Related".into(),
         direction,
         archived: false,
     }

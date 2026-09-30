@@ -30,6 +30,7 @@ fn config() -> Configuration {
         project_id: ProjectId("project".into()),
         revision: 4,
         project_archived: false,
+        relationship_types: vec![],
         statuses: vec![
             Status {
                 id: StatusId("active".into()),

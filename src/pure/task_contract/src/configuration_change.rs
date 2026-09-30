@@ -3,6 +3,7 @@
 use std::collections::HashSet;
 
 use crate::field::{apply_edit, FieldEdit, FieldEntry, FieldId, FieldUsage};
+use crate::relationship::RelationshipTypeId;
 use crate::work_item::{Configuration, WorkItem, WorkItemId};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -17,6 +18,7 @@ pub struct ItemSnapshot {
 pub struct ConfigurationSnapshot {
     pub items: Vec<ItemSnapshot>,
     pub historically_used_field_ids: Vec<FieldId>,
+    pub historically_used_relationship_type_ids: Vec<RelationshipTypeId>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -53,6 +55,7 @@ pub enum ConfigurationChangeError {
     RevisionOverflow,
     MigrationRequired { item_id: WorkItemId },
     FieldMigrationRequired { field_id: FieldId },
+    RelationshipMigrationRequired { type_id: RelationshipTypeId },
 }
 
 /// A complete configuration replacement is one versioned, replayable command.
@@ -142,6 +145,23 @@ pub fn validate_change(
     }
     let mut item_ids = HashSet::new();
     let historical_ids: HashSet<_> = snapshot.historically_used_field_ids.iter().collect();
+    let used_relationship_ids: HashSet<_> = snapshot
+        .historically_used_relationship_type_ids
+        .iter()
+        .collect();
+    for old_type in &previous.relationship_types {
+        let replacement = proposed
+            .relationship_types
+            .iter()
+            .find(|candidate| candidate.id == old_type.id);
+        if used_relationship_ids.contains(&old_type.id)
+            && !matches!(replacement, Some(candidate) if candidate.direction == old_type.direction)
+        {
+            return Err(ConfigurationChangeError::RelationshipMigrationRequired {
+                type_id: old_type.id.clone(),
+            });
+        }
+    }
     for old_field in &previous.fields {
         let new_field = proposed
             .fields

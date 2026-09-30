@@ -42,6 +42,7 @@ fn config() -> Configuration {
         project_id: ProjectId("project".into()),
         revision: 4,
         project_archived: false,
+        relationship_types: vec![],
         statuses,
         workflows: vec![workflow("task-flow"), workflow("milestone-flow")],
         types: vec![

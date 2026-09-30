@@ -19,6 +19,7 @@ pub enum Direction {
 pub struct RelationshipType {
     pub owner_project_id: ProjectId,
     pub id: RelationshipTypeId,
+    pub name: String,
     pub direction: Direction,
     pub archived: bool,
 }
