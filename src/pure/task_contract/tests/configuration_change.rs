@@ -4,12 +4,12 @@ use task_contract::configuration_change::{
     SuccessfulConfigurationChange,
 };
 use task_contract::field::{
-    FieldDefinition, FieldEntry, FieldId, FieldKind, FieldUsage, FieldValue,
+    ChoiceOption, FieldDefinition, FieldEntry, FieldId, FieldKind, FieldUsage, FieldValue, OptionId,
 };
 use task_contract::relationship::{Direction, RelationshipType, RelationshipTypeId};
 use task_contract::work_item::{
     Configuration, Phase, ProjectId, Status, StatusId, WorkItem, WorkItemId, WorkItemType,
-    WorkItemTypeId, Workflow, WorkflowId,
+    WorkItemTypeId, Workflow, WorkflowId, MAX_STATUSES,
 };
 
 fn config() -> Configuration {
@@ -155,6 +155,55 @@ fn relationship_types_are_scoped_and_unique_in_project_configuration() {
         .relationship_types
         .push(configuration.relationship_types[0].clone());
     assert!(configuration.validate().is_err());
+}
+
+#[test]
+fn complete_configuration_has_count_and_utf8_text_budgets() {
+    let previous = config();
+    let mut proposed = next(&previous);
+    for index in proposed.statuses.len()..=MAX_STATUSES {
+        proposed.statuses.push(Status {
+            id: StatusId(format!("extra-{index}")),
+            phase: Phase::New,
+            archived: false,
+        });
+    }
+    let command = ConfigurationChangeCommand {
+        operation_id: "op".into(),
+        expected_revision: previous.revision,
+        proposed: proposed.clone(),
+    };
+    assert_eq!(
+        decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
+        ConfigurationChangeDecision::Reject(ConfigurationChangeError::PayloadLimitExceeded)
+    );
+    proposed = next(&previous);
+    for field_index in 0..17 {
+        proposed.fields.push(FieldDefinition {
+            id: FieldId(format!("choice-{field_index}")),
+            owner_type: WorkItemTypeId("task".into()),
+            name: "Choice".into(),
+            kind: FieldKind::SingleChoice,
+            usage: FieldUsage::Optional,
+            archived: false,
+            options: (0..256)
+                .map(|index| ChoiceOption {
+                    id: OptionId(format!("option-{index}")),
+                    name: "x".repeat(256),
+                    archived: false,
+                })
+                .collect(),
+        });
+    }
+    assert!(!proposed.within_limits());
+    let command = ConfigurationChangeCommand {
+        proposed,
+        ..command
+    };
+    assert_eq!(
+        decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
+        ConfigurationChangeDecision::Reject(ConfigurationChangeError::PayloadLimitExceeded)
+    );
 }
 
 #[test]

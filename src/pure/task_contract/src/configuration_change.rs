@@ -52,6 +52,7 @@ pub enum ConfigurationChangeError {
     InvalidConfiguration,
     InvalidReference,
     InvalidOperation,
+    PayloadLimitExceeded,
     RevisionOverflow,
     MigrationRequired { item_id: WorkItemId },
     FieldMigrationRequired { field_id: FieldId },
@@ -93,6 +94,9 @@ pub fn decide_configuration_change(
     }
     if command.operation_id.is_empty() {
         return Reject(E::InvalidOperation);
+    }
+    if !command.proposed.within_limits() {
+        return Reject(E::PayloadLimitExceeded);
     }
     if let Err(error) = validate_change(
         previous,

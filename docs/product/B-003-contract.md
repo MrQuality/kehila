@@ -604,6 +604,20 @@ The pure result carries the complete history for contract inspection; a storage
 adapter may append only the new revision while preserving the same invariant.
 No knowledge mutation changes an item's status, phase, usage, or version.
 
+### Logical payload bounds
+
+A complete project configuration revision contains at most 256 statuses, 128
+workflows, 128 WorkItem types, 512 fields, 128 relationship types, and 256
+choice options per field. The total UTF-8 byte length of every supplied string
+occurrence, including repeated ID references, is at most 1 MiB. New commands
+over this bound return `payload_limit_exceeded`; a recorded success still
+replays first. A knowledge create/edit command changes one entry. Its text or
+file-reference limits are given above; it has no multi-entry payload. A
+relationship-type administration command is a complete configuration revision
+and uses the same bound. HTTP encoded-body limits and decoding budgets are
+transport contracts for B-004/B-006 and may be stricter or use chunked
+administration later; they cannot silently reduce this logical M1 contract.
+
 ### Follow-up origin contract
 
 A follow-up origin is an immutable directed record from one source WorkItem to
@@ -627,12 +641,9 @@ restoring an item does not create or remove origins.
 
 These are narrower details, not a reopening of C-01 through C-10:
 
-- Specify configuration, knowledge-command payload, relationship-administration, and encoded
-  request-body limits; item create/edit/conversion field limits are fixed by D-023.
-- Complete remaining command payloads, typed results, and operation-specific error
-  precedence. Stable domain codes exist
-  for the current pure decisions; adapters
-  still need an HTTP mapping.
+- Audit command payloads, typed results, and operation-specific error
+  precedence across the completed pure slices. Stable domain codes exist;
+  adapters still need an HTTP mapping in B-004/B-006.
 - B-005 must demonstrate the decided archival and cross-project relationship
   consistency boundaries against concurrent selection, endpoint, and
   configuration changes.

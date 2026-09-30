@@ -80,6 +80,8 @@ revision-only no-ops.
 Relationship-type configuration tests cover owner scope, duplicate IDs,
 rename/archive compatibility, and rejection of direction changes or removal
 after historical use.
+The complete configuration bound is checked for excessive entry counts and
+aggregate UTF-8 string bytes. Encoded HTTP-body limits remain adapter work.
 Concurrent item/configuration writes remain B-005
 integration checks.
 Pure conversion tests cover complete destination validation, migration

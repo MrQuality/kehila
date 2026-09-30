@@ -260,6 +260,7 @@ impl StableCode for ConfigurationChangeError {
             Self::InvalidConfiguration => Code::InvalidConfiguration,
             Self::InvalidReference => Code::InvalidReference,
             Self::InvalidOperation => Code::InvalidOperation,
+            Self::PayloadLimitExceeded => Code::PayloadLimitExceeded,
             Self::RevisionOverflow => Code::VersionExhausted,
             Self::MigrationRequired { .. } => Code::MigrationRequired,
             Self::FieldMigrationRequired { .. } => Code::MigrationRequired,

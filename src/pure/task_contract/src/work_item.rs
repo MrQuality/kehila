@@ -24,6 +24,14 @@ id_type!(WorkItemTypeId);
 id_type!(WorkflowId);
 id_type!(StatusId);
 
+pub const MAX_CONFIGURATION_TEXT_BYTES: usize = 1024 * 1024;
+pub const MAX_STATUSES: usize = 256;
+pub const MAX_WORKFLOWS: usize = 128;
+pub const MAX_ITEM_TYPES: usize = 128;
+pub const MAX_FIELDS: usize = 512;
+pub const MAX_RELATIONSHIP_TYPES: usize = 128;
+pub const MAX_OPTIONS_PER_FIELD: usize = 256;
+
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Phase {
     New,
@@ -94,10 +102,69 @@ pub struct Configuration {
 }
 
 impl Configuration {
+    /// Logical command bound; transport must reject oversized encoded bodies
+    /// before decoding. This counts all supplied string occurrences in one
+    /// complete configuration, including repeated references.
+    pub fn within_limits(&self) -> bool {
+        if self.statuses.len() > MAX_STATUSES
+            || self.workflows.len() > MAX_WORKFLOWS
+            || self.types.len() > MAX_ITEM_TYPES
+            || self.fields.len() > MAX_FIELDS
+            || self.relationship_types.len() > MAX_RELATIONSHIP_TYPES
+            || self
+                .fields
+                .iter()
+                .any(|field| field.options.len() > MAX_OPTIONS_PER_FIELD)
+        {
+            return false;
+        }
+        let mut total = self.project_id.0.len();
+        for status in &self.statuses {
+            total = total.saturating_add(status.id.0.len());
+        }
+        for workflow in &self.workflows {
+            total = total
+                .saturating_add(workflow.id.0.len())
+                .saturating_add(workflow.initial_status_id.0.len());
+            for status_id in &workflow.status_ids {
+                total = total.saturating_add(status_id.0.len());
+            }
+        }
+        for item_type in &self.types {
+            total = total
+                .saturating_add(item_type.id.0.len())
+                .saturating_add(item_type.default_workflow_id.0.len());
+            if let Some(title) = &item_type.title_field_id {
+                total = total.saturating_add(title.0.len());
+            }
+            for workflow_id in &item_type.permitted_workflows {
+                total = total.saturating_add(workflow_id.0.len());
+            }
+        }
+        for field in &self.fields {
+            total = total
+                .saturating_add(field.id.0.len())
+                .saturating_add(field.owner_type.0.len())
+                .saturating_add(field.name.len());
+            for option in &field.options {
+                total = total
+                    .saturating_add(option.id.0.len())
+                    .saturating_add(option.name.len());
+            }
+        }
+        for kind in &self.relationship_types {
+            total = total
+                .saturating_add(kind.owner_project_id.0.len())
+                .saturating_add(kind.id.0.len())
+                .saturating_add(kind.name.len());
+        }
+        total <= MAX_CONFIGURATION_TEXT_BYTES
+    }
+
     /// Check the structural rules needed to interpret item references uniquely.
     /// Administration commands must validate their proposed complete revision.
     pub fn validate(&self) -> Result<(), Error> {
-        if self.project_id.0.is_empty() || self.revision == 0 {
+        if self.project_id.0.is_empty() || self.revision == 0 || !self.within_limits() {
             return Err(Error::InvalidConfiguration);
         }
         let mut relationship_ids = HashSet::new();
