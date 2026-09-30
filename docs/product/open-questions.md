@@ -107,6 +107,13 @@ open for exact value/identity limits, project archival details, field-definition
 evolution, complete typed commands/errors, and contract checks; the accepted
 review decisions are not pending reconfirmation.
 
+**Further resolution, 2026-09-30:** [D-020](decisions.md#d-020) fixes project
+archival and restoration effects, preserves issued readable IDs across prefix
+changes, and rejects in-place value-kind changes for populated fields. The
+[contract review](B-003-contract.md) adds BC-21 through BC-23. Q-008 remains
+open for exact limits, identifier uniqueness scope, complete typed commands,
+and checks.
+
 <a id="q-009"></a>
 ## Q-009 — Scheduling demand, windows, and multiple drivers
 

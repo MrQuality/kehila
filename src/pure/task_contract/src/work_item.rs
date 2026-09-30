@@ -65,6 +65,7 @@ pub struct WorkItemType {
 pub struct Configuration {
     pub project_id: ProjectId,
     pub revision: u64,
+    pub project_archived: bool,
     pub statuses: Vec<Status>,
     pub workflows: Vec<Workflow>,
     pub types: Vec<WorkItemType>,
@@ -202,6 +203,7 @@ pub enum Error {
     InvalidReference,
     InvalidConfiguration,
     ArchivedTarget,
+    ArchivedProject,
     ProhibitedPhaseChange,
     InvalidOperation,
     VersionOverflow,
@@ -253,6 +255,9 @@ pub fn decide(
     }
     if item.project_id != configuration.project_id {
         return Decision::Reject(Error::InvalidReference);
+    }
+    if configuration.project_archived {
+        return Decision::Reject(Error::ArchivedProject);
     }
     if item.archived {
         return Decision::Reject(Error::ArchivedTarget);

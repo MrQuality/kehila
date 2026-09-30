@@ -46,8 +46,16 @@ Unit tests cover the equality grammar, schema-version decisions, and the first
 pure B-003 status/workflow command rules. The latter test configuration
 references, phase derivation, migration restrictions, archival targets, stale
 versions, and replay order; they do not establish persistence or concurrency.
-Integration
-tests use the development NATS server to check its greeting, connection handshake,
+Pure project-rule tests cover archive access effects, project-local readable ID
+allocation across prefix changes, exact estimate parsing and unit locking, and
+the populated-field kind-change rule. Their cross-record storage effects are
+still unverified.
+Pure field-rule tests cover hidden value preservation, optional/required
+validation, typed values and WorkItem type ownership, choice-option archival,
+and calendar boundaries. Required-field changes under concurrent writes still
+need authoritative storage checks.
+
+Integration tests use the development NATS server to check its greeting, connection handshake,
 and request/response behavior. The Python probe also checks the JetStream account
 API using a temporary subscription. It creates no streams or application data.
 Connections use three-second deadlines and bounded frame sizes and counts.

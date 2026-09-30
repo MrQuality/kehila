@@ -1,8 +1,9 @@
 # B-003 project and work-item contract review
 
 **Status:** Contract work in progress. The maintainer accepted the review
-recommendations and the ten review resolutions on 2026-09-29;
-[D-018](decisions.md#d-018) and [D-019](decisions.md#d-019) record those decisions.
+recommendations and the ten review resolutions on 2026-09-29; the remaining
+project, identifier, and field-kind choices on 2026-09-30. [D-018](decisions.md#d-018),
+[D-019](decisions.md#d-019), and [D-020](decisions.md#d-020) record those decisions.
 The remaining specification work is listed below. This document does not
 claim implemented behavior or a finalized storage format.
 
@@ -72,6 +73,13 @@ through an explicit archive filter. Their history and relationships survive.
 Archival alone does not complete an item, report usage, or release resources.
 Its interaction with reservations must be specified before resource integration.
 
+Project archival blocks item creation and project configuration edits. Items in
+that project become read-only, and user current-work selections pointing to them
+are cleared. Items, relationships, and history remain readable. Project
+restoration makes only individually unarchived items editable again. Archival
+itself produces no item lifecycle or resource effects. Storage coordination of
+archive and selection changes is a B-005 acceptance requirement.
+
 ### Relationships
 
 Cross-project relationships are allowed when the actor is authorized to access
@@ -92,6 +100,10 @@ Projects have stable identity, name, readable identifier prefix, estimation
 unit, configuration revision, and archival state. Archive projects containing
 records instead of deleting them. Preserve configuration history needed to
 interpret historical operations. Destructive history cleanup is outside B-003.
+Issued readable IDs keep their original prefix and sequence when a project's
+current prefix changes. Only future allocations use the new prefix. Old IDs
+remain resolvable to stable internal identities; sequence allocation is
+monotonic within each project and must be safe under concurrent creation.
 
 ### Estimates
 
@@ -103,9 +115,14 @@ sum of heterogeneous resource-hours defines an estimate.
 
 Use exact decimal estimates, allow zero, reject negatives, and distinguish zero
 from absence (not estimated). M1 prohibits changing the project unit once an
-estimate has been recorded, including after that estimate is cleared. Numeric
-precision and bounds remain to specify. Scheduling must obtain explicit resource
-demand; its detailed rules remain with the scheduling questions.
+estimate has been recorded, including after that estimate is cleared. Scheduling
+must obtain explicit resource demand; its detailed rules remain with the
+scheduling questions.
+
+The current pure contract proposes exact thousandths from `0` through
+`999999.999`. It rejects signs, exponent notation, implicit rounding, and larger
+values. This M1 representation bound needs review before durable storage is
+finalized. Zero remains distinct from an absent estimate.
 
 ### Replay
 
@@ -126,7 +143,7 @@ HTTP routes, serialization, or Rust inheritance.
 | Project | Stable identity, name, readable identifier prefix, estimate unit, configuration revision, archival state. |
 | Project configuration revision | A coherent set of field rules, type/workflow permissions, workflow membership, defaults, and transition restrictions. |
 | Work item | Stable identity, project and type references, workflow/status references, item version; phase derived from status. |
-| Field definition | Stable identity, owning type, value kind, and validation constraints; display names are not identity. |
+| Field definition | Stable identity, owning type, value kind, and validation constraints; display names are not identity. Once values exist, change of value kind is rejected; migrate to a new field and archive the old one. |
 | Status | Stable project-scoped identity and phase mapping; display metadata is separate from identity. |
 | Workflow | Project-scoped status membership, initial status, and phase-transition restrictions. |
 | Current-work selection | User-scoped reference with its own concurrency boundary; selection does not mutate item lifecycle. |
@@ -229,6 +246,64 @@ conflict. The existing single-task worker still uses its provisional mutation
 contract. B-005 must integrate the new rules with authoritative configuration
 loading, atomic persistence, and real concurrency checks.
 
+### Second typed rule slice: project identity and archival
+
+The Rust `task_contract::project` module models project archival, item access,
+readable ID allocation, estimate values and unit locking, and populated-field
+kind changes. Archiving emits a project-scoped instruction to clear current-work
+selections. Restoring emits no lifecycle effect. Access is read-only while the
+project is archived; an individually archived item remains read-only after
+project restoration. Authorization is a separate concern.
+
+Each issued ID stores the stable internal item and project identities together
+with the prefix and sequence used at issue time. The allocator increments a
+project-local sequence; prefix changes affect only later allocations. The pure
+module proposes uppercase ASCII prefixes of 2–12 characters, beginning with a
+letter. Readable IDs are resolved with project context; any global lookup policy
+needs a separate uniqueness rule. B-005 must serialize allocation and preserve
+old lookup entries.
+
+The estimate representation uses exact decimal thousandths with an upper bound
+of `999999.999` in hours or points. No float conversion or implicit rounding is
+allowed. A monotonic `ever_estimated` flag locks unit changes after the first
+accepted estimate, even if it was zero or is later cleared. B-005 must update
+that flag coherently with the estimate write.
+
+A populated field's value kind cannot be changed in place. The pure rule uses
+an `ever_valued` input that must include historical values, not only current
+visible values. A new field and explicit migration are required. The rule also
+rejects configuration edits while the project is archived. Full field schema,
+value validation, and migration commands remain to define.
+
+The pure tests cover the rule portions of BC-19 and BC-21 through BC-23.
+Storage coordination, old-ID resolution, cross-user selection clearing, and
+authoritative historical-value checks are B-005 obligations.
+
+### Third typed rule slice: field values and usage
+
+The Rust `task_contract::field` module gives each field a stable identity and
+owning WorkItem type, independent of its display name. A definition has one of
+the five accepted value kinds, one usage mode, an archival flag, and stable
+single-choice option identities. It validates ordinary `Keep`, `Set`, and
+`Clear` edits: `Keep` retains hidden or archived values; `Set` and `Clear`
+cannot change them. `Clear` produces absence, and a required field rejects
+absence. Required text must contain non-whitespace content; numeric zero and
+Boolean false are valid values. A single-choice assignment must name a current
+non-archived option, while an existing archived option may be retained.
+
+The pure rule for optional-to-required changes checks the full applicable
+value set provided by its caller. B-005 must get that set authoritatively and
+serialize the configuration change with concurrent item writes. A search
+query or a detached snapshot cannot establish compliance. The rule tests cover
+the pure portion of BC-02 and BC-15, plus type ownership, date boundaries,
+choice archival, and similarly named fields on distinct WorkItem types.
+
+The current pure representation proposes text values of at most 16 KiB,
+signed numeric thousandths in `-999999.999` through `999999.999`, and Gregorian
+dates in years 1 through 9999. These bounds require review before durable
+storage is finalized. Command payload limits and how archived field definitions
+evolve remain distinct contract work.
+
 ## Review resolutions
 
 All ten resolutions were accepted by the maintainer on 2026-09-29. C-09 retains
@@ -251,12 +326,12 @@ the full configurable model in M1; no capability is deferred by this review.
 
 These are narrower details, not a reopening of C-01 through C-10:
 
-- Set exact decimal precision and maximum values, text limits, date format,
-  single-choice option identity/edit rules, and command payload limits.
-- Specify readable identifier prefix rules, sequence allocation, and behavior
-  when a project prefix changes. Internal identity must remain stable.
-- Specify project archival effects on contained items, current selections, and
-  configuration commands; distinguish item archival from project archival.
+- Review the proposed estimate, prefix, text, number, and date bounds above;
+  finish single-choice option administration and command payload limits.
+- Specify whether globally resolving a readable ID is required, and the
+  corresponding uniqueness policy. Project-scoped resolution is defined now.
+- Specify project archival command inputs and restoration errors. D-020 fixes
+  effects on contained items and current selections.
 - Complete command payloads, typed results, error precedence and stable codes,
   field-definition evolution rules, and the full phase-transition table.
 - Specify the consistency boundary for item archival plus selection clearing,
@@ -294,6 +369,9 @@ These are specifications for future checks, not test results.
 | BC-18 | Create an untitled item, rename a display prefix, and inspect history. | Readable fallback remains available; internal identity and history remain stable under the specified naming policy. | Pure identity policy after naming details are specified. |
 | BC-19 | Record zero, omit an estimate, submit a negative estimate, and change units after clearing a recorded estimate. | Zero and absence differ; negative and post-use unit changes fail. | Pure estimate rules. |
 | BC-20 | Convert an item and later expire its operation replay record. | Required history, including removed source-type values, remains available independently of replay retention. | Contract preservation plus B-005 retention/recovery checks. |
+| BC-21 | Archive a project with active items and current-work selections, then restore it. | Clear selections; preserve readable items, links, and history; prohibit edits while archived; restore editability only for individually unarchived items. No lifecycle or resource effects. | Pure eligibility/effect rules plus B-005 coordinated persistence. |
+| BC-22 | Issue an item ID, change the project prefix, then issue another ID. | The first issued ID remains stable and resolvable; the second uses the new prefix and next project sequence. | Pure allocation rule plus B-005 uniqueness and lookup checks. |
+| BC-23 | Attempt to change a populated custom field from text to number. | Reject in-place kind change; allow an explicit new field and value migration while preserving old field history. | Pure configuration rule plus B-005 authoritative value check. |
 
 ## Completion and handoff
 

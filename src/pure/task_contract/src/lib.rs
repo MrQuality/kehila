@@ -1,5 +1,7 @@
 //! Single-task mutation rules, independent of persistence and HTTP.
 
+pub mod field;
+pub mod project;
 pub mod work_item;
 
 #[derive(Clone, Debug, Eq, PartialEq)]

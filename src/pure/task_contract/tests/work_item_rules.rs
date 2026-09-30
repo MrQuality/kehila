@@ -8,6 +8,7 @@ fn configuration() -> Configuration {
     Configuration {
         project_id: ProjectId("project".into()),
         revision: 4,
+        project_archived: false,
         statuses: vec![
             Status {
                 id: StatusId("backlog".into()),
@@ -454,4 +455,50 @@ fn configuration_rejects_ambiguous_references_and_invalid_initial_phase() {
         .permitted_phase_changes
         .push(PhaseChange::new(Phase::Done, Phase::New));
     assert_eq!(config.validate(), Err(Error::InvalidConfiguration));
+}
+
+#[test]
+fn archived_project_blocks_new_item_commands_but_preserves_recorded_replay() {
+    let original = command(Action::ChangeStatus {
+        target: StatusId("ready".into()),
+    });
+    let result = WorkItemChange {
+        workflow_id: WorkflowId("development".into()),
+        status_id: StatusId("ready".into()),
+        phase: Phase::New,
+        version: 3,
+        effect: LifecycleEffect::None,
+    };
+    let recorded = SuccessfulCommand {
+        item_id: WorkItemId("item".into()),
+        request: original.clone(),
+        result: result.clone(),
+    };
+    let mut config = configuration();
+    config.project_archived = true;
+    config.revision = 5;
+    assert_eq!(
+        decide(&config, &item("backlog", 2), None, true, &original),
+        Decision::Reject(Error::ConfigurationConflict {
+            current_revision: 5
+        })
+    );
+    let fresh = Command {
+        expected_configuration_revision: 5,
+        ..original.clone()
+    };
+    assert_eq!(
+        decide(&config, &item("backlog", 2), None, true, &fresh),
+        Decision::Reject(Error::ArchivedProject)
+    );
+    assert_eq!(
+        decide(
+            &config,
+            &item("backlog", 9),
+            Some(&recorded),
+            true,
+            &original
+        ),
+        Decision::Replay(result)
+    );
 }

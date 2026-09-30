@@ -231,6 +231,37 @@ Detailed access grants and knowledge structure still require their respective
 questions to be resolved. M1 does not absorb later resource/scheduling features
 merely because configuration and relationships are included.
 
+<a id="d-020"></a>
+## D-020 — Preserve issued identifiers and archive projects without rewriting items
+
+**Status: Accepted by the maintainer on 2026-09-30.** Archiving a project blocks
+new items and project configuration edits, makes its existing items read-only,
+and clears current-work selections that point into it. Existing items,
+relationships, and history remain readable. Restoring the project makes items
+that were not individually archived editable again. Project archival alone
+does not change item phase, report usage, release resources, or invoke scheduling.
+
+An issued readable work-item ID retains its original prefix and sequence.
+Changing a project's current prefix affects only future IDs. Earlier IDs
+continue to resolve to the same stable internal WorkItem identity. Allocation
+must be unique and monotonic within the project; an authoritative allocator is
+needed before issuing IDs in concurrent requests.
+
+Changing a field's value kind after values exist is rejected. Define a new
+field, migrate values explicitly, and archive the old field. Renaming a field
+and changing its hidden/optional/required usage are separate operations subject
+to existing validation and history rules. This policy preserves the meaning of
+historical values rather than reinterpreting them under a new type.
+
+**Consequence:** [B-003](backlog.md#b-003) defines typed rules and pure tests.
+[B-005](backlog.md#b-005) must coordinate project archival with user selections,
+provide durable readable-ID allocation and old-ID resolution, and enforce
+field changes against authoritative values under concurrency. Exact prefix,
+field-value, and estimate limits remain contract details. References:
+[R-001](requirements.md#r-001), [R-005](requirements.md#r-005),
+[Q-008](open-questions.md#q-008), and the
+[contract review](B-003-contract.md).
+
 ## How to change a decision
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.
