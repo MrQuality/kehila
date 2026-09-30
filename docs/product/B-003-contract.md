@@ -578,14 +578,29 @@ under the wrong kind. Conversion retains the same entry and prior versions.
 The initial typed limits are 16 KiB of UTF-8 bytes for a text entry, 256 bytes
 for a file label, and 2048 bytes for its locator. Labels and locators exclude
 control characters. These are contract design limits, not separately accepted
-product decisions. Creation and edit command bounds, authorizations, and
-history mutation rules are specified below as subsequent B-003 slices.
+product decisions. Create names a trusted allocated entry ID, current item
+version, kind, and value. Edit names the entry and its expected independent
+version; it preserves kind and item ownership. Both carry an operation ID and
+authenticated actor identity. Reading and editing knowledge on the item are
+required for a new mutation and for replay. Unauthorized comes first, then a
+previously recorded identical success replays before mutable validation;
+changed content under its operation ID conflicts. A new command checks
+identity, archival state, and expected version. No-op edits fail.
+
+Each successful create or edit yields the current entry and an ordered revision
+history. Each revision retains version, author, and value; edit appends one
+revision and never rewrites prior ones. The input history must be complete and
+match the current value. B-005 must commit the entry, appended revision, and
+success record atomically with item archival eligibility and unique entry ID.
+The pure result carries the complete history for contract inspection; a storage
+adapter may append only the new revision while preserving the same invariant.
+No knowledge mutation changes an item's status, phase, usage, or version.
 
 ## Remaining specification work
 
 These are narrower details, not a reopening of C-01 through C-10:
 
-- Specify configuration, knowledge-command, relationship-administration, and encoded
+- Specify configuration, knowledge-command payload, relationship-administration, and encoded
   request-body limits; item create/edit/conversion field limits are fixed by D-023.
 - Complete remaining command payloads, typed results, and operation-specific error
   precedence. Stable domain codes exist

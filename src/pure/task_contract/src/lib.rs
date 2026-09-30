@@ -9,6 +9,7 @@ pub mod field;
 pub mod field_admin;
 pub mod item_mutation;
 pub mod knowledge;
+pub mod knowledge_command;
 pub mod payload;
 pub mod project;
 pub mod relationship;

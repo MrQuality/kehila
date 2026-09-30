@@ -11,6 +11,7 @@ use crate::field::FieldError;
 use crate::field_admin::OptionAdminError;
 use crate::item_mutation::ItemMutationError;
 use crate::knowledge::KnowledgeError;
+use crate::knowledge_command::KnowledgeError as KnowledgeCommandError;
 use crate::project::ProjectError;
 use crate::relationship::RelationshipError;
 use crate::relationship_command::RelationshipCreateError;
@@ -23,6 +24,7 @@ pub enum Code {
     OperationIdReused,
     ConfigurationConflict,
     ItemVersionConflict,
+    KnowledgeVersionConflict,
     SelectionVersionConflict,
     InvalidConfiguration,
     InvalidReference,
@@ -49,6 +51,7 @@ pub enum Code {
     PayloadLimitExceeded,
     DuplicateOption,
     DuplicateRelationship,
+    DuplicateKnowledgeEntry,
     SelfLink,
     ProhibitedPhaseChange,
     MigrationRequired,
@@ -65,6 +68,7 @@ impl Code {
             Self::OperationIdReused => "operation_id_reused",
             Self::ConfigurationConflict => "configuration_conflict",
             Self::ItemVersionConflict => "item_version_conflict",
+            Self::KnowledgeVersionConflict => "knowledge_version_conflict",
             Self::SelectionVersionConflict => "selection_version_conflict",
             Self::InvalidConfiguration => "invalid_configuration",
             Self::InvalidReference => "invalid_reference",
@@ -91,6 +95,7 @@ impl Code {
             Self::PayloadLimitExceeded => "payload_limit_exceeded",
             Self::DuplicateOption => "duplicate_option",
             Self::DuplicateRelationship => "duplicate_relationship",
+            Self::DuplicateKnowledgeEntry => "duplicate_knowledge_entry",
             Self::SelfLink => "self_link",
             Self::ProhibitedPhaseChange => "prohibited_phase_change",
             Self::MigrationRequired => "migration_required",
@@ -146,6 +151,23 @@ impl StableCode for KnowledgeError {
             Self::InvalidReference => Code::InvalidReference,
             Self::InvalidValue => Code::InvalidKnowledgeValue,
             Self::WrongKind => Code::WrongKnowledgeKind,
+        }
+    }
+}
+
+impl StableCode for KnowledgeCommandError {
+    fn code(&self) -> Code {
+        match self {
+            Self::Unauthorized => Code::Unauthorized,
+            Self::OperationIdReused => Code::OperationIdReused,
+            Self::VersionConflict { .. } => Code::KnowledgeVersionConflict,
+            Self::ItemVersionConflict { .. } => Code::ItemVersionConflict,
+            Self::InvalidReference => Code::InvalidReference,
+            Self::InvalidOperation => Code::InvalidOperation,
+            Self::ArchivedTarget => Code::ArchivedTarget,
+            Self::AlreadyExists => Code::DuplicateKnowledgeEntry,
+            Self::Value(error) => error.code(),
+            Self::VersionExhausted => Code::VersionExhausted,
         }
     }
 }
