@@ -1,5 +1,6 @@
 //! Single-task mutation rules, independent of persistence and HTTP.
 
+pub mod configuration_change;
 pub mod current_work;
 pub mod field;
 pub mod project;

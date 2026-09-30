@@ -58,6 +58,7 @@ pub struct Workflow {
 pub struct WorkItemType {
     pub id: WorkItemTypeId,
     pub permitted_workflows: Vec<WorkflowId>,
+    pub default_workflow_id: WorkflowId,
     pub archived: bool,
 }
 
@@ -123,6 +124,22 @@ impl Configuration {
         let mut ids = HashSet::new();
         for item_type in &self.types {
             if item_type.id.0.is_empty() || !ids.insert(&item_type.id) {
+                return Err(Error::InvalidConfiguration);
+            }
+            if !item_type
+                .permitted_workflows
+                .contains(&item_type.default_workflow_id)
+            {
+                return Err(Error::InvalidConfiguration);
+            }
+            let Some(default_workflow) = self
+                .workflows
+                .iter()
+                .find(|workflow| workflow.id == item_type.default_workflow_id)
+            else {
+                return Err(Error::InvalidConfiguration);
+            };
+            if !item_type.archived && default_workflow.archived {
                 return Err(Error::InvalidConfiguration);
             }
             let mut permitted = HashSet::new();

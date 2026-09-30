@@ -58,6 +58,10 @@ Pure relationship and current-work tests cover cross-project access decisions,
 canonical duplicate/self-link rejection, symmetric identity, archival
 eligibility, selection versions, and selection independent of lifecycle.
 Storage uniqueness and authorization enforcement remain unverified.
+Pure configuration-change tests cover active defaults, replacement before
+archival, dependency-preserving edits, phase mapping preservation, and revision
+and authorization gates. Concurrent item/configuration writes remain B-005
+integration checks.
 
 Integration tests use the development NATS server to check its greeting, connection handshake,
 and request/response behavior. The Python probe also checks the JetStream account

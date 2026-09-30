@@ -71,6 +71,7 @@ fn configuration() -> Configuration {
                 WorkflowId("development".into()),
                 WorkflowId("alternate".into()),
             ],
+            default_workflow_id: WorkflowId("development".into()),
             archived: false,
         }],
     }
@@ -327,6 +328,7 @@ fn returning_from_active_to_new_has_no_lifecycle_effect() {
 #[test]
 fn archived_workflow_allows_existing_items_to_progress_but_blocks_migration_into_it() {
     let mut config = configuration();
+    config.types[0].default_workflow_id = WorkflowId("alternate".into());
     config.workflows[0].archived = true;
     assert!(matches!(
         decide(

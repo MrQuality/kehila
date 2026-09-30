@@ -141,7 +141,7 @@ HTTP routes, serialization, or Rust inheritance.
 | Contract | Ownership and responsibility |
 | --- | --- |
 | Project | Stable identity, name, readable identifier prefix, estimate unit, configuration revision, archival state. |
-| Project configuration revision | A coherent set of field rules, type/workflow permissions, workflow membership, defaults, and transition restrictions. |
+| Project configuration revision | A coherent set of field rules, type/workflow permissions, workflow membership, type default workflows, initial statuses, and transition restrictions. |
 | Work item | Stable identity, project and type references, workflow/status references, item version; phase derived from status. |
 | Field definition | Stable identity, owning type, value kind, and validation constraints; display names are not identity. Once values exist, change of value kind is rejected; migrate to a new field and archive the old one. |
 | Status | Stable project-scoped identity and phase mapping; display metadata is separate from identity. |
@@ -325,6 +325,29 @@ affected selection clear with the archive change.
 Pure tests cover BC-12 and the identity/access portion of BC-17. B-005 must
 enforce relationship uniqueness under concurrent creation and valid endpoints
 at commit; B-007 must supply authoritative access decisions for both endpoints.
+
+### Fifth typed rule slice: configuration compatibility
+
+An active WorkItem type names a default workflow that it permits and that is
+not archived. Every workflow names an unarchived New-phase initial status in
+its membership. Archiving an active type's default workflow therefore requires
+selecting another eligible default first; archiving an initial status requires
+selecting another eligible initial status first. An archived workflow can still
+govern existing items and their status changes.
+
+The Rust `task_contract::configuration_change` module validates an authorized
+one-revision configuration edit against the complete set of affected items. It
+rejects removing a type, workflow, status, workflow membership, or type/workflow
+permission while an item still depends on it. It also rejects changing the
+phase of a status used by an item, which would reinterpret that item's current
+lifecycle state. Archived items remain in the dependency set. A new revision
+cannot be accepted for an archived project.
+
+These pure checks cover BC-07 and BC-08 and the in-use status policy in issue
+#7. The item set must be authoritative and protected from concurrent writes
+through commit; B-005 owns that enforcement. The rule does not implement a
+project archive command, since archive changes project state rather than the
+configuration schema.
 
 ## Review resolutions
 
