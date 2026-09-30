@@ -55,7 +55,8 @@ validation, typed values and WorkItem type ownership, choice-option archival,
 and calendar boundaries. Required-field changes under concurrent writes still
 need authoritative storage checks.
 Pure relationship and current-work tests cover type ownership, type-use and
-two-endpoint Link inputs, canonical duplicate/self-link rejection, symmetric identity, archival
+two-endpoint Link inputs, canonical duplicate/self-link rejection, stable record
+ID in directed inverse and symmetric views, archival
 eligibility, selection versions, and selection independent of lifecycle.
 Storage uniqueness and authorization enforcement remain unverified.
 Pure configuration-change tests cover active defaults, replacement before

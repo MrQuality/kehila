@@ -2,8 +2,9 @@ use task_contract::current_work::{
     decide_selection, CurrentWork, SelectionError, SelectionResult, UserId,
 };
 use task_contract::relationship::{
-    canonical_key, decide_relationship, Direction, Endpoint, LinkAuthorization, RelationshipError,
-    RelationshipKey, RelationshipType, RelationshipTypeId,
+    canonical_key, decide_relationship, view_from, Direction, Endpoint, LinkAuthorization,
+    RelationshipError, RelationshipId, RelationshipKey, RelationshipRecord, RelationshipType,
+    RelationshipTypeId, RelationshipView, ViewDirection,
 };
 use task_contract::work_item::{ProjectId, WorkItemId};
 
@@ -124,6 +125,80 @@ fn directed_links_keep_their_orientation() {
     assert_ne!(
         canonical_key(&kind, &left, &right).unwrap(),
         canonical_key(&kind, &right, &left).unwrap()
+    );
+}
+
+#[test]
+fn inverse_view_reuses_the_directed_record_identity() {
+    let left = endpoint("one", "a");
+    let right = endpoint("two", "b");
+    let kind = relation_type(Direction::Directed);
+    let record = RelationshipRecord {
+        id: RelationshipId("link-1".into()),
+        key: canonical_key(&kind, &left, &right).unwrap(),
+    };
+    assert_eq!(
+        view_from(&record, &kind, &left.identity()),
+        Ok(RelationshipView {
+            id: record.id.clone(),
+            other_endpoint: right.identity(),
+            direction: ViewDirection::Outgoing,
+        })
+    );
+    assert_eq!(
+        view_from(&record, &kind, &right.identity()),
+        Ok(RelationshipView {
+            id: record.id.clone(),
+            other_endpoint: left.identity(),
+            direction: ViewDirection::Incoming,
+        })
+    );
+    assert_eq!(
+        view_from(&record, &kind, &endpoint("three", "c").identity()),
+        Err(RelationshipError::InvalidReference)
+    );
+}
+
+#[test]
+fn symmetric_view_is_the_same_from_either_endpoint() {
+    let left = endpoint("one", "a");
+    let right = endpoint("two", "b");
+    let kind = relation_type(Direction::Symmetric);
+    let record = RelationshipRecord {
+        id: RelationshipId("link-2".into()),
+        key: canonical_key(&kind, &right, &left).unwrap(),
+    };
+    for (viewer, other) in [(&left, &right), (&right, &left)] {
+        assert_eq!(
+            view_from(&record, &kind, &viewer.identity()),
+            Ok(RelationshipView {
+                id: record.id.clone(),
+                other_endpoint: other.identity(),
+                direction: ViewDirection::Symmetric,
+            })
+        );
+    }
+}
+
+#[test]
+fn a_view_rejects_missing_record_identity_and_mismatched_type() {
+    let left = endpoint("one", "a");
+    let right = endpoint("two", "b");
+    let kind = relation_type(Direction::Directed);
+    let mut record = RelationshipRecord {
+        id: RelationshipId(String::new()),
+        key: canonical_key(&kind, &left, &right).unwrap(),
+    };
+    assert_eq!(
+        view_from(&record, &kind, &left.identity()),
+        Err(RelationshipError::InvalidReference)
+    );
+    record.id = RelationshipId("link-3".into());
+    let mut other_kind = kind.clone();
+    other_kind.id = RelationshipTypeId("blocks".into());
+    assert_eq!(
+        view_from(&record, &other_kind, &left.identity()),
+        Err(RelationshipError::InvalidReference)
     );
 }
 

@@ -5,6 +5,10 @@ use crate::work_item::{ProjectId, WorkItemId};
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct RelationshipTypeId(pub String);
 
+/// Opaque identity of one persisted link, independent of its uniqueness key.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct RelationshipId(pub String);
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Direction {
     Directed,
@@ -48,6 +52,26 @@ pub struct RelationshipKey {
     pub type_id: RelationshipTypeId,
     pub from: EndpointIdentity,
     pub to: EndpointIdentity,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RelationshipRecord {
+    pub id: RelationshipId,
+    pub key: RelationshipKey,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ViewDirection {
+    Outgoing,
+    Incoming,
+    Symmetric,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RelationshipView {
+    pub id: RelationshipId,
+    pub other_endpoint: EndpointIdentity,
+    pub direction: ViewDirection,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -127,4 +151,44 @@ pub fn decide_relationship(
         return Err(RelationshipError::Duplicate);
     }
     Ok(key)
+}
+
+/// Project one stored link for an endpoint. The inverse of a directed link is
+/// a view of the same record; it is never another persisted relationship.
+/// The caller must authorize the read before presenting this view.
+pub fn view_from(
+    record: &RelationshipRecord,
+    kind: &RelationshipType,
+    viewer: &EndpointIdentity,
+) -> Result<RelationshipView, RelationshipError> {
+    if record.id.0.is_empty()
+        || record.key.owner_project_id != kind.owner_project_id
+        || record.key.type_id != kind.id
+    {
+        return Err(RelationshipError::InvalidReference);
+    }
+    let (other_endpoint, direction) = if *viewer == record.key.from {
+        (
+            record.key.to.clone(),
+            match kind.direction {
+                Direction::Directed => ViewDirection::Outgoing,
+                Direction::Symmetric => ViewDirection::Symmetric,
+            },
+        )
+    } else if *viewer == record.key.to {
+        (
+            record.key.from.clone(),
+            match kind.direction {
+                Direction::Directed => ViewDirection::Incoming,
+                Direction::Symmetric => ViewDirection::Symmetric,
+            },
+        )
+    } else {
+        return Err(RelationshipError::InvalidReference);
+    };
+    Ok(RelationshipView {
+        id: record.id.clone(),
+        other_endpoint,
+        direction,
+    })
 }

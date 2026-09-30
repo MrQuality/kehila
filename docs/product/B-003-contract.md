@@ -319,15 +319,22 @@ evolve remain distinct contract work.
 
 ### Fourth typed rule slice: relationships and current work
 
-The Rust `task_contract::relationship` module derives canonical identity from
-an owner-project-qualified relationship type and two project-qualified WorkItem
-endpoints. It rejects
-self-links, duplicate canonical links, archived types or endpoints, and missing
-access to either endpoint. Symmetric types sort endpoints into one stored key;
-directed types preserve their canonical orientation, from which inverse display
-can be derived. Existing links survive endpoint archival. A relationship's
-stable record identity, project-defined type ownership, and type-specific
-scheduling behavior remain further contract work.
+The Rust `task_contract::relationship` module derives a canonical uniqueness
+key from an owner-project-qualified relationship type and two
+project-qualified WorkItem endpoints. It rejects self-links, duplicate keys,
+archived types or endpoints, and missing creation grants. A stored relationship
+also has its own opaque, stable record ID, separate from the uniqueness key.
+B-005 allocates that ID and enforces key uniqueness at commit. Neither a type
+rename nor inverse display changes the record ID.
+
+Symmetric types sort endpoints into one stored key. Directed types preserve
+their `from` and `to` orientation. A view from `from` is outgoing; a view from
+`to` is incoming. Both views carry the same record ID and other-endpoint
+identity. Symmetric views have the same direction marker from either endpoint.
+An unrelated viewer or mismatched type reference is invalid. The view is a
+projection, never a second stored link; B-007 must authorize reads before
+presenting it. Existing links survive endpoint archival. Type-specific
+scheduling behavior remains separate contract work.
 
 The `current_work` module keeps one versioned selection per user. Choosing or
 clearing it changes only user context. An unchanged selection is an idempotent
@@ -505,7 +512,6 @@ These are narrower details, not a reopening of C-01 through C-10:
   precedence, and field-definition evolution rules. Stable domain codes exist
   for the current pure decisions; adapters
   still need an HTTP mapping.
-- Specify stable relationship record IDs and the inverse presentation contract.
 - Demonstrate the consistency boundary for item/project archival plus selection
   clearing, and specify cross-project relationship creation plus
   endpoint/configuration changes.
@@ -548,6 +554,7 @@ These are specifications for future checks, not test results.
 | BC-24 | Configure each possible cross-phase edge and change status within one phase. | Accept only the five system edges when the workflow permits them; reject Done to New and any configured same-phase edge. Same-phase status changes remain valid. | Pure phase graph and workflow checks. |
 | BC-25 | Create a cross-project link using a type owned by either endpoint project, then try a type owned by a third project. | Accept the eligible types; reject the unrelated owner. Equal local type IDs from different owner projects have distinct canonical identities. | Pure relationship identity plus B-005 endpoint integrity. |
 | BC-26 | Attempt link creation without type-use permission or Link permission on either endpoint. | Reject each missing grant; type administration requires project configuration permission in the owner project. | Pure grant inputs; B-007 authoritative enforcement. |
+| BC-27 | View one directed link from each endpoint, then view a symmetric link from each endpoint. | Directed views are outgoing/incoming respectively; symmetric views share one direction marker. Each view carries the same stable record ID and names the other endpoint; no inverse record is stored. | Pure projection; B-005 persistence and B-007 read access. |
 
 ## Completion and handoff
 
@@ -558,6 +565,8 @@ Documentation acceptance alone does not satisfy issue #7's test requirement.
 
 B-005 owns demonstrated commit-time configuration consistency, authoritative
 reference checks, persistence, replay, and recovery. B-007 owns access enforcement.
+B-005 also owns relationship record ID allocation and canonical-key uniqueness;
+B-007 owns read authorization for endpoint-relative relationship views.
 B-011 owns integrated resource effects. Keep those implementation gates visible
 without claiming they have been satisfied by this contract review.
 
