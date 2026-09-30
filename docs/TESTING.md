@@ -60,6 +60,9 @@ establish durable retention. Pure knowledge-command tests cover create/edit
 revision append, author retention, current grants before replay, stale entry
 versions, incomplete history, wrong value kind, and archived targets. Atomic
 persistence remains unverified.
+Pure follow-up tests cover cross-project Link grants, single-origin and cycle
+rejection, and replay precedence. Concurrent ancestry and endpoint checks
+remain B-005 integration work.
 Pure relationship and current-work tests cover type ownership, type-use and
 two-endpoint Link inputs, canonical duplicate/self-link rejection, stable record
 ID in directed inverse and symmetric views, archival

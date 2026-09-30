@@ -9,6 +9,7 @@ use crate::conversion::ConversionError;
 use crate::current_work::SelectionError;
 use crate::field::FieldError;
 use crate::field_admin::OptionAdminError;
+use crate::follow_up::FollowUpError;
 use crate::item_mutation::ItemMutationError;
 use crate::knowledge::KnowledgeError;
 use crate::knowledge_command::KnowledgeError as KnowledgeCommandError;
@@ -52,6 +53,8 @@ pub enum Code {
     DuplicateOption,
     DuplicateRelationship,
     DuplicateKnowledgeEntry,
+    FollowUpOriginExists,
+    FollowUpCycle,
     SelfLink,
     ProhibitedPhaseChange,
     MigrationRequired,
@@ -96,6 +99,8 @@ impl Code {
             Self::DuplicateOption => "duplicate_option",
             Self::DuplicateRelationship => "duplicate_relationship",
             Self::DuplicateKnowledgeEntry => "duplicate_knowledge_entry",
+            Self::FollowUpOriginExists => "follow_up_origin_exists",
+            Self::FollowUpCycle => "follow_up_cycle",
             Self::SelfLink => "self_link",
             Self::ProhibitedPhaseChange => "prohibited_phase_change",
             Self::MigrationRequired => "migration_required",
@@ -168,6 +173,23 @@ impl StableCode for KnowledgeCommandError {
             Self::AlreadyExists => Code::DuplicateKnowledgeEntry,
             Self::Value(error) => error.code(),
             Self::VersionExhausted => Code::VersionExhausted,
+        }
+    }
+}
+
+impl StableCode for FollowUpError {
+    fn code(&self) -> Code {
+        match self {
+            Self::Unauthorized => Code::Unauthorized,
+            Self::OperationIdReused => Code::OperationIdReused,
+            Self::ConfigurationConflict => Code::ConfigurationConflict,
+            Self::ItemVersionConflict => Code::ItemVersionConflict,
+            Self::InvalidReference => Code::InvalidReference,
+            Self::InvalidOperation => Code::InvalidOperation,
+            Self::ArchivedTarget => Code::ArchivedTarget,
+            Self::SelfOrigin => Code::SelfLink,
+            Self::AlreadyHasOrigin => Code::FollowUpOriginExists,
+            Self::Cycle => Code::FollowUpCycle,
         }
     }
 }

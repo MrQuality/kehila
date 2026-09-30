@@ -7,6 +7,7 @@ pub mod current_work;
 pub mod error_code;
 pub mod field;
 pub mod field_admin;
+pub mod follow_up;
 pub mod item_mutation;
 pub mod knowledge;
 pub mod knowledge_command;

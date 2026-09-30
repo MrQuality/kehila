@@ -596,6 +596,25 @@ The pure result carries the complete history for contract inspection; a storage
 adapter may append only the new revision while preserving the same invariant.
 No knowledge mutation changes an item's status, phase, usage, or version.
 
+### Follow-up origin contract
+
+A follow-up origin is an immutable directed record from one source WorkItem to
+one follow-up WorkItem. The follow-up has at most one origin; one source may
+have many follow-ups. Both endpoints may belong to different projects. A new
+origin requires current Link permission on each item, current versions for
+both items and both project revisions, live endpoints, and a unique record ID.
+The source cannot be its own follow-up, and the complete ancestry of the
+source cannot contain the proposed follow-up. This keeps provenance acyclic.
+It is independent of project-defined relationship types and never supplies a
+scheduling dependency or status transition.
+
+Current Link grants are checked before replay. Identical recorded success
+replays before mutable endpoint, version, and ancestry checks; changed content
+under the same operation ID conflicts. B-005 must atomically protect both
+endpoints, the child's unique origin, complete ancestry, and the operation
+record. Archival and conversion preserve the origin and endpoint identities;
+restoring an item does not create or remove origins.
+
 ## Remaining specification work
 
 These are narrower details, not a reopening of C-01 through C-10:
