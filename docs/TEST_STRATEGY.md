@@ -3,7 +3,10 @@
 - **Document:** `docs/TEST_STRATEGY.md`
 - **Status:** Proposed
 - **Applies to:** YAJA repository and all supported YAJA distributions
-- **Strategy owner:** Project maintainer / Quality owner
+- **Strategy owner:** [Project maintainer](../CONTRIBUTING.md#repository-roles),
+  currently the account listed in [CODEOWNERS](../.github/CODEOWNERS). No
+  separate quality owner is assigned.
+
 **Review trigger:** Material architecture change, supported-runtime change, release-scope change, or evidence that this strategy no longer provides adequate risk coverage
 
 ---

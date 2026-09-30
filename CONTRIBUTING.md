@@ -30,6 +30,21 @@ and `gofmt` on changed Rust and Go files.
 Pure Rust code lives in `src/pure/` and adapters in `src/io/`. Go uses `go/pure/`
 and `go/io/`. Add new Go modules to `go.work` and the test runner.
 
+## Repository roles
+
+The **project maintainer** owns repository decisions, reviews changes, and
+records the assessment required before merging. The current GitHub account for
+that role is listed in [CODEOWNERS](.github/CODEOWNERS). During the
+sole-contributor phase, the project maintainer also owns the proposed
+[test strategy](docs/TEST_STRATEGY.md); no separate **quality owner** has been
+assigned. When these responsibilities are delegated, update this section and
+the relevant ownership records.
+
+CODEOWNERS routes review requests. It does not grant permissions inside YAJA,
+identify an independent reviewer for an author's PR, or by itself require
+code-owner approval. Product project administrators and their grants are
+separate roles defined by the product contracts.
+
 ## Pull requests and review
 
 Describe the resulting behavior, tests run, and any remaining limitations.
@@ -45,7 +60,7 @@ independent approving PR review is optional. Before merging, the maintainer
 inspects the final change, test evidence, and applicable procedure requirements
 and records that assessment in the PR. Give particular attention to architecture,
 dependencies, CI, and test coverage. Self-assessment is not an independent GitHub
-approval. Ownership is recorded in `.github/CODEOWNERS`; code-owner approval is
+approval. Ownership is recorded in [CODEOWNERS](.github/CODEOWNERS); code-owner approval is
 not a required merge condition in this phase. Reconsider mandatory independent
 review when another reviewer is available.
 
