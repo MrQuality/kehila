@@ -58,7 +58,10 @@ Pure relationship and current-work tests cover type ownership, type-use and
 two-endpoint Link inputs, canonical duplicate/self-link rejection, stable record
 ID in directed inverse and symmetric views, archival
 eligibility, selection versions, and selection independent of lifecycle.
-Storage uniqueness and authorization enforcement remain unverified.
+Relationship command tests cover both endpoint project revisions and item
+versions, current authorization before replay, and changed operation content.
+Atomic multi-record storage checks, uniqueness, and authorization enforcement
+remain unverified.
 Pure configuration-change tests cover active defaults, replacement before
 archival, dependency-preserving edits, phase mapping preservation, and revision
 and authorization gates. They also cover required-field values, historical

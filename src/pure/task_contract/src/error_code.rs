@@ -12,6 +12,7 @@ use crate::field_admin::OptionAdminError;
 use crate::item_mutation::ItemMutationError;
 use crate::project::ProjectError;
 use crate::relationship::RelationshipError;
+use crate::relationship_command::RelationshipCreateError;
 use crate::work_item::Error as WorkItemError;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -160,6 +161,20 @@ impl StableCode for RelationshipError {
             Self::Duplicate => Code::DuplicateRelationship,
             Self::ArchivedTarget => Code::ArchivedTarget,
             Self::ArchivedType => Code::ArchivedRelationshipType,
+        }
+    }
+}
+
+impl StableCode for RelationshipCreateError {
+    fn code(&self) -> Code {
+        match self {
+            Self::Unauthorized => Code::Unauthorized,
+            Self::OperationIdReused => Code::OperationIdReused,
+            Self::ConfigurationConflict { .. } => Code::ConfigurationConflict,
+            Self::ItemVersionConflict { .. } => Code::ItemVersionConflict,
+            Self::InvalidReference => Code::InvalidReference,
+            Self::InvalidOperation => Code::InvalidOperation,
+            Self::Relationship(error) => error.code(),
         }
     }
 }

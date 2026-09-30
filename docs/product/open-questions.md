@@ -125,6 +125,10 @@ commit-time consistency.
 **Further resolution, 2026-09-30:** [D-023](decisions.md#d-023) fixes the M1
 item create/edit/conversion field payload limit at 128 entries and 1 MiB of
 supplied text. Other command and transport limits remain open.
+**Contract progress, 2026-09-30:** [B-003](B-003-contract.md) now has a typed
+cross-project relationship creation command with expected project revisions
+and item versions on both endpoints. B-005 still must demonstrate commit-time
+coordination across those records.
 
 <a id="q-009"></a>
 ## Q-009 — Scheduling demand, windows, and multiple drivers

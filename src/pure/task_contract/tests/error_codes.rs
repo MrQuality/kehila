@@ -8,6 +8,7 @@ use task_contract::field_admin::OptionAdminError;
 use task_contract::item_mutation::ItemMutationError;
 use task_contract::project::ProjectError;
 use task_contract::relationship::RelationshipError;
+use task_contract::relationship_command::RelationshipCreateError;
 use task_contract::work_item::Error;
 
 #[test]
@@ -87,6 +88,14 @@ fn nested_field_and_project_errors_keep_specific_codes() {
 
 #[test]
 fn selection_and_relationship_failures_are_distinguishable() {
+    assert_eq!(
+        RelationshipCreateError::ConfigurationConflict {
+            project_id: task_contract::work_item::ProjectId("project".into()),
+            current_revision: 2,
+        }
+        .code(),
+        Code::ConfigurationConflict
+    );
     assert_eq!(
         SelectionError::VersionConflict { current_version: 1 }.code(),
         Code::SelectionVersionConflict

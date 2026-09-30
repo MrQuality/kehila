@@ -203,7 +203,7 @@ of consistency. The existing single-task uniqueness checks do not establish it.
 | Migrate workflow | Validate destination permissions/status and applicable migration restrictions; preserve history. |
 | Change configuration | Check expected configuration revision and the effect on existing items and defaults. |
 | Select current work | Validate selection eligibility and update user context independently of lifecycle. |
-| Create relationship | Validate relationship type and endpoints under the decided integrity policy. |
+| Create relationship | Supply owner-qualified type and endpoint identities, expected revisions for both projects and versions for both items, operation ID, and trusted record ID; validate grants, current eligibility, and canonical uniqueness. |
 
 Failure categories distinguish item-version conflict, configuration conflict,
 operation-ID reuse, invalid reference, archived target, invalid field value,
@@ -346,6 +346,26 @@ affected selection clear with the archive change.
 Pure tests cover BC-12 and the identity/access portion of BC-17. B-005 must
 enforce relationship uniqueness under concurrent creation and valid endpoints
 at commit; B-007 must supply authoritative access decisions for both endpoints.
+
+The `task_contract::relationship_command` module specifies creation as one
+typed command. It carries an operation ID, owner-qualified type, both endpoint
+identities, expected configuration revisions for both endpoint projects, and
+expected versions for both items. The relationship type's owner is one of
+those projects, so its governing configuration revision is among the two.
+The trusted boundary supplies the new opaque relationship record ID. A
+same-project link reads one coherent project revision. Authorization to use
+the type and Link both items is checked before replay. Identical recorded
+success replays before current revisions or archival rules; changed content
+under the same operation ID conflicts. A new command checks both project
+revisions before both item versions, then reference identity, archival state,
+and canonical uniqueness. Conflicts identify the stale project or item and
+its current revision/version.
+
+The pure inputs are assertions about authoritative reads, not an atomicity
+mechanism. B-005 must load the type from the matched owner configuration,
+protect both project and item states through commit, allocate a unique record
+ID, enforce canonical-key uniqueness, and atomically record success. B-007
+must supply current grants, including on replay. Pure tests cover BC-30.
 
 ### Fifth typed rule slice: configuration compatibility
 
@@ -537,7 +557,7 @@ These are narrower details, not a reopening of C-01 through C-10:
   for the current pure decisions; adapters
   still need an HTTP mapping.
 - Demonstrate the consistency boundary for item/project archival plus selection
-  clearing, and specify cross-project relationship creation plus
+  clearing and for cross-project relationship creation against concurrent
   endpoint/configuration changes.
 - Implement meaningful pure contract checks and record results. Real-service
   enforcement is a B-005 obligation, not evidence supplied by these checks.
@@ -581,6 +601,7 @@ These are specifications for future checks, not test results.
 | BC-27 | View one directed link from each endpoint, then view a symmetric link from each endpoint. | Directed views are outgoing/incoming respectively; symmetric views share one direction marker. Each view carries the same stable record ID and names the other endpoint; no inverse record is stored. | Pure projection; B-005 persistence and B-007 read access. |
 | BC-28 | Make a field required while one applicable item lacks a valid value; separately change or remove a field used in history after its current value was cleared. | Reject the required change until items comply; reject kind reinterpretation or removal of a historically used definition. Rename, hide, and archive preserve existing values. | Pure snapshot rules; B-005 authoritative snapshot and concurrent-commit protection. |
 | BC-29 | Submit 129 field entries or over 1 MiB of aggregate supplied text in a create, edit, or conversion command. | Reject with `payload_limit_exceeded`; 128 entries and exactly 1 MiB pass the aggregate check, subject to other field rules. Identical recorded success replays first. | Pure command checks; transport limits and durable replay in B-004/B-005. |
+| BC-30 | Create a cross-project link while either endpoint project revision or item version changes, then retry a recorded success. | A new stale command identifies the changed project or item and is rejected. Identical success replays after current authorization; changed content under the same operation ID conflicts. No link may commit against an archived endpoint, changed type, or duplicate canonical key. | Pure command checks; B-005 atomic multi-record contention and B-007 current grants. |
 
 ## Completion and handoff
 

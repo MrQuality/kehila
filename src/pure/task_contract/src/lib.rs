@@ -11,6 +11,7 @@ pub mod item_mutation;
 pub mod payload;
 pub mod project;
 pub mod relationship;
+pub mod relationship_command;
 pub mod work_item;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
