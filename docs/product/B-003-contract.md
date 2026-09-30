@@ -193,12 +193,12 @@ of consistency. The existing single-task uniqueness checks do not establish it.
 | Select current work | Validate selection eligibility and update user context independently of lifecycle. |
 | Create relationship | Validate relationship type and endpoints under the decided integrity policy. |
 
-Proposed failure categories distinguish item-version conflict, configuration
-conflict, operation-ID reuse, invalid reference, archived target, invalid field
-value, prohibited transition, and migration required. HTTP mapping and stable
-wire error codes remain to be specified. A rejected operation must expose no
-partial destination state or lifecycle effects. An uncertain transport outcome
-is reconciled using the original operation ID.
+Failure categories distinguish item-version conflict, configuration conflict,
+operation-ID reuse, invalid reference, archived target, invalid field value,
+prohibited transition, and migration required. The stable domain codes are
+specified below; HTTP mapping remains B-004/B-006 integration work. A rejected
+operation must expose no partial destination state or lifecycle effects. An
+uncertain transport outcome is reconciled using the original operation ID.
 
 ### First typed rule slice: status and workflow commands
 
@@ -440,6 +440,30 @@ configuration revision; B-005 must commit it with the operation record and
 coordinate it with concurrent item writes. Pure tests cover stable identity,
 archive/restore behavior, invalid names and duplicate IDs, and replay.
 
+### Tenth typed rule slice: stable domain error codes
+
+The Rust `task_contract::error_code` module maps every current pure-rule error
+to a stable snake-case domain code. The typed error still carries details such
+as the current version or affected item. Adapters must use the code rather than
+infer a category from message text. Shared failures have the same code across
+commands: `unauthorized`, `operation_id_reused`,
+`configuration_conflict`, `item_version_conflict`, `invalid_reference`, and
+`invalid_configuration`. Separate codes preserve meaningful distinctions such
+as `selection_version_conflict`, `required_field`, `archived_option`,
+`duplicate_relationship`, `self_link`, `prohibited_phase_change`,
+`migration_required`, and `estimate_unit_locked`.
+
+For commands with operation replay, authorization is checked first; an
+identical recorded success then replays before current revisions or business
+rules, and changed content under the same operation ID conflicts. A new
+command checks its expected configuration revision before item version where
+both exist. It then validates configuration and references before accepting a
+new state. Individual commands define the remaining eligibility precedence in
+their typed decisions; the domain code does not change that order. Transport
+status mapping, localized messages, and disclosure of version details under
+authorization remain adapter work. Pure tests cover representative shared,
+nested, and distinct code mappings.
+
 ## Review resolutions
 
 All ten resolutions were accepted by the maintainer on 2026-09-29. C-09 retains
@@ -463,8 +487,10 @@ the full configurable model in M1; no capability is deferred by this review.
 These are narrower details, not a reopening of C-01 through C-10:
 
 - Specify command payload limits.
-- Complete command payloads, typed results, error precedence and stable codes,
-  field-definition evolution rules, and the full phase-transition table.
+- Complete remaining command payloads, typed results, operation-specific error
+  precedence, field-definition evolution rules, and the full phase-transition
+  table. Stable domain codes exist for the current pure decisions; adapters
+  still need an HTTP mapping.
 - Specify ownership and administration of project-defined relationship types,
   stable relationship record IDs, and the inverse presentation contract.
 - Demonstrate the consistency boundary for item/project archival plus selection

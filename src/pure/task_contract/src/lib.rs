@@ -4,6 +4,7 @@ pub mod archive;
 pub mod configuration_change;
 pub mod conversion;
 pub mod current_work;
+pub mod error_code;
 pub mod field;
 pub mod field_admin;
 pub mod item_mutation;

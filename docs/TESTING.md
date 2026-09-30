@@ -79,6 +79,9 @@ Pure option-administration tests cover stable IDs through rename and archival,
 retaining old assignments while blocking new ones, restoration, invalid names,
 duplicate IDs, revision conflicts, and replay. Concurrent configuration and
 item writes remain a B-005 integration check.
+Pure error-code tests cover shared conflicts across commands, nested field and
+project failures, and distinct selection/relationship codes. API status and
+message mappings remain unverified.
 
 Integration tests use the development NATS server to check its greeting, connection handshake,
 and request/response behavior. The Python probe also checks the JetStream account
