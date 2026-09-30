@@ -75,6 +75,10 @@ remain B-005 checks.
 Pure archival tests cover item/project version conflicts, restore eligibility,
 replay, and selection-clear effects without lifecycle changes. Coordinated
 cross-user selection clearing remains a B-005 integration check.
+Pure option-administration tests cover stable IDs through rename and archival,
+retaining old assignments while blocking new ones, restoration, invalid names,
+duplicate IDs, revision conflicts, and replay. Concurrent configuration and
+item writes remain a B-005 integration check.
 
 Integration tests use the development NATS server to check its greeting, connection handshake,
 and request/response behavior. The Python probe also checks the JetStream account

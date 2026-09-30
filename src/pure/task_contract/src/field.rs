@@ -29,6 +29,7 @@ pub enum FieldUsage {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ChoiceOption {
     pub id: OptionId,
+    pub name: String,
     pub archived: bool,
 }
 
@@ -57,7 +58,11 @@ impl FieldDefinition {
         }
         let mut ids = HashSet::new();
         for option in &self.options {
-            if option.id.0.is_empty() || !ids.insert(&option.id) {
+            if option.id.0.is_empty()
+                || option.name.trim().is_empty()
+                || option.name.len() > 256
+                || !ids.insert(&option.id)
+            {
                 return Err(FieldError::InvalidDefinition);
             }
         }

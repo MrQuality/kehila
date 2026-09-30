@@ -422,6 +422,24 @@ revision where applicable, affected user selections, and success record under
 concurrency. The pure tests cover BC-16 and BC-21's eligibility and effect
 portions; durable cross-user clearing remains unverified.
 
+### Ninth typed rule slice: single-choice option administration
+
+Each single-choice option has a stable identity, a display name, and an archive
+flag in its field definition. The Rust `task_contract::field_admin` module
+defines Add, Rename, Archive, and Restore commands against the expected project
+configuration revision. Option IDs cannot be reused or removed. Renaming keeps
+the identity referenced by current and historical values. Archiving rejects
+new assignments while retaining existing values; restoration makes the same
+option eligible for new assignments again. Names must contain non-whitespace
+text and fit within 256 UTF-8 bytes. Identity is determined by ID, not name.
+
+Administration requires authorization, an active project and field, and a
+single-choice field kind. An identical recorded success replays before mutable
+revision or definition checks. The accepted result is a complete next
+configuration revision; B-005 must commit it with the operation record and
+coordinate it with concurrent item writes. Pure tests cover stable identity,
+archive/restore behavior, invalid names and duplicate IDs, and replay.
+
 ## Review resolutions
 
 All ten resolutions were accepted by the maintainer on 2026-09-29. C-09 retains
@@ -444,7 +462,7 @@ the full configurable model in M1; no capability is deferred by this review.
 
 These are narrower details, not a reopening of C-01 through C-10:
 
-- Finish single-choice option administration and command payload limits.
+- Specify command payload limits.
 - Complete command payloads, typed results, error precedence and stable codes,
   field-definition evolution rules, and the full phase-transition table.
 - Specify ownership and administration of project-defined relationship types,

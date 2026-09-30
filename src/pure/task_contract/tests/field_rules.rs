@@ -155,10 +155,12 @@ fn choice_identity_and_archival_govern_new_assignments() {
     field.options = vec![
         ChoiceOption {
             id: OptionId("open".into()),
+            name: "Open".into(),
             archived: false,
         },
         ChoiceOption {
             id: OptionId("old".into()),
+            name: "Old".into(),
             archived: true,
         },
     ];
