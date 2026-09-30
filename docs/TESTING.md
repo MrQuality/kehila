@@ -61,7 +61,9 @@ eligibility, selection versions, and selection independent of lifecycle.
 Storage uniqueness and authorization enforcement remain unverified.
 Pure configuration-change tests cover active defaults, replacement before
 archival, dependency-preserving edits, phase mapping preservation, and revision
-and authorization gates. Concurrent item/configuration writes remain B-005
+and authorization gates. They also cover required-field values, historical
+kind/removal protection, and value preservation under rename, hide, and archive.
+Concurrent item/configuration writes remain B-005
 integration checks.
 Pure conversion tests cover complete destination validation, migration
 authorization, both workflows' phase permissions, Done-to-New rejection,

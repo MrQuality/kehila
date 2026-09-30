@@ -150,7 +150,10 @@ pub fn apply_edit(
         if let Some(value) = current {
             validate_value(definition, value, true)?;
         }
-        if definition.usage == FieldUsage::Required && !valid_required(current) {
+        if !definition.archived
+            && definition.usage == FieldUsage::Required
+            && !valid_required(current)
+        {
             return Err(FieldError::Required);
         }
         return Ok(current.cloned());

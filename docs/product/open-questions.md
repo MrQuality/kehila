@@ -117,6 +117,11 @@ project-scoped readable-ID lookup policy and M1 value limits.
 **Further resolution, 2026-09-30:** [D-022](decisions.md#d-022) fixes the full
 M1 phase graph and relationship-type ownership. Q-008 remains open for the
 remaining typed command and representation details in B-003.
+**Contract progress, 2026-09-30:** [B-003](B-003-contract.md) now requires a
+complete item-value and historical-field-use snapshot for configuration edits.
+The pure rule checks required-field changes and rejects kind reinterpretation
+or removal after historical use; B-005 must enforce snapshot completeness and
+commit-time consistency.
 
 <a id="q-009"></a>
 ## Q-009 — Scheduling demand, windows, and multiple drivers

@@ -1,8 +1,9 @@
 use task_contract::archive::ArchiveCommandError;
+use task_contract::configuration_change::ConfigurationChangeError;
 use task_contract::conversion::ConversionError;
 use task_contract::current_work::SelectionError;
 use task_contract::error_code::{Code, StableCode};
-use task_contract::field::FieldError;
+use task_contract::field::{FieldError, FieldId};
 use task_contract::field_admin::OptionAdminError;
 use task_contract::item_mutation::ItemMutationError;
 use task_contract::project::ProjectError;
@@ -47,6 +48,13 @@ fn shared_conflicts_have_the_same_stable_code_across_commands() {
 
 #[test]
 fn nested_field_and_project_errors_keep_specific_codes() {
+    assert_eq!(
+        ConfigurationChangeError::FieldMigrationRequired {
+            field_id: FieldId("summary".into())
+        }
+        .code(),
+        Code::MigrationRequired
+    );
     assert_eq!(
         ItemMutationError::Field(FieldError::Required).code(),
         Code::RequiredField

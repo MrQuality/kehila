@@ -357,14 +357,27 @@ selecting another eligible initial status first. An archived workflow can still
 govern existing items and their status changes.
 
 The Rust `task_contract::configuration_change` module validates an authorized
-one-revision configuration edit against the complete set of affected items. It
+one-revision configuration edit against a complete authoritative snapshot of
+current items and their field values, plus field IDs ever used in accepted
+history. It
 rejects removing a type, workflow, status, workflow membership, or type/workflow
 permission while an item still depends on it. It also rejects changing the
 phase of a status used by an item, which would reinterpret that item's current
 lifecycle state. Archived items remain in the dependency set. A new revision
 cannot be accepted for an archived project.
 
-These pure checks cover BC-07 and BC-08 and the in-use status policy in issue
+The same decision checks that every applicable current item satisfies a newly
+required field. Existing values must remain valid under the proposed
+definition; a hidden or archived field retains its value. Archiving a required
+field ends its active required-value obligation without deleting old values.
+A field's owning WorkItem type cannot change. Once a field ID has appeared in
+accepted history, changing its value kind or removing its definition is
+rejected; create a new field, migrate values, and archive the old definition.
+An unused field may change kind or be removed. Renaming is independent of
+identity. The authoritative snapshot must be checked and protected through
+commit, including concurrent changes to item values and historical use.
+
+These pure checks cover BC-02, BC-07, BC-08, BC-23, and the in-use status policy in issue
 #7. The item set must be authoritative and protected from concurrent writes
 through commit; B-005 owns that enforcement. The rule does not implement a
 project archive command, since archive changes project state rather than the
@@ -508,8 +521,8 @@ the full configurable model in M1; no capability is deferred by this review.
 These are narrower details, not a reopening of C-01 through C-10:
 
 - Specify command payload limits.
-- Complete remaining command payloads, typed results, operation-specific error
-  precedence, and field-definition evolution rules. Stable domain codes exist
+- Complete remaining command payloads, typed results, and operation-specific error
+  precedence. Stable domain codes exist
   for the current pure decisions; adapters
   still need an HTTP mapping.
 - Demonstrate the consistency boundary for item/project archival plus selection
@@ -555,6 +568,7 @@ These are specifications for future checks, not test results.
 | BC-25 | Create a cross-project link using a type owned by either endpoint project, then try a type owned by a third project. | Accept the eligible types; reject the unrelated owner. Equal local type IDs from different owner projects have distinct canonical identities. | Pure relationship identity plus B-005 endpoint integrity. |
 | BC-26 | Attempt link creation without type-use permission or Link permission on either endpoint. | Reject each missing grant; type administration requires project configuration permission in the owner project. | Pure grant inputs; B-007 authoritative enforcement. |
 | BC-27 | View one directed link from each endpoint, then view a symmetric link from each endpoint. | Directed views are outgoing/incoming respectively; symmetric views share one direction marker. Each view carries the same stable record ID and names the other endpoint; no inverse record is stored. | Pure projection; B-005 persistence and B-007 read access. |
+| BC-28 | Make a field required while one applicable item lacks a valid value; separately change or remove a field used in history after its current value was cleared. | Reject the required change until items comply; reject kind reinterpretation or removal of a historically used definition. Rename, hide, and archive preserve existing values. | Pure snapshot rules; B-005 authoritative snapshot and concurrent-commit protection. |
 
 ## Completion and handoff
 

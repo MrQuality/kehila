@@ -183,6 +183,7 @@ impl StableCode for ConfigurationChangeError {
             Self::InvalidConfiguration => Code::InvalidConfiguration,
             Self::RevisionOverflow => Code::VersionExhausted,
             Self::MigrationRequired { .. } => Code::MigrationRequired,
+            Self::FieldMigrationRequired { .. } => Code::MigrationRequired,
         }
     }
 }
