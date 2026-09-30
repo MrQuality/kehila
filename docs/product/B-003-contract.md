@@ -2,8 +2,9 @@
 
 **Status:** Contract work in progress. The maintainer accepted the review
 recommendations and the ten review resolutions on 2026-09-29; the remaining
-project, identifier, and field-kind choices on 2026-09-30. [D-018](decisions.md#d-018),
-[D-019](decisions.md#d-019), and [D-020](decisions.md#d-020) record those decisions.
+project, identifier, field-kind, and M1 representation choices on 2026-09-30.
+[D-018](decisions.md#d-018), [D-019](decisions.md#d-019),
+[D-020](decisions.md#d-020), and [D-021](decisions.md#d-021) record those decisions.
 The remaining specification work is listed below. This document does not
 claim implemented behavior or a finalized storage format.
 
@@ -104,6 +105,9 @@ Issued readable IDs keep their original prefix and sequence when a project's
 current prefix changes. Only future allocations use the new prefix. Old IDs
 remain resolvable to stable internal identities; sequence allocation is
 monotonic within each project and must be safe under concurrent creation.
+Readable-ID lookup includes project identity. Prefixes and sequence numbers
+may repeat across distinct projects; global readable-ID uniqueness is not an
+M1 requirement.
 
 ### Estimates
 
@@ -119,10 +123,9 @@ estimate has been recorded, including after that estimate is cleared. Scheduling
 must obtain explicit resource demand; its detailed rules remain with the
 scheduling questions.
 
-The current pure contract proposes exact thousandths from `0` through
+The M1 contract uses exact thousandths from `0` through
 `999999.999`. It rejects signs, exponent notation, implicit rounding, and larger
-values. This M1 representation bound needs review before durable storage is
-finalized. Zero remains distinct from an absent estimate.
+values. Zero remains distinct from an absent estimate.
 
 ### Replay
 
@@ -258,10 +261,9 @@ project restoration. Authorization is a separate concern.
 Each issued ID stores the stable internal item and project identities together
 with the prefix and sequence used at issue time. The allocator increments a
 project-local sequence; prefix changes affect only later allocations. The pure
-module proposes uppercase ASCII prefixes of 2–12 characters, beginning with a
-letter. Readable IDs are resolved with project context; any global lookup policy
-needs a separate uniqueness rule. B-005 must serialize allocation and preserve
-old lookup entries.
+module accepts uppercase ASCII prefixes of 2–12 characters, beginning with a
+letter. Readable IDs are resolved with project context; global lookup is not an
+M1 contract. B-005 must serialize allocation and preserve old lookup entries.
 
 The estimate representation uses exact decimal thousandths with an upper bound
 of `999999.999` in hours or points. No float conversion or implicit rounding is
@@ -298,10 +300,9 @@ query or a detached snapshot cannot establish compliance. The rule tests cover
 the pure portion of BC-02 and BC-15, plus type ownership, date boundaries,
 choice archival, and similarly named fields on distinct WorkItem types.
 
-The current pure representation proposes text values of at most 16 KiB,
+The M1 representation accepts text values of at most 16 KiB of UTF-8 bytes,
 signed numeric thousandths in `-999999.999` through `999999.999`, and Gregorian
-dates in years 1 through 9999. These bounds require review before durable
-storage is finalized. Command payload limits and how archived field definitions
+dates in years 1 through 9999. Command payload limits and how archived field definitions
 evolve remain distinct contract work.
 
 ### Fourth typed rule slice: relationships and current work
@@ -392,10 +393,7 @@ the full configurable model in M1; no capability is deferred by this review.
 
 These are narrower details, not a reopening of C-01 through C-10:
 
-- Review the proposed estimate, prefix, text, number, and date bounds above;
-  finish single-choice option administration and command payload limits.
-- Specify whether globally resolving a readable ID is required, and the
-  corresponding uniqueness policy. Project-scoped resolution is defined now.
+- Finish single-choice option administration and command payload limits.
 - Specify project archival command inputs and restoration errors. D-020 fixes
   effects on contained items and current selections.
 - Complete command payloads, typed results, error precedence and stable codes,

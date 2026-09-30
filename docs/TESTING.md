@@ -66,6 +66,8 @@ Pure conversion tests cover complete destination validation, migration
 authorization, both workflows' phase permissions, Done-to-New rejection,
 reopening, source-value history output, and successful replay precedence.
 Durable history, knowledge, and provenance retention remain B-005 checks.
+Pure boundary tests also cover the accepted M1 estimate, prefix, UTF-8 text,
+numeric-field, and Gregorian-date limits and project-scoped readable IDs.
 
 Integration tests use the development NATS server to check its greeting, connection handshake,
 and request/response behavior. The Python probe also checks the JetStream account

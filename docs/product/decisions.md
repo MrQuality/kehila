@@ -262,6 +262,30 @@ field-value, and estimate limits remain contract details. References:
 [Q-008](open-questions.md#q-008), and the
 [contract review](B-003-contract.md).
 
+<a id="d-021"></a>
+## D-021 — Scope readable IDs by project and bound M1 field values
+
+**Status: Accepted by the maintainer on 2026-09-30.** A readable WorkItem ID
+is resolved together with its project identity. Different projects may use the
+same prefix and sequence. An issued ID keeps its original prefix and sequence
+when the project's current prefix changes; its stable internal identity remains
+the record reference. A global readable-ID namespace is not required in M1.
+
+M1 uses exact decimal thousandths for estimates from `0` through
+`999999.999`, and for general numeric fields from `-999999.999` through
+`999999.999`. Text field values contain at most 16 KiB of UTF-8 bytes. Dates
+use the Gregorian calendar in years 1 through 9999. Project prefixes contain
+2 through 12 uppercase ASCII letters or digits and begin with a letter. The
+contract rejects values outside these limits without rounding or truncation.
+
+**Consequence:** These limits are part of [B-003](backlog.md#b-003)'s typed
+contract, with pure boundary checks. [B-005](backlog.md#b-005) must preserve
+exact values, project-scoped lookup, and issued-ID stability in durable storage.
+Command-size limits and resource-demand representation remain separate work.
+References: [Q-006](open-questions.md#q-006),
+[Q-008](open-questions.md#q-008), [R-002](requirements.md#r-002), and
+[the contract review](B-003-contract.md).
+
 ## How to change a decision
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.

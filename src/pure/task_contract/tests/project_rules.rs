@@ -91,6 +91,26 @@ fn prefix_change_affects_future_ids_only_and_sequence_is_monotonic() {
 }
 
 #[test]
+fn readable_ids_are_project_scoped_and_prefix_bounds_are_enforced() {
+    let first_project = project();
+    let mut second_project = project();
+    second_project.id = ProjectId("another".into());
+    let (_, first) = allocate_readable_id(&first_project, WorkItemId("first".into())).unwrap();
+    let (_, second) = allocate_readable_id(&second_project, WorkItemId("second".into())).unwrap();
+    assert_eq!(first.display(), second.display());
+    assert_ne!(first.project_id, second.project_id);
+    for valid in ["AB", "ABCDEFGHIJKL", "A12345678901"] {
+        assert!(change_prefix(&first_project, valid).is_ok());
+    }
+    for invalid in ["A", "ABCDEFGHIJKLM", "1A", "Ab", "A_"] {
+        assert_eq!(
+            change_prefix(&first_project, invalid),
+            Err(ProjectError::InvalidPrefix)
+        );
+    }
+}
+
+#[test]
 fn archived_projects_cannot_allocate_or_change_prefix_and_sequence_cannot_wrap() {
     let archived = Project {
         archived: true,

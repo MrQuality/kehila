@@ -67,7 +67,7 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 
 **Accepted direction:** Projects select hours or points, and YAJA uses hours. A task estimate is an independent planning quantity; resource demand is recorded separately. There is no implicit points-to-hours conversion or aggregation of heterogeneous resource-hours into a task estimate. See [D-018](decisions.md#d-018).
 
-**Further resolution, 2026-09-29:** [D-019](decisions.md#d-019) selects exact nonnegative decimals, distinguishes zero from absence, and prohibits M1 project-unit changes after the first recorded estimate. **Remaining:** Exact precision and bounds, and the detailed input of resource demand for scheduling. See C-08 and the remaining specification work in the [B-003 contract](B-003-contract.md).
+**Further resolution, 2026-09-29:** [D-019](decisions.md#d-019) selects exact nonnegative decimals, distinguishes zero from absence, and prohibits M1 project-unit changes after the first recorded estimate. [D-021](decisions.md#d-021) fixes M1 precision and bounds. **Remaining:** Detailed resource-demand input for scheduling. See C-08 and the remaining specification work in the [B-003 contract](B-003-contract.md).
 
 **Blocks:** Estimate semantics in [B-003](backlog.md#b-003)/[B-004](backlog.md#b-004), scheduling in [B-015](backlog.md#b-015). Status/phase logic can proceed independently.
 
@@ -111,8 +111,9 @@ review decisions are not pending reconfirmation.
 archival and restoration effects, preserves issued readable IDs across prefix
 changes, and rejects in-place value-kind changes for populated fields. The
 [contract review](B-003-contract.md) adds BC-21 through BC-23. Q-008 remains
-open for exact limits, identifier uniqueness scope, complete typed commands,
-and checks.
+open for complete typed commands and remaining administration/checks.
+**Further resolution, 2026-09-30:** [D-021](decisions.md#d-021) fixes the
+project-scoped readable-ID lookup policy and M1 value limits.
 
 <a id="q-009"></a>
 ## Q-009 — Scheduling demand, windows, and multiple drivers

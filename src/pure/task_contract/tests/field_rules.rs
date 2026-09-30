@@ -196,6 +196,55 @@ fn dates_validate_calendar_boundaries() {
     assert_eq!(CivilDate::new(2024, 2, 29).unwrap().day, 29);
     assert_eq!(CivilDate::new(2023, 2, 29), Err(FieldError::InvalidDate));
     assert_eq!(CivilDate::new(2026, 13, 1), Err(FieldError::InvalidDate));
+    assert!(CivilDate::new(1, 1, 1).is_ok());
+    assert!(CivilDate::new(9999, 12, 31).is_ok());
+    assert_eq!(CivilDate::new(0, 1, 1), Err(FieldError::InvalidDate));
+    assert_eq!(CivilDate::new(10000, 1, 1), Err(FieldError::InvalidDate));
+}
+
+#[test]
+fn accepted_text_and_number_limits_are_exact() {
+    let text = text_field(FieldUsage::Optional);
+    let within = "é".repeat(8192);
+    let beyond = "é".repeat(8193);
+    assert!(apply_edit(
+        &text,
+        &text.owner_type,
+        None,
+        FieldEdit::Set(FieldValue::Text(within))
+    )
+    .is_ok());
+    assert_eq!(
+        apply_edit(
+            &text,
+            &text.owner_type,
+            None,
+            FieldEdit::Set(FieldValue::Text(beyond))
+        ),
+        Err(FieldError::InvalidValue)
+    );
+    let mut number = text;
+    number.kind = FieldKind::Number;
+    for value in [-999_999_999, 0, 999_999_999] {
+        assert!(apply_edit(
+            &number,
+            &number.owner_type,
+            None,
+            FieldEdit::Set(FieldValue::Number(value))
+        )
+        .is_ok());
+    }
+    for value in [-1_000_000_000, 1_000_000_000] {
+        assert_eq!(
+            apply_edit(
+                &number,
+                &number.owner_type,
+                None,
+                FieldEdit::Set(FieldValue::Number(value))
+            ),
+            Err(FieldError::InvalidValue)
+        );
+    }
 }
 
 #[test]
