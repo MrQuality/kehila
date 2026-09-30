@@ -72,6 +72,9 @@ Pure item-mutation tests cover untitled creation and title display, initial
 status, required/hidden fields, estimate locking, item/configuration versions,
 and replay. Durable sequence allocation and coordinated project/item writes
 remain B-005 checks.
+Pure archival tests cover item/project version conflicts, restore eligibility,
+replay, and selection-clear effects without lifecycle changes. Coordinated
+cross-user selection clearing remains a B-005 integration check.
 
 Integration tests use the development NATS server to check its greeting, connection handshake,
 and request/response behavior. The Python probe also checks the JetStream account

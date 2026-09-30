@@ -399,6 +399,29 @@ the required configuration, item, project, and operation writes coherent under
 concurrency. The pure checks cover the creation/edit portions of BC-03,
 BC-11, BC-13, BC-15, BC-18, and BC-19.
 
+### Eighth typed rule slice: item and project archival
+
+The Rust `task_contract::archive` module gives item and project archive/restore
+commands operation identities, expected versions, typed results, and explicit
+selection-clear effects. Item archival advances the item version, leaves its
+type, workflow, status, phase, knowledge, history, and relationships untouched,
+and returns an instruction to clear every user's current-work selection of
+that item. Item restoration has no selection effect and is rejected while the
+project is archived. Project archival advances the project configuration
+revision, makes the project read-only through the existing eligibility rules,
+and returns a project-wide selection-clear instruction. Project restoration
+advances the revision without restoring individually archived items.
+
+An already archived item or project cannot be archived again as a new
+operation; restoring an active one is likewise invalid. Stale revisions
+conflict. Identical recorded success replays after authorization and before
+current revisions or archive rules, while changed content under the same
+operation ID conflicts. The result carries no lifecycle, usage, reservation,
+or scheduling effect. B-005 must coordinate the archive state, configuration
+revision where applicable, affected user selections, and success record under
+concurrency. The pure tests cover BC-16 and BC-21's eligibility and effect
+portions; durable cross-user clearing remains unverified.
+
 ## Review resolutions
 
 All ten resolutions were accepted by the maintainer on 2026-09-29. C-09 retains
@@ -422,14 +445,13 @@ the full configurable model in M1; no capability is deferred by this review.
 These are narrower details, not a reopening of C-01 through C-10:
 
 - Finish single-choice option administration and command payload limits.
-- Specify project archival command inputs and restoration errors. D-020 fixes
-  effects on contained items and current selections.
 - Complete command payloads, typed results, error precedence and stable codes,
   field-definition evolution rules, and the full phase-transition table.
 - Specify ownership and administration of project-defined relationship types,
   stable relationship record IDs, and the inverse presentation contract.
-- Specify the consistency boundary for item archival plus selection clearing,
-  and cross-project relationship creation plus endpoint/configuration changes.
+- Demonstrate the consistency boundary for item/project archival plus selection
+  clearing, and specify cross-project relationship creation plus
+  endpoint/configuration changes.
 - Implement meaningful pure contract checks and record results. Real-service
   enforcement is a B-005 obligation, not evidence supplied by these checks.
 
