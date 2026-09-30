@@ -57,7 +57,7 @@ the technical work below remains part of the existing architecture reference.
 Documented requirements and planned backlog items are not implemented features.
 
 - Full query grammar, OpenSearch and Rhai emitters, and Wasm bindings.
-- Complete typed domain mutations and authoritative schema state.
+- Connect the typed domain rules to authoritative schema state and mutation paths.
 - Sagas, the production CDC-to-Rust-indexer path, and idempotent search projections.
 - Go authentication, full API routes, and SSE delivery.
 - React UI, optimistic state, and reconciliation.

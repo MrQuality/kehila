@@ -42,7 +42,7 @@ python scripts/go_test.py
 
 ## Coverage
 
-Unit tests cover the equality grammar, schema-version decisions, and the first
+Unit tests cover the equality grammar, schema-version decisions, and the
 pure B-003 status/workflow command rules. The latter test configuration
 references, phase derivation, migration restrictions, archival targets, stale
 versions, and replay order; they do not establish persistence or concurrency.

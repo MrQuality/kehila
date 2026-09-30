@@ -32,7 +32,7 @@ SOPs, their approval status, and enforcement coverage.
 | [Decisions](decisions.md) | Design choices and their rationale. |
 | [Open questions](open-questions.md) | Unresolved choices and affected work. |
 | [Backlog](backlog.md) | Proposed delivery order, dependencies, and requirement coverage. |
-| [B-003 contract review](B-003-contract.md) | Accepted contract direction, remaining decisions, and acceptance scenarios for projects and work items. |
+| [B-003 project and WorkItem contract](B-003-contract.md) | Accepted typed rules, pure-check evidence, acceptance scenarios, and implementation handoffs. |
 | [Spike register and approved procedure](../spikes/README.md) | Bounded investigations, reproducible evidence, and reusable findings. |
 
 **Confirmed** identifies requirements included in this planning baseline.
@@ -49,8 +49,11 @@ cost accounting, or the phase/status model. Conflicts between the product rules
 and technical contracts need resolution before the affected work is implemented.
 
 Current components include the Rust equality parser, NATS connection checks,
-Go synchronization rules, TypeScript declarations, and Compose services. There
-is no runnable application UI or API, and development storage is ephemeral.
+Go synchronization rules, an experimental Go API/Rust task worker, pure B-003
+contract rules, TypeScript declarations, and Compose services. There is no
+application UI or supported configurable-model API; development storage is
+ephemeral. See [implementation status](../IMPLEMENTATION.md) for the exact
+boundary.
 
 ## Updating the plan
 

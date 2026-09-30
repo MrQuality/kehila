@@ -38,18 +38,19 @@ applicable API, storage, access, and interface integration through its parents.
 | Child ID | Parent / dependencies | Deliverable and acceptance |
 | --- | --- | --- |
 | [M1-01](https://github.com/MrQuality/yaja/issues/26) | B-005; B-003 | Configuration revisions, history, reference integrity, and coordinated command acceptance. Demonstrate configuration/item contention, replay after configuration changes, and recovery without partial accepted state. Establish consistency protocols for later slices. |
-| [M1-02](https://github.com/MrQuality/yaja/issues/27) | B-004/B-006; M1-01, B-007 | Project and WorkItem identity, Task/Milestone, estimates, current selection, archival/restoration. Verify untitled-item display, zero versus absent estimates, unit locking, and selection clearing. Settle project archival details before implementation. |
+| [M1-02](https://github.com/MrQuality/yaja/issues/27) | B-004/B-006; M1-01, B-007 | Project and WorkItem identity, Task/Milestone, estimates, current selection, archival/restoration. Verify untitled-item display, zero versus absent estimates, unit locking, and selection clearing under the accepted project archival contract. |
 | [M1-03](https://github.com/MrQuality/yaja/issues/28) | B-004/B-006; M1-02 | Project-defined types, application/custom fields, hidden/optional/required modes, and five initial value kinds. Verify hidden-value preservation/write rejection, required-field changes under contention, and safe definition evolution. |
 | [M1-04](https://github.com/MrQuality/yaja/issues/29) | B-004/B-006; M1-03 | Multiple workflows, statuses, defaults, permitted workflows per type, phase restrictions, and configuration archival. Verify phase derivation, initial/default replacements, reference preservation, and zero implicit usage. |
 | [M1-05](https://github.com/MrQuality/yaja/issues/30) | B-004/B-006; M1-04 | Explicit type conversion and workflow migration. Verify complete destination validation, both-workflow phase restrictions, migration authorization, preserved source values/history, and no partial conversion. |
-| [M1-06](https://github.com/MrQuality/yaja/issues/31) | B-004/B-006; M1-02, Q-016 | Relationship types and links, knowledge, and follow-up provenance. Verify cross-project authorization, canonical duplicate prevention, self-link rejection, inverse display, archival preservation, and history surviving conversion. Final integration includes M1-05. |
+| [M1-06](https://github.com/MrQuality/yaja/issues/31) | B-004/B-006; M1-02, B-003 | Relationship types and links, knowledge, and follow-up provenance under the resolved Q-016 contract. Verify cross-project authorization, canonical duplicate prevention, self-link rejection, inverse display, archival preservation, and history surviving conversion. Final integration includes M1-05. |
 | [M1-07](https://github.com/MrQuality/yaja/issues/32) | B-007/B-006; B-003, Q-014 | Configuration permissions and delegated administration, including status-group administration. Define grants and revocation; verify authoritative allow/deny behavior across all slices. Initial access enforcement is required before dependent routes are exposed. |
 | [M1-08](https://github.com/MrQuality/yaja/issues/33) | B-006 with B-004/B-005/B-007; M1-01–M1-07 | Integrate the full configurable model into the local interface. Demonstrate administration, edits, conversion, migration, knowledge, relationships, reload, conflict recovery, and archival. Retain B-005 durability and authenticated-access gates before real data. |
 
 M1-07's initial access boundary accompanies the early slices; its delegated
-administration surface expands with them. Q-014/Q-016 decisions can progress
-alongside B-003. Resource reservations, costs, and scheduling retain their later
-milestone placement. Their lifecycle effects must not be claimed by M1 checks.
+administration surface expands with them. Q-016 is resolved for M1; Q-014 grant
+assignment and revocation remain B-007 work. Resource reservations, costs, and
+scheduling retain their later milestone placement. Their lifecycle effects
+must not be claimed by M1 checks.
 
 <a id="b-001"></a>
 ## B-001 — Establish the product planning baseline
@@ -123,7 +124,7 @@ Durable records and the configurable worker are not implemented here.
 <a id="b-004"></a>
 ## B-004 — Implement project/task operations and manual knowledge
 
-**Status:** Waiting on dependencies and knowledge-format decisions. **Dependencies:** B-003, B-005; access checks from B-007.
+**Status:** Knowledge and workflow contracts are specified; implementation waits on B-005 storage and B-007 access work. **Dependencies:** B-003, B-005; access checks from B-007.
 
 **Traceability:** [R-001](requirements.md#r-001), [R-002](requirements.md#r-002), [R-005](requirements.md#r-005)–[R-007](requirements.md#r-007). **Questions:** [Q-008](open-questions.md#q-008), [Q-016](open-questions.md#q-016).
 

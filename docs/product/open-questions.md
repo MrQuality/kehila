@@ -89,7 +89,7 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 
 **Known:** New/Active/Done are system phases; phase derives from status. Done → Active has explicit reopening rules. A complete hierarchy, transition-permission matrix, or cancellation state was not agreed.
 
-**Proposed M1 baseline, pending contract review:** Project identity, name, estimation unit, and configurable statuses; task identity, project, title, description, optional estimate, status reference, and version; structured knowledge entries and follow-up origin links; explicit current-work selection independent of Active. Use stable status IDs; permit renaming but initially block deletion of referenced statuses and changes to their phase mapping. Specify reopening and other transitions; leave unresolved transitions unavailable. Finalize this model before a durable record format is committed. M1 includes knowledge and follow-ups; the first release still includes sprint, Gantt, resource, and scheduling commitments.
+**Historical proposed M1 baseline, superseded by the resolved contract below:** Project identity, name, estimation unit, and configurable statuses; task identity, project, title, description, optional estimate, status reference, and version; structured knowledge entries and follow-up origin links; explicit current-work selection independent of Active. Use stable status IDs; permit renaming but initially block deletion of referenced statuses and changes to their phase mapping. Specify reopening and other transitions; leave unresolved transitions unavailable. Finalize this model before a durable record format is committed. M1 includes knowledge and follow-ups; the first release still includes sprint, Gantt, resource, and scheduling commitments.
 
 **Blocks:** Implementation in [B-004](backlog.md#b-004) and parts of [B-011](backlog.md#b-011). B-003 is resolved below.
 
@@ -124,7 +124,8 @@ or removal after historical use; B-005 must enforce snapshot completeness and
 commit-time consistency.
 **Further resolution, 2026-09-30:** [D-023](decisions.md#d-023) fixes the M1
 item create/edit/conversion field payload limit at 128 entries and 1 MiB of
-supplied text. Other command and transport limits remain open.
+supplied text. Later B-003 work fixed the remaining logical command bounds;
+encoded transport limits remain B-004/B-006 work.
 **Contract progress, 2026-09-30:** [B-003](B-003-contract.md) now has a typed
 cross-project relationship creation command with expected project revisions
 and item versions on both endpoints. B-005 still must demonstrate commit-time

@@ -9,7 +9,7 @@ YAJA supports local project planning: identifying current and upcoming work, ret
 | Term | Meaning in this baseline |
 | --- | --- |
 | Project | A collection of work with its own workflow and planning configuration. |
-| Task | A work item with an estimate, status, knowledge, and potentially resource requirements and reservations. Minimum fields and hierarchy remain open. |
+| Task | A work item with an estimate, status, knowledge, and potentially resource requirements and reservations. M1 minimum fields are defined by the [B-003 contract](B-003-contract.md); a broader hierarchy remains open. |
 | Phase | One of the system-wide lifecycle categories New, Active, Done. It is not a sequential subtask or a resource-execution stage. |
 | Status | A project-defined workflow state mapped to exactly one phase. |
 | Sprint | A bounded planning period with its own capacity. Duration, calendar, and rollover rules remain open. |
@@ -62,7 +62,7 @@ Both planning approaches are required in the first release and for the YAJA proj
 <a id="r-005"></a>
 ### R-005 — Task knowledge and originating work
 
-Manually record files created, decisions, lessons learned, new insights, and follow-up tasks produced by execution. A follow-up must be linked to the task that revealed it. Keep this information available after completion and reopening. Automatic knowledge capture is not required in the first release. File references versus uploaded content, record structure, and editing history remain open ([Q-016](open-questions.md#q-016)).
+Manually record files created, decisions, lessons learned, new insights, and follow-up tasks produced by execution. A follow-up must be linked to the task that revealed it. Keep this information available after completion and reopening. Automatic knowledge capture is not required in the first release. [D-024](decisions.md#d-024) and the [B-003 contract](B-003-contract.md#knowledge-value-contract) define typed, versioned entries and labeled file references; [Q-016](open-questions.md#q-016) records the resolution.
 
 <a id="r-006"></a>
 ### R-006 — Shared phases and configurable statuses
@@ -72,7 +72,7 @@ New, Active, and Done are system-wide phases shared across projects. Project adm
 <a id="r-007"></a>
 ### R-007 — Workflow state is not resource usage
 
-A status change does not itself consume time. Moving within a phase does not automatically change allocations or consumption. Entering Active does not imply any work was performed. Usage comes from reporting. Entering Done and reopening have the explicit resource effects in R-017 and R-018. Other status-triggered resource automation is outside the defined scope. Status deletion, remapping, and special outcomes are open ([Q-008](open-questions.md#q-008)).
+A status change does not itself consume time. Moving within a phase does not automatically change allocations or consumption. Entering Active does not imply any work was performed. Usage comes from reporting. Entering Done and reopening have the explicit resource effects in R-017 and R-018. Other status-triggered resource automation is outside the defined scope. [Q-008](open-questions.md#q-008) and the [B-003 contract](B-003-contract.md) resolve M1 status changes, in-use edits, phase transitions, and archival behavior.
 
 <a id="r-008"></a>
 ### R-008 — Task ordering and prerequisites
