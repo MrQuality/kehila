@@ -5,7 +5,7 @@ recommendations and the ten review resolutions on 2026-09-29; the remaining
 project, identifier, field-kind, and M1 representation choices on 2026-09-30.
 [D-018](decisions.md#d-018), [D-019](decisions.md#d-019),
 [D-020](decisions.md#d-020), [D-021](decisions.md#d-021), and
-[D-022](decisions.md#d-022) record those decisions.
+[D-022](decisions.md#d-022) and [D-023](decisions.md#d-023) record those decisions.
 The remaining specification work is listed below. This document does not
 claim implemented behavior or a finalized storage format.
 
@@ -432,6 +432,16 @@ the required configuration, item, project, and operation writes coherent under
 concurrency. The pure checks cover the creation/edit portions of BC-03,
 BC-11, BC-13, BC-15, BC-18, and BC-19.
 
+M1 create, edit, and conversion commands each carry no more than 128 supplied
+field entries and 1 MiB of combined supplied UTF-8 text values. All supplied
+edit entries count, including Keep and Clear; retained values do not count
+against the edit. The 16 KiB per-text-value limit also applies. An oversized
+new command returns `payload_limit_exceeded` after authorization, replay, and
+current revision checks, without truncating data. This is a logical field
+payload bound, separate from an adapter's encoded request-body limit.
+A configuration with more than 128 active required fields for one WorkItem
+type is invalid because no create or conversion command could satisfy it.
+
 ### Eighth typed rule slice: item and project archival
 
 The Rust `task_contract::archive` module gives item and project archive/restore
@@ -485,7 +495,7 @@ commands: `unauthorized`, `operation_id_reused`,
 as `selection_version_conflict`, `required_field`, `archived_option`,
 `duplicate_relationship`, `self_link`, `unrelated_type_owner`,
 `prohibited_phase_change`,
-`migration_required`, and `estimate_unit_locked`.
+`migration_required`, `payload_limit_exceeded`, and `estimate_unit_locked`.
 
 For commands with operation replay, authorization is checked first; an
 identical recorded success then replays before current revisions or business
@@ -520,7 +530,8 @@ the full configurable model in M1; no capability is deferred by this review.
 
 These are narrower details, not a reopening of C-01 through C-10:
 
-- Specify command payload limits.
+- Specify configuration, knowledge, relationship-administration, and encoded
+  request-body limits; item create/edit/conversion field limits are fixed by D-023.
 - Complete remaining command payloads, typed results, and operation-specific error
   precedence. Stable domain codes exist
   for the current pure decisions; adapters
@@ -569,6 +580,7 @@ These are specifications for future checks, not test results.
 | BC-26 | Attempt link creation without type-use permission or Link permission on either endpoint. | Reject each missing grant; type administration requires project configuration permission in the owner project. | Pure grant inputs; B-007 authoritative enforcement. |
 | BC-27 | View one directed link from each endpoint, then view a symmetric link from each endpoint. | Directed views are outgoing/incoming respectively; symmetric views share one direction marker. Each view carries the same stable record ID and names the other endpoint; no inverse record is stored. | Pure projection; B-005 persistence and B-007 read access. |
 | BC-28 | Make a field required while one applicable item lacks a valid value; separately change or remove a field used in history after its current value was cleared. | Reject the required change until items comply; reject kind reinterpretation or removal of a historically used definition. Rename, hide, and archive preserve existing values. | Pure snapshot rules; B-005 authoritative snapshot and concurrent-commit protection. |
+| BC-29 | Submit 129 field entries or over 1 MiB of aggregate supplied text in a create, edit, or conversion command. | Reject with `payload_limit_exceeded`; 128 entries and exactly 1 MiB pass the aggregate check, subject to other field rules. Identical recorded success replays first. | Pure command checks; transport limits and durable replay in B-004/B-005. |
 
 ## Completion and handoff
 

@@ -70,9 +70,11 @@ authorization, both workflows' phase permissions, Done-to-New rejection,
 reopening, source-value history output, and successful replay precedence.
 Durable history, knowledge, and provenance retention remain B-005 checks.
 Pure boundary tests also cover the accepted M1 estimate, prefix, UTF-8 text,
-numeric-field, and Gregorian-date limits and project-scoped readable IDs.
+numeric-field, and Gregorian-date limits, project-scoped readable IDs, and
+the 128-entry/1-MiB logical field payload bound.
 Pure item-mutation tests cover untitled creation and title display, initial
-status, required/hidden fields, estimate locking, item/configuration versions,
+status, required/hidden fields, payload rejection, estimate locking,
+item/configuration versions,
 and replay. Durable sequence allocation and coordinated project/item writes
 remain B-005 checks.
 Pure archival tests cover item/project version conflicts, restore eligibility,

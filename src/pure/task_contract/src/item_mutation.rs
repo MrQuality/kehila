@@ -3,6 +3,7 @@
 use std::collections::HashSet;
 
 use crate::field::{apply_edit, FieldEdit, FieldEntry, FieldError, FieldId, FieldValue};
+use crate::payload::within_field_payload_limit;
 use crate::project::{
     allocate_readable_id, record_estimate, Estimate, Project, ProjectError, ReadableId,
 };
@@ -111,6 +112,7 @@ pub enum ItemMutationError {
     ArchivedItem,
     ArchivedTarget,
     DuplicateField,
+    PayloadLimitExceeded,
     Field(FieldError),
     Project(ProjectError),
     VersionOverflow,
@@ -159,6 +161,12 @@ pub fn decide_create(
     }
     if command.operation_id.is_empty() || command.item_id.0.is_empty() {
         return Reject(E::InvalidOperation);
+    }
+    if !within_field_payload_limit(
+        command.values.len(),
+        command.values.iter().map(|entry| &entry.value),
+    ) {
+        return Reject(E::PayloadLimitExceeded);
     }
     let Some(item_type) = configuration
         .types
@@ -281,6 +289,18 @@ pub fn decide_edit(
     }
     if command.operation_id.is_empty() {
         return Reject(E::InvalidOperation);
+    }
+    if !within_field_payload_limit(
+        command.fields.len(),
+        command
+            .fields
+            .iter()
+            .filter_map(|update| match &update.edit {
+                FieldEdit::Set(value) => Some(value),
+                FieldEdit::Keep | FieldEdit::Clear => None,
+            }),
+    ) {
+        return Reject(E::PayloadLimitExceeded);
     }
     let Some(item_type) = configuration
         .types

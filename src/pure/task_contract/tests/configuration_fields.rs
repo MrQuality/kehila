@@ -1,4 +1,5 @@
 use task_contract::field::{FieldDefinition, FieldId, FieldKind, FieldUsage};
+use task_contract::payload::MAX_FIELD_ENTRIES;
 use task_contract::work_item::{
     Configuration, Error, Phase, ProjectId, Status, StatusId, WorkItemType, WorkItemTypeId,
     Workflow, WorkflowId,
@@ -60,4 +61,31 @@ fn field_definitions_are_unique_in_one_configuration_revision() {
     let mut duplicate = config();
     duplicate.fields.push(duplicate.fields[0].clone());
     assert_eq!(duplicate.validate(), Err(Error::InvalidConfiguration));
+}
+
+#[test]
+fn required_fields_cannot_exceed_one_create_payload() {
+    let mut configuration = config();
+    for index in 0..MAX_FIELD_ENTRIES {
+        configuration.fields.push(FieldDefinition {
+            id: FieldId(format!("required-{index}")),
+            owner_type: WorkItemTypeId("task".into()),
+            name: format!("Required {index}"),
+            kind: FieldKind::Boolean,
+            usage: FieldUsage::Required,
+            archived: false,
+            options: vec![],
+        });
+    }
+    assert_eq!(configuration.validate(), Ok(()));
+    configuration.fields.push(FieldDefinition {
+        id: FieldId("one-too-many".into()),
+        owner_type: WorkItemTypeId("task".into()),
+        name: "One too many".into(),
+        kind: FieldKind::Boolean,
+        usage: FieldUsage::Required,
+        archived: false,
+        options: vec![],
+    });
+    assert_eq!(configuration.validate(), Err(Error::InvalidConfiguration));
 }

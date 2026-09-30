@@ -122,6 +122,9 @@ complete item-value and historical-field-use snapshot for configuration edits.
 The pure rule checks required-field changes and rejects kind reinterpretation
 or removal after historical use; B-005 must enforce snapshot completeness and
 commit-time consistency.
+**Further resolution, 2026-09-30:** [D-023](decisions.md#d-023) fixes the M1
+item create/edit/conversion field payload limit at 128 entries and 1 MiB of
+supplied text. Other command and transport limits remain open.
 
 <a id="q-009"></a>
 ## Q-009 — Scheduling demand, windows, and multiple drivers

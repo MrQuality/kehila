@@ -4,6 +4,7 @@ use std::collections::HashSet;
 
 pub use crate::field::FieldEntry;
 use crate::field::{apply_edit, FieldEdit, FieldError};
+use crate::payload::within_field_payload_limit;
 use crate::work_item::{
     classify_transition, Configuration, Error, LifecycleEffect, Phase, StatusId, WorkItem,
     WorkItemId, WorkItemTypeId, WorkflowId,
@@ -52,6 +53,7 @@ pub enum ConversionError {
     ArchivedTarget,
     InvalidOperation,
     DuplicateField,
+    PayloadLimitExceeded,
     Field(FieldError),
     ProhibitedPhaseChange,
     VersionOverflow,
@@ -116,6 +118,12 @@ pub fn decide_conversion(
     }
     if command.operation_id.is_empty() || item.type_id == command.destination_type {
         return Reject(C::InvalidOperation);
+    }
+    if !within_field_payload_limit(
+        command.destination_values.len(),
+        command.destination_values.iter().map(|entry| &entry.value),
+    ) {
+        return Reject(C::PayloadLimitExceeded);
     }
     let Some(source_type) = configuration
         .types

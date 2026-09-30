@@ -5,6 +5,7 @@ use task_contract::conversion::{
 use task_contract::field::{
     FieldDefinition, FieldError, FieldId, FieldKind, FieldUsage, FieldValue,
 };
+use task_contract::payload::MAX_FIELD_ENTRIES;
 use task_contract::work_item::{
     Configuration, LifecycleEffect, Phase, PhaseChange, ProjectId, Status, StatusId, WorkItem,
     WorkItemId, WorkItemType, WorkItemTypeId, Workflow, WorkflowId,
@@ -100,6 +101,25 @@ fn command(status: &str) -> ConversionCommand {
             value: FieldValue::Text("Deliver the release".into()),
         }],
     }
+}
+
+#[test]
+fn conversion_rejects_oversized_destination_payload() {
+    let mut oversized = command("active");
+    oversized.destination_values =
+        vec![oversized.destination_values[0].clone(); MAX_FIELD_ENTRIES + 1];
+    assert_eq!(
+        decide_conversion(
+            &config(),
+            &item("active"),
+            &[],
+            None,
+            true,
+            true,
+            &oversized
+        ),
+        ConversionDecision::Reject(ConversionError::PayloadLimitExceeded)
+    );
 }
 
 #[test]

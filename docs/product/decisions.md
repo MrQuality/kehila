@@ -310,6 +310,28 @@ and canonical uniqueness under concurrent creation.
 contract and pure decision checks. References: [Q-008](open-questions.md#q-008),
 [Q-014](open-questions.md#q-014), [B-003 contract](B-003-contract.md).
 
+<a id="d-023"></a>
+## D-023 — Bound M1 item field payloads
+
+**Status: Accepted by the maintainer on 2026-09-30.** A new WorkItem create,
+field edit, or type conversion command supplies at most 128 field entries and
+at most 1 MiB (1,048,576 bytes) of UTF-8 text values in total. An edit counts
+all supplied field updates, including Keep and Clear; only supplied Set text
+values contribute to the text-byte sum. A create or conversion counts every
+supplied field entry and its text value. Existing retained values do not count
+against an edit's command payload. The existing 16 KiB limit for each text
+value still applies. Reject an oversized new command without truncation or
+rounding, using `payload_limit_exceeded`. An identical previously recorded
+success still replays before current payload validation.
+One WorkItem type may not define more than 128 active required fields: such a
+configuration would make item creation impossible under this command bound.
+
+**Consequence:** B-003 has a pure, encoding-independent bound for these three
+item commands. HTTP body limits, configuration and knowledge payloads, and
+storage record budgets need their own contracts. References:
+[Q-008](open-questions.md#q-008), [B-003](backlog.md#b-003), and
+[the contract review](B-003-contract.md).
+
 ## How to change a decision
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.

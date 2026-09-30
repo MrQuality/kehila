@@ -6,6 +6,7 @@ use task_contract::item_mutation::{
     EditDecision, EstimateEdit, FieldUpdate, ItemData, ItemMutationError, SuccessfulCreate,
     SuccessfulEdit,
 };
+use task_contract::payload::MAX_FIELD_ENTRIES;
 use task_contract::project::{Estimate, EstimateUnit, Project};
 use task_contract::work_item::{
     Configuration, Phase, ProjectId, Status, StatusId, WorkItemId, WorkItemType, WorkItemTypeId,
@@ -324,5 +325,83 @@ fn new_commands_reject_archived_project_and_ineligible_workflow() {
     assert_eq!(
         decide_create(&project(), &config(), None, true, &ineligible),
         CreateDecision::Reject(ItemMutationError::InvalidReference)
+    );
+}
+
+#[test]
+fn create_and_edit_reject_oversized_field_payloads() {
+    let mut oversized = create();
+    oversized.values = vec![oversized.values[0].clone(); MAX_FIELD_ENTRIES + 1];
+    assert_eq!(
+        decide_create(&project(), &config(), None, true, &oversized),
+        CreateDecision::Reject(ItemMutationError::PayloadLimitExceeded)
+    );
+
+    let CreateDecision::Apply(created) =
+        decide_create(&project(), &config(), None, true, &create())
+    else {
+        panic!("fixture create must apply");
+    };
+    let edit = EditCommand {
+        operation_id: "edit-oversized".into(),
+        expected_item_version: created.item.version,
+        expected_configuration_revision: 4,
+        estimate: EstimateEdit::Keep,
+        fields: vec![
+            FieldUpdate {
+                id: FieldId("title".into()),
+                edit: FieldEdit::Keep,
+            };
+            MAX_FIELD_ENTRIES + 1
+        ],
+    };
+    assert_eq!(
+        decide_edit(
+            &created.project,
+            &config(),
+            &created.item,
+            &created.data,
+            None,
+            true,
+            &edit,
+        ),
+        EditDecision::Reject(ItemMutationError::PayloadLimitExceeded)
+    );
+}
+
+#[test]
+fn create_counts_combined_text_bytes_across_distinct_valid_fields() {
+    let mut configuration = config();
+    let mut command = create();
+    for index in 0..65 {
+        let id = format!("note-{index}");
+        configuration.fields.push(field(&id, FieldUsage::Optional));
+        command.values.push(FieldEntry {
+            id: FieldId(id),
+            value: FieldValue::Text("x".repeat(16 * 1024)),
+        });
+    }
+    assert_eq!(
+        decide_create(&project(), &configuration, None, true, &command),
+        CreateDecision::Reject(ItemMutationError::PayloadLimitExceeded)
+    );
+}
+
+#[test]
+fn recorded_success_replays_before_current_payload_limit() {
+    let CreateDecision::Apply(result) = decide_create(&project(), &config(), None, true, &create())
+    else {
+        panic!("fixture create must apply");
+    };
+    let mut oversized = create();
+    oversized.values = vec![oversized.values[0].clone(); MAX_FIELD_ENTRIES + 1];
+    let recorded = SuccessfulCreate {
+        project_id: ProjectId("project".into()),
+        request: oversized.clone(),
+        result: result.clone(),
+    };
+    assert_eq!(
+        decide_create(&project(), &config(), Some(&recorded), true, &oversized),
+        CreateDecision::Replay(result)
     );
 }

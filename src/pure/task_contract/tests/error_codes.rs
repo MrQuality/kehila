@@ -49,6 +49,18 @@ fn shared_conflicts_have_the_same_stable_code_across_commands() {
 #[test]
 fn nested_field_and_project_errors_keep_specific_codes() {
     assert_eq!(
+        ItemMutationError::PayloadLimitExceeded.code(),
+        Code::PayloadLimitExceeded
+    );
+    assert_eq!(
+        ConversionError::PayloadLimitExceeded.code(),
+        Code::PayloadLimitExceeded
+    );
+    assert_eq!(
+        Code::PayloadLimitExceeded.as_str(),
+        "payload_limit_exceeded"
+    );
+    assert_eq!(
         ConfigurationChangeError::FieldMigrationRequired {
             field_id: FieldId("summary".into())
         }

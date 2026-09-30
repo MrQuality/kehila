@@ -6,7 +6,9 @@
 
 use std::collections::HashSet;
 
+use crate::field::FieldUsage;
 use crate::field::{FieldDefinition, FieldId, FieldKind};
+use crate::payload::MAX_FIELD_ENTRIES;
 
 macro_rules! id_type {
     ($name:ident) => {
@@ -186,6 +188,20 @@ impl Configuration {
                     .iter()
                     .any(|item_type| item_type.id == field.owner_type)
             {
+                return Err(Error::InvalidConfiguration);
+            }
+        }
+        for item_type in &self.types {
+            let required = self
+                .fields
+                .iter()
+                .filter(|field| {
+                    field.owner_type == item_type.id
+                        && !field.archived
+                        && field.usage == FieldUsage::Required
+                })
+                .count();
+            if required > MAX_FIELD_ENTRIES {
                 return Err(Error::InvalidConfiguration);
             }
         }

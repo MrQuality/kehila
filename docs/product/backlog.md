@@ -107,7 +107,8 @@ records the accepted review direction; [D-019](decisions.md#d-019) resolves the
 ten review areas and retains the full M1 scope. [D-020](decisions.md#d-020) and
 [D-021](decisions.md#d-021) settle project archival, readable IDs, and M1 value
 limits. [D-022](decisions.md#d-022) settles the phase graph, relationship-type
-ownership, and link-creation grants. The [contract review](B-003-contract.md)
+ownership, and link-creation grants. [D-023](decisions.md#d-023) bounds item
+field payloads. The [contract review](B-003-contract.md)
 tracks remaining specification details and acceptance scenarios. Durable records are not
 finalized, and required pure rule checks remain to implement.
 **Dependencies:** B-001; align persistence contracts with B-002.
