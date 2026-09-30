@@ -163,6 +163,8 @@ HTTP routes, serialization, or Rust inheritance.
 | Workflow | Project-scoped status membership, initial status, and phase-transition restrictions. |
 | Current-work selection | User-scoped reference with its own concurrency boundary; selection does not mutate item lifecycle. |
 | Relationship | Stable identity, relationship-type reference, and endpoint identities; informational links do not imply scheduling behavior. |
+| Knowledge entry | Stable identity, WorkItem identity, one of created file/decision/lesson/insight, validated value, independent version, and archival state. A created file is a labeled external reference. |
+| Follow-up origin | Stable directed WorkItem-to-WorkItem provenance, including cross-project links with Link grants on both endpoints; no scheduling edge. |
 
 Reference invariant: an item's type, workflow, and status must resolve
 within its project configuration, and the status must belong to its workflow.
@@ -564,11 +566,26 @@ the full configurable model in M1; no capability is deferred by this review.
 | C-09 | M1 scope | Full configurable model in M1, divided into implementation slices in the backlog. |
 | C-10 | Project/history | Explicit project minimum fields; archive populated projects; retain configuration, conversion, knowledge, provenance, and lifecycle history. |
 
+### Knowledge value contract
+
+[D-024](decisions.md#d-024) fixes four manually entered entry kinds. Created
+files carry a nonblank label and an opaque locator; the application neither
+uploads nor resolves the referenced content as part of this command. Decisions,
+lessons, and insights carry nonblank text. The entry identity, owning item,
+kind, and version are explicit; version starts at 1. A value cannot be used
+under the wrong kind. Conversion retains the same entry and prior versions.
+
+The initial typed limits are 16 KiB of UTF-8 bytes for a text entry, 256 bytes
+for a file label, and 2048 bytes for its locator. Labels and locators exclude
+control characters. These are contract design limits, not separately accepted
+product decisions. Creation and edit command bounds, authorizations, and
+history mutation rules are specified below as subsequent B-003 slices.
+
 ## Remaining specification work
 
 These are narrower details, not a reopening of C-01 through C-10:
 
-- Specify configuration, knowledge, relationship-administration, and encoded
+- Specify configuration, knowledge-command, relationship-administration, and encoded
   request-body limits; item create/edit/conversion field limits are fixed by D-023.
 - Complete remaining command payloads, typed results, and operation-specific error
   precedence. Stable domain codes exist

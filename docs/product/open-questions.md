@@ -210,11 +210,11 @@ the other permissions in this question remain open.
 <a id="q-016"></a>
 ## Q-016 — Knowledge and file-reference structure
 
-**Question:** Separate entry types or a structured task note? Are created files stored as repository paths, commit links, attachments, or another reference? Who can edit entries and is revision history needed? Can a follow-up belong to another project?
+**Resolution, 2026-09-30:** [D-024](decisions.md#d-024) selects separate typed entries, labeled external file references, versioned edits retaining prior versions, and cross-project follow-ups with Link grants on both items. Entry edit authorization and precise command boundaries are specified by B-003.
 
 **Known:** All five knowledge categories in R-005 are required and manual entry is sufficient. File upload, automatic scanning, and commit integration are not implied.
 
-**Blocks:** Knowledge implementation in [B-004](backlog.md#b-004).
+**Blocks:** B-004 implementation until B-003 completes its command and history contract.
 
 <a id="q-017"></a>
 ## Q-017 — Usage corrections, overrun, and timers

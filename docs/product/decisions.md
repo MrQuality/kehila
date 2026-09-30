@@ -332,6 +332,24 @@ storage record budgets need their own contracts. References:
 [Q-008](open-questions.md#q-008), [B-003](backlog.md#b-003), and
 [the contract review](B-003-contract.md).
 
+<a id="d-024"></a>
+## D-024 — Keep typed, versioned knowledge and cross-project follow-ups
+
+**Status: Accepted by the maintainer on 2026-09-30.** M1 stores created files,
+decisions, lessons, and insights as separate typed entries attached to a
+WorkItem. A created file is a label and an external reference such as a
+repository path, commit link, or URL. The reference does not imply uploaded
+content or automatic retrieval. Edits retain prior versions. A follow-up
+WorkItem may belong to another project when the actor has Link permission on
+both items. Provenance is a distinct origin relationship, retained through
+conversion and archival; it does not imply task ordering.
+
+**Consequence:** B-003 defines the typed entries, edit/history and follow-up
+commands. B-005 must retain versions and provenance durably; B-007 supplies
+current grants. Entry edit grants and exact command boundaries are specified
+in the B-003 contract. References: [Q-016](open-questions.md#q-016),
+[R-005](requirements.md#r-005), [B-003](backlog.md#b-003).
+
 ## How to change a decision
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.

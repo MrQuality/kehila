@@ -20,6 +20,7 @@ YAJA is in early development. The current components are:
 | Rust item creation/edit rules | Pure default/initial status, project-scoped ID, bounded field payload, field/estimate, title fallback, version, and replay decisions; not yet used by the worker | Focused pure tests; atomic ID allocation, item writes, and configuration coordination unverified |
 | Rust archival commands | Pure item/project archive and restore, matching Project/Configuration state, versioned selection clears, and replay decisions; not yet used by the worker | Focused pure tests; authoritative selection snapshots and atomic cross-user clearing unverified |
 | Rust choice-option administration | Pure option add/rename/archive/restore and revision/replay decisions; not yet used by the worker | Focused pure tests; commit-time configuration/item coordination unverified |
+| Rust knowledge values | Pure typed created-file, decision, lesson, and insight entries with bounded values; command and history decisions still in progress | Focused pure tests; durable history and access enforcement unverified |
 | Rust domain error codes | Stable codes for current pure contract errors; not yet mapped through the API | Focused mapping tests; transport status/message behavior unverified |
 | TypeScript contracts | Shared declarations | No runtime implementation |
 | Development tools | Staged-source verification and CI base selection | Temporary Git repository tests |

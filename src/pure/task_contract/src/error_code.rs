@@ -10,6 +10,7 @@ use crate::current_work::SelectionError;
 use crate::field::FieldError;
 use crate::field_admin::OptionAdminError;
 use crate::item_mutation::ItemMutationError;
+use crate::knowledge::KnowledgeError;
 use crate::project::ProjectError;
 use crate::relationship::RelationshipError;
 use crate::relationship_command::RelationshipCreateError;
@@ -36,6 +37,8 @@ pub enum Code {
     HiddenField,
     RequiredField,
     InvalidFieldValue,
+    InvalidKnowledgeValue,
+    WrongKnowledgeKind,
     InvalidEstimate,
     InvalidPrefix,
     InvalidName,
@@ -76,6 +79,8 @@ impl Code {
             Self::HiddenField => "hidden_field",
             Self::RequiredField => "required_field",
             Self::InvalidFieldValue => "invalid_field_value",
+            Self::InvalidKnowledgeValue => "invalid_knowledge_value",
+            Self::WrongKnowledgeKind => "wrong_knowledge_kind",
             Self::InvalidEstimate => "invalid_estimate",
             Self::InvalidPrefix => "invalid_prefix",
             Self::InvalidName => "invalid_name",
@@ -131,6 +136,16 @@ impl StableCode for FieldError {
             Self::Required | Self::ExistingValueMissing => Code::RequiredField,
             Self::UnknownOption => Code::UnknownOption,
             Self::ArchivedOption => Code::ArchivedOption,
+        }
+    }
+}
+
+impl StableCode for KnowledgeError {
+    fn code(&self) -> Code {
+        match self {
+            Self::InvalidReference => Code::InvalidReference,
+            Self::InvalidValue => Code::InvalidKnowledgeValue,
+            Self::WrongKind => Code::WrongKnowledgeKind,
         }
     }
 }

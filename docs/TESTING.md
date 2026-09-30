@@ -54,6 +54,9 @@ Pure field-rule tests cover hidden value preservation, optional/required
 validation, typed values and WorkItem type ownership, choice-option archival,
 and calendar boundaries. Required-field changes under concurrent writes still
 need authoritative storage checks.
+Pure knowledge-value tests cover typed entry kinds, labeled file references,
+UTF-8 limits, identity/version validation, and stable error codes. They do not
+establish edit history or durable retention.
 Pure relationship and current-work tests cover type ownership, type-use and
 two-endpoint Link inputs, canonical duplicate/self-link rejection, stable record
 ID in directed inverse and symmetric views, archival
