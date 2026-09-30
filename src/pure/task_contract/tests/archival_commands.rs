@@ -1,8 +1,10 @@
 use task_contract::archive::{
-    decide_item_archive, decide_project_archive_command, ArchiveCommandError, ItemArchiveCommand,
-    ItemArchiveDecision, ItemArchiveEffect, ProjectArchiveCommand, ProjectArchiveDecision,
-    SuccessfulItemArchive, SuccessfulProjectArchive,
+    decide_item_archive as decide_item_archive_raw,
+    decide_project_archive_command as decide_project_archive_command_raw, ArchiveCommandError,
+    ItemArchiveCommand, ItemArchiveDecision, ItemArchiveEffect, ProjectArchiveCommand,
+    ProjectArchiveDecision, SelectionClear, SuccessfulItemArchive, SuccessfulProjectArchive,
 };
+use task_contract::current_work::{CurrentWork, UserId};
 use task_contract::project::{ArchiveAction, ArchiveEffect, EstimateUnit, Project};
 use task_contract::relationship::EndpointIdentity;
 use task_contract::work_item::{
@@ -68,6 +70,28 @@ fn item() -> WorkItem {
         version: 3,
         archived: false,
     }
+}
+
+fn decide_item_archive(
+    configuration: &Configuration,
+    item: &WorkItem,
+    previous: Option<&SuccessfulItemArchive>,
+    authorized: bool,
+    command: &ItemArchiveCommand,
+) -> ItemArchiveDecision {
+    decide_item_archive_raw(configuration, item, &[], previous, authorized, command)
+}
+
+fn decide_project_archive_command(
+    project: &Project,
+    previous: Option<&SuccessfulProjectArchive>,
+    authorized: bool,
+    command: &ProjectArchiveCommand,
+) -> ProjectArchiveDecision {
+    let mut configuration = config();
+    configuration.revision = project.configuration_revision;
+    configuration.project_archived = project.archived;
+    decide_project_archive_command_raw(project, &configuration, &[], previous, authorized, command)
 }
 
 #[test]
@@ -250,5 +274,144 @@ fn archival_rejects_an_orphaned_status_reference() {
     assert_eq!(
         decide_item_archive(&config(), &orphaned, None, true, &command),
         ItemArchiveDecision::Reject(ArchiveCommandError::InvalidReference)
+    );
+}
+
+#[test]
+fn project_archive_advances_project_and_configuration_together() {
+    let command = ProjectArchiveCommand {
+        operation_id: "archive-project".into(),
+        expected_configuration_revision: 4,
+        action: ArchiveAction::Archive,
+    };
+    let ProjectArchiveDecision::Apply(result) =
+        decide_project_archive_command_raw(&project(), &config(), &[], None, true, &command)
+    else {
+        panic!("eligible project archive must apply");
+    };
+    assert_eq!(result.project.configuration_revision, 5);
+    assert_eq!(result.configuration.revision, 5);
+    assert!(result.project.archived);
+    assert!(result.configuration.project_archived);
+
+    let mut mismatched = config();
+    mismatched.project_archived = true;
+    assert_eq!(
+        decide_project_archive_command_raw(&project(), &mismatched, &[], None, true, &command),
+        ProjectArchiveDecision::Reject(ArchiveCommandError::InvalidConfiguration)
+    );
+}
+
+#[test]
+fn item_archive_plans_versioned_clears_for_every_selected_user() {
+    let command = ItemArchiveCommand {
+        operation_id: "archive-item".into(),
+        expected_item_version: 3,
+        expected_configuration_revision: 4,
+        action: ArchiveAction::Archive,
+    };
+    let selected = item();
+    let selections = vec![
+        CurrentWork {
+            user_id: UserId("alice".into()),
+            selected: Some(EndpointIdentity {
+                project_id: selected.project_id.clone(),
+                item_id: selected.id.clone(),
+            }),
+            version: 2,
+        },
+        CurrentWork {
+            user_id: UserId("bob".into()),
+            selected: Some(EndpointIdentity {
+                project_id: selected.project_id.clone(),
+                item_id: selected.id.clone(),
+            }),
+            version: 7,
+        },
+        CurrentWork {
+            user_id: UserId("carol".into()),
+            selected: None,
+            version: 9,
+        },
+    ];
+    let ItemArchiveDecision::Apply(result) =
+        decide_item_archive_raw(&config(), &selected, &selections, None, true, &command)
+    else {
+        panic!("eligible item archive must apply");
+    };
+    assert_eq!(result.selection_clears.len(), 2);
+    assert_eq!(
+        result.selection_clears[0],
+        SelectionClear {
+            before: selections[0].clone(),
+            after: CurrentWork {
+                selected: None,
+                version: 3,
+                ..selections[0].clone()
+            }
+        }
+    );
+    assert_eq!(result.selection_clears[1].after.version, 8);
+    assert_eq!(
+        selections[0].selected,
+        result.selection_clears[0].before.selected
+    );
+    let previous = SuccessfulItemArchive {
+        item_id: selected.id.clone(),
+        request: command.clone(),
+        result: result.clone(),
+    };
+    let current_selections = result
+        .selection_clears
+        .iter()
+        .map(|clear| clear.after.clone())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        decide_item_archive_raw(
+            &config(),
+            &result.item,
+            &current_selections,
+            Some(&previous),
+            true,
+            &command,
+        ),
+        ItemArchiveDecision::Replay(result)
+    );
+}
+
+#[test]
+fn project_archive_clears_only_its_selections_and_fails_on_version_overflow() {
+    let command = ProjectArchiveCommand {
+        operation_id: "archive-project".into(),
+        expected_configuration_revision: 4,
+        action: ArchiveAction::Archive,
+    };
+    let selected = |user: &str, project: &str, version| CurrentWork {
+        user_id: UserId(user.into()),
+        selected: Some(EndpointIdentity {
+            project_id: ProjectId(project.into()),
+            item_id: WorkItemId("item".into()),
+        }),
+        version,
+    };
+    let selections = [selected("alice", "project", 2), selected("bob", "other", 3)];
+    let ProjectArchiveDecision::Apply(result) = decide_project_archive_command_raw(
+        &project(),
+        &config(),
+        &selections,
+        None,
+        true,
+        &command,
+    ) else {
+        panic!("eligible project archive must apply");
+    };
+    assert_eq!(result.selection_clears.len(), 1);
+    assert_eq!(result.selection_clears[0].after.version, 3);
+    assert_eq!(result.selection_clears[0].after.selected, None);
+
+    let overflow = [selected("alice", "project", u64::MAX)];
+    assert_eq!(
+        decide_project_archive_command_raw(&project(), &config(), &overflow, None, true, &command),
+        ProjectArchiveDecision::Reject(ArchiveCommandError::VersionOverflow)
     );
 }

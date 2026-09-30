@@ -468,22 +468,30 @@ The Rust `task_contract::archive` module gives item and project archive/restore
 commands operation identities, expected versions, typed results, and explicit
 selection-clear effects. Item archival advances the item version, leaves its
 type, workflow, status, phase, knowledge, history, and relationships untouched,
-and returns an instruction to clear every user's current-work selection of
-that item. Item restoration has no selection effect and is rejected while the
-project is archived. Project archival advances the project configuration
-revision, makes the project read-only through the existing eligibility rules,
-and returns a project-wide selection-clear instruction. Project restoration
-advances the revision without restoring individually archived items.
+and returns versioned before/after mutations clearing every user's current-work
+selection of that item. Item restoration has no selection effect and is rejected
+while the project is archived. Project archival advances the configuration
+revision in both the Project and Configuration representations, sets both
+archival flags, makes the project read-only through the existing eligibility
+rules, and returns versioned project-wide selection clears. Project restoration
+advances both revisions and clears both archival flags without restoring
+individually archived items or selections. Mismatched current Project and
+Configuration revisions or archival flags are invalid inputs.
 
 An already archived item or project cannot be archived again as a new
 operation; restoring an active one is likewise invalid. Stale revisions
 conflict. Identical recorded success replays after authorization and before
 current revisions or archive rules, while changed content under the same
 operation ID conflicts. The result carries no lifecycle, usage, reservation,
-or scheduling effect. B-005 must coordinate the archive state, configuration
-revision where applicable, affected user selections, and success record under
-concurrency. The pure tests cover BC-16 and BC-21's eligibility and effect
-portions; durable cross-user clearing remains unverified.
+or scheduling effect. The supplied current-work snapshot must contain every
+user who could select the affected item or project. A duplicate user context
+or selection-version overflow rejects the whole command. B-005 must protect
+the full selection set against concurrent additions or changes, compare each
+before-version, and commit archive state, both project representations where
+applicable, all selection clears, and the success record atomically. A replay
+returns the original result without reapplying clears. The pure tests cover
+BC-16, BC-21, and BC-31's decision portions; durable cross-user clearing
+remains unverified.
 
 ### Ninth typed rule slice: single-choice option administration
 
@@ -556,9 +564,9 @@ These are narrower details, not a reopening of C-01 through C-10:
   precedence. Stable domain codes exist
   for the current pure decisions; adapters
   still need an HTTP mapping.
-- Demonstrate the consistency boundary for item/project archival plus selection
-  clearing and for cross-project relationship creation against concurrent
-  endpoint/configuration changes.
+- B-005 must demonstrate the decided archival and cross-project relationship
+  consistency boundaries against concurrent selection, endpoint, and
+  configuration changes.
 - Implement meaningful pure contract checks and record results. Real-service
   enforcement is a B-005 obligation, not evidence supplied by these checks.
 
@@ -602,6 +610,7 @@ These are specifications for future checks, not test results.
 | BC-28 | Make a field required while one applicable item lacks a valid value; separately change or remove a field used in history after its current value was cleared. | Reject the required change until items comply; reject kind reinterpretation or removal of a historically used definition. Rename, hide, and archive preserve existing values. | Pure snapshot rules; B-005 authoritative snapshot and concurrent-commit protection. |
 | BC-29 | Submit 129 field entries or over 1 MiB of aggregate supplied text in a create, edit, or conversion command. | Reject with `payload_limit_exceeded`; 128 entries and exactly 1 MiB pass the aggregate check, subject to other field rules. Identical recorded success replays first. | Pure command checks; transport limits and durable replay in B-004/B-005. |
 | BC-30 | Create a cross-project link while either endpoint project revision or item version changes, then retry a recorded success. | A new stale command identifies the changed project or item and is rejected. Identical success replays after current authorization; changed content under the same operation ID conflicts. No link may commit against an archived endpoint, changed type, or duplicate canonical key. | Pure command checks; B-005 atomic multi-record contention and B-007 current grants. |
+| BC-31 | Archive an item selected by two users, or archive a project with selected and unrelated users, while a selection changes concurrently. | Produce versioned clears only for affected users. The archive, matching Project/Configuration state where applicable, all clears, and success record commit together; otherwise none commit. Replay never reapplies clears. | Pure plan checks; B-005 authoritative selection set, contention, and atomicity. |
 
 ## Completion and handoff
 

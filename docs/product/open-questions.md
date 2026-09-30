@@ -129,6 +129,10 @@ supplied text. Other command and transport limits remain open.
 cross-project relationship creation command with expected project revisions
 and item versions on both endpoints. B-005 still must demonstrate commit-time
 coordination across those records.
+**Contract progress, 2026-09-30:** [B-003](B-003-contract.md) now returns
+matching Project/Configuration archive state and versioned current-work
+selection clears. B-005 still must prove complete selection discovery and
+atomic commit under concurrent selection changes.
 
 <a id="q-009"></a>
 ## Q-009 — Scheduling demand, windows, and multiple drivers
