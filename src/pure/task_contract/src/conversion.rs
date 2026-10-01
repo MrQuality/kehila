@@ -181,10 +181,14 @@ pub fn decide_conversion(
     {
         return Reject(C::InvalidReference);
     }
-    if destination_type.archived || destination_workflow.archived || destination_status.archived {
+    let migration = item.workflow_id != command.destination_workflow;
+    let changes_status = item.status_id != command.destination_status;
+    if destination_type.archived
+        || (migration && destination_workflow.archived)
+        || (changes_status && destination_status.archived)
+    {
         return Reject(C::ArchivedTarget);
     }
-    let migration = item.workflow_id != command.destination_workflow;
     if migration && !may_migrate {
         return Reject(C::MigrationUnauthorized);
     }

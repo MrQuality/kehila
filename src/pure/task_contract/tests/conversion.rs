@@ -204,6 +204,65 @@ fn conversion_requires_a_complete_compatible_destination_and_migration_permissio
 }
 
 #[test]
+fn conversion_can_retain_existing_archived_workflow_and_status() {
+    let mut configuration = config();
+    configuration.types[0]
+        .permitted_workflows
+        .push(WorkflowId("milestone-flow".into()));
+    configuration.types[0].default_workflow_id = WorkflowId("milestone-flow".into());
+    configuration.types[1]
+        .permitted_workflows
+        .push(WorkflowId("task-flow".into()));
+    configuration.workflows[0].archived = true;
+    configuration.statuses[1].archived = true;
+    assert_eq!(configuration.validate(), Ok(()));
+    let source = item("active");
+    let mut request = command("active");
+    request.destination_workflow = source.workflow_id.clone();
+    let ConversionDecision::Apply(result) =
+        decide_conversion(&configuration, &source, &[], None, true, false, &request)
+    else {
+        panic!("retained references should remain valid")
+    };
+    assert_eq!(result.next_item.workflow_id, source.workflow_id);
+    assert_eq!(result.next_item.status_id, source.status_id);
+    assert_eq!(result.effect, LifecycleEffect::None);
+    request.destination_status = StatusId("done".into());
+    assert!(matches!(
+        decide_conversion(&configuration, &source, &[], None, true, false, &request),
+        ConversionDecision::Apply(_)
+    ));
+    configuration.statuses[2].archived = true;
+    assert_eq!(
+        decide_conversion(&configuration, &source, &[], None, true, false, &request),
+        ConversionDecision::Reject(ConversionError::ArchivedTarget)
+    );
+}
+
+#[test]
+fn conversion_cannot_migrate_into_a_different_archived_workflow() {
+    let mut configuration = config();
+    configuration.types[1]
+        .permitted_workflows
+        .push(WorkflowId("task-flow".into()));
+    configuration.types[1].default_workflow_id = WorkflowId("task-flow".into());
+    configuration.workflows[1].archived = true;
+    assert_eq!(configuration.validate(), Ok(()));
+    assert_eq!(
+        decide_conversion(
+            &configuration,
+            &item("active"),
+            &[],
+            None,
+            true,
+            true,
+            &command("active")
+        ),
+        ConversionDecision::Reject(ConversionError::ArchivedTarget)
+    );
+}
+
+#[test]
 fn conversion_uses_both_workflows_phase_rules_and_forbids_done_to_new() {
     let config = config();
     let source = item("done");

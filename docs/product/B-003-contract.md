@@ -471,8 +471,10 @@ configuration schema.
 The Rust `task_contract::conversion` module accepts a complete destination
 field-value set alongside explicit destination type, workflow, and status. A
 conversion to another type cannot proceed with an incompatible workflow,
-missing required destination field, archived destination, or prohibited phase
-change. A workflow change also needs migration authorization and both workflows'
+missing required destination field, archived destination type, newly assigned
+archived workflow/status, or prohibited phase change. Retaining the item's
+existing archived workflow or status is valid when the destination type permits
+those references. A workflow change also needs migration authorization and both workflows'
 cross-phase permissions. Done to New remains forbidden; Done to Active produces
 the reopening effect. The converted item keeps its stable identity and advances
 one version. The result separates current destination values from a snapshot of

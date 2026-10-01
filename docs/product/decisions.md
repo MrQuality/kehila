@@ -350,6 +350,19 @@ current grants. Entry edit grants and exact command boundaries are specified
 in the B-003 contract. References: [Q-016](open-questions.md#q-016),
 [R-005](requirements.md#r-005), [B-003](backlog.md#b-003).
 
+<a id="d-025"></a>
+## D-025 — Retain existing archived references during type conversion
+
+**Status: Accepted by the maintainer on 2026-10-01.** A conversion may retain
+the item's current archived workflow or status when the destination type
+permits those references. A different destination type must be active, and a
+new assignment to a different archived workflow or status is rejected.
+Workflow changes retain the existing migration authorization and phase rules.
+
+**Consequence:** B-003 distinguishes retained references from new assignments
+in its pure conversion decision and regression tests. B-005/M1-05 must enforce
+the same eligibility at commit time.
+
 ## How to change a decision
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.
