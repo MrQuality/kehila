@@ -167,10 +167,11 @@ HTTP routes, serialization, or Rust inheritance.
 | Contract | Ownership and responsibility |
 | --- | --- |
 | Project | Stable identity, name, readable identifier prefix, estimate unit, configuration revision, archival state. |
-| Project configuration revision | A coherent set of field definitions, type/workflow permissions, workflow membership, type default workflows, initial statuses, transition restrictions, and project-owned relationship types. Each type may identify a text field for display title. |
+| Project configuration revision | A coherent set of field definitions, type/workflow permissions, workflow membership, type default workflows, initial statuses, status groups, transition restrictions, and project-owned relationship types. Each type may identify a text field for display title. |
 | Work item | Stable identity, project and type references, workflow/status references, item version; phase derived from status. |
 | Field definition | Stable identity, owning type, value kind, and validation constraints; display names are not identity. Once values exist, change of value kind is rejected; migrate to a new field and archive the old one. |
-| Status | Stable project-scoped identity and phase mapping; display metadata is separate from identity. |
+| Status | Stable project-scoped identity and phase mapping, display name, optional status-group reference, and archival state. Display metadata is separate from identity. |
+| Status group | Stable project-scoped identity, display name, and archival state; membership is held by statuses and has no lifecycle effect. |
 | Workflow | Project-scoped status membership, initial status, and phase-transition restrictions. |
 | Current-work selection | User-scoped reference with its own concurrency boundary; selection does not mutate item lifecycle. |
 | Relationship | Stable identity, relationship-type reference, and endpoint identities; informational links do not imply scheduling behavior. |
@@ -389,6 +390,14 @@ ID, enforce canonical-key uniqueness, and atomically record success. B-007
 must supply current grants, including on replay. Pure tests cover BC-30.
 
 ### Fifth typed rule slice: configuration compatibility
+
+Status groups are organizational metadata. A status may belong to one group or
+none; any referenced group must exist in the same project configuration. A
+referenced status may be renamed or moved to another group without changing its
+identity or phase. Group names and status names are nonblank and bounded by 256
+UTF-8 bytes; group IDs are unique within the project. A group's administration
+grant is scoped by its stable identity and is supplied by B-007. Group archival
+does not change the phase or validity of member statuses.
 
 An active WorkItem type names a default workflow that it permits and that is
 not archived. Every workflow names an unarchived New-phase initial status in

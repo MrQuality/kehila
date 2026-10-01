@@ -17,9 +17,12 @@ fn config() -> Configuration {
         project_id: ProjectId("project".into()),
         revision: 4,
         project_archived: false,
+        status_groups: vec![],
         relationship_types: vec![],
         statuses: vec![Status {
             id: StatusId("new".into()),
+            name: "Status".into(),
+            group_id: None,
             phase: Phase::New,
             archived: false,
         }],

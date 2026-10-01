@@ -20,6 +20,8 @@ fn config() -> Configuration {
     .into_iter()
     .map(|(id, phase)| Status {
         id: StatusId(id.into()),
+        name: id.into(),
+        group_id: None,
         phase,
         archived: false,
     })
@@ -42,6 +44,7 @@ fn config() -> Configuration {
         project_id: ProjectId("project".into()),
         revision: 4,
         project_archived: false,
+        status_groups: vec![],
         relationship_types: vec![],
         statuses,
         workflows: vec![workflow("task-flow"), workflow("milestone-flow")],

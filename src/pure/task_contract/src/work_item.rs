@@ -23,9 +23,11 @@ id_type!(WorkItemId);
 id_type!(WorkItemTypeId);
 id_type!(WorkflowId);
 id_type!(StatusId);
+id_type!(StatusGroupId);
 
 pub const MAX_CONFIGURATION_TEXT_BYTES: usize = 1024 * 1024;
 pub const MAX_STATUSES: usize = 256;
+pub const MAX_STATUS_GROUPS: usize = 256;
 pub const MAX_WORKFLOWS: usize = 128;
 pub const MAX_ITEM_TYPES: usize = 128;
 pub const MAX_FIELDS: usize = 512;
@@ -66,7 +68,16 @@ impl PhaseChange {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Status {
     pub id: StatusId,
+    pub name: String,
+    pub group_id: Option<StatusGroupId>,
     pub phase: Phase,
+    pub archived: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StatusGroup {
+    pub id: StatusGroupId,
+    pub name: String,
     pub archived: bool,
 }
 
@@ -95,6 +106,7 @@ pub struct Configuration {
     pub revision: u64,
     pub project_archived: bool,
     pub statuses: Vec<Status>,
+    pub status_groups: Vec<StatusGroup>,
     pub workflows: Vec<Workflow>,
     pub types: Vec<WorkItemType>,
     pub fields: Vec<FieldDefinition>,
@@ -107,6 +119,7 @@ impl Configuration {
     /// complete configuration, including repeated references.
     pub fn within_limits(&self) -> bool {
         if self.statuses.len() > MAX_STATUSES
+            || self.status_groups.len() > MAX_STATUS_GROUPS
             || self.workflows.len() > MAX_WORKFLOWS
             || self.types.len() > MAX_ITEM_TYPES
             || self.fields.len() > MAX_FIELDS
@@ -120,7 +133,17 @@ impl Configuration {
         }
         let mut total = self.project_id.0.len();
         for status in &self.statuses {
-            total = total.saturating_add(status.id.0.len());
+            total = total
+                .saturating_add(status.id.0.len())
+                .saturating_add(status.name.len());
+            if let Some(group_id) = &status.group_id {
+                total = total.saturating_add(group_id.0.len());
+            }
+        }
+        for group in &self.status_groups {
+            total = total
+                .saturating_add(group.id.0.len())
+                .saturating_add(group.name.len());
         }
         for workflow in &self.workflows {
             total = total
@@ -180,8 +203,27 @@ impl Configuration {
             }
         }
         let mut ids = HashSet::new();
+        for group in &self.status_groups {
+            if group.id.0.is_empty()
+                || group.name.trim().is_empty()
+                || group.name.len() > 256
+                || group.name.chars().any(char::is_control)
+                || !ids.insert(&group.id)
+            {
+                return Err(Error::InvalidConfiguration);
+            }
+        }
+        let mut ids = HashSet::new();
         for status in &self.statuses {
-            if status.id.0.is_empty() || !ids.insert(&status.id) {
+            if status.id.0.is_empty()
+                || status.name.trim().is_empty()
+                || status.name.len() > 256
+                || status.name.chars().any(char::is_control)
+                || !ids.insert(&status.id)
+                || status.group_id.as_ref().is_some_and(|group_id| {
+                    !self.status_groups.iter().any(|group| group.id == *group_id)
+                })
+            {
                 return Err(Error::InvalidConfiguration);
             }
         }

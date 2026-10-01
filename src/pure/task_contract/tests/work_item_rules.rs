@@ -1,38 +1,68 @@
 use task_contract::work_item::{
     decide, Action, Command, Configuration, Decision, Error, LifecycleEffect, Phase, PhaseChange,
-    ProjectId, Status, StatusId, SuccessfulCommand, WorkItem, WorkItemChange, WorkItemId,
-    WorkItemType, WorkItemTypeId, Workflow, WorkflowId,
+    ProjectId, Status, StatusGroup, StatusGroupId, StatusId, SuccessfulCommand, WorkItem,
+    WorkItemChange, WorkItemId, WorkItemType, WorkItemTypeId, Workflow, WorkflowId,
 };
+
+#[test]
+fn status_group_metadata_is_validated_without_changing_phase() {
+    let mut config = configuration();
+    config.status_groups.push(StatusGroup {
+        id: StatusGroupId("team".into()),
+        name: "Development".into(),
+        archived: false,
+    });
+    config.statuses[0].group_id = Some(StatusGroupId("team".into()));
+    config.statuses[0].name = "Backlog".into();
+    assert_eq!(config.validate(), Ok(()));
+
+    config.status_groups[0].name = "  ".into();
+    assert_eq!(config.validate(), Err(Error::InvalidConfiguration));
+    config.status_groups[0].name = "Development".into();
+    config.statuses[0].group_id = Some(StatusGroupId("missing".into()));
+    assert_eq!(config.validate(), Err(Error::InvalidConfiguration));
+}
 
 fn configuration() -> Configuration {
     Configuration {
         project_id: ProjectId("project".into()),
         revision: 4,
         project_archived: false,
+        status_groups: vec![],
         relationship_types: vec![],
         statuses: vec![
             Status {
                 id: StatusId("backlog".into()),
+                name: "Status".into(),
+                group_id: None,
                 phase: Phase::New,
                 archived: false,
             },
             Status {
                 id: StatusId("ready".into()),
+                name: "Status".into(),
+                group_id: None,
                 phase: Phase::New,
                 archived: false,
             },
             Status {
                 id: StatusId("active".into()),
+                name: "Status".into(),
+                group_id: None,
                 phase: Phase::Active,
                 archived: false,
             },
             Status {
                 id: StatusId("done".into()),
+                name: "Status".into(),
+                group_id: None,
                 phase: Phase::Done,
                 archived: false,
             },
             Status {
                 id: StatusId("old".into()),
+                name: "Status".into(),
+                group_id: None,
                 phase: Phase::Active,
                 archived: true,
             },

@@ -21,6 +21,7 @@ fn current() -> (Project, Configuration) {
             project_id: id,
             revision: 3,
             project_archived: false,
+            status_groups: vec![],
             statuses: vec![],
             workflows: vec![],
             types: vec![],

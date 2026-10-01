@@ -8,29 +8,67 @@ use task_contract::field::{
 };
 use task_contract::relationship::{Direction, RelationshipType, RelationshipTypeId};
 use task_contract::work_item::{
-    Configuration, Phase, ProjectId, Status, StatusId, WorkItem, WorkItemId, WorkItemType,
-    WorkItemTypeId, Workflow, WorkflowId, MAX_STATUSES,
+    Configuration, Phase, ProjectId, Status, StatusGroup, StatusGroupId, StatusId, WorkItem,
+    WorkItemId, WorkItemType, WorkItemTypeId, Workflow, WorkflowId, MAX_STATUSES,
 };
+
+#[test]
+fn referenced_status_can_be_renamed_and_moved_between_groups() {
+    let mut previous = config();
+    previous.status_groups = vec![
+        StatusGroup {
+            id: StatusGroupId("a".into()),
+            name: "Team A".into(),
+            archived: false,
+        },
+        StatusGroup {
+            id: StatusGroupId("b".into()),
+            name: "Team B".into(),
+            archived: false,
+        },
+    ];
+    previous.statuses[0].group_id = Some(StatusGroupId("a".into()));
+    let mut proposed = next(&previous);
+    proposed.statuses[0].name = "Queued".into();
+    proposed.statuses[0].group_id = Some(StatusGroupId("b".into()));
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![item("new")]),
+            true
+        ),
+        Ok(())
+    );
+}
 
 fn config() -> Configuration {
     Configuration {
         project_id: ProjectId("project".into()),
         revision: 3,
         project_archived: false,
+        status_groups: vec![],
         relationship_types: vec![],
         statuses: vec![
             Status {
                 id: StatusId("new".into()),
+                name: "Status".into(),
+                group_id: None,
                 phase: Phase::New,
                 archived: false,
             },
             Status {
                 id: StatusId("ready".into()),
+                name: "Status".into(),
+                group_id: None,
                 phase: Phase::New,
                 archived: false,
             },
             Status {
                 id: StatusId("done".into()),
+                name: "Status".into(),
+                group_id: None,
                 phase: Phase::Done,
                 archived: false,
             },
@@ -244,6 +282,8 @@ fn complete_configuration_has_count_and_utf8_text_budgets() {
     for index in proposed.statuses.len()..=MAX_STATUSES {
         proposed.statuses.push(Status {
             id: StatusId(format!("extra-{index}")),
+            name: "Status".into(),
+            group_id: None,
             phase: Phase::New,
             archived: false,
         });
