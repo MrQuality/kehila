@@ -1,8 +1,86 @@
 use task_contract::configuration_change::{
     decide_configuration_change, validate_change, ConfigurationChangeCommand,
-    ConfigurationChangeDecision, ConfigurationChangeError, ConfigurationSnapshot,
-    HistoricalReference, ItemSnapshot, SuccessfulConfigurationChange,
+    ConfigurationChangeDecision, ConfigurationChangeError, ConfigurationChangeResult,
+    ConfigurationGrantScope, ConfigurationGrants, ConfigurationSnapshot, HistoricalReference,
+    ItemSnapshot, SuccessfulConfigurationChange,
 };
+
+#[test]
+fn delegated_status_changes_require_both_groups_and_current_grants_on_replay() {
+    use task_contract::configuration_change::{ConfigurationGrantScope, ConfigurationGrants};
+    let mut previous = config();
+    previous.status_groups = ["a", "b"]
+        .map(|id| StatusGroup {
+            id: StatusGroupId(id.into()),
+            name: id.into(),
+            archived: false,
+        })
+        .to_vec();
+    previous.statuses[1].group_id = Some(StatusGroupId("a".into()));
+    let mut proposed = next(&previous);
+    proposed.statuses[1].group_id = Some(StatusGroupId("b".into()));
+    proposed.statuses[1].name = "Moved".into();
+    let command = ConfigurationChangeCommand {
+        operation_id: "delegate".into(),
+        expected_revision: previous.revision,
+        proposed,
+    };
+    let one = ConfigurationGrants {
+        manage_project: false,
+        status_groups: vec![StatusGroupId("a".into())],
+    };
+    assert_eq!(
+        decide_configuration_change(&previous, &snapshot(vec![]), None, &one, &command),
+        ConfigurationChangeDecision::Reject(ConfigurationChangeError::Unauthorized)
+    );
+    let both = ConfigurationGrants {
+        manage_project: false,
+        status_groups: vec![StatusGroupId("b".into()), StatusGroupId("a".into())],
+    };
+    let ConfigurationChangeDecision::Apply(result) =
+        decide_configuration_change(&previous, &snapshot(vec![]), None, &both, &command)
+    else {
+        panic!("both group grants permit the move")
+    };
+    assert_eq!(
+        result.required_grants,
+        ConfigurationGrantScope::StatusGroups(vec![
+            StatusGroupId("a".into()),
+            StatusGroupId("b".into())
+        ])
+    );
+    let recorded = SuccessfulConfigurationChange {
+        project_id: previous.project_id.clone(),
+        request: command.clone(),
+        result: result.clone(),
+    };
+    assert_eq!(
+        decide_configuration_change(
+            &command.proposed,
+            &snapshot(vec![]),
+            Some(&recorded),
+            &one,
+            &command
+        ),
+        ConfigurationChangeDecision::Reject(ConfigurationChangeError::Unauthorized)
+    );
+    assert_eq!(
+        decide_configuration_change(
+            &command.proposed,
+            &snapshot(vec![]),
+            Some(&recorded),
+            &both,
+            &command
+        ),
+        ConfigurationChangeDecision::Replay(result)
+    );
+    let mut phase_change = command.clone();
+    phase_change.proposed.statuses[1].phase = Phase::Active;
+    assert_eq!(
+        decide_configuration_change(&previous, &snapshot(vec![]), None, &both, &phase_change),
+        ConfigurationChangeDecision::Reject(ConfigurationChangeError::Unauthorized)
+    );
+}
 use task_contract::field::{
     ChoiceOption, FieldDefinition, FieldEntry, FieldId, FieldKind, FieldOrigin, FieldUsage,
     FieldValue, OptionId,
@@ -432,7 +510,13 @@ fn a_complete_revision_cannot_remove_an_option_from_a_retained_field() {
         proposed,
     };
     assert_eq!(
-        decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
+        decide_configuration_change(
+            &previous,
+            &snapshot(vec![]),
+            None,
+            &ConfigurationGrants::project(),
+            &command
+        ),
         ConfigurationChangeDecision::Reject(ConfigurationChangeError::InvalidConfiguration)
     );
     let mut retained = next(&previous);
@@ -551,7 +635,13 @@ fn complete_configuration_has_count_and_utf8_text_budgets() {
         proposed: proposed.clone(),
     };
     assert_eq!(
-        decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
+        decide_configuration_change(
+            &previous,
+            &snapshot(vec![]),
+            None,
+            &ConfigurationGrants::project(),
+            &command
+        ),
         ConfigurationChangeDecision::Reject(ConfigurationChangeError::PayloadLimitExceeded)
     );
     proposed = next(&previous);
@@ -579,23 +669,29 @@ fn complete_configuration_has_count_and_utf8_text_budgets() {
         ..command
     };
     assert_eq!(
-        decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
+        decide_configuration_change(
+            &previous,
+            &snapshot(vec![]),
+            None,
+            &ConfigurationGrants::project(),
+            &command
+        ),
         ConfigurationChangeDecision::Reject(ConfigurationChangeError::PayloadLimitExceeded)
     );
     let recorded = SuccessfulConfigurationChange {
         project_id: previous.project_id.clone(),
         request: command.clone(),
-        result: command.proposed.clone(),
+        result: project_result(command.proposed.clone()),
     };
     assert_eq!(
         decide_configuration_change(
             &previous,
             &snapshot(vec![]),
             Some(&recorded),
-            true,
+            &ConfigurationGrants::project(),
             &command
         ),
-        ConfigurationChangeDecision::Replay(command.proposed.clone())
+        ConfigurationChangeDecision::Replay(project_result(command.proposed.clone()))
     );
 }
 
@@ -805,28 +901,52 @@ fn configuration_command_accepts_a_compatible_revision_and_replays_success() {
     };
     let evidence = snapshot(vec![item("ready")]);
     assert_eq!(
-        decide_configuration_change(&previous, &evidence, None, true, &command),
-        ConfigurationChangeDecision::Apply(proposed.clone())
+        decide_configuration_change(
+            &previous,
+            &evidence,
+            None,
+            &ConfigurationGrants::project(),
+            &command
+        ),
+        ConfigurationChangeDecision::Apply(project_result(proposed.clone()))
     );
     let recorded = SuccessfulConfigurationChange {
         project_id: previous.project_id.clone(),
         request: command.clone(),
-        result: proposed.clone(),
+        result: project_result(proposed.clone()),
     };
     let mut later = proposed.clone();
     later.revision += 1;
     assert_eq!(
-        decide_configuration_change(&later, &snapshot(vec![]), Some(&recorded), true, &command),
-        ConfigurationChangeDecision::Replay(proposed.clone())
+        decide_configuration_change(
+            &later,
+            &snapshot(vec![]),
+            Some(&recorded),
+            &ConfigurationGrants::project(),
+            &command
+        ),
+        ConfigurationChangeDecision::Replay(project_result(proposed.clone()))
     );
     assert_eq!(
-        decide_configuration_change(&later, &snapshot(vec![]), Some(&recorded), false, &command),
+        decide_configuration_change(
+            &later,
+            &snapshot(vec![]),
+            Some(&recorded),
+            &ConfigurationGrants::default(),
+            &command
+        ),
         ConfigurationChangeDecision::Reject(ConfigurationChangeError::Unauthorized)
     );
     let mut reused = command;
     reused.proposed.statuses[0].archived = false;
     assert_eq!(
-        decide_configuration_change(&later, &snapshot(vec![]), Some(&recorded), true, &reused),
+        decide_configuration_change(
+            &later,
+            &snapshot(vec![]),
+            Some(&recorded),
+            &ConfigurationGrants::project(),
+            &reused
+        ),
         ConfigurationChangeDecision::Reject(ConfigurationChangeError::OperationIdReused)
     );
 }
@@ -841,7 +961,13 @@ fn configuration_command_rejects_stale_and_empty_operations() {
         proposed,
     };
     assert_eq!(
-        decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
+        decide_configuration_change(
+            &previous,
+            &snapshot(vec![]),
+            None,
+            &ConfigurationGrants::project(),
+            &command
+        ),
         ConfigurationChangeDecision::Reject(ConfigurationChangeError::RevisionConflict {
             current_revision: 3
         })
@@ -849,12 +975,86 @@ fn configuration_command_rejects_stale_and_empty_operations() {
     command.expected_revision = 3;
     command.operation_id.clear();
     assert_eq!(
-        decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
+        decide_configuration_change(
+            &previous,
+            &snapshot(vec![]),
+            None,
+            &ConfigurationGrants::project(),
+            &command
+        ),
         ConfigurationChangeDecision::Reject(ConfigurationChangeError::InvalidOperation)
     );
     command.operation_id = "config-2".into();
     assert_eq!(
-        decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
+        decide_configuration_change(
+            &previous,
+            &snapshot(vec![]),
+            None,
+            &ConfigurationGrants::project(),
+            &command
+        ),
         ConfigurationChangeDecision::Reject(ConfigurationChangeError::InvalidOperation)
+    );
+}
+
+fn project_result(configuration: Configuration) -> ConfigurationChangeResult {
+    ConfigurationChangeResult {
+        configuration,
+        required_grants: ConfigurationGrantScope::Project,
+    }
+}
+
+#[test]
+fn group_delegate_can_create_rename_archive_but_cannot_change_project_configuration() {
+    let mut previous = config();
+    previous.status_groups.push(StatusGroup {
+        id: StatusGroupId("a".into()),
+        name: "Team".into(),
+        archived: false,
+    });
+    previous.statuses[1].group_id = Some(StatusGroupId("a".into()));
+    let grants = ConfigurationGrants {
+        manage_project: false,
+        status_groups: vec![StatusGroupId("a".into())],
+    };
+    let mut command = ConfigurationChangeCommand {
+        operation_id: "group-edit".into(),
+        expected_revision: previous.revision,
+        proposed: next(&previous),
+    };
+    command.proposed.statuses[1].name = "Ready for work".into();
+    command.proposed.statuses[1].archived = true;
+    command.proposed.statuses.push(Status {
+        id: StatusId("team-active".into()),
+        name: "In progress".into(),
+        group_id: Some(StatusGroupId("a".into())),
+        phase: Phase::Active,
+        archived: false,
+    });
+    assert!(matches!(
+        decide_configuration_change(&previous, &snapshot(vec![]), None, &grants, &command),
+        ConfigurationChangeDecision::Apply(_)
+    ));
+    for mutation in 0..4 {
+        let mut restricted = command.clone();
+        match mutation {
+            0 => restricted.proposed.workflows[0]
+                .status_ids
+                .push(StatusId("team-active".into())),
+            1 => restricted.proposed.status_groups[0].archived = true,
+            2 => restricted.proposed.statuses[1].group_id = None,
+            _ => restricted.proposed.fields.push(field(FieldUsage::Optional)),
+        }
+        assert_eq!(
+            decide_configuration_change(&previous, &snapshot(vec![]), None, &grants, &restricted),
+            ConfigurationChangeDecision::Reject(ConfigurationChangeError::Unauthorized)
+        );
+    }
+    previous.statuses[0].group_id = Some(StatusGroupId("a".into()));
+    command.proposed = next(&previous);
+    command.proposed.statuses[0].archived = true;
+    assert_eq!(
+        decide_configuration_change(&previous, &snapshot(vec![]), None, &grants, &command),
+        ConfigurationChangeDecision::Reject(ConfigurationChangeError::InvalidConfiguration)
     );
 }

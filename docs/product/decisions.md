@@ -388,6 +388,19 @@ or archived fields and archived types may retain no active options.
 so option administration and configuration replacement enforce the same rule.
 B-005 must serialize configuration changes with item mutations.
 
+<a id="d-028"></a>
+## D-028 — Delegate status administration by group
+
+**Status: Accepted by the maintainer on 2026-10-01.** A status-group grant permits
+status creation, renaming, and archival in that group. Moving a status requires
+both source and destination group grants. Project administration retains phase
+remapping, workflow membership and defaults, and group lifecycle. Other project
+configuration changes continue to require project administration.
+
+**Consequence:** B-003 retains the required permission scope with successful
+configuration commands and checks current grants before replay. B-007 owns
+grant provisioning and revocation; B-005 coordinates authorization and commit.
+
 ## How to change a decision
 
 

@@ -46,6 +46,22 @@ items no longer depend on the removed membership or permission. B-003 defines
 the invariant; B-005 must establish how the authoritative storage path enforces
 it.
 
+### Delegated status administration
+
+`configuration_change::ConfigurationGrants` carries current trusted project
+administration and status-group grants. Group delegates may create, rename,
+and archive statuses in their granted groups. Moving a status between groups
+requires grants on both groups. Changes involving ungrouped statuses, phase
+remapping, restoration, status removal, workflow membership or defaults, fields,
+types, relationship types, and group lifecycle or metadata require project
+administration. Initial-status archival still requires a valid replacement
+prepared through project administration.
+
+Every accepted configuration result retains its required grant scope with the
+success record. Replay checks current grants against that scope before returning
+the original result. B-007 supplies authoritative grants scoped to the project;
+B-005 protects grant validation and acceptance from concurrent revocation.
+
 ### Conversion and migration
 
 Type conversion validates the complete destination state. When the existing

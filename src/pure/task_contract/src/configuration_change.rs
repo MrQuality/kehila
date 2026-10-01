@@ -4,7 +4,93 @@ use std::collections::HashSet;
 
 use crate::field::{apply_edit, FieldEdit, FieldEntry, FieldId, FieldOrigin, FieldUsage};
 use crate::relationship::RelationshipTypeId;
-use crate::work_item::{Configuration, StatusId, WorkItem, WorkItemId, WorkItemTypeId, WorkflowId};
+use crate::work_item::{
+    Configuration, StatusGroupId, StatusId, WorkItem, WorkItemId, WorkItemTypeId, WorkflowId,
+};
+
+/// Current trusted grants for the command's project, supplied by B-007.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ConfigurationGrants {
+    pub manage_project: bool,
+    pub status_groups: Vec<StatusGroupId>,
+}
+
+impl ConfigurationGrants {
+    pub fn project() -> Self {
+        Self {
+            manage_project: true,
+            status_groups: vec![],
+        }
+    }
+
+    fn permits(&self, scope: &ConfigurationGrantScope) -> bool {
+        self.manage_project
+            || match scope {
+                ConfigurationGrantScope::Project => false,
+                ConfigurationGrantScope::StatusGroups(ids) => {
+                    ids.iter().all(|id| self.status_groups.contains(id))
+                }
+            }
+    }
+}
+
+/// Retained with success so replay never derives permissions from later state.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ConfigurationGrantScope {
+    Project,
+    StatusGroups(Vec<StatusGroupId>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ConfigurationChangeResult {
+    pub configuration: Configuration,
+    pub required_grants: ConfigurationGrantScope,
+}
+
+fn required_grants(previous: &Configuration, proposed: &Configuration) -> ConfigurationGrantScope {
+    use ConfigurationGrantScope::{Project, StatusGroups};
+    if previous.project_id != proposed.project_id
+        || previous.project_archived != proposed.project_archived
+        || previous.status_groups != proposed.status_groups
+        || previous.workflows != proposed.workflows
+        || previous.types != proposed.types
+        || previous.fields != proposed.fields
+        || previous.relationship_types != proposed.relationship_types
+        || previous
+            .statuses
+            .iter()
+            .any(|old| !proposed.statuses.iter().any(|new| old.id == new.id))
+    {
+        return Project;
+    }
+    let mut groups = Vec::new();
+    for new in &proposed.statuses {
+        let old = previous.statuses.iter().find(|old| old.id == new.id);
+        if old == Some(new) {
+            continue;
+        }
+        if old.is_some_and(|old| old.phase != new.phase || (old.archived && !new.archived)) {
+            return Project;
+        }
+        let Some(target) = &new.group_id else {
+            return Project;
+        };
+        groups.push(target.clone());
+        if let Some(old) = old {
+            let Some(source) = &old.group_id else {
+                return Project;
+            };
+            groups.push(source.clone());
+        }
+    }
+    groups.sort();
+    groups.dedup();
+    if groups.is_empty() {
+        Project
+    } else {
+        StatusGroups(groups)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ItemSnapshot {
@@ -43,13 +129,13 @@ pub struct ConfigurationChangeCommand {
 pub struct SuccessfulConfigurationChange {
     pub project_id: crate::work_item::ProjectId,
     pub request: ConfigurationChangeCommand,
-    pub result: Configuration,
+    pub result: ConfigurationChangeResult,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ConfigurationChangeDecision {
-    Replay(Configuration),
-    Apply(Configuration),
+    Replay(ConfigurationChangeResult),
+    Apply(ConfigurationChangeResult),
     Reject(ConfigurationChangeError),
 }
 
@@ -77,13 +163,17 @@ pub fn decide_configuration_change(
     previous: &Configuration,
     snapshot: &ConfigurationSnapshot,
     recorded: Option<&SuccessfulConfigurationChange>,
-    authorized: bool,
+    grants: &ConfigurationGrants,
     command: &ConfigurationChangeCommand,
 ) -> ConfigurationChangeDecision {
     use ConfigurationChangeDecision::{Apply, Reject, Replay};
     use ConfigurationChangeError as E;
 
-    if !authorized {
+    let required_grants = recorded.map_or_else(
+        || required_grants(previous, &command.proposed),
+        |recorded| recorded.result.required_grants.clone(),
+    );
+    if !grants.permits(&required_grants) {
         return Reject(E::Unauthorized);
     }
     if let Some(recorded) = recorded {
@@ -123,12 +213,17 @@ pub fn decide_configuration_change(
     if comparable == *previous {
         return Reject(E::InvalidOperation);
     }
-    Apply(command.proposed.clone())
+    Apply(ConfigurationChangeResult {
+        configuration: command.proposed.clone(),
+        required_grants,
+    })
 }
 
 /// `snapshot` must contain every current item and its values, plus all IDs ever
 /// referenced in accepted history. The caller must serialize validation and
 /// commit with item writes and historical-use changes.
+/// This compatibility helper does not perform delegated grant checks; command
+/// callers must use `decide_configuration_change` for scoped authorization.
 pub fn validate_change(
     previous: &Configuration,
     proposed: &Configuration,
