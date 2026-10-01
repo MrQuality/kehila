@@ -166,6 +166,19 @@ fn a_complete_revision_cannot_remove_an_option_from_a_retained_field() {
         ),
         Ok(())
     );
+    let mut changed_kind = next(&previous);
+    changed_kind.fields[0].kind = FieldKind::Text;
+    changed_kind.fields[0].options.clear();
+    assert_eq!(
+        validate_change(
+            &previous,
+            &changed_kind,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
 }
 
 #[test]

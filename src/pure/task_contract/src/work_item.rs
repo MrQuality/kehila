@@ -173,6 +173,7 @@ impl Configuration {
                 || relationship_type.id.0.is_empty()
                 || relationship_type.name.trim().is_empty()
                 || relationship_type.name.len() > 256
+                || relationship_type.name.chars().any(char::is_control)
                 || !relationship_ids.insert(&relationship_type.id)
             {
                 return Err(Error::InvalidConfiguration);
@@ -409,6 +410,9 @@ pub fn decide(
     }
     if item.archived {
         return Decision::Reject(Error::ArchivedTarget);
+    }
+    if command.operation_id.is_empty() {
+        return Decision::Reject(Error::InvalidOperation);
     }
 
     let Some(item_type) = configuration

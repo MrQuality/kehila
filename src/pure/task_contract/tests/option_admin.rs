@@ -1,3 +1,4 @@
+use task_contract::error_code::{Code, StableCode};
 use task_contract::field::{
     apply_edit, ChoiceOption, FieldDefinition, FieldEdit, FieldError, FieldId, FieldKind,
     FieldUsage, FieldValue, OptionId,
@@ -8,7 +9,7 @@ use task_contract::field_admin::{
 };
 use task_contract::work_item::{
     Configuration, Phase, ProjectId, Status, StatusId, WorkItemType, WorkItemTypeId, Workflow,
-    WorkflowId,
+    WorkflowId, MAX_OPTIONS_PER_FIELD,
 };
 
 fn config() -> Configuration {
@@ -178,5 +179,31 @@ fn archived_project_or_field_blocks_new_option_administration() {
     assert_eq!(
         decide_option_admin(&archived_field, None, true, &request),
         OptionAdminDecision::Reject(OptionAdminError::ArchivedField)
+    );
+}
+
+#[test]
+fn adding_an_option_past_the_configuration_limit_reports_a_payload_error() {
+    let mut full = config();
+    full.fields[0].options = (0..MAX_OPTIONS_PER_FIELD)
+        .map(|index| ChoiceOption {
+            id: OptionId(format!("option-{index}")),
+            name: format!("Option {index}"),
+            archived: false,
+        })
+        .collect();
+    assert_eq!(full.validate(), Ok(()));
+    let add = command(OptionAction::Add {
+        id: OptionId("one-more".into()),
+        name: "One more".into(),
+    });
+    let decision = decide_option_admin(&full, None, true, &add);
+    assert_eq!(
+        decision,
+        OptionAdminDecision::Reject(OptionAdminError::PayloadLimitExceeded)
+    );
+    assert_eq!(
+        OptionAdminError::PayloadLimitExceeded.code(),
+        Code::PayloadLimitExceeded
     );
 }

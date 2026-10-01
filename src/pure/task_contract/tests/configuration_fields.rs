@@ -1,5 +1,6 @@
 use task_contract::field::{FieldDefinition, FieldId, FieldKind, FieldUsage};
 use task_contract::payload::MAX_FIELD_ENTRIES;
+use task_contract::relationship::{Direction, RelationshipType, RelationshipTypeId};
 use task_contract::work_item::{
     Configuration, Error, Phase, ProjectId, Status, StatusId, WorkItemType, WorkItemTypeId,
     Workflow, WorkflowId,
@@ -62,6 +63,33 @@ fn field_definitions_are_unique_in_one_configuration_revision() {
     let mut duplicate = config();
     duplicate.fields.push(duplicate.fields[0].clone());
     assert_eq!(duplicate.validate(), Err(Error::InvalidConfiguration));
+}
+
+#[test]
+fn display_names_reject_control_characters() {
+    let mut configuration = config();
+    configuration.fields[0].name = "Title\0hidden".into();
+    assert_eq!(configuration.validate(), Err(Error::InvalidConfiguration));
+
+    let mut configuration = config();
+    configuration.fields[0].kind = FieldKind::SingleChoice;
+    configuration.types[0].title_field_id = None;
+    configuration.fields[0].options = vec![task_contract::field::ChoiceOption {
+        id: task_contract::field::OptionId("option".into()),
+        name: "Option\nother".into(),
+        archived: false,
+    }];
+    assert_eq!(configuration.validate(), Err(Error::InvalidConfiguration));
+
+    let mut configuration = config();
+    configuration.relationship_types.push(RelationshipType {
+        owner_project_id: configuration.project_id.clone(),
+        id: RelationshipTypeId("related".into()),
+        name: "Related\0hidden".into(),
+        direction: Direction::Directed,
+        archived: false,
+    });
+    assert_eq!(configuration.validate(), Err(Error::InvalidConfiguration));
 }
 
 #[test]

@@ -50,6 +50,7 @@ impl FieldDefinition {
             || self.owner_type.0.is_empty()
             || self.name.trim().is_empty()
             || self.name.len() > 256
+            || self.name.chars().any(char::is_control)
         {
             return Err(FieldError::InvalidDefinition);
         }
@@ -61,6 +62,7 @@ impl FieldDefinition {
             if option.id.0.is_empty()
                 || option.name.trim().is_empty()
                 || option.name.len() > 256
+                || option.name.chars().any(char::is_control)
                 || !ids.insert(&option.id)
             {
                 return Err(FieldError::InvalidDefinition);

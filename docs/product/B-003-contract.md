@@ -108,7 +108,8 @@ those three creation grants as explicit inputs.
 
 Relationship types are members of the owning project's single configuration
 revision. A complete-revision command can add, rename, archive, or restore a
-type. Its owner and stable ID cannot change. A type with any historical link
+type. Its display name excludes control characters; its owner and stable ID
+cannot change. A type with any historical link
 cannot be removed or change directed/symmetric meaning; archiving preserves
 existing links and blocks new ones. The configuration snapshot includes type
 IDs ever used by links, including links to archived items and other projects.
@@ -297,7 +298,9 @@ The estimate representation uses exact decimal thousandths with an upper bound
 of `999999.999` in hours or points. No float conversion or implicit rounding is
 allowed. A monotonic `ever_estimated` flag locks unit changes after the first
 accepted estimate, even if it was zero or is later cleared. B-005 must update
-that flag coherently with the estimate write.
+that flag coherently with the estimate write. A concurrent first-estimate write
+and unit change must serialize against the same authoritative project state;
+the configuration revision alone does not detect a change to `ever_estimated`.
 
 A populated field's value kind cannot be changed in place. The pure rule uses
 an `ever_valued` input that must include historical values, not only current
@@ -320,6 +323,8 @@ cannot change them. `Clear` produces absence, and a required field rejects
 absence. Required text must contain non-whitespace content; numeric zero and
 Boolean false are valid values. A single-choice assignment must name a current
 non-archived option, while an existing archived option may be retained.
+Field and option display names reject control characters; stable IDs, rather
+than display names, determine identity.
 
 The pure rule for optional-to-required changes checks the full applicable
 value set provided by its caller. B-005 must get that set authoritatively and
@@ -525,12 +530,14 @@ Each single-choice option has a stable identity, a display name, and an archive
 flag in its field definition. The Rust `task_contract::field_admin` module
 defines Add, Rename, Archive, and Restore commands against the expected project
 configuration revision. Option IDs cannot be reused or removed from a retained
-field, including by complete configuration replacement. Removing an entire
-never-used field is a separate configuration change. Renaming keeps the identity
+single-choice field, including by complete configuration replacement. An unused
+field may instead change kind or be removed; its former choice options then
+belong to the retained configuration history. Renaming keeps the identity
 referenced by current and historical values. Archiving rejects
 new assignments while retaining existing values; restoration makes the same
 option eligible for new assignments again. Names must contain non-whitespace
-text and fit within 256 UTF-8 bytes. Identity is determined by ID, not name.
+text, contain no control characters, and fit within 256 UTF-8 bytes. Identity
+is determined by ID, not name.
 
 Administration requires authorization, an active project and field, and a
 single-choice field kind. An identical recorded success replays before mutable
@@ -619,7 +626,8 @@ workflows, 128 WorkItem types, 512 fields, 128 relationship types, and 256
 choice options per field. The total UTF-8 byte length of every supplied string
 occurrence, including repeated ID references, is at most 1 MiB. New commands
 over this bound return `payload_limit_exceeded`; a recorded success still
-replays first. A knowledge create/edit command changes one entry. Its text or
+replays first. Adding an option beyond the per-field count uses the same error.
+A knowledge create/edit command changes one entry. Its text or
 file-reference limits are given above; it has no multi-entry payload. A
 relationship-type administration command is a complete configuration revision
 and uses the same bound. HTTP encoded-body limits and decoding budgets are
@@ -631,6 +639,8 @@ together under the same project configuration revision. A name is nonblank,
 free of control characters, and at most 256 UTF-8 bytes. Prefix rules and the
 monotonic estimate-unit lock apply. A no-op is rejected. Project and matching
 Configuration revisions advance once; issued readable IDs stay unchanged.
+The public pure metadata command returns both revised values; separate
+Project-only prefix and unit mutators are not supported.
 Current project configuration authorization is checked before replay. B-005
 must persist both records, revision history, and the success record together.
 

@@ -184,7 +184,7 @@ pub fn validate_change(
             if field.owner_type != old_field.owner_type {
                 return Err(ConfigurationChangeError::InvalidConfiguration);
             }
-            if !old_field.options.is_empty() {
+            if field.kind == old_field.kind && !old_field.options.is_empty() {
                 let retained_ids: HashSet<_> =
                     field.options.iter().map(|option| &option.id).collect();
                 if old_field

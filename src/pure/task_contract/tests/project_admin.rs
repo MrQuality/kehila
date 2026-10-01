@@ -1,8 +1,8 @@
-use task_contract::project::{EstimateUnit, Project};
+use task_contract::project::{allocate_readable_id, EstimateUnit, Project};
 use task_contract::project_admin::{
     decide_project_metadata, ProjectMetadataCommand, ProjectMetadataDecision, ProjectMetadataError,
 };
-use task_contract::work_item::{Configuration, ProjectId};
+use task_contract::work_item::{Configuration, ProjectId, WorkItemId};
 
 fn current() -> (Project, Configuration) {
     let id = ProjectId("project".into());
@@ -96,5 +96,67 @@ fn replay_is_authorized_before_stale_revision_and_archival_checks() {
     assert_eq!(
         decide_project_metadata(&archived, &config, Some(&recorded), true, &changed),
         ProjectMetadataDecision::Reject(ProjectMetadataError::OperationIdReused)
+    );
+}
+
+#[test]
+fn prefix_change_keeps_issued_ids_and_both_revisions_coherent() {
+    let (project, configuration) = current();
+    let (project, first) = allocate_readable_id(&project, WorkItemId("first".into())).unwrap();
+    let mut request = command();
+    request.name = project.name.clone();
+    request.estimate_unit = project.estimate_unit;
+    request.prefix = "WORK".into();
+    let ProjectMetadataDecision::Apply(result) =
+        decide_project_metadata(&project, &configuration, None, true, &request)
+    else {
+        panic!("prefix change should apply")
+    };
+    assert_eq!(
+        result.project.configuration_revision,
+        result.configuration.revision
+    );
+    let (_, second) = allocate_readable_id(&result.project, WorkItemId("second".into())).unwrap();
+    assert_eq!(first.display(), "OLD-12");
+    assert_eq!(second.display(), "WORK-13");
+}
+
+#[test]
+fn metadata_change_rejects_stale_archived_invalid_prefix_and_noop() {
+    let (project, configuration) = current();
+    let mut request = command();
+    request.expected_revision = 2;
+    assert_eq!(
+        decide_project_metadata(&project, &configuration, None, true, &request),
+        ProjectMetadataDecision::Reject(ProjectMetadataError::ConfigurationConflict {
+            current_revision: 3
+        })
+    );
+    request.expected_revision = 3;
+    request.prefix = "bad-prefix".into();
+    assert_eq!(
+        decide_project_metadata(&project, &configuration, None, true, &request),
+        ProjectMetadataDecision::Reject(ProjectMetadataError::InvalidPrefix)
+    );
+    request.prefix = project.prefix.clone();
+    request.name = project.name.clone();
+    request.estimate_unit = project.estimate_unit;
+    assert_eq!(
+        decide_project_metadata(&project, &configuration, None, true, &request),
+        ProjectMetadataDecision::Reject(ProjectMetadataError::InvalidOperation)
+    );
+    let mut archived_project = project;
+    archived_project.archived = true;
+    let mut archived_configuration = configuration;
+    archived_configuration.project_archived = true;
+    assert_eq!(
+        decide_project_metadata(
+            &archived_project,
+            &archived_configuration,
+            None,
+            true,
+            &request
+        ),
+        ProjectMetadataDecision::Reject(ProjectMetadataError::ArchivedProject)
     );
 }

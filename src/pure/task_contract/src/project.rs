@@ -95,7 +95,6 @@ pub enum ProjectError {
     SequenceExhausted,
     RevisionExhausted,
     InvalidEstimate,
-    EstimateUnitLocked,
     FieldMigrationRequired,
 }
 
@@ -166,27 +165,8 @@ pub fn allocate_readable_id(
     Ok((next, issued))
 }
 
-/// Prefix syntax is an initial bounded contract; the display value is frozen
-/// into every issued ID so changing this prefix cannot rename old items.
-pub fn change_prefix(project: &Project, prefix: &str) -> Result<Project, ProjectError> {
-    if project.archived {
-        return Err(ProjectError::Archived);
-    }
-    if !valid_prefix(prefix) {
-        return Err(ProjectError::InvalidPrefix);
-    }
-    let mut next = project.clone();
-    if project.prefix == prefix {
-        return Ok(next);
-    }
-    next.prefix = prefix.to_owned();
-    next.configuration_revision = project
-        .configuration_revision
-        .checked_add(1)
-        .ok_or(ProjectError::RevisionExhausted)?;
-    Ok(next)
-}
-
+/// Prefix syntax is an initial bounded contract. Metadata changes must use
+/// the coordinated Project/Configuration command in `project_admin`.
 pub fn valid_prefix(prefix: &str) -> bool {
     (2..=12).contains(&prefix.len())
         && prefix.as_bytes()[0].is_ascii_uppercase()
@@ -234,28 +214,6 @@ pub fn estimate_from_decimal(value: &str) -> Result<Estimate, ProjectError> {
         })
         .ok_or(ProjectError::InvalidEstimate)?;
     Estimate::try_from_thousandths(scaled)
-}
-
-pub fn change_estimate_unit(
-    project: &Project,
-    unit: EstimateUnit,
-) -> Result<Project, ProjectError> {
-    if project.archived {
-        return Err(ProjectError::Archived);
-    }
-    if project.estimate_unit != unit && project.ever_estimated {
-        return Err(ProjectError::EstimateUnitLocked);
-    }
-    let mut next = project.clone();
-    if project.estimate_unit == unit {
-        return Ok(next);
-    }
-    next.estimate_unit = unit;
-    next.configuration_revision = project
-        .configuration_revision
-        .checked_add(1)
-        .ok_or(ProjectError::RevisionExhausted)?;
-    Ok(next)
 }
 
 /// Record the monotonic unit lock when any estimate value is first accepted.

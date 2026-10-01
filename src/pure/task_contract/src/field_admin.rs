@@ -41,6 +41,7 @@ pub enum OptionAdminError {
     InvalidConfiguration,
     InvalidReference,
     InvalidOperation,
+    PayloadLimitExceeded,
     ArchivedProject,
     ArchivedField,
     NotChoiceField,
@@ -149,6 +150,9 @@ pub fn decide_option_admin(
         return Reject(E::RevisionOverflow);
     };
     next.revision = revision;
+    if !next.within_limits() {
+        return Reject(E::PayloadLimitExceeded);
+    }
     if next.validate().is_err() {
         return Reject(E::InvalidConfiguration);
     }
@@ -156,5 +160,5 @@ pub fn decide_option_admin(
 }
 
 fn valid_name(name: &str) -> bool {
-    !name.trim().is_empty() && name.len() <= 256
+    !name.trim().is_empty() && name.len() <= 256 && !name.chars().any(char::is_control)
 }

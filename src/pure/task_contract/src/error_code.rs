@@ -205,7 +205,6 @@ impl StableCode for ProjectError {
             Self::SequenceExhausted => Code::SequenceExhausted,
             Self::RevisionExhausted => Code::VersionExhausted,
             Self::InvalidEstimate => Code::InvalidEstimate,
-            Self::EstimateUnitLocked => Code::EstimateUnitLocked,
             Self::FieldMigrationRequired => Code::MigrationRequired,
         }
     }
@@ -357,6 +356,7 @@ impl StableCode for OptionAdminError {
             Self::InvalidConfiguration => Code::InvalidConfiguration,
             Self::InvalidReference => Code::InvalidReference,
             Self::InvalidOperation => Code::InvalidOperation,
+            Self::PayloadLimitExceeded => Code::PayloadLimitExceeded,
             Self::ArchivedProject => Code::ArchivedProject,
             Self::ArchivedField => Code::ArchivedField,
             Self::NotChoiceField => Code::NotChoiceField,

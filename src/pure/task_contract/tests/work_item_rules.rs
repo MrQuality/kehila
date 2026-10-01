@@ -526,3 +526,15 @@ fn archived_project_blocks_new_item_commands_but_preserves_recorded_replay() {
         Decision::Replay(result)
     );
 }
+
+#[test]
+fn new_status_command_requires_an_operation_id() {
+    let mut request = command(Action::ChangeStatus {
+        target: StatusId("ready".into()),
+    });
+    request.operation_id.clear();
+    assert_eq!(
+        decide(&configuration(), &item("backlog", 2), None, true, &request),
+        Decision::Reject(Error::InvalidOperation)
+    );
+}
