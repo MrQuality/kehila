@@ -118,7 +118,9 @@ open for complete typed commands and remaining administration/checks.
 source-snapshot validation, required-choice feasibility, delegated status
 administration, and trusted project initialization. These have typed pure
 checks. Operation identity, replay authorization and retention, and
-configuration lifetime limits remain under final B-003 review.
+status-group lifecycle remain under final B-003 review.
+[D-030](decisions.md#d-030) counts all retained active and archived definitions
+against the configuration limits; archival does not free capacity.
 **Further resolution, 2026-09-30:** [D-021](decisions.md#d-021) fixes the
 project-scoped readable-ID lookup policy and M1 value limits.
 **Further resolution, 2026-09-30:** [D-022](decisions.md#d-022) fixes the full

@@ -1005,6 +1005,114 @@ fn project_result(configuration: Configuration) -> ConfigurationChangeResult {
 }
 
 #[test]
+fn archived_definitions_still_consume_each_configuration_count_limit() {
+    use task_contract::work_item::{
+        MAX_FIELDS, MAX_ITEM_TYPES, MAX_OPTIONS_PER_FIELD, MAX_RELATIONSHIP_TYPES, MAX_STATUSES,
+        MAX_STATUS_GROUPS, MAX_WORKFLOWS,
+    };
+    fn boundary(fill: impl Fn(&mut Configuration, usize), limit: usize) {
+        let mut configuration = config();
+        fill(&mut configuration, limit);
+        assert!(configuration.within_limits());
+        fill(&mut configuration, limit + 1);
+        assert!(!configuration.within_limits());
+    }
+    boundary(
+        |configuration, count| {
+            let mut status = configuration.statuses[0].clone();
+            status.archived = true;
+            configuration.statuses = (0..count)
+                .map(|index| Status {
+                    id: StatusId(format!("status-{index}")),
+                    ..status.clone()
+                })
+                .collect();
+        },
+        MAX_STATUSES,
+    );
+    boundary(
+        |configuration, count| {
+            configuration.status_groups = (0..count)
+                .map(|index| StatusGroup {
+                    id: StatusGroupId(format!("group-{index}")),
+                    name: "Group".into(),
+                    archived: true,
+                })
+                .collect();
+        },
+        MAX_STATUS_GROUPS,
+    );
+    boundary(
+        |configuration, count| {
+            let mut workflow = configuration.workflows[0].clone();
+            workflow.archived = true;
+            configuration.workflows = (0..count)
+                .map(|index| Workflow {
+                    id: WorkflowId(format!("flow-{index}")),
+                    ..workflow.clone()
+                })
+                .collect();
+        },
+        MAX_WORKFLOWS,
+    );
+    boundary(
+        |configuration, count| {
+            let mut kind = configuration.types[0].clone();
+            kind.archived = true;
+            configuration.types = (0..count)
+                .map(|index| WorkItemType {
+                    id: WorkItemTypeId(format!("type-{index}")),
+                    ..kind.clone()
+                })
+                .collect();
+        },
+        MAX_ITEM_TYPES,
+    );
+    boundary(
+        |configuration, count| {
+            let mut definition = field(FieldUsage::Optional);
+            definition.archived = true;
+            configuration.fields = (0..count)
+                .map(|index| FieldDefinition {
+                    id: FieldId(format!("field-{index}")),
+                    ..definition.clone()
+                })
+                .collect();
+        },
+        MAX_FIELDS,
+    );
+    boundary(
+        |configuration, count| {
+            configuration.relationship_types = (0..count)
+                .map(|index| RelationshipType {
+                    owner_project_id: configuration.project_id.clone(),
+                    id: RelationshipTypeId(format!("relationship-{index}")),
+                    name: "Related".into(),
+                    direction: Direction::Directed,
+                    archived: true,
+                })
+                .collect();
+        },
+        MAX_RELATIONSHIP_TYPES,
+    );
+    boundary(
+        |configuration, count| {
+            let mut definition = field(FieldUsage::Optional);
+            definition.kind = FieldKind::SingleChoice;
+            definition.options = (0..count)
+                .map(|index| ChoiceOption {
+                    id: OptionId(format!("option-{index}")),
+                    name: "Choice".into(),
+                    archived: true,
+                })
+                .collect();
+            configuration.fields = vec![definition];
+        },
+        MAX_OPTIONS_PER_FIELD,
+    );
+}
+
+#[test]
 fn group_delegate_can_create_rename_archive_but_cannot_change_project_configuration() {
     let mut previous = config();
     previous.status_groups.push(StatusGroup {

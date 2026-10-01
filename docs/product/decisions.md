@@ -414,6 +414,19 @@ configuration revision one; replay returns the recorded seed.
 configuration. B-005 persists creation coherently; M1-02 integrates the command,
 and B-007 provisions creation authorization and initial project access.
 
+<a id="d-030"></a>
+## D-030 — Count all retained definitions toward configuration limits
+
+**Status: Accepted by the maintainer on 2026-10-01.** M1 configuration count and
+text limits include retained active and archived definitions and choice options.
+Archival does not free capacity. Removal frees capacity only where the existing
+reference, historical-use, and application-field protection rules permit it.
+
+**Consequence:** B-003 retains bounded complete configuration snapshots and
+tests archived entries at every count boundary. The bounds do not authorize
+history cleanup or limit the number of historical revisions; B-005 owns their
+durable representation.
+
 ## How to change a decision
 
 

@@ -3,7 +3,8 @@
 **Status:** Typed rule slices implemented; final contract review remains open.
 Project initialization, delegated status administration, and conversion review
 policies are specified. Operation identity, replay authorization, retention, and
-configuration lifetime limits still require final resolution before closure.
+status-group lifecycle still requires resolution before closure. All retained
+active and archived definitions count toward the configuration limits.
 Implementation remains in the
 linked backlog slices. The maintainer accepted the review recommendations and
 ten review resolutions on 2026-09-29, then the project, identifier, field,
@@ -720,7 +721,13 @@ No knowledge mutation changes an item's status, phase, usage, or version.
 A complete project configuration revision contains at most 256 statuses, 256
 status groups, 128
 workflows, 128 WorkItem types, 512 fields, 128 relationship types, and 256
-choice options per field. The total UTF-8 byte length of every supplied string
+choice options per field. These counts include every retained active and archived
+definition and option; archival does not free capacity. Eligible removal of
+unused definitions can free capacity only when existing reference, historical-use,
+and application-field protections permit it. Retained archived strings also
+consume the text budget. The limits bound each complete configuration revision;
+they do not limit the number of stored historical revisions or authorize history
+deletion. The total UTF-8 byte length of every supplied string
 occurrence, including repeated ID references, is at most 1 MiB. New commands
 over this bound return `payload_limit_exceeded`; a recorded success still
 replays first. Adding an option beyond the per-field count uses the same error.
