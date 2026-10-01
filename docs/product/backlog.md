@@ -103,7 +103,9 @@ settings.
 <a id="b-003"></a>
 ## B-003 — Specify project/task contracts and workflow rules
 
-**Status:** Typed contract and pure-rule checks complete on the B-003 branch; B-004/B-005/B-006/B-007 implement and verify the behavior. [D-018](decisions.md#d-018)
+**Status:** Typed rule slices and pure checks are implemented on the B-003 branch;
+final review of initialization, delegated administration, conversion, and replay
+boundaries remains open. B-004/B-005/B-006/B-007 implement and verify the behavior. [D-018](decisions.md#d-018)
 records the accepted review direction; [D-019](decisions.md#d-019) resolves the
 ten review areas and retains the full M1 scope. [D-020](decisions.md#d-020) and
 [D-021](decisions.md#d-021) settle project archival, readable IDs, and M1 value

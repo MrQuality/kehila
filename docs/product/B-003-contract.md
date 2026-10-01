@@ -1,6 +1,9 @@
 # B-003 project and work-item contract review
 
-**Status:** Typed contract complete for B-003; implementation remains in the
+**Status:** Typed rule slices implemented; final contract review remains open.
+Project initialization, delegated administration boundaries, and the remaining
+conversion and replay choices require resolution before B-003 is closed.
+Implementation remains in the
 linked backlog slices. The maintainer accepted the review recommendations and
 ten review resolutions on 2026-09-29, then the project, identifier, field,
 relationship, payload, and knowledge choices on 2026-09-30.
@@ -307,7 +310,7 @@ A populated field's value kind cannot be changed in place. The pure rule uses
 an `ever_valued` input that must include historical values, not only current
 visible values. A new field and explicit migration are required. The rule also
 rejects configuration edits while the project is archived. Full field schema,
-value validation, and migration commands remain to define.
+value validation, and migration commands are specified in the following slices.
 
 The pure tests cover the rule portions of BC-19 and BC-21 through BC-23.
 Storage coordination, old-ID resolution, cross-user selection clearing, and
@@ -336,8 +339,8 @@ choice archival, and similarly named fields on distinct WorkItem types.
 
 The M1 representation accepts text values of at most 16 KiB of UTF-8 bytes,
 signed numeric thousandths in `-999999.999` through `999999.999`, and Gregorian
-dates in years 1 through 9999. Command payload limits and how archived field definitions
-evolve remain distinct contract work.
+dates in years 1 through 9999. The following slices specify command payload
+limits and archived field-definition evolution.
 
 ### Fourth typed rule slice: relationships and current work
 
@@ -660,7 +663,8 @@ No knowledge mutation changes an item's status, phase, usage, or version.
 
 ### Logical payload bounds
 
-A complete project configuration revision contains at most 256 statuses, 128
+A complete project configuration revision contains at most 256 statuses, 256
+status groups, 128
 workflows, 128 WorkItem types, 512 fields, 128 relationship types, and 256
 choice options per field. The total UTF-8 byte length of every supplied string
 occurrence, including repeated ID references, is at most 1 MiB. New commands
@@ -771,14 +775,15 @@ pure decisions; the named downstream issues own the service-level evidence.
 | BC-32 | Submit a complete compatible configuration revision, retry it after later changes, then reuse its operation ID with changed content. | Apply one revision; replay the original result after current authorization; reject changed content. Reject an empty operation ID or a revision-only no-op. | Pure command checks; B-005 durable revision/history and operation record. |
 | BC-33 | Create and edit each knowledge kind, including a labeled file reference. | Keep kind and WorkItem ownership; append attributed versions; reject wrong kind, stale version, and invalid values. | Pure knowledge checks; B-005 retention and B-007 grants. |
 | BC-34 | Create a cross-project follow-up with and without Link grants; attempt a second origin or cycle. | Require both grants; accept one directed acyclic origin; reject duplicate origin and cycle. Preserve provenance through archive/conversion. | Pure provenance checks; B-005 atomic ancestry and B-007 grants. |
-| BC-35 | Rename/archive a historically used relationship type, then change its direction or remove it. | Permit rename/archive; reject reinterpretation and removal until affected links are migrated. | Pure configuration checks; B-005 historical-use evidence. |
+| BC-35 | Rename/archive a historically used relationship type, then change its direction or remove it. | Permit rename/archive; reject reinterpretation and removal even after current links migrate away. Historical-use evidence remains authoritative. | Pure configuration checks; B-005 historical-use evidence. |
 | BC-36 | Exceed complete-configuration count or text budget; retry a recorded success. | Reject a new oversized command with `payload_limit_exceeded`; replay an identical recorded success first. | Pure configuration checks; B-004/B-006 encoded-body limits. |
 | BC-37 | Change project name, prefix, and unit in one command; retry after another revision. | Advance Project and Configuration once; preserve issued IDs; enforce estimate-unit lock and successful replay. | Pure project metadata checks; B-005 atomic persistence. |
 
 ## Completion and handoff
 
-B-003's typed contract and required pure checks are complete on the contract
-branch. `python scripts/verify.py --pure`, `cargo clippy --locked -p
+The implemented typed rule slices have passing pure checks on the contract
+branch; final review choices remain open as stated above.
+`python scripts/verify.py --pure`, `cargo clippy --locked -p
 task_contract --tests -- -D warnings`, and `cargo fmt --all -- --check`
 passed after the 2026-10-01 contract review changes. The pure tests exercise
 S-01 phase behavior and the contract scenarios above at their stated pure
