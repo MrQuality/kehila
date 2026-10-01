@@ -102,6 +102,73 @@ fn field(usage: FieldUsage) -> FieldDefinition {
 }
 
 #[test]
+fn a_complete_revision_cannot_remove_an_option_from_a_retained_field() {
+    let mut previous = config();
+    let mut choice = field(FieldUsage::Optional);
+    choice.kind = FieldKind::SingleChoice;
+    choice.options = vec![
+        ChoiceOption {
+            id: OptionId("first".into()),
+            name: "First".into(),
+            archived: false,
+        },
+        ChoiceOption {
+            id: OptionId("second".into()),
+            name: "Second".into(),
+            archived: false,
+        },
+    ];
+    previous.fields.push(choice);
+    let mut proposed = next(&previous);
+    proposed.fields[0].options.remove(0);
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Err(ConfigurationChangeError::InvalidConfiguration)
+    );
+    let command = ConfigurationChangeCommand {
+        operation_id: "remove-option".into(),
+        expected_revision: previous.revision,
+        proposed,
+    };
+    assert_eq!(
+        decide_configuration_change(&previous, &snapshot(vec![]), None, true, &command),
+        ConfigurationChangeDecision::Reject(ConfigurationChangeError::InvalidConfiguration)
+    );
+    let mut retained = next(&previous);
+    retained.fields[0].options.swap(0, 1);
+    retained.fields[0].options[0].name = "Renamed".into();
+    retained.fields[0].options[1].archived = true;
+    assert_eq!(
+        validate_change(
+            &previous,
+            &retained,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
+    let mut removed_field = next(&previous);
+    removed_field.fields.clear();
+    assert_eq!(
+        validate_change(
+            &previous,
+            &removed_field,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
+}
+
+#[test]
 fn relationship_type_meaning_is_stable_after_use() {
     let mut previous = config();
     previous.relationship_types.push(RelationshipType {

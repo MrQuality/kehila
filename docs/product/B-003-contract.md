@@ -524,8 +524,10 @@ remains unverified.
 Each single-choice option has a stable identity, a display name, and an archive
 flag in its field definition. The Rust `task_contract::field_admin` module
 defines Add, Rename, Archive, and Restore commands against the expected project
-configuration revision. Option IDs cannot be reused or removed. Renaming keeps
-the identity referenced by current and historical values. Archiving rejects
+configuration revision. Option IDs cannot be reused or removed from a retained
+field, including by complete configuration replacement. Removing an entire
+never-used field is a separate configuration change. Renaming keeps the identity
+referenced by current and historical values. Archiving rejects
 new assignments while retaining existing values; restoration makes the same
 option eligible for new assignments again. Names must contain non-whitespace
 text and fit within 256 UTF-8 bytes. Identity is determined by ID, not name.

@@ -83,6 +83,9 @@ revision-only no-ops.
 Relationship-type configuration tests cover owner scope, duplicate IDs,
 rename/archive compatibility, and rejection of direction changes or removal
 after historical use.
+Complete-configuration tests also reject removal of an option from a retained
+field, even when no current item uses it; rename, archive, and reordering keep
+the stable option identities.
 The complete configuration bound is checked for excessive entry counts and
 aggregate UTF-8 string bytes. Encoded HTTP-body limits remain adapter work.
 Concurrent item/configuration writes remain B-005

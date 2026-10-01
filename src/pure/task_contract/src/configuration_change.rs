@@ -180,8 +180,21 @@ pub fn validate_change(
                 field_id: old_field.id.clone(),
             });
         }
-        if new_field.is_some_and(|field| field.owner_type != old_field.owner_type) {
-            return Err(ConfigurationChangeError::InvalidConfiguration);
+        if let Some(field) = new_field {
+            if field.owner_type != old_field.owner_type {
+                return Err(ConfigurationChangeError::InvalidConfiguration);
+            }
+            if !old_field.options.is_empty() {
+                let retained_ids: HashSet<_> =
+                    field.options.iter().map(|option| &option.id).collect();
+                if old_field
+                    .options
+                    .iter()
+                    .any(|option| !retained_ids.contains(&option.id))
+                {
+                    return Err(ConfigurationChangeError::InvalidConfiguration);
+                }
+            }
         }
     }
     for snapshot_item in &snapshot.items {
