@@ -23,6 +23,7 @@ use crate::work_item::Error as WorkItemError;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Code {
+    ReplayExpired,
     ProjectAlreadyExists,
     Unauthorized,
     MigrationUnauthorized,
@@ -71,6 +72,7 @@ pub enum Code {
 impl Code {
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::ReplayExpired => "replay_expired",
             Self::ProjectAlreadyExists => "project_already_exists",
             Self::Unauthorized => "unauthorized",
             Self::MigrationUnauthorized => "migration_unauthorized",
@@ -125,6 +127,7 @@ pub trait StableCode {
 impl StableCode for OperationError {
     fn code(&self) -> Code {
         match self {
+            Self::ReplayExpired => Code::ReplayExpired,
             Self::Unauthorized => Code::Unauthorized,
             Self::InvalidReference => Code::InvalidReference,
             Self::InvalidOperation => Code::InvalidOperation,

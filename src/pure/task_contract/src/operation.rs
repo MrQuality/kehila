@@ -124,12 +124,68 @@ pub struct OperationSuccess<Request, Result, Scope> {
     pub required_grants: Scope,
 }
 
+pub const REPLAY_PERIOD_MS: u64 = 90 * 24 * 60 * 60 * 1000;
+
+/// SHA-256 of the exact typed request under a versioned deterministic codec.
+/// Supplied by a trusted adapter, never accepted from a client as evidence.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RequestFingerprint {
+    pub codec_version: u32,
+    pub sha256: [u8; 32],
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RetainedOperation<Request, Result, Scope> {
+    pub success: OperationSuccess<Request, Result, Scope>,
+    pub committed_at_ms: u64,
+    pub request_fingerprint: RequestFingerprint,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OperationTombstone<Scope> {
+    pub key: OperationKey,
+    pub request_fingerprint: RequestFingerprint,
+    pub required_grants: Scope,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum OperationRecord<Request, Result, Scope> {
+    Full(RetainedOperation<Request, Result, Scope>),
+    Tombstone(OperationTombstone<Scope>),
+}
+
+/// Replaces only the replay record. Product state/history is a separate store.
+/// B-005 must atomically replace the full record without a lookup gap and never
+/// delete the tombstone or admit that operation key as new again.
+pub fn compact_expired<Request, Outcome, Scope: Clone>(
+    record: &RetainedOperation<Request, Outcome, Scope>,
+    now_ms: u64,
+) -> Result<OperationTombstone<Scope>, OperationError> {
+    record.success.key.validate()?;
+    if record.request_fingerprint.codec_version == 0 {
+        return Err(OperationError::InvalidReference);
+    }
+    let deadline = record
+        .committed_at_ms
+        .checked_add(REPLAY_PERIOD_MS)
+        .ok_or(OperationError::InvalidOperation)?;
+    if now_ms < deadline {
+        return Err(OperationError::InvalidOperation);
+    }
+    Ok(OperationTombstone {
+        key: record.success.key.clone(),
+        request_fingerprint: record.request_fingerprint,
+        required_grants: record.success.required_grants.clone(),
+    })
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum OperationError {
     Unauthorized,
     InvalidReference,
     InvalidOperation,
     OperationIdReused,
+    ReplayExpired,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -146,25 +202,59 @@ pub enum ReplayDecision<Result> {
 pub fn decide_replay<Request: Eq, Result: Clone, Scope>(
     key: &OperationKey,
     request: &Request,
-    recorded: Option<&OperationSuccess<Request, Result, Scope>>,
+    recorded: Option<&OperationRecord<Request, Result, Scope>>,
     new_required_grants: &Scope,
+    request_fingerprint: RequestFingerprint,
+    now_ms: u64,
     authorize: impl FnOnce(&Scope) -> bool,
 ) -> ReplayDecision<Result> {
-    let scope = recorded.map_or(new_required_grants, |recorded| &recorded.required_grants);
+    let scope = match recorded {
+        None => new_required_grants,
+        Some(OperationRecord::Full(record)) => &record.success.required_grants,
+        Some(OperationRecord::Tombstone(record)) => &record.required_grants,
+    };
     if !authorize(scope) {
         return ReplayDecision::Reject(OperationError::Unauthorized);
     }
     if let Err(error) = key.validate() {
         return ReplayDecision::Reject(error);
     }
+    if request_fingerprint.codec_version == 0 {
+        return ReplayDecision::Reject(OperationError::InvalidReference);
+    }
     let Some(recorded) = recorded else {
         return ReplayDecision::Unseen;
     };
-    if recorded.key != *key {
-        return ReplayDecision::Reject(OperationError::InvalidReference);
+    match recorded {
+        OperationRecord::Full(record) => {
+            if record.success.key != *key {
+                return ReplayDecision::Reject(OperationError::InvalidReference);
+            }
+            if record.success.request != *request {
+                return ReplayDecision::Reject(OperationError::OperationIdReused);
+            }
+            if record.request_fingerprint != request_fingerprint {
+                return ReplayDecision::Reject(OperationError::InvalidReference);
+            }
+            let Some(deadline) = record.committed_at_ms.checked_add(REPLAY_PERIOD_MS) else {
+                return ReplayDecision::Reject(OperationError::InvalidOperation);
+            };
+            if now_ms < record.committed_at_ms {
+                return ReplayDecision::Reject(OperationError::InvalidOperation);
+            }
+            if now_ms >= deadline {
+                return ReplayDecision::Reject(OperationError::ReplayExpired);
+            }
+            ReplayDecision::Replay(record.success.result.clone())
+        }
+        OperationRecord::Tombstone(record) => {
+            if record.key != *key {
+                return ReplayDecision::Reject(OperationError::InvalidReference);
+            }
+            if record.request_fingerprint != request_fingerprint {
+                return ReplayDecision::Reject(OperationError::OperationIdReused);
+            }
+            ReplayDecision::Reject(OperationError::ReplayExpired)
+        }
     }
-    if recorded.request != *request {
-        return ReplayDecision::Reject(OperationError::OperationIdReused);
-    }
-    ReplayDecision::Replay(recorded.result.clone())
 }

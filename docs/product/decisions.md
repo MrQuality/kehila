@@ -466,8 +466,21 @@ without changing whether its original operation committed.
 conversion retains its original migration requirement. B-007 resolves current
 grants and B-005 protects their validation through command acceptance.
 
+<a id="d-034"></a>
+## D-034 — Guarantee 90-day M1 replay and retain operation tombstones
+
+**Status: Accepted by the maintainer on 2026-10-01.** Extend D-017's provisional
+task-path direction to all M1 commands: full replay lasts 90 days after commit.
+At expiry an identical retry returns `replay_expired` and never executes again.
+Compaction retains a permanent scoped operation tombstone, versioned request
+fingerprint, and original grant scope. Changed-content reuse still conflicts.
+Product history remains separate; unseen opaque IDs have no timestamp admission
+rule. Full replay retention is bounded, but tombstone storage grows over time.
+
+**Consequence:** B-003 supplies full/tombstone lookup and compaction decisions.
+B-004/B-005 must freeze the exact-request fingerprint codec and prove durable
+replacement, restoration, and no duplicate execution before exposing M1 routes.
+
 ## How to change a decision
-
-
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.

@@ -118,8 +118,10 @@ open for complete typed commands and remaining administration/checks.
 source-snapshot validation, required-choice feasibility, delegated status
 administration, and trusted project initialization. These have typed pure
 checks. [D-031](decisions.md#d-031) specifies group archival and identity retention.
-Operation identity, replay authorization, and expiry policies are accepted;
-typed enforcement and the final B-003 closure review remain.
+Operation identity, replay authorization, and expiry have typed enforcement in
+[D-032](decisions.md#d-032) through [D-034](decisions.md#d-034). The B-003 contract
+is ready for final maintainer review; physical storage, fingerprint codecs,
+transport, and access integration remain downstream work.
 [D-030](decisions.md#d-030) counts all retained active and archived definitions
 against the configuration limits; archival does not free capacity.
 **Further resolution, 2026-09-30:** [D-021](decisions.md#d-021) fixes the

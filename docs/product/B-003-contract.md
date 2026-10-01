@@ -1,9 +1,9 @@
 # B-003 project and work-item contract review
 
-**Status:** Typed rule slices implemented; final contract review remains open.
+**Status:** Accepted typed policies implemented; ready for final maintainer review.
 Project initialization, delegated status administration, and conversion review
 policies are specified. Operation identity, replay authorization, and expiry
-policies are accepted; their typed enforcement is in progress. All retained
+policies have typed pure enforcement. All retained
 active and archived definitions count toward the configuration limits.
 Implementation remains in the
 linked backlog slices. The maintainer accepted the review recommendations and
@@ -182,6 +182,36 @@ The M1 contract uses exact thousandths from `0` through
 values. Zero remains distinct from an absent estimate.
 
 ### Replay
+
+All M1 command families guarantee full replay for 90 days after authoritative
+commit, measured as 7,776,000,000 milliseconds. The full-result window is
+`committed_at <= now < committed_at + period`; at the deadline, an identical
+retry returns `replay_expired`, even if physical compaction has not run. Changed
+typed content still conflicts. Checked arithmetic rejects an overflowing
+deadline; trusted time earlier than the recorded commit is incoherent.
+
+`operation::OperationRecord` distinguishes full successes from tombstones.
+Compaction retains the scoped key, a versioned SHA-256 request fingerprint, and
+the original grant scope. Tombstones never become unseen, including after clock
+rollback. An identical tombstone retry returns `replay_expired`; changed content
+returns `operation_id_reused`, after current original-grant checks. Clients must
+reconcile the committed outcome through authorized reads. They must not
+automatically resubmit an expired intention with a new token.
+
+B-004/B-005 must define and freeze each deterministic fingerprint codec version
+over exact typed content, preserving string bytes, ordered collections, enum
+variants, versions, and revisions. The digest is computed by a trusted adapter,
+not accepted from the client. Existing full records are checked with exact typed
+equality as well as fingerprint coherence. Retries use the retained codec
+version; codec support and tombstones must survive upgrades and restores.
+Codec implementation and real durable compaction are downstream verification
+gates, not capabilities provided by the pure module.
+
+Only the shared replay decision's `Unseen` outcome allows the new-command domain
+decision. B-005 must atomically replace full records with tombstones without a
+lookup gap, retain tombstones indefinitely, and preserve them in backup/restore.
+The 90-day window does not impose an unseen-token age limit. Product state and
+history have separate retention and are never deleted by replay compaction.
 
 Replay requires all current grants required by the original mutation, checked
 against its retained scope. This includes Migration permission if the original
@@ -873,17 +903,23 @@ pure decisions; the named downstream issues own the service-level evidence.
 | BC-33 | Create and edit each knowledge kind, including a labeled file reference. | Keep kind and WorkItem ownership; append attributed versions; reject wrong kind, stale version, and invalid values. | Pure knowledge checks; B-005 retention and B-007 grants. |
 | BC-34 | Create a cross-project follow-up with and without Link grants; attempt a second origin or cycle. | Require both grants; accept one directed acyclic origin; reject duplicate origin and cycle. Preserve provenance through archive/conversion. | Pure provenance checks; B-005 atomic ancestry and B-007 grants. |
 | BC-35 | Rename/archive a historically used relationship type, then change its direction or remove it. | Permit rename/archive; reject reinterpretation and removal even after current links migrate away. Historical-use evidence remains authoritative. | Pure configuration checks; B-005 historical-use evidence. |
-| BC-36 | Convert while retaining the item's archived workflow/status; separately select a different archived target. | Retain eligible existing references; reject new archived assignments. Reject malformed source values while preserving valid hidden/archived history. | Pure conversion checks; M1-05 authoritative snapshots and persistence. |
-| BC-37 | Archive the last active option of an active required choice field, through option administration and complete replacement. | Reject both paths; permit archival once another active option is available. | Pure configuration and option checks; B-005 commit-time consistency. |
-| BC-38 | A group delegate creates/renames/archives a status, moves it between groups, then retries after one grant is revoked. | Require the relevant group grants, both groups for a move, and retained original scope for replay. Reject phase/workflow/group lifecycle changes without project administration. | Pure scoped checks; B-007 authoritative grants and B-005 revocation coordination. |
-| BC-39 | Create a project, retry after its identity exists, then reuse the operation with changed input. | Install the valid revision-one M1V1 seed once; replay the exact original result after current authorization; reject changed-content reuse and duplicate new creation. | Pure project creation checks; M1-02/B-005 coherent persistence and uniqueness, B-007 initial access. |
 | BC-36 | Exceed complete-configuration count or text budget; retry a recorded success. | Reject a new oversized command with `payload_limit_exceeded`; replay an identical recorded success first. | Pure configuration checks; B-004/B-006 encoded-body limits. |
 | BC-37 | Change project name, prefix, and unit in one command; retry after another revision. | Advance Project and Configuration once; preserve issued IDs; enforce estimate-unit lock and successful replay. | Pure project metadata checks; B-005 atomic persistence. |
+| BC-38 | Convert while retaining the item's archived workflow/status; separately select a different archived target. | Retain eligible existing references; reject new archived assignments. Reject malformed source values while preserving valid hidden/archived history. | Pure conversion checks; M1-05 authoritative snapshots and persistence. |
+| BC-39 | Archive the last active option of an active required choice field, through option administration and complete replacement. | Reject both paths; permit archival once another active option is available. | Pure configuration and option checks; B-005 commit-time consistency. |
+| BC-40 | A group delegate creates/renames/archives a status, moves it between groups, then retries after one grant is revoked. | Require the relevant group grants, both groups for a move, and retained original scope for replay. Reject phase/workflow/group lifecycle changes without project administration. | Pure scoped checks; B-007 authoritative grants and B-005 revocation coordination. |
+| BC-41 | Create a project, retry after its identity exists, then reuse the operation with changed input. | Install the valid revision-one M1V1 seed once; replay the exact original result after current authorization; reject changed-content reuse and duplicate new creation. | Pure project creation checks; M1-02/B-005 coherent persistence and uniqueness, B-007 initial access. |
+| BC-42 | Fill each configuration collection with archived definitions or options at and above its bound. | Count retained archived entries and text; archival never frees capacity. | Pure payload-bound checks. |
+| BC-43 | Archive a group, retain/edit existing statuses, add or move a status into it, then remove a historically assigned/granted group. | Preserve existing status behavior; reject new membership until restoration; retain historically used group IDs. | Pure configuration checks; B-005/B-007 authoritative grant/assignment history. |
+| BC-44 | Reuse a token across actors, command families, and targets; reorder typed collection content. | Separate operation namespaces; reject a foreign lookup record; changed ordered content conflicts in the same scope. | Pure envelope checks; B-005 lookup/index and B-007 actor binding. |
+| BC-45 | Revoke Migration permission after successful conversion and retry after the item's workflow has changed. | Check the original migration requirement before replay; denial does not roll back the prior success. A conversion without migration does not invent that grant requirement. | Pure conversion/scope checks; B-007 revocation and B-005 protected authorization. |
+| BC-46 | Retry just before and at 90 days, compact the success, retry the tombstone, and submit changed content. | Replay before expiry; return replay_expired at/after expiry; tombstones never execute as new; changed content conflicts after authorization. Compaction cannot precede expiry or overflow the deadline. | Pure retention checks; B-004/B-005 fingerprint codec, atomic compaction, no lookup gap, durable tombstone and backup/restore verification. |
 
 ## Completion and handoff
 
 The implemented typed rule slices have passing pure checks on the contract
-branch; final review choices remain open as stated above.
+branch; accepted policy decisions are implemented and final maintainer review
+remains. The configurable runtime and downstream verification gates remain open.
 `python scripts/verify.py --pure`, `cargo clippy --locked -p
 task_contract --tests -- -D warnings`, and `cargo fmt --all -- --check`
 passed after the 2026-10-01 contract review changes. The pure tests exercise
