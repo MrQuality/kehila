@@ -140,6 +140,7 @@ fn selection_and_relationship_failures_are_distinguishable() {
 fn every_domain_error_code_has_a_pinned_wire_string() {
     use Code::*;
     let codes = [
+        ProjectAlreadyExists,
         Unauthorized,
         MigrationUnauthorized,
         OperationIdReused,
@@ -183,11 +184,12 @@ fn every_domain_error_code_has_a_pinned_wire_string() {
         SequenceExhausted,
         VersionExhausted,
     ];
-    assert_eq!(codes.len(), 42);
+    assert_eq!(codes.len(), 43);
     let distinct: std::collections::HashSet<_> = codes.iter().map(|code| code.as_str()).collect();
     assert_eq!(distinct.len(), codes.len());
     for code in codes {
         let expected = match code {
+            ProjectAlreadyExists => "project_already_exists",
             Unauthorized => "unauthorized",
             MigrationUnauthorized => "migration_unauthorized",
             OperationIdReused => "operation_id_reused",

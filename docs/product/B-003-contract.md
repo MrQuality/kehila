@@ -1,8 +1,9 @@
 # B-003 project and work-item contract review
 
 **Status:** Typed rule slices implemented; final contract review remains open.
-Project initialization, delegated administration boundaries, and the remaining
-conversion and replay choices require resolution before B-003 is closed.
+Project initialization, delegated status administration, and conversion review
+policies are specified. Operation identity, replay authorization, retention, and
+configuration lifetime limits still require final resolution before closure.
 Implementation remains in the
 linked backlog slices. The maintainer accepted the review recommendations and
 ten review resolutions on 2026-09-29, then the project, identifier, field,
@@ -299,6 +300,28 @@ contract. B-005 must integrate the new rules with authoritative configuration
 loading, atomic persistence, and real concurrency checks.
 
 ### Second typed rule slice: project identity and archival
+
+`project_create` defines a replayable creation command using a trusted allocated
+ProjectId, name, readable-ID prefix, and estimate unit. Creation authorization is
+checked before replay. An identical recorded success returns its original seed
+before new identity-uniqueness checks; changed-content operation reuse fails.
+Names contain non-whitespace text, no control characters, and at most 256 UTF-8
+bytes. Prefixes use the existing project prefix rules.
+
+The trusted `M1V1` seed creates revision one with Task and Milestone types, each
+with optional application-origin text fields for title and description. Both
+types share the default New/Active/Done workflow with the five system-allowed
+phase transitions. It creates no status groups or relationship types. Estimates
+remain independent of custom fields. The project begins active, with next
+sequence one and no historical estimates. New application fields can enter only
+through this initialization path; later configuration edits preserve their
+origin and protection.
+
+B-005 must persist project, complete seed, initial history, and success record
+coherently and enforce identity uniqueness under concurrent creation. B-007
+supplies creation permission and initial project access. The result records the
+seed profile and full configuration so later changes to defaults cannot alter
+replay. This contract does not yet provide a storage or onboarding route.
 
 The Rust `task_contract::project` module models project archival, item access,
 readable ID allocation, estimate values and unit locking, and populated-field
@@ -807,6 +830,10 @@ pure decisions; the named downstream issues own the service-level evidence.
 | BC-33 | Create and edit each knowledge kind, including a labeled file reference. | Keep kind and WorkItem ownership; append attributed versions; reject wrong kind, stale version, and invalid values. | Pure knowledge checks; B-005 retention and B-007 grants. |
 | BC-34 | Create a cross-project follow-up with and without Link grants; attempt a second origin or cycle. | Require both grants; accept one directed acyclic origin; reject duplicate origin and cycle. Preserve provenance through archive/conversion. | Pure provenance checks; B-005 atomic ancestry and B-007 grants. |
 | BC-35 | Rename/archive a historically used relationship type, then change its direction or remove it. | Permit rename/archive; reject reinterpretation and removal even after current links migrate away. Historical-use evidence remains authoritative. | Pure configuration checks; B-005 historical-use evidence. |
+| BC-36 | Convert while retaining the item's archived workflow/status; separately select a different archived target. | Retain eligible existing references; reject new archived assignments. Reject malformed source values while preserving valid hidden/archived history. | Pure conversion checks; M1-05 authoritative snapshots and persistence. |
+| BC-37 | Archive the last active option of an active required choice field, through option administration and complete replacement. | Reject both paths; permit archival once another active option is available. | Pure configuration and option checks; B-005 commit-time consistency. |
+| BC-38 | A group delegate creates/renames/archives a status, moves it between groups, then retries after one grant is revoked. | Require the relevant group grants, both groups for a move, and retained original scope for replay. Reject phase/workflow/group lifecycle changes without project administration. | Pure scoped checks; B-007 authoritative grants and B-005 revocation coordination. |
+| BC-39 | Create a project, retry after its identity exists, then reuse the operation with changed input. | Install the valid revision-one M1V1 seed once; replay the exact original result after current authorization; reject changed-content reuse and duplicate new creation. | Pure project creation checks; M1-02/B-005 coherent persistence and uniqueness, B-007 initial access. |
 | BC-36 | Exceed complete-configuration count or text budget; retry a recorded success. | Reject a new oversized command with `payload_limit_exceeded`; replay an identical recorded success first. | Pure configuration checks; B-004/B-006 encoded-body limits. |
 | BC-37 | Change project name, prefix, and unit in one command; retry after another revision. | Advance Project and Configuration once; preserve issued IDs; enforce estimate-unit lock and successful replay. | Pure project metadata checks; B-005 atomic persistence. |
 

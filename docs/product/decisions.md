@@ -401,7 +401,21 @@ configuration changes continue to require project administration.
 configuration commands and checks current grants before replay. B-007 owns
 grant provisioning and revocation; B-005 coordinates authorization and commit.
 
+<a id="d-029"></a>
+## D-029 — Create projects with a minimal trusted seed
+
+**Status: Accepted by the maintainer on 2026-10-01.** Project creation is a typed,
+replayable command. The initial application seed supplies Task and Milestone,
+optional title and description text fields per type, and one shared
+New/Active/Done workflow. Estimates remain independent. Creation starts at
+configuration revision one; replay returns the recorded seed.
+
+**Consequence:** B-003 provides trusted initialization and validates its complete
+configuration. B-005 persists creation coherently; M1-02 integrates the command,
+and B-007 provisions creation authorization and initial project access.
+
 ## How to change a decision
+
 
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.

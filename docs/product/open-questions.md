@@ -112,6 +112,13 @@ archival and restoration effects, preserves issued readable IDs across prefix
 changes, and rejects in-place value-kind changes for populated fields. The
 [contract review](B-003-contract.md) adds BC-21 through BC-23. Q-008 remains
 open for complete typed commands and remaining administration/checks.
+
+**Contract progress, 2026-10-01:** [D-025](decisions.md#d-025) through
+[D-029](decisions.md#d-029) resolve retained archived conversion references,
+source-snapshot validation, required-choice feasibility, delegated status
+administration, and trusted project initialization. These have typed pure
+checks. Operation identity, replay authorization and retention, and
+configuration lifetime limits remain under final B-003 review.
 **Further resolution, 2026-09-30:** [D-021](decisions.md#d-021) fixes the
 project-scoped readable-ID lookup policy and M1 value limits.
 **Further resolution, 2026-09-30:** [D-022](decisions.md#d-022) fixes the full

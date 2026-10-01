@@ -38,12 +38,12 @@ applicable API, storage, access, and interface integration through its parents.
 | Child ID | Parent / dependencies | Deliverable and acceptance |
 | --- | --- | --- |
 | [M1-01](https://github.com/MrQuality/yaja/issues/26) | B-005; B-003 | Configuration revisions, history, reference integrity, and coordinated command acceptance. Track and protect historical status, workflow, type, field, and relationship-type use even after current items migrate away. Demonstrate configuration/item contention, replay after configuration changes, and recovery without partial accepted state. Establish a consistency protocol for archive and current-selection clearing under the single-document storage constraint; test crash, retry, concurrent selection, and recovery behavior before exposing archival routes. |
-| [M1-02](https://github.com/MrQuality/yaja/issues/27) | B-004/B-006; M1-01, B-007 | Project and WorkItem identity, Task/Milestone, estimates, replayable current selection, archival/restoration. Define the trusted initial Task/Milestone type and field seeds. Verify untitled-item display, zero versus absent estimates, unit locking, selection retry after uncertain response, and selection clearing under the accepted project archival contract. |
+| [M1-02](https://github.com/MrQuality/yaja/issues/27) | B-004/B-006; M1-01, B-007 | Project and WorkItem identity, Task/Milestone, estimates, replayable current selection, archival/restoration. Integrate the accepted trusted revision-one Task/Milestone seed and replayable project creation command. Verify untitled-item display, zero versus absent estimates, unit locking, selection retry after uncertain response, and selection clearing under the accepted project archival contract. |
 | [M1-03](https://github.com/MrQuality/yaja/issues/28) | B-004/B-006; M1-02 | Project-defined types, application/custom fields, hidden/optional/required modes, and five initial value kinds. Protect application-defined fields from project removal, archival, and retyping; specify trusted upgrade of built-in definitions. Verify hidden-value preservation/write rejection, required-field changes under contention, and safe definition evolution. |
 | [M1-04](https://github.com/MrQuality/yaja/issues/29) | B-004/B-006; M1-03 | Multiple workflows, statuses, defaults, permitted workflows per type, phase restrictions, and configuration archival. Verify phase derivation, initial/default replacements, reference preservation, and zero implicit usage. |
 | [M1-05](https://github.com/MrQuality/yaja/issues/30) | B-004/B-006; M1-04 | Explicit type conversion and workflow migration. Verify complete destination validation, both-workflow phase restrictions, migration authorization, preserved source values/history, and no partial conversion. |
 | [M1-06](https://github.com/MrQuality/yaja/issues/31) | B-004/B-006; M1-02, B-003 | Relationship types and links, knowledge, and follow-up provenance under the resolved Q-016 contract. Verify cross-project authorization, canonical duplicate prevention, self-link rejection, inverse display, archival preservation, and history surviving conversion. Final integration includes M1-05. |
-| [M1-07](https://github.com/MrQuality/yaja/issues/32) | B-007/B-006; B-003, Q-014 | Configuration permissions and delegated administration, including status-group administration. Define grants and revocation; verify authoritative allow/deny behavior across all slices. Initial access enforcement is required before dependent routes are exposed. |
+| [M1-07](https://github.com/MrQuality/yaja/issues/32) | B-007/B-006; B-003, Q-014 | Configuration permissions and delegated administration, including status-group administration. Implement the accepted group-scoped status grants and project administration boundary; provision initial project access, define revocation, and verify authoritative allow/deny behavior across all slices. Initial access enforcement is required before dependent routes are exposed. |
 | [M1-08](https://github.com/MrQuality/yaja/issues/33) | B-006 with B-004/B-005/B-007; M1-01–M1-07 | Integrate the full configurable model into the local interface. Demonstrate administration, edits, conversion, migration, knowledge, relationships, reload, conflict recovery, and archival. Retain B-005 durability and authenticated-access gates before real data. |
 
 M1-07's initial access boundary accompanies the early slices; its delegated
@@ -104,8 +104,10 @@ settings.
 ## B-003 — Specify project/task contracts and workflow rules
 
 **Status:** Typed rule slices and pure checks are implemented on the B-003 branch;
-final review of initialization, delegated administration, conversion, and replay
-boundaries remains open. B-004/B-005/B-006/B-007 implement and verify the behavior. [D-018](decisions.md#d-018)
+Initialization, delegated status administration, and conversion review policies
+are specified. Final operation identity, replay authorization, retention, and
+configuration lifetime limits remain open. B-004/B-005/B-006/B-007 implement and
+verify the behavior. [D-018](decisions.md#d-018)
 records the accepted review direction; [D-019](decisions.md#d-019) resolves the
 ten review areas and retains the full M1 scope. [D-020](decisions.md#d-020) and
 [D-021](decisions.md#d-021) settle project archival, readable IDs, and M1 value
@@ -113,6 +115,9 @@ limits. [D-022](decisions.md#d-022) settles the phase graph, relationship-type
 ownership, and link-creation grants. [D-023](decisions.md#d-023) bounds item
 field payloads; [D-024](decisions.md#d-024) settles knowledge and follow-up
 provenance. The [contract review](B-003-contract.md) records accepted logical
+rules, including [D-025](decisions.md#d-025) through [D-029](decisions.md#d-029)
+for conversion, choice feasibility, delegated grants, and project initialization,
+alongside
 limits, typed commands, pure-check evidence, and downstream consistency gates.
 Durable records and the configurable worker are not implemented here.
 **Dependencies:** B-001; align persistence contracts with B-002.

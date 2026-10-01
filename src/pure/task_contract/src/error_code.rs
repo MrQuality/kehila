@@ -15,12 +15,14 @@ use crate::knowledge::KnowledgeError;
 use crate::knowledge_command::KnowledgeError as KnowledgeCommandError;
 use crate::project::ProjectError;
 use crate::project_admin::ProjectMetadataError;
+use crate::project_create::ProjectCreateError;
 use crate::relationship::RelationshipError;
 use crate::relationship_command::RelationshipCreateError;
 use crate::work_item::Error as WorkItemError;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Code {
+    ProjectAlreadyExists,
     Unauthorized,
     MigrationUnauthorized,
     OperationIdReused,
@@ -68,6 +70,7 @@ pub enum Code {
 impl Code {
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::ProjectAlreadyExists => "project_already_exists",
             Self::Unauthorized => "unauthorized",
             Self::MigrationUnauthorized => "migration_unauthorized",
             Self::OperationIdReused => "operation_id_reused",
@@ -116,6 +119,21 @@ impl Code {
 
 pub trait StableCode {
     fn code(&self) -> Code;
+}
+
+impl StableCode for ProjectCreateError {
+    fn code(&self) -> Code {
+        match self {
+            Self::Unauthorized => Code::Unauthorized,
+            Self::OperationIdReused => Code::OperationIdReused,
+            Self::InvalidReference => Code::InvalidReference,
+            Self::InvalidOperation => Code::InvalidOperation,
+            Self::InvalidName => Code::InvalidName,
+            Self::InvalidPrefix => Code::InvalidPrefix,
+            Self::InvalidConfiguration => Code::InvalidConfiguration,
+            Self::ProjectAlreadyExists => Code::ProjectAlreadyExists,
+        }
+    }
 }
 
 impl StableCode for WorkItemError {

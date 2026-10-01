@@ -18,7 +18,7 @@ yet; the configurable model is not wired into the task worker.
 | Rust NATS connection | Connects to a broker and checks protocol round trips |
 | Go synchronization rules | Checks whether a query can run at the current schema version |
 | Go API and Rust task worker | Experimental local task save/read boundary with versioned replay against development storage; no supported application API yet |
-| Rust project and WorkItem contract | Pure typed rules for configuration, status groups, application and custom fields, replayable current-work selection, estimates, knowledge, relationships, and provenance; not connected to the worker |
+| Rust project and WorkItem contract | Pure typed rules for seeded project creation, delegated status administration, configuration, application and custom fields, conversion, replayable current-work selection, estimates, knowledge, relationships, and provenance; not connected to the worker |
 | TypeScript contracts | Shared type declarations; no JavaScript runtime |
 | Development services | PostgreSQL, FerretDB, OpenSearch, and NATS in Compose |
 
