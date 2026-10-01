@@ -553,6 +553,16 @@ returns the original result without reapplying clears. The pure tests cover
 BC-16, BC-21, and BC-31's decision portions; durable cross-user clearing
 remains unverified.
 
+The observable result is all-or-none. The reference storage design permits
+single-document atomic writes and forbids database-level multi-document
+transactions. B-005 must choose and verify a consistency protocol that makes
+the archive and all affected selection clears appear together, including after
+crashes, retries, concurrent selection changes, and recovery. A sequence of
+independent acknowledged writes does not meet this contract. The protocol may
+use a different physical representation or explicit in-progress state, but
+must preserve the stated read and replay behavior. This storage choice remains
+open; the pure archive decision alone does not demonstrate it.
+
 ### Ninth typed rule slice: single-choice option administration
 
 Each single-choice option has a stable identity, a display name, and an archive
@@ -770,8 +780,9 @@ pure decisions; the named downstream issues own the service-level evidence.
 B-003's typed contract and required pure checks are complete on the contract
 branch. `python scripts/verify.py --pure`, `cargo clippy --locked -p
 task_contract --tests -- -D warnings`, and `cargo fmt --all -- --check`
-passed on 2026-09-30. The pure tests exercise S-01 phase behavior and the
-contract scenarios above at their stated pure boundary. They do not establish
+passed after the 2026-10-01 contract review changes. The pure tests exercise
+S-01 phase behavior and the contract scenarios above at their stated pure
+boundary. They do not establish
 real-service enforcement.
 
 B-005 owns demonstrated commit-time configuration consistency, authoritative

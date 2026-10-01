@@ -249,13 +249,19 @@ the other permissions in this question remain open.
 
 **Known:** The v0.2 design forbids multi-document transactions and proposes asynchronous sagas. Completion/reopening spans multiple kinds of records. Simply updating them one after another without a recovery design would not establish the agreed behavior.
 
+The accepted B-003 archive contract also requires an item or project archive,
+all affected current-work selection clears, and its success record to appear
+as one accepted result. The pure decision specifies that result but does not
+choose a physical consistency protocol. B-005/M1-01 must demonstrate it before
+archival routes are exposed.
+
 **Next evidence:** Specify stable operation identities, observable intermediate/failure states, and recovery behavior; verify them against actual services. These are engineering proposals, not prescribed database tables or a chosen algorithm.
 
 **Evidence boundary:** [SP-001's design handoff](../../experiments/SP-001/README.md#design-handoff)
 identifies prerequisites for reservation/cost ledgers and compensating actions.
 Its passing single-task cases do not settle cross-document consistency.
 
-**Blocks:** Architecture disposition in [B-002](backlog.md#b-002), integrated [B-011](backlog.md#b-011)/[B-012](backlog.md#b-012).
+**Blocks:** Archive/selection storage coordination in [B-005](backlog.md#b-005)/M1-01, architecture disposition in [B-002](backlog.md#b-002), and integrated [B-011](backlog.md#b-011)/[B-012](backlog.md#b-012).
 
 <a id="q-020"></a>
 ## Q-020 — Local durability and recovery objectives
