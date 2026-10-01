@@ -83,7 +83,7 @@ pub fn decide_project_create(
     if command.project_id.0.is_empty() {
         return Reject(E::InvalidReference);
     }
-    if command.operation_id.is_empty() {
+    if !crate::operation::valid_operation_id(&command.operation_id) {
         return Reject(E::InvalidOperation);
     }
     if command.name.trim().is_empty()

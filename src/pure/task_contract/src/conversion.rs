@@ -131,7 +131,9 @@ pub fn decide_conversion(
     if item.archived {
         return Reject(C::ArchivedItem);
     }
-    if command.operation_id.is_empty() || item.type_id == command.destination_type {
+    if !crate::operation::valid_operation_id(&command.operation_id)
+        || item.type_id == command.destination_type
+    {
         return Reject(C::InvalidOperation);
     }
     if !within_field_payload_limit(

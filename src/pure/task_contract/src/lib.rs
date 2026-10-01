@@ -11,6 +11,7 @@ pub mod follow_up;
 pub mod item_mutation;
 pub mod knowledge;
 pub mod knowledge_command;
+pub mod operation;
 pub mod payload;
 pub mod project;
 pub mod project_admin;

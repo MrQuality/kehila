@@ -183,6 +183,24 @@ values. Zero remains distinct from an absent estimate.
 
 ### Replay
 
+M1 operation IDs are case-sensitive opaque tokens of 1–128 printable ASCII bytes
+without whitespace. They are never trimmed or case-folded. The typed
+`operation::OperationKey` scopes lookup by authenticated actor, command family,
+target identity, and token. Project operations use ProjectId; item, conversion,
+knowledge, and follow-up operations use project-qualified WorkItem identity;
+selection uses its subject UserId; relationship creation uses owner project and
+the trusted allocated relationship record ID. Client retries must preserve
+allocated creation identities. The provisional worker is outside this M1 scope.
+
+`OperationSuccess` wraps the exact typed request, result, and originally required
+grant scope. B-005/B-007 adapters must pass authoritative lookup through the
+shared replay decision before invoking a domain decision. Only `Unseen` permits
+new execution; foreign actor/family/target records fail coherence checks. Exact
+typed equality includes all versions, revisions, string values, and collection
+order. No semantic reordering or normalization is performed. Domain-specific
+success types are payloads inside this envelope, not alternative unscoped
+storage keys. Tests exercise actor/family/target isolation and ordered requests.
+
 Preserve [D-016](decisions.md#d-016) and [D-017](decisions.md#d-017): after access
 checks, an identical recorded success is recognized before current version or
 mutable business-rule validation. A configuration change cannot turn that

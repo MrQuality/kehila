@@ -196,7 +196,7 @@ pub fn decide_configuration_change(
             current_revision: previous.revision,
         });
     }
-    if command.operation_id.is_empty() {
+    if !crate::operation::valid_operation_id(&command.operation_id) {
         return Reject(E::InvalidOperation);
     }
     if !command.proposed.within_limits() {

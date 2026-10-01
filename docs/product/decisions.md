@@ -440,6 +440,19 @@ remain retained and cannot be deleted or reused.
 B-005 and B-007 must maintain authoritative assignment and grant-use evidence
 and protect it through configuration acceptance.
 
+<a id="d-032"></a>
+## D-032 — Scope bounded opaque operation IDs and compare exact requests
+
+**Status: Accepted by the maintainer on 2026-10-01.** M1 uses case-sensitive
+opaque tokens of 1–128 printable ASCII bytes without whitespace. Lookup is
+scoped by authenticated actor, command family, and target identity. Exact typed
+content, including collection order and expected versions/revisions, determines
+whether a retry is identical. IDs and values are not normalized.
+
+**Consequence:** B-003 supplies typed lookup keys and success envelopes. M1
+domain commands validate token bounds. B-005/B-007 must use the shared scoped
+lookup before domain acceptance; the provisional worker remains unchanged.
+
 ## How to change a decision
 
 

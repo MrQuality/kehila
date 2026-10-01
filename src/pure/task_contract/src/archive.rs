@@ -133,7 +133,7 @@ pub fn decide_project_archive_command(
     {
         return Reject(E::InvalidConfiguration);
     }
-    if command.operation_id.is_empty() {
+    if !crate::operation::valid_operation_id(&command.operation_id) {
         return Reject(E::InvalidOperation);
     }
     match decide_project_archive(project, command.action) {
@@ -229,7 +229,7 @@ pub fn decide_item_archive(
     if configuration.project_archived {
         return Reject(E::ArchivedProject);
     }
-    if command.operation_id.is_empty()
+    if !crate::operation::valid_operation_id(&command.operation_id)
         || item.archived == (command.action == ArchiveAction::Archive)
     {
         return Reject(E::InvalidOperation);

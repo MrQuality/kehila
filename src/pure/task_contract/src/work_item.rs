@@ -464,7 +464,7 @@ pub fn decide(
     if item.archived {
         return Decision::Reject(Error::ArchivedTarget);
     }
-    if command.operation_id.is_empty() {
+    if !crate::operation::valid_operation_id(&command.operation_id) {
         return Decision::Reject(Error::InvalidOperation);
     }
 

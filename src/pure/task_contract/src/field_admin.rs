@@ -89,7 +89,7 @@ pub fn decide_option_admin(
     if configuration.project_archived {
         return Reject(E::ArchivedProject);
     }
-    if command.operation_id.is_empty() {
+    if !crate::operation::valid_operation_id(&command.operation_id) {
         return Reject(E::InvalidOperation);
     }
     let mut next = configuration.clone();

@@ -90,7 +90,7 @@ pub fn decide_follow_up(
             Reject(E::OperationIdReused)
         };
     }
-    if command.operation_id.is_empty() || command.id.0.is_empty() {
+    if !crate::operation::valid_operation_id(&command.operation_id) || command.id.0.is_empty() {
         return Reject(E::InvalidOperation);
     }
     if source.item != command.source

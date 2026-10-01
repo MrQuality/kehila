@@ -78,7 +78,7 @@ pub fn decide_selection_command(
             Reject(SelectionError::OperationIdReused)
         };
     }
-    if command.operation_id.is_empty() {
+    if !crate::operation::valid_operation_id(&command.operation_id) {
         return Reject(SelectionError::InvalidOperation);
     }
     if requested.map(Endpoint::identity) != command.requested {

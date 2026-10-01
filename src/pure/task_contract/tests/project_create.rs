@@ -146,3 +146,20 @@ fn creation_rejects_invalid_identity_operation_name_and_prefix() {
         );
     }
 }
+
+#[test]
+fn creation_applies_shared_operation_token_bounds() {
+    let mut request = command();
+    request.operation_id = "x".repeat(128);
+    assert!(matches!(
+        decide_project_create(false, None, true, &request),
+        ProjectCreateDecision::Apply(_)
+    ));
+    for token in ["x".repeat(129), "a b".into(), "é".into()] {
+        request.operation_id = token;
+        assert_eq!(
+            decide_project_create(false, None, true, &request),
+            ProjectCreateDecision::Reject(ProjectCreateError::InvalidOperation)
+        );
+    }
+}

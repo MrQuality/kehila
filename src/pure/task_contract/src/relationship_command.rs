@@ -117,7 +117,9 @@ pub fn decide_create_relationship(
             current_version: to.item_version,
         });
     }
-    if command.operation_id.is_empty() || command.relationship_id.0.is_empty() {
+    if !crate::operation::valid_operation_id(&command.operation_id)
+        || command.relationship_id.0.is_empty()
+    {
         return Reject(E::InvalidOperation);
     }
     if from.configuration_revision == 0

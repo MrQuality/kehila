@@ -159,7 +159,8 @@ pub fn decide_create(
     if project.archived || configuration.project_archived {
         return Reject(E::ArchivedProject);
     }
-    if command.operation_id.is_empty() || command.item_id.0.is_empty() {
+    if !crate::operation::valid_operation_id(&command.operation_id) || command.item_id.0.is_empty()
+    {
         return Reject(E::InvalidOperation);
     }
     if !within_field_payload_limit(
@@ -287,7 +288,7 @@ pub fn decide_edit(
     if item.archived {
         return Reject(E::ArchivedItem);
     }
-    if command.operation_id.is_empty() {
+    if !crate::operation::valid_operation_id(&command.operation_id) {
         return Reject(E::InvalidOperation);
     }
     if !within_field_payload_limit(

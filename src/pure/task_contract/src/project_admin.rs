@@ -72,7 +72,7 @@ pub fn decide_project_metadata(
             current_revision: project.configuration_revision,
         });
     }
-    if command.operation_id.is_empty() {
+    if !crate::operation::valid_operation_id(&command.operation_id) {
         return Reject(E::InvalidOperation);
     }
     if command.project_id != project.id

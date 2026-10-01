@@ -113,7 +113,9 @@ pub fn decide_knowledge(
             Reject(E::OperationIdReused)
         };
     }
-    if command.operation_id.is_empty() || command.actor_id.trim().is_empty() {
+    if !crate::operation::valid_operation_id(&command.operation_id)
+        || command.actor_id.trim().is_empty()
+    {
         return Reject(E::InvalidOperation);
     }
     if command.entry_id.0.is_empty() || command.item != snapshot.item || snapshot.item_version == 0

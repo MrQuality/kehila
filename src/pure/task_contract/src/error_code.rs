@@ -13,6 +13,7 @@ use crate::follow_up::FollowUpError;
 use crate::item_mutation::ItemMutationError;
 use crate::knowledge::KnowledgeError;
 use crate::knowledge_command::KnowledgeError as KnowledgeCommandError;
+use crate::operation::OperationError;
 use crate::project::ProjectError;
 use crate::project_admin::ProjectMetadataError;
 use crate::project_create::ProjectCreateError;
@@ -119,6 +120,17 @@ impl Code {
 
 pub trait StableCode {
     fn code(&self) -> Code;
+}
+
+impl StableCode for OperationError {
+    fn code(&self) -> Code {
+        match self {
+            Self::Unauthorized => Code::Unauthorized,
+            Self::InvalidReference => Code::InvalidReference,
+            Self::InvalidOperation => Code::InvalidOperation,
+            Self::OperationIdReused => Code::OperationIdReused,
+        }
+    }
 }
 
 impl StableCode for ProjectCreateError {
