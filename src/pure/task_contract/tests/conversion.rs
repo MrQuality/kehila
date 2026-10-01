@@ -124,6 +124,60 @@ fn conversion_rejects_oversized_destination_payload() {
 }
 
 #[test]
+fn conversion_checks_fresh_versions_live_targets_and_operation_identity() {
+    let configuration = config();
+    let source = item("active");
+    let mut request = command("active");
+    request.expected_configuration_revision -= 1;
+    assert_eq!(
+        decide_conversion(&configuration, &source, &[], None, true, true, &request),
+        ConversionDecision::Reject(ConversionError::ConfigurationConflict {
+            current_revision: 4
+        })
+    );
+    request = command("active");
+    request.expected_item_version -= 1;
+    assert_eq!(
+        decide_conversion(&configuration, &source, &[], None, true, true, &request),
+        ConversionDecision::Reject(ConversionError::ItemVersionConflict { current_version: 2 })
+    );
+    request = command("active");
+    request.operation_id.clear();
+    assert_eq!(
+        decide_conversion(&configuration, &source, &[], None, true, true, &request),
+        ConversionDecision::Reject(ConversionError::InvalidOperation)
+    );
+    let mut archived_project = configuration.clone();
+    archived_project.project_archived = true;
+    assert_eq!(
+        decide_conversion(
+            &archived_project,
+            &source,
+            &[],
+            None,
+            true,
+            true,
+            &command("active")
+        ),
+        ConversionDecision::Reject(ConversionError::ArchivedProject)
+    );
+    let mut archived_item = source;
+    archived_item.archived = true;
+    assert_eq!(
+        decide_conversion(
+            &configuration,
+            &archived_item,
+            &[],
+            None,
+            true,
+            true,
+            &command("active")
+        ),
+        ConversionDecision::Reject(ConversionError::ArchivedItem)
+    );
+}
+
+#[test]
 fn conversion_requires_a_complete_compatible_destination_and_migration_permission() {
     let config = config();
     let source = item("active");

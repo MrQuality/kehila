@@ -101,6 +101,12 @@ fn origin_is_single_parent_and_cannot_cycle() {
         ),
         FollowUpDecision::Reject(FollowUpError::Cycle)
     );
+    let mut self_origin = cmd.clone();
+    self_origin.follow_up = self_origin.source.clone();
+    assert_eq!(
+        decide_follow_up(&source, &source, allowed, None, &[], None, &self_origin),
+        FollowUpDecision::Reject(FollowUpError::SelfOrigin)
+    );
 }
 
 #[test]

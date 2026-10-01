@@ -47,11 +47,12 @@ pure B-003 status/workflow command rules. The latter test configuration
 references, phase derivation, migration restrictions, archival targets, stale
 versions, and replay order; they do not establish persistence or concurrency.
 Pure project-rule tests cover archive access effects, project-local readable ID
-allocation across prefix changes, exact estimate parsing and unit locking, and
+allocation, exact estimate parsing and the monotonic unit-lock flag, and
 the populated-field kind-change rule. Their cross-record storage effects are
 still unverified.
-Project metadata command tests cover one coordinated revision, name and unit
-validation, estimate-unit locking, and replay precedence. Atomic persistence
+Project metadata command tests cover one coordinated revision, issued IDs across
+prefix changes, name and unit validation, estimate-unit locking, stale and
+archived state, and replay precedence. Atomic persistence
 is B-005 work.
 Pure field-rule tests cover hidden value preservation, optional/required
 validation, typed values and WorkItem type ownership, choice-option archival,
@@ -113,8 +114,21 @@ retaining old assignments while blocking new ones, restoration, invalid names,
 duplicate IDs, revision conflicts, and replay. Concurrent configuration and
 item writes remain a B-005 integration check.
 Pure error-code tests cover shared conflicts across commands, nested field and
-project failures, and distinct selection/relationship codes. API status and
+project failures, distinct selection/relationship codes, and every stable wire
+string. API status and
 message mappings remain unverified.
+
+Critical B-003 scenarios have direct pure test anchors:
+
+| Contract scenario | Pure test file | Downstream evidence still required |
+| --- | --- | --- |
+| BC-19, BC-37 estimate-unit lock and metadata revision | `src/pure/task_contract/tests/project_admin.rs`, `project_rules.rs` | B-005 concurrent first estimate versus unit change |
+| BC-23, BC-28 field kind and historical use | `src/pure/task_contract/tests/configuration_change.rs`, `configuration_fields.rs` | B-005 authoritative usage and item snapshots |
+| BC-32 configuration replay and revision | `src/pure/task_contract/tests/configuration_change.rs` | B-005 durable history and atomic commit |
+| BC-34 follow-up origin | `src/pure/task_contract/tests/follow_up.rs` | B-005 atomic ancestry and B-007 grants |
+| BC-36 configuration and option limits | `src/pure/task_contract/tests/configuration_change.rs`, `option_admin.rs` | B-004/B-006 encoded-body limits |
+
+This mapping identifies pure checks; it does not claim service-level acceptance.
 
 Integration tests use the development NATS server to check its greeting, connection handshake,
 and request/response behavior. The Python probe also checks the JetStream account

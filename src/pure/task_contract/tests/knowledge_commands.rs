@@ -209,3 +209,85 @@ fn commands_reject_wrong_value_kind_and_archived_targets() {
         Code::KnowledgeVersionConflict
     );
 }
+
+#[test]
+fn create_rejects_stale_item_and_existing_entry() {
+    let create = command(KnowledgeAction::Create {
+        expected_item_version: 2,
+        kind: KnowledgeKind::Decision,
+        value: KnowledgeValue::Text("decision".into()),
+    });
+    let mut snapshot = KnowledgeSnapshot {
+        item: item(),
+        item_version: 3,
+        project_archived: false,
+        item_archived: false,
+        entry: None,
+        history: vec![],
+    };
+    assert_eq!(
+        decide_knowledge(&snapshot, KnowledgeAuthorization::allowed(), None, &create),
+        KnowledgeDecision::Reject(KnowledgeError::ItemVersionConflict { current_version: 3 })
+    );
+    let mut fresh = create;
+    fresh.action = KnowledgeAction::Create {
+        expected_item_version: 3,
+        kind: KnowledgeKind::Decision,
+        value: KnowledgeValue::Text("decision".into()),
+    };
+    snapshot.entry = Some(KnowledgeEntry {
+        id: KnowledgeEntryId("entry".into()),
+        item: item(),
+        kind: KnowledgeKind::Decision,
+        value: KnowledgeValue::Text("earlier".into()),
+        version: 1,
+    });
+    assert_eq!(
+        decide_knowledge(&snapshot, KnowledgeAuthorization::allowed(), None, &fresh),
+        KnowledgeDecision::Reject(KnowledgeError::AlreadyExists)
+    );
+}
+
+#[test]
+fn edit_rejects_noop_and_exhausted_entry_version() {
+    let mut snapshot = KnowledgeSnapshot {
+        item: item(),
+        item_version: 3,
+        project_archived: false,
+        item_archived: false,
+        entry: Some(KnowledgeEntry {
+            id: KnowledgeEntryId("entry".into()),
+            item: item(),
+            kind: KnowledgeKind::Lesson,
+            value: KnowledgeValue::Text("same".into()),
+            version: 1,
+        }),
+        history: vec![task_contract::knowledge_command::KnowledgeRevision {
+            version: 1,
+            actor_id: "actor".into(),
+            value: KnowledgeValue::Text("same".into()),
+        }],
+    };
+    let edit = command(KnowledgeAction::Edit {
+        expected_entry_version: 1,
+        value: KnowledgeValue::Text("same".into()),
+    });
+    assert_eq!(
+        decide_knowledge(&snapshot, KnowledgeAuthorization::allowed(), None, &edit),
+        KnowledgeDecision::Reject(KnowledgeError::InvalidOperation)
+    );
+    snapshot.entry.as_mut().unwrap().version = i64::MAX;
+    let exhausted = command(KnowledgeAction::Edit {
+        expected_entry_version: i64::MAX,
+        value: KnowledgeValue::Text("different".into()),
+    });
+    assert_eq!(
+        decide_knowledge(
+            &snapshot,
+            KnowledgeAuthorization::allowed(),
+            None,
+            &exhausted
+        ),
+        KnowledgeDecision::Reject(KnowledgeError::VersionExhausted)
+    );
+}

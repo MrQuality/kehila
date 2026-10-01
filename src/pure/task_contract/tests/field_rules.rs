@@ -198,10 +198,56 @@ fn dates_validate_calendar_boundaries() {
     assert_eq!(CivilDate::new(2024, 2, 29).unwrap().day, 29);
     assert_eq!(CivilDate::new(2023, 2, 29), Err(FieldError::InvalidDate));
     assert_eq!(CivilDate::new(2026, 13, 1), Err(FieldError::InvalidDate));
+    for month in [4, 6, 9, 11] {
+        assert_eq!(
+            CivilDate::new(2026, month, 31),
+            Err(FieldError::InvalidDate)
+        );
+        assert!(CivilDate::new(2026, month, 30).is_ok());
+    }
     assert!(CivilDate::new(1, 1, 1).is_ok());
     assert!(CivilDate::new(9999, 12, 31).is_ok());
     assert_eq!(CivilDate::new(0, 1, 1), Err(FieldError::InvalidDate));
     assert_eq!(CivilDate::new(10000, 1, 1), Err(FieldError::InvalidDate));
+}
+
+#[test]
+fn boolean_and_date_values_follow_their_field_kind() {
+    let mut field = text_field(FieldUsage::Optional);
+    field.kind = FieldKind::Boolean;
+    assert_eq!(
+        apply_edit(
+            &field,
+            &field.owner_type,
+            None,
+            FieldEdit::Set(FieldValue::Boolean(false))
+        ),
+        Ok(Some(FieldValue::Boolean(false)))
+    );
+    field.kind = FieldKind::Date;
+    let date = CivilDate::new(2026, 9, 30).unwrap();
+    assert_eq!(
+        apply_edit(
+            &field,
+            &field.owner_type,
+            None,
+            FieldEdit::Set(FieldValue::Date(date))
+        ),
+        Ok(Some(FieldValue::Date(date)))
+    );
+    assert_eq!(
+        apply_edit(
+            &field,
+            &field.owner_type,
+            None,
+            FieldEdit::Set(FieldValue::Date(CivilDate {
+                year: 2026,
+                month: 9,
+                day: 31,
+            }))
+        ),
+        Err(FieldError::InvalidDate)
+    );
 }
 
 #[test]
