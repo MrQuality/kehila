@@ -45,6 +45,7 @@ fn config() -> Configuration {
             owner_type: WorkItemTypeId("task".into()),
             name: "Priority".into(),
             kind: FieldKind::SingleChoice,
+            origin: task_contract::field::FieldOrigin::Project,
             usage: FieldUsage::Optional,
             archived: false,
             options: vec![ChoiceOption {

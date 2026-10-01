@@ -26,6 +26,12 @@ pub enum FieldUsage {
     Required,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FieldOrigin {
+    Application,
+    Project,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ChoiceOption {
     pub id: OptionId,
@@ -39,6 +45,7 @@ pub struct FieldDefinition {
     pub owner_type: WorkItemTypeId,
     pub name: String,
     pub kind: FieldKind,
+    pub origin: FieldOrigin,
     pub usage: FieldUsage,
     pub archived: bool,
     pub options: Vec<ChoiceOption>,

@@ -86,6 +86,7 @@ fn definitions() -> Vec<FieldDefinition> {
         owner_type: WorkItemTypeId("milestone".into()),
         name: "Goal".into(),
         kind: FieldKind::Text,
+        origin: task_contract::field::FieldOrigin::Project,
         usage: FieldUsage::Required,
         archived: false,
         options: vec![],

@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use crate::field::{apply_edit, FieldEdit, FieldEntry, FieldId, FieldUsage};
+use crate::field::{apply_edit, FieldEdit, FieldEntry, FieldId, FieldOrigin, FieldUsage};
 use crate::relationship::RelationshipTypeId;
 use crate::work_item::{Configuration, WorkItem, WorkItemId};
 
@@ -171,6 +171,12 @@ pub fn validate_change(
             .fields
             .iter()
             .find(|field| field.id == old_field.id);
+        if old_field.origin == FieldOrigin::Application
+            && !matches!(new_field, Some(field) if field.origin == FieldOrigin::Application
+                && !field.archived && field.kind == old_field.kind)
+        {
+            return Err(ConfigurationChangeError::InvalidConfiguration);
+        }
         let changes_historical_kind = match new_field {
             Some(field) => field.kind != old_field.kind,
             None => true,
@@ -181,7 +187,7 @@ pub fn validate_change(
             });
         }
         if let Some(field) = new_field {
-            if field.owner_type != old_field.owner_type {
+            if field.owner_type != old_field.owner_type || field.origin != old_field.origin {
                 return Err(ConfigurationChangeError::InvalidConfiguration);
             }
             if field.kind == old_field.kind && !old_field.options.is_empty() {
@@ -196,6 +202,12 @@ pub fn validate_change(
                 }
             }
         }
+    }
+    if proposed.fields.iter().any(|field| {
+        field.origin == FieldOrigin::Application
+            && !previous.fields.iter().any(|old| old.id == field.id)
+    }) {
+        return Err(ConfigurationChangeError::InvalidConfiguration);
     }
     for snapshot_item in &snapshot.items {
         let item = &snapshot_item.item;

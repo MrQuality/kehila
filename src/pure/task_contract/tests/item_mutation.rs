@@ -19,6 +19,7 @@ fn field(id: &str, usage: FieldUsage) -> FieldDefinition {
         owner_type: WorkItemTypeId("task".into()),
         name: id.into(),
         kind: FieldKind::Text,
+        origin: task_contract::field::FieldOrigin::Project,
         usage,
         archived: false,
         options: vec![],

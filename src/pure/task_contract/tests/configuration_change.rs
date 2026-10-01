@@ -4,8 +4,98 @@ use task_contract::configuration_change::{
     SuccessfulConfigurationChange,
 };
 use task_contract::field::{
-    ChoiceOption, FieldDefinition, FieldEntry, FieldId, FieldKind, FieldUsage, FieldValue, OptionId,
+    ChoiceOption, FieldDefinition, FieldEntry, FieldId, FieldKind, FieldOrigin, FieldUsage,
+    FieldValue, OptionId,
 };
+
+#[test]
+fn application_field_cannot_be_removed_archived_or_retyped() {
+    let mut previous = config();
+    let mut builtin = field(FieldUsage::Optional);
+    builtin.origin = FieldOrigin::Application;
+    previous.fields.push(builtin);
+    let mut proposed = next(&previous);
+    proposed.fields.clear();
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Err(ConfigurationChangeError::InvalidConfiguration)
+    );
+    proposed = next(&previous);
+    proposed.fields[0].archived = true;
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Err(ConfigurationChangeError::InvalidConfiguration)
+    );
+    proposed = next(&previous);
+    proposed.fields[0].kind = FieldKind::Number;
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Err(ConfigurationChangeError::InvalidConfiguration)
+    );
+    proposed = next(&previous);
+    proposed.fields[0].usage = FieldUsage::Hidden;
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
+}
+
+#[test]
+fn configuration_revision_cannot_change_field_origin_or_claim_a_new_application_field() {
+    let mut previous = config();
+    previous.fields.push(field(FieldUsage::Optional));
+    let mut proposed = next(&previous);
+    proposed.fields[0].origin = FieldOrigin::Application;
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Err(ConfigurationChangeError::InvalidConfiguration)
+    );
+    proposed = next(&previous);
+    let mut new_field = field(FieldUsage::Optional);
+    new_field.id = FieldId("new".into());
+    new_field.origin = FieldOrigin::Application;
+    proposed.fields.push(new_field);
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Err(ConfigurationChangeError::InvalidConfiguration)
+    );
+}
 use task_contract::relationship::{Direction, RelationshipType, RelationshipTypeId};
 use task_contract::work_item::{
     Configuration, Phase, ProjectId, Status, StatusGroup, StatusGroupId, StatusId, WorkItem,
@@ -133,6 +223,7 @@ fn field(usage: FieldUsage) -> FieldDefinition {
         owner_type: WorkItemTypeId("task".into()),
         name: "Summary".into(),
         kind: FieldKind::Text,
+        origin: task_contract::field::FieldOrigin::Project,
         usage,
         archived: false,
         options: vec![],
@@ -304,6 +395,7 @@ fn complete_configuration_has_count_and_utf8_text_budgets() {
             owner_type: WorkItemTypeId("task".into()),
             name: "Choice".into(),
             kind: FieldKind::SingleChoice,
+            origin: FieldOrigin::Project,
             usage: FieldUsage::Optional,
             archived: false,
             options: (0..256)

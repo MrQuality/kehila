@@ -169,7 +169,7 @@ HTTP routes, serialization, or Rust inheritance.
 | Project | Stable identity, name, readable identifier prefix, estimate unit, configuration revision, archival state. |
 | Project configuration revision | A coherent set of field definitions, type/workflow permissions, workflow membership, type default workflows, initial statuses, status groups, transition restrictions, and project-owned relationship types. Each type may identify a text field for display title. |
 | Work item | Stable identity, project and type references, workflow/status references, item version; phase derived from status. |
-| Field definition | Stable identity, owning type, value kind, and validation constraints; display names are not identity. Once values exist, change of value kind is rejected; migrate to a new field and archive the old one. |
+| Field definition | Stable identity, owning type, application or project origin, value kind, and validation constraints; display names are not identity. Once values exist, change of value kind is rejected; migrate to a new field and archive the old one. |
 | Status | Stable project-scoped identity and phase mapping, display name, optional status-group reference, and archival state. Display metadata is separate from identity. |
 | Status group | Stable project-scoped identity, display name, and archival state; membership is held by statuses and has no lifecycle effect. |
 | Workflow | Project-scoped status membership, initial status, and phase-transition restrictions. |
@@ -433,9 +433,14 @@ field ends its active required-value obligation without deleting old values.
 A field's owning WorkItem type cannot change. Once a field ID has appeared in
 accepted history, changing its value kind or removing its definition is
 rejected; create a new field, migrate values, and archive the old definition.
-An unused field may change kind or be removed. Renaming is independent of
-identity. The authoritative snapshot must be checked and protected through
-commit, including concurrent changes to item values and historical use.
+An unused project-defined field may change kind or be removed. An
+application-defined field cannot be removed, archived, or retyped through a
+project configuration revision; it may be hidden. A revision cannot relabel a
+field's origin or introduce a new application-defined field. Application
+installation or upgrade supplies those definitions through a separate trusted
+path. Renaming is independent of identity. The authoritative snapshot must be
+checked and protected through commit, including concurrent changes to item
+values and historical use.
 
 These pure checks cover BC-02, BC-07, BC-08, BC-23, and the in-use status policy in issue
 #7. The item set must be authoritative and protected from concurrent writes
