@@ -65,9 +65,11 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 
 **Question:** Is an hour-based task estimate independent of resource requirements, derived from driving resources, or something else? What should happen when they disagree? How does a point-estimated task acquire resource demand for scheduling?
 
-**Known:** Projects select hours or points, and YAJA uses hours. The relationship between task estimates and resource demand remains unresolved. There is no defined points-to-hours conversion.
+**Accepted direction:** Projects select hours or points, and YAJA uses hours. A task estimate is an independent planning quantity; resource demand is recorded separately. There is no implicit points-to-hours conversion or aggregation of heterogeneous resource-hours into a task estimate. See [D-018](decisions.md#d-018).
 
-**Blocks:** Estimate semantics in [B-003](backlog.md#b-003)/[B-004](backlog.md#b-004), scheduling in [B-015](backlog.md#b-015). Status/phase logic can proceed independently.
+**Further resolution, 2026-09-29:** [D-019](decisions.md#d-019) selects exact nonnegative decimals, distinguishes zero from absence, and prohibits M1 project-unit changes after the first recorded estimate. [D-021](decisions.md#d-021) fixes M1 precision and bounds. **Remaining outside B-003:** Detailed resource-demand input for scheduling. See C-08 in the [B-003 contract](B-003-contract.md).
+
+**Blocks:** Estimate implementation in [B-004](backlog.md#b-004) and scheduling in [B-015](backlog.md#b-015). B-003 estimate semantics are resolved.
 
 <a id="q-007"></a>
 ## Q-007 — Sprint membership and boundary behavior
@@ -87,9 +89,69 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 
 **Known:** New/Active/Done are system phases; phase derives from status. Done → Active has explicit reopening rules. A complete hierarchy, transition-permission matrix, or cancellation state was not agreed.
 
-**Proposed M1 baseline, pending contract review:** Project identity, name, estimation unit, and configurable statuses; task identity, project, title, description, optional estimate, status reference, and version; structured knowledge entries and follow-up origin links; explicit current-work selection independent of Active. Use stable status IDs; permit renaming but initially block deletion of referenced statuses and changes to their phase mapping. Specify reopening and other transitions; leave unresolved transitions unavailable. Finalize this model before a durable record format is committed. M1 includes knowledge and follow-ups; the first release still includes sprint, Gantt, resource, and scheduling commitments.
+**Historical proposed M1 baseline, superseded by the resolved contract below:** Project identity, name, estimation unit, and configurable statuses; task identity, project, title, description, optional estimate, status reference, and version; structured knowledge entries and follow-up origin links; explicit current-work selection independent of Active. Use stable status IDs; permit renaming but initially block deletion of referenced statuses and changes to their phase mapping. Specify reopening and other transitions; leave unresolved transitions unavailable. Finalize this model before a durable record format is committed. M1 includes knowledge and follow-ups; the first release still includes sprint, Gantt, resource, and scheduling commitments.
 
-**Blocks:** [B-003](backlog.md#b-003), [B-004](backlog.md#b-004), parts of [B-011](backlog.md#b-011).
+**Blocks:** Implementation in [B-004](backlog.md#b-004) and parts of [B-011](backlog.md#b-011). B-003 is resolved below.
+
+**Contract review started, 2026-09-29:** [D-018](decisions.md#d-018) accepts
+configuration revision consistency, complete destination validation for
+conversion, mandatory preservation of knowledge/provenance/lifecycle history,
+archival reference protections, and system phase enforcement across migration
+and conversion. Done to New is prohibited. The earlier M1 baseline above remains
+historical proposal context, not a finalized record format. The
+[B-003 contract review](B-003-contract.md) records review areas C-01 through C-10.
+**Further resolution, 2026-09-29:** [D-019](decisions.md#d-019) accepts all ten
+resolutions, retaining the full configurable model in M1 and splitting its
+implementation. Scenarios BC-01 through BC-20 specify acceptance. Q-008 remains
+open for exact value/identity limits, project archival details, field-definition
+evolution, complete typed commands/errors, and contract checks; the accepted
+review decisions are not pending reconfirmation.
+
+**Further resolution, 2026-09-30:** [D-020](decisions.md#d-020) fixes project
+archival and restoration effects, preserves issued readable IDs across prefix
+changes, and rejects in-place value-kind changes for populated fields. The
+[contract review](B-003-contract.md) adds BC-21 through BC-23. Q-008 remains
+open for complete typed commands and remaining administration/checks.
+
+**Contract progress, 2026-10-01:** [D-025](decisions.md#d-025) through
+[D-029](decisions.md#d-029) resolve retained archived conversion references,
+source-snapshot validation, required-choice feasibility, delegated status
+administration, and trusted project initialization. These have typed pure
+checks. [D-031](decisions.md#d-031) specifies group archival and identity retention.
+Operation identity, replay authorization, and expiry have typed enforcement in
+[D-032](decisions.md#d-032) through [D-034](decisions.md#d-034). The B-003 contract
+is ready for final maintainer review; physical storage, fingerprint codecs,
+transport, and access integration remain downstream work.
+[D-030](decisions.md#d-030) counts all retained active and archived definitions
+against the configuration limits; archival does not free capacity.
+**Further resolution, 2026-09-30:** [D-021](decisions.md#d-021) fixes the
+project-scoped readable-ID lookup policy and M1 value limits.
+**Further resolution, 2026-09-30:** [D-022](decisions.md#d-022) fixes the full
+M1 phase graph and relationship-type ownership. Q-008 remains open for the
+remaining typed command and representation details in B-003.
+**Contract progress, 2026-09-30:** [B-003](B-003-contract.md) now requires a
+complete item-value and historical-field-use snapshot for configuration edits.
+The pure rule checks required-field changes and rejects kind reinterpretation
+or removal after historical use; B-005 must enforce snapshot completeness and
+commit-time consistency.
+**Further resolution, 2026-09-30:** [D-023](decisions.md#d-023) fixes the M1
+item create/edit/conversion field payload limit at 128 entries and 1 MiB of
+supplied text. Later B-003 work fixed the remaining logical command bounds;
+encoded transport limits remain B-004/B-006 work.
+**Contract progress, 2026-09-30:** [B-003](B-003-contract.md) now has a typed
+cross-project relationship creation command with expected project revisions
+and item versions on both endpoints. B-005 still must demonstrate commit-time
+coordination across those records.
+**Contract progress, 2026-09-30:** [B-003](B-003-contract.md) now returns
+matching Project/Configuration archive state and versioned current-work
+selection clears. B-005 still must prove complete selection discovery and
+atomic commit under concurrent selection changes.
+**B-003 resolution, 2026-09-30:** [D-024](decisions.md#d-024) and the
+[completed typed contract](B-003-contract.md) fix knowledge and follow-up
+representation, project and relationship administration, logical payloads,
+error precedence, and pure acceptance checks. Q-008 no longer blocks B-003.
+Durable mapping and contention proofs belong to B-005; access enforcement to
+B-007; transport and application behavior to B-004/B-006.
 
 <a id="q-009"></a>
 ## Q-009 — Scheduling demand, windows, and multiple drivers
@@ -147,6 +209,12 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 
 **Known:** Project administrators define statuses, and scheduling overrides require permission, including in local deployments. Task-specific driver overrides remain an open proposal.
 
+**Further resolution, 2026-09-30:** [D-022](decisions.md#d-022) fixes link
+creation grants: type use in its owning project and Link on each endpoint item.
+Type administration requires project configuration permission in the owner
+project. B-007 still defines grant assignment, revocation, and enforcement;
+the other permissions in this question remain open.
+
 **Blocks:** [B-007](backlog.md#b-007), permissions in [B-008](backlog.md#b-008)/[B-012](backlog.md#b-012)/[B-016](backlog.md#b-016).
 
 <a id="q-015"></a>
@@ -161,11 +229,12 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 <a id="q-016"></a>
 ## Q-016 — Knowledge and file-reference structure
 
-**Question:** Separate entry types or a structured task note? Are created files stored as repository paths, commit links, attachments, or another reference? Who can edit entries and is revision history needed? Can a follow-up belong to another project?
+**Resolution, 2026-09-30:** [D-024](decisions.md#d-024) selects separate typed entries, labeled external file references, versioned edits retaining prior versions, and cross-project follow-ups with Link grants on both items. Entry edit authorization and precise command boundaries are specified by B-003.
 
 **Known:** All five knowledge categories in R-005 are required and manual entry is sufficient. File upload, automatic scanning, and commit integration are not implied.
 
-**Blocks:** Knowledge implementation in [B-004](backlog.md#b-004).
+**Status:** Resolved for M1 in [D-024](decisions.md#d-024) and the
+[B-003 command contract](B-003-contract.md#knowledge-value-contract).
 
 <a id="q-017"></a>
 ## Q-017 — Usage corrections, overrun, and timers
@@ -192,13 +261,19 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 
 **Known:** The v0.2 design forbids multi-document transactions and proposes asynchronous sagas. Completion/reopening spans multiple kinds of records. Simply updating them one after another without a recovery design would not establish the agreed behavior.
 
+The accepted B-003 archive contract also requires an item or project archive,
+all affected current-work selection clears, and its success record to appear
+as one accepted result. The pure decision specifies that result but does not
+choose a physical consistency protocol. B-005/M1-01 must demonstrate it before
+archival routes are exposed.
+
 **Next evidence:** Specify stable operation identities, observable intermediate/failure states, and recovery behavior; verify them against actual services. These are engineering proposals, not prescribed database tables or a chosen algorithm.
 
 **Evidence boundary:** [SP-001's design handoff](../../experiments/SP-001/README.md#design-handoff)
 identifies prerequisites for reservation/cost ledgers and compensating actions.
 Its passing single-task cases do not settle cross-document consistency.
 
-**Blocks:** Architecture disposition in [B-002](backlog.md#b-002), integrated [B-011](backlog.md#b-011)/[B-012](backlog.md#b-012).
+**Blocks:** Archive/selection storage coordination in [B-005](backlog.md#b-005)/M1-01, architecture disposition in [B-002](backlog.md#b-002), and integrated [B-011](backlog.md#b-011)/[B-012](backlog.md#b-012).
 
 <a id="q-020"></a>
 ## Q-020 — Local durability and recovery objectives

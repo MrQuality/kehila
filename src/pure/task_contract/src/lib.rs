@@ -1,5 +1,25 @@
 //! Single-task mutation rules, independent of persistence and HTTP.
 
+pub mod archive;
+pub mod configuration_change;
+pub mod conversion;
+pub mod current_work;
+pub mod error_code;
+pub mod field;
+pub mod field_admin;
+pub mod follow_up;
+pub mod item_mutation;
+pub mod knowledge;
+pub mod knowledge_command;
+pub mod operation;
+pub mod payload;
+pub mod project;
+pub mod project_admin;
+pub mod project_create;
+pub mod relationship;
+pub mod relationship_command;
+pub mod work_item;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Mutation {
     pub operation_id: String,

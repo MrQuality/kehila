@@ -5,8 +5,10 @@
 
 YAJA is an open-source project management system in early development, designed
 around custom fields and real-time updates. This repository currently contains
-a Rust query parser, NATS connection checks, and shared synchronization types.
-There is no runnable web application yet.
+a Rust query parser, NATS connection checks, a bounded Go-to-Rust task path,
+shared synchronization types, and pure rules for the planned configurable
+project and WorkItem model. There is no application UI or supported installation
+yet; the configurable model is not wired into the task worker.
 
 ## Current components
 
@@ -15,6 +17,8 @@ There is no runnable web application yet.
 | Rust query parser | Parses a single equality filter, such as `status = 'Open'` |
 | Rust NATS connection | Connects to a broker and checks protocol round trips |
 | Go synchronization rules | Checks whether a query can run at the current schema version |
+| Go API and Rust task worker | Experimental local task save/read boundary with versioned replay against development storage; no supported application API yet |
+| Rust project and WorkItem contract | Pure typed rules for seeded project creation, delegated status administration, configuration, fields, conversion, current selection, estimates, knowledge, relationships, provenance, and scoped replay/expiry with tombstones; not connected to the worker |
 | TypeScript contracts | Shared type declarations; no JavaScript runtime |
 | Development services | PostgreSQL, FerretDB, OpenSearch, and NATS in Compose |
 
@@ -26,6 +30,10 @@ The [product plan](docs/product/README.md) records the agreed
 requirements for local task tracking, shared resources, scheduling, and costs.
 It includes decisions, open questions, and a requirement-linked implementation
 backlog. Planned capabilities are not claims of currently available features.
+The [B-003 contract](docs/product/B-003-contract.md) records the accepted
+project and WorkItem rules and their pure checks. The
+[M1 slices](docs/product/backlog.md#m1-configurable-model) track storage, access,
+API, and interface implementation of that model.
 
 ## Development setup
 
@@ -87,8 +95,8 @@ policy](docs/BRANDING.md) for terminology and compatibility claims.
 
 The planned application uses a Go API, Rust workers, PostgreSQL through FerretDB,
 NATS for events, and OpenSearch for search. A shared Rust compiler will support
-server queries and browser-side evaluation. The API, UI, change-data-capture
-pipeline, and full query compiler remain to be implemented.
+server queries and browser-side evaluation. The full application API, UI,
+change-data-capture pipeline, and query compiler remain to be implemented.
 
 The [v0.2 design](docs/reference/YAJA-v0.2.md) describes the target architecture
 and proposed contracts. It is a design reference, not a list of shipped features.
@@ -101,7 +109,9 @@ Use the [project procedure index](docs/procedures/README.md) to find SOPs,
 their approval status, and their enforcement coverage.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution requirements and
-[docs/TESTING.md](docs/TESTING.md) for test commands. Report vulnerabilities as
+[docs/TESTING.md](docs/TESTING.md) for test commands and the
+[test strategy](docs/TEST_STRATEGY.md) for the longer-term quality approach.
+Report vulnerabilities as
 described in [SECURITY.md](SECURITY.md).
 
 Code is licensed under Apache-2.0. The Code of Conduct retains its upstream

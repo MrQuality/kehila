@@ -1,7 +1,8 @@
 # YAJA spike procedure and register
 
-Status: approved procedure, version 1, 2026-09-25. The project maintainer
-approved this version on 2026-09-25 for initial use with manual checks. Use the
+Status: approved procedure, version 1, 2026-09-25. The
+[project maintainer](../../CONTRIBUTING.md#repository-roles) approved this
+version on 2026-09-25 for initial use with manual checks. Use the
 first spike to assess the template and propose revisions if needed. This
 approval does not approve architecture changes.
 

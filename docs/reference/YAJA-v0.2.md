@@ -1,6 +1,12 @@
 Version: 0.2
 # YAJA — Project and task management — Technical Specification
 
+This historical architecture reference predates the accepted product contracts.
+For project and WorkItem identity, configuration, workflow, knowledge, access
+inputs, and mutation rules, follow the [B-003 contract](../product/B-003-contract.md)
+and [decisions](../product/decisions.md). The structures and flows illustrated
+below are design context, not the current typed contract or implemented M1 API.
+
 Query terminology in this design refers to YAJA's own grammar, not a claim of
 third-party query-language compatibility. The current parser supports only a
 single equality filter; see the [naming policy](../BRANDING.md).

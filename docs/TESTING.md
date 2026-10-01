@@ -1,5 +1,8 @@
 # Testing
 
+The [test strategy](TEST_STRATEGY.md) describes the proposed long-term quality
+approach. This guide records executable commands, current coverage, and limits.
+
 For bounded technical investigations, see the approved [spike procedure and
 register](spikes/README.md). Spike records distinguish planned cases from observed
 results and link experiments to decisions and reusable regression coverage.
@@ -39,8 +42,95 @@ python scripts/go_test.py
 
 ## Coverage
 
-Unit tests cover the equality grammar and schema-version decisions. Integration
-tests use the development NATS server to check its greeting, connection handshake,
+Unit tests cover the equality grammar, schema-version decisions, and the
+pure B-003 status/workflow command rules. The latter test configuration
+references, phase derivation, migration restrictions, archival targets, stale
+versions, and replay order; they do not establish persistence or concurrency.
+Pure project-rule tests cover archive access effects, project-local readable ID
+allocation, exact estimate parsing and the monotonic unit-lock flag, and
+the populated-field kind-change rule. Their cross-record storage effects are
+still unverified.
+Project metadata command tests cover one coordinated revision, issued IDs across
+prefix changes, name and unit validation, estimate-unit locking, stale and
+archived state, and replay precedence. Atomic persistence
+is B-005 work.
+Pure field-rule tests cover hidden value preservation, optional/required
+validation, typed values and WorkItem type ownership, choice-option archival,
+and calendar boundaries. Required-field changes under concurrent writes still
+need authoritative storage checks.
+Pure knowledge-value tests cover typed entry kinds, labeled file references,
+UTF-8 limits, identity/version validation, and stable error codes. They do not
+establish durable retention. Pure knowledge-command tests cover create/edit
+revision append, author retention, current grants before replay, stale entry
+versions, incomplete history, wrong value kind, and archived targets. Atomic
+persistence remains unverified.
+Pure follow-up tests cover cross-project Link grants, single-origin and cycle
+rejection, and replay precedence. Concurrent ancestry and endpoint checks
+remain B-005 integration work.
+Pure relationship and current-work tests cover type ownership, type-use and
+two-endpoint Link inputs, canonical duplicate/self-link rejection, stable record
+ID in directed inverse and symmetric views, archival
+eligibility, selection versions, and selection independent of lifecycle.
+Relationship command tests cover both endpoint project revisions and item
+versions, current authorization before replay, and changed operation content.
+Atomic multi-record storage checks, uniqueness, and authorization enforcement
+remain unverified.
+Pure configuration-change tests cover active defaults, replacement before
+archival, dependency-preserving edits, phase mapping preservation, and revision
+and authorization gates. They also cover required-field values, historical
+kind/removal protection, and value preservation under rename, hide, and archive.
+The complete-revision command checks replay, changed operation content, and
+revision-only no-ops.
+Relationship-type configuration tests cover owner scope, duplicate IDs,
+rename/archive compatibility, and rejection of direction changes or removal
+after historical use.
+Complete-configuration tests also reject removal of an option from a retained
+single-choice field, even when no current item uses it; rename, archive, and
+reordering keep the stable option identities. An unused choice field may change
+kind or be removed. Display-name tests reject control characters in field,
+option, and relationship-type names.
+The complete configuration bound is checked for excessive entry counts and
+aggregate UTF-8 string bytes. Encoded HTTP-body limits remain adapter work.
+Concurrent item/configuration writes remain B-005
+integration checks.
+Pure conversion tests cover complete destination validation, migration
+authorization, both workflows' phase permissions, Done-to-New rejection,
+reopening, source-value history output, and successful replay precedence.
+Durable history, knowledge, and provenance retention remain B-005 checks.
+Pure boundary tests also cover the accepted M1 estimate, prefix, UTF-8 text,
+numeric-field, and Gregorian-date limits, project-scoped readable IDs, and
+the 128-entry/1-MiB logical field payload bound.
+Pure item-mutation tests cover untitled creation and title display, initial
+status, required/hidden fields, payload rejection, estimate locking,
+item/configuration versions,
+and replay. Durable sequence allocation and coordinated project/item writes
+remain B-005 checks.
+Pure archival tests cover item/project version conflicts, restore eligibility,
+replay, matching project/configuration state, and versioned selection clears
+without lifecycle changes. Coordinated cross-user selection clearing remains
+a B-005 integration check.
+Pure option-administration tests cover stable IDs through rename and archival,
+retaining old assignments while blocking new ones, restoration, invalid names,
+duplicate IDs, revision conflicts, and replay. Concurrent configuration and
+item writes remain a B-005 integration check.
+Pure error-code tests cover shared conflicts across commands, nested field and
+project failures, distinct selection/relationship codes, and every stable wire
+string. API status and
+message mappings remain unverified.
+
+Critical B-003 scenarios have direct pure test anchors:
+
+| Contract scenario | Pure test file | Downstream evidence still required |
+| --- | --- | --- |
+| BC-19, BC-37 estimate-unit lock and metadata revision | `src/pure/task_contract/tests/project_admin.rs`, `project_rules.rs` | B-005 concurrent first estimate versus unit change |
+| BC-23, BC-28 field kind and historical use | `src/pure/task_contract/tests/configuration_change.rs`, `configuration_fields.rs` | B-005 authoritative usage and item snapshots |
+| BC-32 configuration replay and revision | `src/pure/task_contract/tests/configuration_change.rs` | B-005 durable history and atomic commit |
+| BC-34 follow-up origin | `src/pure/task_contract/tests/follow_up.rs` | B-005 atomic ancestry and B-007 grants |
+| BC-36 configuration and option limits | `src/pure/task_contract/tests/configuration_change.rs`, `option_admin.rs` | B-004/B-006 encoded-body limits |
+
+This mapping identifies pure checks; it does not claim service-level acceptance.
+
+Integration tests use the development NATS server to check its greeting, connection handshake,
 and request/response behavior. The Python probe also checks the JetStream account
 API using a temporary subscription. It creates no streams or application data.
 Connections use three-second deadlines and bounded frame sizes and counts.

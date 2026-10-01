@@ -27,9 +27,13 @@ jobs:
           go-version: '1.22.x'
           cache: false
       - name: Install Rust stable
-        run: rustup toolchain install stable --profile minimal
+        run: rustup toolchain install stable --profile minimal --component clippy,rustfmt
       - name: Select Rust stable
         run: rustup default stable
+      - name: Check Rust formatting
+        run: cargo fmt --all --check
+      - name: Lint Rust workspace
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Prepare disposable host
         run: python scripts/ci_prepare.py
       - name: Start test services

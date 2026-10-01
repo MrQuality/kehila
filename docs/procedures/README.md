@@ -9,7 +9,7 @@ GitHub enforces it.
 
 | ID | Procedure | Version / status | Owner | Approval | Enforcement |
 | --- | --- | --- | --- | --- | --- |
-| SOP-001 | [Technical spikes](../spikes/README.md) | 1 / Approved | Project maintainer | Maintainer approval recorded 2026-09-25 | Manual use in effect; spike validator and runner preflight not implemented |
+| SOP-001 | [Technical spikes](../spikes/README.md) | 1 / Approved | [Project maintainer](../../CONTRIBUTING.md#repository-roles) | Maintainer approval recorded 2026-09-25 | Manual use in effect; spike validator and runner preflight not implemented |
 
 SOP IDs describe procedures; SP IDs describe individual spikes. Use a new SOP ID
 for a new procedure and a new version for a revision of the same procedure.
@@ -25,6 +25,7 @@ approval or claim additional automation.
 | --- | --- | --- |
 | [Contributing](../../CONTRIBUTING.md) | Changes, testing, and merge policy | CI; maintainer inspection of scope, evidence, and limitations |
 | [Testing](../TESTING.md) | Supported checks and their limits | Local verification scripts and CI workflow |
+| [Test strategy](../TEST_STRATEGY.md) | Proposed quality goals, test levels, and future qualification | Planning guidance; not an implemented CI gate |
 | [Security](../../SECURITY.md) | Development exposure and vulnerability reporting | Contributor and maintainer responsibility |
 | [Naming and attribution](../BRANDING.md) | Project identity and attribution | Naming check plus manual review of matters the check cannot establish |
 | [Product planning](../product/README.md) | Requirements, decisions, questions, and backlog | Stable IDs, linked records, and maintainer assessment |

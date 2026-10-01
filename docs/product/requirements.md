@@ -9,7 +9,7 @@ YAJA supports local project planning: identifying current and upcoming work, ret
 | Term | Meaning in this baseline |
 | --- | --- |
 | Project | A collection of work with its own workflow and planning configuration. |
-| Task | A work item with an estimate, status, knowledge, and potentially resource requirements and reservations. Minimum fields and hierarchy remain open. |
+| Task | A work item with an estimate, status, knowledge, and potentially resource requirements and reservations. M1 minimum fields are defined by the [B-003 contract](B-003-contract.md); a broader hierarchy remains open. |
 | Phase | One of the system-wide lifecycle categories New, Active, Done. It is not a sequential subtask or a resource-execution stage. |
 | Status | A project-defined workflow state mapped to exactly one phase. |
 | Sprint | A bounded planning period with its own capacity. Duration, calendar, and rollover rules remain open. |
@@ -35,10 +35,19 @@ Effort, elapsed duration, resource-hours, and money are separate quantities. Fou
 
 Support local project and task management, including tracking YAJA development. Identify current work, upcoming work, and progress. Broader deployment requirements and access from other devices remain open ([Q-002](open-questions.md#q-002)).
 
+M1 includes the full configurable model accepted in [D-019](decisions.md#d-019),
+including custom fields/types, workflow migration, type conversion, relationship
+administration, and delegated administration. See the
+[implementation slices](backlog.md#m1-configurable-model). Titles are configurable;
+readable project-prefix/sequence identifiers supplement stable internal identity.
+Current-work selection is independent of lifecycle. Archiving an item clears its
+selection and makes it read-only until restored, preserving relationships and
+history without implicit lifecycle or resource effects.
+
 <a id="r-002"></a>
 ### R-002 — Project-configurable estimates
 
-Projects choose hours or story points as their estimation unit. The YAJA project uses hours. Estimates describe expected work during planning. The relationship between the task-level estimate and individual resource requirements is unresolved ([Q-006](open-questions.md#q-006)); heterogeneous resource-hours cannot be summed into a task estimate, and no points-to-hours conversion is defined.
+Projects choose hours or story points as their estimation unit. The YAJA project uses hours. Estimates describe expected work during planning and are independent of separately recorded resource demand ([D-018](decisions.md#d-018)). Resource usage does not automatically rewrite the task estimate. Heterogeneous resource-hours cannot be summed into a task estimate, and no points-to-hours conversion is defined. Estimates use exact nonnegative decimals; zero differs from absence. M1 prohibits project-unit changes after the first recorded estimate ([D-019](decisions.md#d-019)). Exact precision and bounds remain to specify ([Q-006](open-questions.md#q-006)).
 
 <a id="r-003"></a>
 ### R-003 — Actual time tracking and presentation
@@ -53,7 +62,7 @@ Both planning approaches are required in the first release and for the YAJA proj
 <a id="r-005"></a>
 ### R-005 — Task knowledge and originating work
 
-Manually record files created, decisions, lessons learned, new insights, and follow-up tasks produced by execution. A follow-up must be linked to the task that revealed it. Keep this information available after completion and reopening. Automatic knowledge capture is not required in the first release. File references versus uploaded content, record structure, and editing history remain open ([Q-016](open-questions.md#q-016)).
+Manually record files created, decisions, lessons learned, new insights, and follow-up tasks produced by execution. A follow-up must be linked to the task that revealed it. Keep this information available after completion and reopening. Automatic knowledge capture is not required in the first release. [D-024](decisions.md#d-024) and the [B-003 contract](B-003-contract.md#knowledge-value-contract) define typed, versioned entries and labeled file references; [Q-016](open-questions.md#q-016) records the resolution.
 
 <a id="r-006"></a>
 ### R-006 — Shared phases and configurable statuses
@@ -63,7 +72,7 @@ New, Active, and Done are system-wide phases shared across projects. Project adm
 <a id="r-007"></a>
 ### R-007 — Workflow state is not resource usage
 
-A status change does not itself consume time. Moving within a phase does not automatically change allocations or consumption. Entering Active does not imply any work was performed. Usage comes from reporting. Entering Done and reopening have the explicit resource effects in R-017 and R-018. Other status-triggered resource automation is outside the defined scope. Status deletion, remapping, and special outcomes are open ([Q-008](open-questions.md#q-008)).
+A status change does not itself consume time. Moving within a phase does not automatically change allocations or consumption. Entering Active does not imply any work was performed. Usage comes from reporting. Entering Done and reopening have the explicit resource effects in R-017 and R-018. Other status-triggered resource automation is outside the defined scope. [Q-008](open-questions.md#q-008) and the [B-003 contract](B-003-contract.md) resolve M1 status changes, in-use edits, phase transitions, and archival behavior.
 
 <a id="r-008"></a>
 ### R-008 — Task ordering and prerequisites
@@ -120,7 +129,7 @@ Moving to a status mapped to Done completes the task. Preserve its plan and cons
 <a id="r-018"></a>
 ### R-018 — Reopening
 
-Moving from Done to Active reopens the task. Preserve earlier completion, consumption, releases, charges, and refunds. Do not reclaim released reservations, even if they once belonged to this task. Mark the remaining resource plan as needing review and require confirmation or revision of remaining demand before creating new reservations. Remaining demand cannot safely be inferred from the original estimate minus actuals. Automatic scheduling finds feasible capacity after confirmation; manual scheduling exposes requirements and conflicts for user planning. Authorized fixed dates remain respected. Done → New is unresolved ([Q-008](open-questions.md#q-008)).
+Moving from Done to Active reopens the task. Preserve earlier completion, consumption, releases, charges, and refunds. Do not reclaim released reservations, even if they once belonged to this task. Mark the remaining resource plan as needing review and require confirmation or revision of remaining demand before creating new reservations. Remaining demand cannot safely be inferred from the original estimate minus actuals. Automatic scheduling finds feasible capacity after confirmation; manual scheduling exposes requirements and conflicts for user planning. Authorized fixed dates remain respected. Done → New is prohibited, including through workflow migration or type conversion ([D-018](decisions.md#d-018)).
 
 <a id="r-019"></a>
 ### R-019 — Usage-reporting maturity

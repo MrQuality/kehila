@@ -1,6 +1,6 @@
 # YAJA implementation backlog
 
-Baseline: 2026-09-23. This proposed delivery plan links to the [requirements](requirements.md) and [decisions](decisions.md). Items are planning records, not existing GitHub issues. Dates and effort estimates remain unassigned.
+Baseline: 2026-09-23. This proposed delivery plan links to the [requirements](requirements.md) and [decisions](decisions.md). Backlog IDs are planning references; linked GitHub issues track execution. Dates and effort estimates remain unassigned.
 
 ## How to use this backlog
 
@@ -20,12 +20,37 @@ Backlog IDs are stable references, not strict execution order. The technical pat
 | Milestone | Items / order | Observable outcome |
 | --- | --- | --- |
 | M0 — Document and establish the path | B-001, B-002; resolve the blocking subset of B-003/B-007 | A traceable baseline and an evidence-backed implementation plan. |
-| M1 — Use YAJA to record its own work | B-003 and B-007; B-005 and B-004; B-006 | Create a project and tasks, configure phase-mapped statuses, record estimates and knowledge, and retrieve saved records locally. |
+| M1 — Use YAJA to record its own work | B-003 and B-007; B-005 and B-004; B-006, divided into M1-01–M1-08 | Create projects and work items with the full configurable model, including fields, types, workflows, conversion, migration, relationships, administration, estimates, and knowledge; retrieve saved records locally. |
 | M2 — Track shared resources and execution | B-008, B-009, B-010; integrate B-011 and B-012 | Reserve shared resources, report actuals, compare plans, complete/reopen safely, and inspect costs. |
 | M3 — Plan across dates and sprints | B-013 and B-014; B-015, B-016, B-017 | Both sprint and Gantt planning with manual/automatic scheduling, multiple drivers, authorized overrides, and cost/time summaries. |
 | M4 — Validate the full first release | B-018 | Demonstrated end-to-end behavior, local recovery, and an explicit record of remaining limitations. |
 
-Within a milestone, independent work may proceed once its own blockers are resolved. Milestones divide the work while preserving the full release scope. Resource-backed lifecycle automation arrives after M1. M2's completion/cost behavior is accepted together once both B-011 and B-012 integrate.
+Within a milestone, independent work may proceed once its own blockers are resolved. Milestones divide the work while preserving the full release scope. Resource-backed lifecycle automation arrives after M1. M2's completion/cost behavior is accepted together once both B-011 and B-012 integrate. [D-019](decisions.md#d-019) retains the full configurable model in M1; the [implementation slices](#m1-configurable-model) divide that work without reducing scope.
+
+<a id="m1-configurable-model"></a>
+## M1 configurable-model implementation slices
+
+**Scope accepted 2026-09-29; implementation pending.** These child IDs
+divide existing backlog responsibilities and link to GitHub issues.
+B-003 defines the shared contracts and pure rules. Each slice includes
+applicable API, storage, access, and interface integration through its parents.
+
+| Child ID | Parent / dependencies | Deliverable and acceptance |
+| --- | --- | --- |
+| [M1-01](https://github.com/MrQuality/yaja/issues/26) | B-005; B-003 | Configuration revisions, history, reference integrity, and coordinated command acceptance. Track and protect historical status, status-group assignment/grant, workflow, type, field, and relationship-type use even after current items migrate away. Demonstrate configuration/item contention, replay after configuration changes, and recovery without partial accepted state. Use actor/family/target-scoped operation lookup, freeze versioned exact-request fingerprints, and demonstrate 90-day replay, gap-free compaction to permanent tombstones, and tombstone backup/restore. Establish a consistency protocol for archive and current-selection clearing under the single-document storage constraint; test crash, retry, concurrent selection, and recovery behavior before exposing archival routes. |
+| [M1-02](https://github.com/MrQuality/yaja/issues/27) | B-004/B-006; M1-01, B-007 | Project and WorkItem identity, Task/Milestone, estimates, replayable current selection, archival/restoration. Integrate the accepted trusted revision-one Task/Milestone seed and replayable project creation command. Verify untitled-item display, zero versus absent estimates, unit locking, selection retry after uncertain response, and selection clearing under the accepted project archival contract. |
+| [M1-03](https://github.com/MrQuality/yaja/issues/28) | B-004/B-006; M1-02 | Project-defined types, application/custom fields, hidden/optional/required modes, and five initial value kinds. Protect application-defined fields from project removal, archival, and retyping; specify trusted upgrade of built-in definitions. Verify hidden-value preservation/write rejection, required-field changes under contention, and safe definition evolution. |
+| [M1-04](https://github.com/MrQuality/yaja/issues/29) | B-004/B-006; M1-03 | Multiple workflows, statuses, defaults, permitted workflows per type, phase restrictions, and configuration archival. Verify phase derivation, initial/default replacements, reference preservation, and zero implicit usage. |
+| [M1-05](https://github.com/MrQuality/yaja/issues/30) | B-004/B-006; M1-04 | Explicit type conversion and workflow migration. Verify complete destination validation, both-workflow phase restrictions, current original migration grants on replay, retained archived references, source-snapshot validation, preserved source values/history, and no partial conversion. |
+| [M1-06](https://github.com/MrQuality/yaja/issues/31) | B-004/B-006; M1-02, B-003 | Relationship types and links, knowledge, and follow-up provenance under the resolved Q-016 contract. Verify cross-project authorization, canonical duplicate prevention, self-link rejection, inverse display, archival preservation, and history surviving conversion. Final integration includes M1-05. |
+| [M1-07](https://github.com/MrQuality/yaja/issues/32) | B-007/B-006; B-003, Q-014 | Configuration permissions and delegated administration, including status-group administration. Implement the accepted group-scoped status grants and project administration boundary; provision initial project access, define revocation, and verify authoritative allow/deny behavior across all slices. Initial access enforcement is required before dependent routes are exposed. |
+| [M1-08](https://github.com/MrQuality/yaja/issues/33) | B-006 with B-004/B-005/B-007; M1-01–M1-07 | Integrate the full configurable model into the local interface. Demonstrate administration, edits, conversion, migration, knowledge, relationships, reload, conflict recovery, and archival. Retain B-005 durability and authenticated-access gates before real data. |
+
+M1-07's initial access boundary accompanies the early slices; its delegated
+administration surface expands with them. Q-016 is resolved for M1; Q-014 grant
+assignment and revocation remain B-007 work. Resource reservations, costs, and
+scheduling retain their later milestone placement. Their lifecycle effects
+must not be claimed by M1 checks.
 
 <a id="b-001"></a>
 ## B-001 — Establish the product planning baseline
@@ -78,7 +103,28 @@ settings.
 <a id="b-003"></a>
 ## B-003 — Specify project/task contracts and workflow rules
 
-**Status:** Proposed M1 baseline in [Q-008](open-questions.md#q-008) needs contract review before finalizing durable records; estimate and transition details remain open. **Dependencies:** B-001; align persistence contracts with B-002.
+**Status:** Accepted typed policies and pure checks are implemented on the B-003
+branch; ready for final maintainer review.
+Initialization, delegated status administration, and conversion review policies
+are specified, including group lifecycle in [D-031](decisions.md#d-031).
+Operation identity, replay authorization, and expiry have typed enforcement in
+[D-032](decisions.md#d-032) through [D-034](decisions.md#d-034).
+[D-030](decisions.md#d-030) confirms that active
+and archived definitions both consume configuration capacity. B-004/B-005/B-006/B-007 implement and
+verify the behavior. [D-018](decisions.md#d-018)
+records the accepted review direction; [D-019](decisions.md#d-019) resolves the
+ten review areas and retains the full M1 scope. [D-020](decisions.md#d-020) and
+[D-021](decisions.md#d-021) settle project archival, readable IDs, and M1 value
+limits. [D-022](decisions.md#d-022) settles the phase graph, relationship-type
+ownership, and link-creation grants. [D-023](decisions.md#d-023) bounds item
+field payloads; [D-024](decisions.md#d-024) settles knowledge and follow-up
+provenance. The [contract review](B-003-contract.md) records accepted logical
+rules, including [D-025](decisions.md#d-025) through [D-029](decisions.md#d-029)
+for conversion, choice feasibility, delegated grants, and project initialization,
+alongside
+limits, typed commands, pure-check evidence, and downstream consistency gates.
+Durable records and the configurable worker are not implemented here.
+**Dependencies:** B-001; align persistence contracts with B-002.
 
 **Traceability:** [R-001](requirements.md#r-001), [R-002](requirements.md#r-002), [R-006](requirements.md#r-006), [R-007](requirements.md#r-007). **Questions:** [Q-006](open-questions.md#q-006), [Q-008](open-questions.md#q-008).
 
@@ -89,7 +135,7 @@ settings.
 <a id="b-004"></a>
 ## B-004 — Implement project/task operations and manual knowledge
 
-**Status:** Waiting on dependencies and knowledge-format decisions. **Dependencies:** B-003, B-005; access checks from B-007.
+**Status:** Knowledge and workflow contracts are specified; implementation waits on B-005 storage and B-007 access work. **Dependencies:** B-003, B-005; access checks from B-007.
 
 **Traceability:** [R-001](requirements.md#r-001), [R-002](requirements.md#r-002), [R-005](requirements.md#r-005)–[R-007](requirements.md#r-007). **Questions:** [Q-008](open-questions.md#q-008), [Q-016](open-questions.md#q-016).
 
@@ -102,11 +148,19 @@ settings.
 
 **Status:** First task-path direction accepted; implementation and recovery decisions remain. **Dependencies:** B-002, B-003; coordinate access boundaries with B-007.
 
-**Traceability:** Supports [R-001](requirements.md#r-001), [R-005](requirements.md#r-005), [R-012](requirements.md#r-012); engineering prerequisites rather than new confirmed product semantics. **Questions:** [Q-001](open-questions.md#q-001), [Q-002](open-questions.md#q-002), [Q-020](open-questions.md#q-020).
+**Traceability:** Supports [R-001](requirements.md#r-001), [R-005](requirements.md#r-005), [R-012](requirements.md#r-012); engineering prerequisites rather than new confirmed product semantics. **Questions:** [Q-001](open-questions.md#q-001), [Q-002](open-questions.md#q-002), [Q-019](open-questions.md#q-019), [Q-020](open-questions.md#q-020).
 
 **Deliverable:** Versioned storage representation, durable local configuration, the required command/read/update integrations, and basic backup/restore instructions.
 
 **Proposed engineering acceptance:** Demonstrate actual task writes and reads and no acknowledged-save loss through process crash, application/container recreation, and ordinary machine restart. Test clean-instance restore of configuration and replay records followed by search reconstruction; report automatic daily backup age and failures, and keep an off-machine copy before claiming machine-loss recovery. Check stale browser versions and retry IDs after restoring an older backup. Prove relevant delivery acknowledgments/replay where used; existing connection probes are insufficient. For immutable operation records, prove concurrent next-version exclusion, non-regressing search, safe compaction of inactive tasks, index rebuild during writes, and practical project lists as history grows. Distinguish authoritative data from rebuildable projections. Use disposable test records until durability is verified. Record schema migration, backup format, and an operating budget for task count, memory, disk, startup, and save latency. See [D-017](decisions.md#d-017).
+
+Before item or project archival is exposed, specify the physical representation
+and commit/recovery protocol for [BC-31](B-003-contract.md#acceptance-scenarios).
+Show that readers never observe an accepted archive with a stale current-work
+selection, or an accepted selection clear with an uncommitted archive. Exercise
+crashes between physical steps, racing selection changes, duplicate retries,
+and restore from a backup. The chosen protocol must respect the reference
+design's ban on multi-document database transactions.
 
 <a id="b-006"></a>
 ## B-006 — Deliver the first local project/task interface

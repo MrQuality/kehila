@@ -11,6 +11,21 @@ YAJA is in early development. The current components are:
 | Go synchronization rules | Provisional evaluation requires matching schema version and a pure query | Table-driven unit test |
 | Go local task API boundary | Proxies authoritative task writes/reads to a worker; keeps version-gated search reads separate; checks loopback origin on mutations | Unit tests and a live boundary check |
 | Rust task mutation worker | Stores each accepted mutation and its replay result as one immutable FerretDB operation record; optimistic version and operation-ID indexes were checked against real services | Pure/policy tests and automated live checks across two worker processes |
+| Rust work-item rules | Pure typed status/workflow decisions validate project configuration references, status-group metadata, phase changes, migration restrictions, archival targets, version conflicts, and replay order; not yet used by the worker | Focused pure tests; no storage or API integration claim |
+| Rust project rules | Pure project archival/access, project-local readable ID allocation, exact estimate and unit-lock rules, and populated-field kind-change decisions; not yet used by the worker | Focused pure tests; storage coordination and lookup unverified |
+| Rust project metadata administration | Pure replayable name/prefix/unit replacement under one Project/Configuration revision; not yet used by the worker | Focused pure tests; atomic cross-record persistence unverified |
+| Rust project creation | Pure replayable trusted Task/Milestone seed with optional application fields, shared workflow, and revision-one project/configuration; not yet used by the worker | Focused pure tests; concurrent identity uniqueness, initial access, and coherent persistence unverified |
+| Rust scoped operation replay | Pure actor/family/target keys, bounded tokens, exact request comparison, current original-grant checks, 90-day expiry and permanent tombstones; not yet used by the worker | Focused pure tests; fingerprint codec, atomic compaction, backup/restore, and access integration unverified |
+| Rust field rules | Pure typed value, application/project origin, usage, owner, hidden/required, and choice-option validation; not yet used by the worker | Focused pure tests; trusted application-field installation and configuration/item contention unverified |
+| Rust relationship and current-work rules | Pure owner-project-qualified relationship key, versioned cross-project creation command, distinct stable record ID and endpoint-relative view, duplicate/self-link eligibility, explicit type-use and two-endpoint Link inputs, and replayable user-scoped selection decisions; not yet used by the worker | Focused pure tests; durable selection replay, atomic cross-project checks, ID allocation, storage uniqueness, and access enforcement unverified |
+| Rust configuration-change rules | Pure replayable bounded complete-revision administration, delegated status-group grants retained for replay, satisfiable required choice fields, defaults, application-field protection, and current/historical reference compatibility; not yet used by the worker | Focused pure tests; authoritative grants/history and commit-time serialization unverified |
+| Rust type-conversion rules | Pure complete destination, phase, migration, source-snapshot validation, retained archived references, history, and replay decisions; not yet used by the worker | Focused pure tests; atomic persistence and non-field history preservation unverified |
+| Rust item creation/edit rules | Pure default/initial status, project-scoped ID, bounded field payload, field/estimate, title fallback, version, and replay decisions; not yet used by the worker | Focused pure tests; atomic ID allocation, item writes, and configuration coordination unverified |
+| Rust archival commands | Pure item/project archive and restore, matching Project/Configuration state, versioned selection clears, and replay decisions; not yet used by the worker | Focused pure tests; authoritative selection snapshots and atomic cross-user clearing unverified |
+| Rust choice-option administration | Pure option add/rename/archive/restore and revision/replay decisions; not yet used by the worker | Focused pure tests; commit-time configuration/item coordination unverified |
+| Rust knowledge values and commands | Pure typed created-file, decision, lesson, and insight entries, bounded values, create/edit replay, authorization, and attributed revision history; not yet used by the worker | Focused pure tests; durable history and access enforcement unverified |
+| Rust follow-up provenance | Pure cross-project, single-origin, acyclic provenance creation with two-endpoint grants and replay; not yet used by the worker | Focused pure tests; atomic ancestry and unique-origin enforcement unverified |
+| Rust domain error codes | Stable codes for current pure contract errors; not yet mapped through the API | Focused mapping tests; transport status/message behavior unverified |
 | TypeScript contracts | Shared declarations | No runtime implementation |
 | Development tools | Staged-source verification and CI base selection | Temporary Git repository tests |
 
@@ -44,7 +59,7 @@ the technical work below remains part of the existing architecture reference.
 Documented requirements and planned backlog items are not implemented features.
 
 - Full query grammar, OpenSearch and Rhai emitters, and Wasm bindings.
-- Complete typed domain mutations and authoritative schema state.
+- Connect the typed domain rules to authoritative schema state and mutation paths.
 - Sagas, the production CDC-to-Rust-indexer path, and idempotent search projections.
 - Go authentication, full API routes, and SSE delivery.
 - React UI, optimistic state, and reconciliation.
