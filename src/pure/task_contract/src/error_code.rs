@@ -282,6 +282,7 @@ impl StableCode for ConfigurationChangeError {
             Self::MigrationRequired { .. } => Code::MigrationRequired,
             Self::FieldMigrationRequired { .. } => Code::MigrationRequired,
             Self::RelationshipMigrationRequired { .. } => Code::MigrationRequired,
+            Self::HistoricalReferenceChange(_) => Code::InvalidConfiguration,
         }
     }
 }

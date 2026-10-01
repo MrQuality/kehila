@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use crate::field::{apply_edit, FieldEdit, FieldEntry, FieldId, FieldOrigin, FieldUsage};
 use crate::relationship::RelationshipTypeId;
-use crate::work_item::{Configuration, WorkItem, WorkItemId};
+use crate::work_item::{Configuration, StatusId, WorkItem, WorkItemId, WorkItemTypeId, WorkflowId};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ItemSnapshot {
@@ -12,13 +12,23 @@ pub struct ItemSnapshot {
     pub field_values: Vec<FieldEntry>,
 }
 
-/// Complete authoritative current items and evidence of historical field use.
+/// Complete authoritative current items and evidence of historical reference use.
 /// B-005 must read and protect this evidence through the configuration commit.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConfigurationSnapshot {
     pub items: Vec<ItemSnapshot>,
     pub historically_used_field_ids: Vec<FieldId>,
+    pub historically_used_status_ids: Vec<StatusId>,
+    pub historically_used_workflow_ids: Vec<WorkflowId>,
+    pub historically_used_type_ids: Vec<WorkItemTypeId>,
     pub historically_used_relationship_type_ids: Vec<RelationshipTypeId>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HistoricalReference {
+    Status(StatusId),
+    Workflow(WorkflowId),
+    WorkItemType(WorkItemTypeId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -57,6 +67,7 @@ pub enum ConfigurationChangeError {
     MigrationRequired { item_id: WorkItemId },
     FieldMigrationRequired { field_id: FieldId },
     RelationshipMigrationRequired { type_id: RelationshipTypeId },
+    HistoricalReferenceChange(HistoricalReference),
 }
 
 /// A complete configuration replacement is one versioned, replayable command.
@@ -115,8 +126,8 @@ pub fn decide_configuration_change(
     Apply(command.proposed.clone())
 }
 
-/// `snapshot` must contain every current item and its values, plus all field IDs
-/// ever used in accepted history. The caller must serialize validation and
+/// `snapshot` must contain every current item and its values, plus all IDs ever
+/// referenced in accepted history. The caller must serialize validation and
 /// commit with item writes and historical-use changes.
 pub fn validate_change(
     previous: &Configuration,
@@ -153,6 +164,43 @@ pub fn validate_change(
         .historically_used_relationship_type_ids
         .iter()
         .collect();
+    for status_id in &snapshot.historically_used_status_ids {
+        let old = previous
+            .statuses
+            .iter()
+            .find(|status| status.id == *status_id);
+        let new = proposed
+            .statuses
+            .iter()
+            .find(|status| status.id == *status_id);
+        if !matches!((old, new), (Some(old), Some(new)) if old.phase == new.phase) {
+            return Err(ConfigurationChangeError::HistoricalReferenceChange(
+                HistoricalReference::Status(status_id.clone()),
+            ));
+        }
+    }
+    for workflow_id in &snapshot.historically_used_workflow_ids {
+        if !proposed
+            .workflows
+            .iter()
+            .any(|flow| flow.id == *workflow_id)
+        {
+            return Err(ConfigurationChangeError::HistoricalReferenceChange(
+                HistoricalReference::Workflow(workflow_id.clone()),
+            ));
+        }
+    }
+    for type_id in &snapshot.historically_used_type_ids {
+        if !proposed
+            .types
+            .iter()
+            .any(|item_type| item_type.id == *type_id)
+        {
+            return Err(ConfigurationChangeError::HistoricalReferenceChange(
+                HistoricalReference::WorkItemType(type_id.clone()),
+            ));
+        }
+    }
     for old_type in &previous.relationship_types {
         let replacement = proposed
             .relationship_types

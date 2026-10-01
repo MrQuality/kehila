@@ -1,7 +1,7 @@
 use task_contract::configuration_change::{
     decide_configuration_change, validate_change, ConfigurationChangeCommand,
-    ConfigurationChangeDecision, ConfigurationChangeError, ConfigurationSnapshot, ItemSnapshot,
-    SuccessfulConfigurationChange,
+    ConfigurationChangeDecision, ConfigurationChangeError, ConfigurationSnapshot,
+    HistoricalReference, ItemSnapshot, SuccessfulConfigurationChange,
 };
 use task_contract::field::{
     ChoiceOption, FieldDefinition, FieldEntry, FieldId, FieldKind, FieldOrigin, FieldUsage,
@@ -133,6 +133,106 @@ fn referenced_status_can_be_renamed_and_moved_between_groups() {
     );
 }
 
+#[test]
+fn historical_references_survive_after_current_items_migrate() {
+    let previous = config();
+    let mut evidence = snapshot(vec![]);
+    evidence
+        .historically_used_status_ids
+        .push(StatusId("ready".into()));
+    let mut proposed = next(&previous);
+    proposed
+        .statuses
+        .iter_mut()
+        .find(|status| status.id.0 == "ready")
+        .unwrap()
+        .phase = Phase::Done;
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
+    assert_eq!(
+        validate_change(&previous, &proposed, previous.revision, &evidence, true),
+        Err(ConfigurationChangeError::HistoricalReferenceChange(
+            HistoricalReference::Status(StatusId("ready".into()))
+        ))
+    );
+    proposed = next(&previous);
+    proposed.statuses.retain(|status| status.id.0 != "ready");
+    proposed.workflows[0]
+        .status_ids
+        .retain(|id| id.0 != "ready");
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
+    assert_eq!(
+        validate_change(&previous, &proposed, previous.revision, &evidence, true),
+        Err(ConfigurationChangeError::HistoricalReferenceChange(
+            HistoricalReference::Status(StatusId("ready".into()))
+        ))
+    );
+
+    let mut evidence = snapshot(vec![]);
+    evidence
+        .historically_used_workflow_ids
+        .push(WorkflowId("flow".into()));
+    proposed = next(&previous);
+    proposed.workflows.clear();
+    proposed.types.clear();
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
+    assert_eq!(
+        validate_change(&previous, &proposed, previous.revision, &evidence, true),
+        Err(ConfigurationChangeError::HistoricalReferenceChange(
+            HistoricalReference::Workflow(WorkflowId("flow".into()))
+        ))
+    );
+
+    let mut evidence = snapshot(vec![]);
+    evidence
+        .historically_used_type_ids
+        .push(WorkItemTypeId("task".into()));
+    proposed = next(&previous);
+    proposed.types.clear();
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
+    assert_eq!(
+        validate_change(&previous, &proposed, previous.revision, &evidence, true),
+        Err(ConfigurationChangeError::HistoricalReferenceChange(
+            HistoricalReference::WorkItemType(WorkItemTypeId("task".into()))
+        ))
+    );
+}
+
 fn config() -> Configuration {
     Configuration {
         project_id: ProjectId("project".into()),
@@ -213,6 +313,9 @@ fn snapshot(items: Vec<WorkItem>) -> ConfigurationSnapshot {
             })
             .collect(),
         historically_used_field_ids: vec![],
+        historically_used_status_ids: vec![],
+        historically_used_workflow_ids: vec![],
+        historically_used_type_ids: vec![],
         historically_used_relationship_type_ids: vec![],
     }
 }

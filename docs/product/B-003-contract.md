@@ -408,13 +408,21 @@ govern existing items and their status changes.
 
 The Rust `task_contract::configuration_change` module validates an authorized
 one-revision configuration edit against a complete authoritative snapshot of
-current items and their field values, plus field IDs ever used in accepted
-history. It
+current items and their field values, plus status, workflow, type, field, and
+relationship-type IDs ever used in accepted history. It
 rejects removing a type, workflow, status, workflow membership, or type/workflow
 permission while an item still depends on it. It also rejects changing the
 phase of a status used by an item, which would reinterpret that item's current
 lifecycle state. Archived items remain in the dependency set. A new revision
 cannot be accepted for an archived project.
+
+Historical use has a stronger rule than current-item compatibility. Once a
+status has been referenced, its identity and phase mapping remain defined;
+once a workflow or WorkItem type has been referenced, its identity remains
+defined. After current items migrate away, these definitions may be archived
+but cannot be removed, and the status phase cannot be remapped. B-005 must
+provide complete historical-use evidence, including converted, archived, and
+deleted-item history, and protect it through the configuration commit.
 
 Configuration administration has a typed command carrying one operation ID,
 expected revision, and a complete proposed configuration. Authorization is
