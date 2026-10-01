@@ -23,6 +23,51 @@ fn status_group_metadata_is_validated_without_changing_phase() {
     assert_eq!(config.validate(), Err(Error::InvalidConfiguration));
 }
 
+#[test]
+fn status_group_identity_and_count_boundaries_are_enforced() {
+    use task_contract::work_item::MAX_STATUS_GROUPS;
+    let mut config = configuration();
+    config.status_groups = (0..MAX_STATUS_GROUPS)
+        .map(|index| StatusGroup {
+            id: StatusGroupId(format!("group-{index}")),
+            name: "Team".into(),
+            archived: false,
+        })
+        .collect();
+    assert_eq!(config.validate(), Ok(()));
+    let mut duplicate = config.clone();
+    duplicate.status_groups[1].id = duplicate.status_groups[0].id.clone();
+    assert_eq!(duplicate.validate(), Err(Error::InvalidConfiguration));
+    config.status_groups.push(StatusGroup {
+        id: StatusGroupId("one-too-many".into()),
+        name: "Team".into(),
+        archived: true,
+    });
+    assert!(!config.within_limits());
+    assert_eq!(config.validate(), Err(Error::InvalidConfiguration));
+}
+
+#[test]
+fn status_metadata_preserves_group_references_and_rejects_control_characters() {
+    let mut config = configuration();
+    config.status_groups.push(StatusGroup {
+        id: StatusGroupId("team".into()),
+        name: "Team".into(),
+        archived: false,
+    });
+    config.statuses[0].group_id = Some(StatusGroupId("team".into()));
+    config.status_groups[0].name = "Team\nOther".into();
+    assert_eq!(config.validate(), Err(Error::InvalidConfiguration));
+    config.status_groups[0].name = "Team".into();
+    config.statuses[0].name = "Backlog\nOther".into();
+    assert_eq!(config.validate(), Err(Error::InvalidConfiguration));
+    config.statuses[0].name = "Backlog".into();
+    config.status_groups.clear();
+    assert_eq!(config.validate(), Err(Error::InvalidConfiguration));
+    config.statuses[0].group_id = None;
+    assert_eq!(config.validate(), Ok(()));
+}
+
 fn configuration() -> Configuration {
     Configuration {
         project_id: ProjectId("project".into()),

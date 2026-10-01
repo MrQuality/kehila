@@ -233,6 +233,29 @@ fn historical_references_survive_after_current_items_migrate() {
     );
 }
 
+#[test]
+fn historical_use_permits_archiving_definitions_after_current_items_migrate() {
+    let previous = config();
+    let mut evidence = snapshot(vec![]);
+    evidence
+        .historically_used_status_ids
+        .push(StatusId("ready".into()));
+    evidence
+        .historically_used_workflow_ids
+        .push(WorkflowId("flow".into()));
+    evidence
+        .historically_used_type_ids
+        .push(WorkItemTypeId("task".into()));
+    let mut proposed = next(&previous);
+    proposed.statuses[1].archived = true;
+    proposed.workflows[0].archived = true;
+    proposed.types[0].archived = true;
+    assert_eq!(
+        validate_change(&previous, &proposed, previous.revision, &evidence, true),
+        Ok(())
+    );
+}
+
 fn config() -> Configuration {
     Configuration {
         project_id: ProjectId("project".into()),
