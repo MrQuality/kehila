@@ -160,6 +160,7 @@ fn every_domain_error_code_has_a_pinned_wire_string() {
         HiddenField,
         RequiredField,
         InvalidFieldValue,
+        InvalidSourceSnapshot,
         InvalidKnowledgeValue,
         WrongKnowledgeKind,
         InvalidEstimate,
@@ -182,7 +183,7 @@ fn every_domain_error_code_has_a_pinned_wire_string() {
         SequenceExhausted,
         VersionExhausted,
     ];
-    assert_eq!(codes.len(), 41);
+    assert_eq!(codes.len(), 42);
     let distinct: std::collections::HashSet<_> = codes.iter().map(|code| code.as_str()).collect();
     assert_eq!(distinct.len(), codes.len());
     for code in codes {
@@ -207,6 +208,7 @@ fn every_domain_error_code_has_a_pinned_wire_string() {
             HiddenField => "hidden_field",
             RequiredField => "required_field",
             InvalidFieldValue => "invalid_field_value",
+            InvalidSourceSnapshot => "invalid_source_snapshot",
             InvalidKnowledgeValue => "invalid_knowledge_value",
             WrongKnowledgeKind => "wrong_knowledge_kind",
             InvalidEstimate => "invalid_estimate",

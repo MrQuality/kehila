@@ -482,6 +482,13 @@ source values for conversion history. Successful operation replay precedes
 changed configuration and item-version checks.
 
 The source-value snapshot is contract output, not proof of durable retention.
+Before accepting a new conversion, every source field must resolve to the
+source type and its value must satisfy the existing-value rules. Required
+source values must be present. Hidden and archived source values, including
+archived choice selections, may be retained when valid. A malformed source
+snapshot returns `invalid_source_snapshot` with the field identity and reason;
+normal conversion does not repair or quarantine it. Recorded success still
+replays before mutable source validation.
 B-005 must atomically store it with the converted item and keep it independently
 of replay expiration. Knowledge, follow-up provenance, and lifecycle history
 are outside the current pure WorkItem shape and must be preserved by the

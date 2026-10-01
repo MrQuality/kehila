@@ -1,6 +1,6 @@
 use task_contract::conversion::{
     decide_conversion, ConversionCommand, ConversionDecision, ConversionError, FieldEntry,
-    SuccessfulConversion,
+    SourceSnapshotError, SuccessfulConversion,
 };
 use task_contract::field::{
     FieldDefinition, FieldError, FieldId, FieldKind, FieldUsage, FieldValue,
@@ -81,16 +81,109 @@ fn item(status: &str) -> WorkItem {
 }
 
 fn definitions() -> Vec<FieldDefinition> {
-    vec![FieldDefinition {
-        id: FieldId("milestone-goal".into()),
-        owner_type: WorkItemTypeId("milestone".into()),
-        name: "Goal".into(),
-        kind: FieldKind::Text,
-        origin: task_contract::field::FieldOrigin::Project,
-        usage: FieldUsage::Required,
-        archived: false,
-        options: vec![],
-    }]
+    vec![
+        FieldDefinition {
+            id: FieldId("milestone-goal".into()),
+            owner_type: WorkItemTypeId("milestone".into()),
+            name: "Goal".into(),
+            kind: FieldKind::Text,
+            origin: task_contract::field::FieldOrigin::Project,
+            usage: FieldUsage::Required,
+            archived: false,
+            options: vec![],
+        },
+        FieldDefinition {
+            id: FieldId("task-note".into()),
+            owner_type: WorkItemTypeId("task".into()),
+            name: "Note".into(),
+            kind: FieldKind::Text,
+            origin: task_contract::field::FieldOrigin::Project,
+            usage: FieldUsage::Optional,
+            archived: false,
+            options: vec![],
+        },
+    ]
+}
+
+#[test]
+fn conversion_rejects_malformed_source_snapshots_with_field_details() {
+    for (id, value, reason) in [
+        (
+            "missing",
+            FieldValue::Text("text".into()),
+            SourceSnapshotError::UnknownField,
+        ),
+        (
+            "milestone-goal",
+            FieldValue::Text("text".into()),
+            SourceSnapshotError::WrongOwner,
+        ),
+        (
+            "task-note",
+            FieldValue::Boolean(true),
+            SourceSnapshotError::InvalidValue(FieldError::WrongValueKind),
+        ),
+    ] {
+        let value = FieldEntry {
+            id: FieldId(id.into()),
+            value,
+        };
+        assert_eq!(
+            decide_conversion(
+                &config(),
+                &item("active"),
+                &[value],
+                None,
+                true,
+                true,
+                &command("active")
+            ),
+            ConversionDecision::Reject(ConversionError::InvalidSourceSnapshot {
+                field_id: FieldId(id.into()),
+                reason
+            })
+        );
+    }
+    let mut configuration = config();
+    configuration.fields[1].usage = FieldUsage::Required;
+    assert_eq!(
+        decide_conversion(
+            &configuration,
+            &item("active"),
+            &[],
+            None,
+            true,
+            true,
+            &command("active")
+        ),
+        ConversionDecision::Reject(ConversionError::InvalidSourceSnapshot {
+            field_id: FieldId("task-note".into()),
+            reason: SourceSnapshotError::InvalidValue(FieldError::Required)
+        })
+    );
+}
+
+#[test]
+fn conversion_preserves_valid_hidden_and_archived_source_values() {
+    let mut configuration = config();
+    configuration.fields[1].usage = FieldUsage::Hidden;
+    configuration.fields[1].archived = true;
+    let values = vec![FieldEntry {
+        id: FieldId("task-note".into()),
+        value: FieldValue::Text("Retained note".into()),
+    }];
+    let ConversionDecision::Apply(result) = decide_conversion(
+        &configuration,
+        &item("active"),
+        &values,
+        None,
+        true,
+        true,
+        &command("active"),
+    ) else {
+        panic!("valid source history should survive")
+    };
+    assert_eq!(result.source_values, values);
 }
 
 fn command(status: &str) -> ConversionCommand {

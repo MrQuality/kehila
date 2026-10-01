@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 
 pub use crate::field::FieldEntry;
-use crate::field::{apply_edit, FieldEdit, FieldError};
+use crate::field::{apply_edit, FieldEdit, FieldError, FieldId};
 use crate::payload::within_field_payload_limit;
 use crate::work_item::{
     classify_transition, Configuration, Error, LifecycleEffect, Phase, StatusId, WorkItem,
@@ -40,12 +40,23 @@ pub struct SuccessfulConversion {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub enum SourceSnapshotError {
+    UnknownField,
+    WrongOwner,
+    InvalidValue(FieldError),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ConversionError {
     Unauthorized,
     MigrationUnauthorized,
     OperationIdReused,
-    ConfigurationConflict { current_revision: u64 },
-    ItemVersionConflict { current_version: u64 },
+    ConfigurationConflict {
+        current_revision: u64,
+    },
+    ItemVersionConflict {
+        current_version: u64,
+    },
     InvalidReference,
     InvalidConfiguration,
     ArchivedProject,
@@ -55,6 +66,10 @@ pub enum ConversionError {
     DuplicateField,
     PayloadLimitExceeded,
     Field(FieldError),
+    InvalidSourceSnapshot {
+        field_id: FieldId,
+        reason: SourceSnapshotError,
+    },
     ProhibitedPhaseChange,
     VersionOverflow,
 }
@@ -216,6 +231,33 @@ pub fn decide_conversion(
     for entry in source_values {
         if !ids.insert(&entry.id) {
             return Reject(C::DuplicateField);
+        }
+        let Some(field) = definitions.iter().find(|field| field.id == entry.id) else {
+            return Reject(C::InvalidSourceSnapshot {
+                field_id: entry.id.clone(),
+                reason: SourceSnapshotError::UnknownField,
+            });
+        };
+        if field.owner_type != item.type_id {
+            return Reject(C::InvalidSourceSnapshot {
+                field_id: entry.id.clone(),
+                reason: SourceSnapshotError::WrongOwner,
+            });
+        }
+    }
+    for field in definitions
+        .iter()
+        .filter(|field| field.owner_type == item.type_id)
+    {
+        let value = source_values
+            .iter()
+            .find(|entry| entry.id == field.id)
+            .map(|entry| &entry.value);
+        if let Err(error) = apply_edit(field, &item.type_id, value, FieldEdit::Keep) {
+            return Reject(C::InvalidSourceSnapshot {
+                field_id: field.id.clone(),
+                reason: SourceSnapshotError::InvalidValue(error),
+            });
         }
     }
     ids.clear();

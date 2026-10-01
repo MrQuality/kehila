@@ -363,6 +363,18 @@ Workflow changes retain the existing migration authorization and phase rules.
 in its pure conversion decision and regression tests. B-005/M1-05 must enforce
 the same eligibility at commit time.
 
+<a id="d-026"></a>
+## D-026 — Reject malformed source snapshots during normal conversion
+
+**Status: Accepted by the maintainer on 2026-10-01.** Normal conversion rejects
+unknown source fields, fields owned by another type, invalid values, and missing
+required source values. The error identifies the field and reason. Valid hidden
+and archived source values remain eligible for retained conversion history.
+Repair requires an explicit recovery path outside normal conversion.
+
+**Consequence:** B-003 validates source snapshots with existing-value rules;
+B-005/M1-05 supplies complete authoritative values and preserves their history.
+
 ## How to change a decision
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.

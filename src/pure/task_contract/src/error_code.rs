@@ -41,6 +41,7 @@ pub enum Code {
     HiddenField,
     RequiredField,
     InvalidFieldValue,
+    InvalidSourceSnapshot,
     InvalidKnowledgeValue,
     WrongKnowledgeKind,
     InvalidEstimate,
@@ -87,6 +88,7 @@ impl Code {
             Self::HiddenField => "hidden_field",
             Self::RequiredField => "required_field",
             Self::InvalidFieldValue => "invalid_field_value",
+            Self::InvalidSourceSnapshot => "invalid_source_snapshot",
             Self::InvalidKnowledgeValue => "invalid_knowledge_value",
             Self::WrongKnowledgeKind => "wrong_knowledge_kind",
             Self::InvalidEstimate => "invalid_estimate",
@@ -306,6 +308,7 @@ impl StableCode for ConversionError {
             Self::DuplicateField => Code::DuplicateField,
             Self::PayloadLimitExceeded => Code::PayloadLimitExceeded,
             Self::Field(error) => error.code(),
+            Self::InvalidSourceSnapshot { .. } => Code::InvalidSourceSnapshot,
             Self::ProhibitedPhaseChange => Code::ProhibitedPhaseChange,
             Self::VersionOverflow => Code::VersionExhausted,
         }
