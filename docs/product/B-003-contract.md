@@ -358,12 +358,19 @@ projection, never a second stored link; B-007 must authorize reads before
 presenting it. Existing links survive endpoint archival. Type-specific
 scheduling behavior remains separate contract work.
 
-The `current_work` module keeps one versioned selection per user. Choosing or
-clearing it changes only user context. An unchanged selection is an idempotent
-no-op. Selection checks its own version and rejects archived targets and denied
-access; it does not inspect or mutate WorkItem phase, usage, timer, reservations,
-or scheduling. When an item or project is archived, B-005 must coordinate the
-affected selection clear with the archive change.
+The `current_work` module keeps one versioned selection per user. Its typed
+selection command carries user identity, operation ID, expected selection
+version, and optional project-qualified item identity. Choosing or clearing
+changes only user context. An unchanged selection is an idempotent no-op, but
+its successful command is still recorded for replay. Current authorization
+precedes recorded-success lookup; an identical recorded command returns its
+original result even after later selection changes, while changed content under
+the same operation ID conflicts. A new command checks the requested endpoint
+against its identity, its own version, and target eligibility. It rejects
+archived targets and denied access; it does not inspect or mutate WorkItem
+phase, usage, timer, reservations, or scheduling. B-005 commits selection state
+and successful-operation record atomically and coordinates affected selection
+clears with item or project archival.
 
 Pure tests cover BC-12 and the identity/access portion of BC-17. B-005 must
 enforce relationship uniqueness under concurrent creation and valid endpoints

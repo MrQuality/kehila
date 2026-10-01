@@ -259,6 +259,8 @@ impl StableCode for SelectionError {
     fn code(&self) -> Code {
         match self {
             Self::Unauthorized => Code::Unauthorized,
+            Self::OperationIdReused => Code::OperationIdReused,
+            Self::InvalidOperation => Code::InvalidOperation,
             Self::VersionConflict { .. } => Code::SelectionVersionConflict,
             Self::InvalidReference => Code::InvalidReference,
             Self::ArchivedTarget => Code::ArchivedTarget,

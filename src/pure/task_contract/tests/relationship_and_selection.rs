@@ -1,6 +1,89 @@
 use task_contract::current_work::{
-    decide_selection, CurrentWork, SelectionError, SelectionResult, UserId,
+    decide_selection, decide_selection_command, CurrentWork, SelectionCommand, SelectionDecision,
+    SelectionError, SelectionResult, SuccessfulSelection, UserId,
 };
+
+#[test]
+fn selection_command_replays_original_result_after_later_changes() {
+    let current = CurrentWork {
+        user_id: UserId("owner".into()),
+        selected: None,
+        version: 2,
+    };
+    let chosen = endpoint("one", "a");
+    let command = SelectionCommand {
+        user_id: current.user_id.clone(),
+        operation_id: "select-a".into(),
+        expected_version: 2,
+        requested: Some(chosen.identity()),
+    };
+    let SelectionDecision::Apply(result) =
+        decide_selection_command(&current, Some(&chosen), None, true, &command)
+    else {
+        panic!("selection should apply")
+    };
+    let recorded = SuccessfulSelection {
+        request: command.clone(),
+        result: result.clone(),
+    };
+    let later = CurrentWork {
+        user_id: current.user_id.clone(),
+        selected: None,
+        version: 4,
+    };
+    assert_eq!(
+        decide_selection_command(&later, None, Some(&recorded), true, &command),
+        SelectionDecision::Replay(result)
+    );
+    let mut changed = command.clone();
+    changed.requested = None;
+    assert_eq!(
+        decide_selection_command(&later, None, Some(&recorded), true, &changed),
+        SelectionDecision::Reject(SelectionError::OperationIdReused)
+    );
+    assert_eq!(
+        decide_selection_command(&later, None, Some(&recorded), false, &command),
+        SelectionDecision::Reject(SelectionError::Unauthorized)
+    );
+}
+
+#[test]
+fn selection_command_validates_new_intentions_and_records_no_ops() {
+    let chosen = endpoint("one", "a");
+    let current = CurrentWork {
+        user_id: UserId("owner".into()),
+        selected: Some(chosen.identity()),
+        version: 7,
+    };
+    let mut command = SelectionCommand {
+        user_id: current.user_id.clone(),
+        operation_id: "same".into(),
+        expected_version: 7,
+        requested: Some(chosen.identity()),
+    };
+    assert_eq!(
+        decide_selection_command(&current, Some(&chosen), None, true, &command),
+        SelectionDecision::Apply(SelectionResult {
+            next: current.clone()
+        })
+    );
+    command.expected_version = 6;
+    assert_eq!(
+        decide_selection_command(&current, Some(&chosen), None, true, &command),
+        SelectionDecision::Reject(SelectionError::VersionConflict { current_version: 7 })
+    );
+    command.expected_version = 7;
+    command.requested = None;
+    assert_eq!(
+        decide_selection_command(&current, Some(&chosen), None, true, &command),
+        SelectionDecision::Reject(SelectionError::InvalidReference)
+    );
+    command.operation_id.clear();
+    assert_eq!(
+        decide_selection_command(&current, None, None, true, &command),
+        SelectionDecision::Reject(SelectionError::InvalidOperation)
+    );
+}
 use task_contract::relationship::{
     canonical_key, decide_relationship, view_from, Direction, Endpoint, LinkAuthorization,
     RelationshipError, RelationshipId, RelationshipKey, RelationshipRecord, RelationshipType,

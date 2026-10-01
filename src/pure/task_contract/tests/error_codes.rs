@@ -19,6 +19,14 @@ fn shared_conflicts_have_the_same_stable_code_across_commands() {
         Code::OperationIdReused
     );
     assert_eq!(
+        SelectionError::OperationIdReused.code(),
+        Code::OperationIdReused
+    );
+    assert_eq!(
+        SelectionError::InvalidOperation.code(),
+        Code::InvalidOperation
+    );
+    assert_eq!(
         Error::ConfigurationConflict {
             current_revision: 2
         }
