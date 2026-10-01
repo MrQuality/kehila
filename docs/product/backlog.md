@@ -105,8 +105,9 @@ settings.
 
 **Status:** Typed rule slices and pure checks are implemented on the B-003 branch;
 Initialization, delegated status administration, and conversion review policies
-are specified. Final operation identity, replay authorization, retention, and
-status-group lifecycle remain open. [D-030](decisions.md#d-030) confirms that active
+are specified, including group lifecycle in [D-031](decisions.md#d-031).
+Operation identity, replay authorization, and expiry policies are accepted;
+their typed enforcement is in progress. [D-030](decisions.md#d-030) confirms that active
 and archived definitions both consume configuration capacity. B-004/B-005/B-006/B-007 implement and
 verify the behavior. [D-018](decisions.md#d-018)
 records the accepted review direction; [D-019](decisions.md#d-019) resolves the

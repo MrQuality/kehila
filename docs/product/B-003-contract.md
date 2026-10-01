@@ -2,8 +2,8 @@
 
 **Status:** Typed rule slices implemented; final contract review remains open.
 Project initialization, delegated status administration, and conversion review
-policies are specified. Operation identity, replay authorization, retention, and
-status-group lifecycle still requires resolution before closure. All retained
+policies are specified. Operation identity, replay authorization, and expiry
+policies are accepted; their typed enforcement is in progress. All retained
 active and archived definitions count toward the configuration limits.
 Implementation remains in the
 linked backlog slices. The maintainer accepted the review recommendations and
@@ -63,6 +63,16 @@ Every accepted configuration result retains its required grant scope with the
 success record. Replay checks current grants against that scope before returning
 the original result. B-007 supplies authoritative grants scoped to the project;
 B-005 protects grant validation and acceptance from concurrent revocation.
+
+Archiving a group blocks new status creation and moves into it, including by
+project administrators. Existing member statuses retain their workflow and
+selection behavior; rename and status archival remain permitted. A project
+administrator can restore the group, including in the same complete revision
+that adds a member. Group archival does not cascade to its statuses.
+Group identities ever used in status assignments or grants must remain in
+configuration and cannot be deleted or reused. The authoritative historical
+group-use snapshot includes assignment and grant history. An unused group may
+be removed when reference and historical-use checks permit it.
 
 ### Conversion and migration
 

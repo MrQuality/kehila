@@ -117,8 +117,9 @@ open for complete typed commands and remaining administration/checks.
 [D-029](decisions.md#d-029) resolve retained archived conversion references,
 source-snapshot validation, required-choice feasibility, delegated status
 administration, and trusted project initialization. These have typed pure
-checks. Operation identity, replay authorization and retention, and
-status-group lifecycle remain under final B-003 review.
+checks. [D-031](decisions.md#d-031) specifies group archival and identity retention.
+Operation identity, replay authorization, and expiry policies are accepted;
+typed enforcement and the final B-003 closure review remain.
 [D-030](decisions.md#d-030) counts all retained active and archived definitions
 against the configuration limits; archival does not free capacity.
 **Further resolution, 2026-09-30:** [D-021](decisions.md#d-021) fixes the

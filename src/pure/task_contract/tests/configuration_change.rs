@@ -455,6 +455,7 @@ fn snapshot(items: Vec<WorkItem>) -> ConfigurationSnapshot {
             .collect(),
         historically_used_field_ids: vec![],
         historically_used_status_ids: vec![],
+        historically_used_status_group_ids: vec![],
         historically_used_workflow_ids: vec![],
         historically_used_type_ids: vec![],
         historically_used_relationship_type_ids: vec![],
@@ -1164,5 +1165,124 @@ fn group_delegate_can_create_rename_archive_but_cannot_change_project_configurat
     assert_eq!(
         decide_configuration_change(&previous, &snapshot(vec![]), None, &grants, &command),
         ConfigurationChangeDecision::Reject(ConfigurationChangeError::InvalidConfiguration)
+    );
+}
+
+#[test]
+fn archived_group_blocks_new_membership_but_preserves_existing_status_edits() {
+    let mut previous = config();
+    previous.status_groups = vec![StatusGroup {
+        id: StatusGroupId("team".into()),
+        name: "Team".into(),
+        archived: true,
+    }];
+    previous.statuses[1].group_id = Some(StatusGroupId("team".into()));
+    let mut proposed = next(&previous);
+    proposed.statuses[1].name = "Still available".into();
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
+    proposed.statuses[1].archived = true;
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
+    proposed.statuses[0].group_id = Some(StatusGroupId("team".into()));
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Err(ConfigurationChangeError::InvalidConfiguration)
+    );
+    proposed = next(&previous);
+    proposed.statuses.push(Status {
+        id: StatusId("extra".into()),
+        name: "Extra".into(),
+        group_id: Some(StatusGroupId("team".into())),
+        phase: Phase::Active,
+        archived: false,
+    });
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Err(ConfigurationChangeError::InvalidConfiguration)
+    );
+    proposed.status_groups[0].archived = false;
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
+}
+
+#[test]
+fn used_group_identity_is_retained_after_members_move_away() {
+    let mut previous = config();
+    previous.status_groups = vec![StatusGroup {
+        id: StatusGroupId("team".into()),
+        name: "Team".into(),
+        archived: false,
+    }];
+    let mut evidence = snapshot(vec![]);
+    evidence
+        .historically_used_status_group_ids
+        .push(StatusGroupId("team".into()));
+    let mut proposed = next(&previous);
+    proposed.status_groups.clear();
+    assert_eq!(
+        validate_change(&previous, &proposed, previous.revision, &evidence, true),
+        Err(ConfigurationChangeError::HistoricalReferenceChange(
+            HistoricalReference::StatusGroup(StatusGroupId("team".into()))
+        ))
+    );
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
+    previous.statuses[1].group_id = Some(StatusGroupId("team".into()));
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Err(ConfigurationChangeError::HistoricalReferenceChange(
+            HistoricalReference::StatusGroup(StatusGroupId("team".into()))
+        ))
     );
 }

@@ -105,6 +105,8 @@ pub struct ConfigurationSnapshot {
     pub items: Vec<ItemSnapshot>,
     pub historically_used_field_ids: Vec<FieldId>,
     pub historically_used_status_ids: Vec<StatusId>,
+    /// Includes group assignments and grants ever accepted for this project.
+    pub historically_used_status_group_ids: Vec<StatusGroupId>,
     pub historically_used_workflow_ids: Vec<WorkflowId>,
     pub historically_used_type_ids: Vec<WorkItemTypeId>,
     pub historically_used_relationship_type_ids: Vec<RelationshipTypeId>,
@@ -112,6 +114,7 @@ pub struct ConfigurationSnapshot {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HistoricalReference {
+    StatusGroup(StatusGroupId),
     Status(StatusId),
     Workflow(WorkflowId),
     WorkItemType(WorkItemTypeId),
@@ -254,6 +257,43 @@ pub fn validate_change(
         return Err(ConfigurationChangeError::InvalidConfiguration);
     }
     let mut item_ids = HashSet::new();
+    for group_id in snapshot.historically_used_status_group_ids.iter().chain(
+        previous
+            .statuses
+            .iter()
+            .filter_map(|status| status.group_id.as_ref()),
+    ) {
+        if !previous
+            .status_groups
+            .iter()
+            .any(|group| group.id == *group_id)
+            || !proposed
+                .status_groups
+                .iter()
+                .any(|group| group.id == *group_id)
+        {
+            return Err(ConfigurationChangeError::HistoricalReferenceChange(
+                HistoricalReference::StatusGroup(group_id.clone()),
+            ));
+        }
+    }
+    for status in &proposed.statuses {
+        let Some(group_id) = &status.group_id else {
+            continue;
+        };
+        let is_new_membership = !previous
+            .statuses
+            .iter()
+            .any(|old| old.id == status.id && old.group_id.as_ref() == Some(group_id));
+        if is_new_membership
+            && proposed
+                .status_groups
+                .iter()
+                .any(|group| group.id == *group_id && group.archived)
+        {
+            return Err(ConfigurationChangeError::InvalidConfiguration);
+        }
+    }
     let historical_ids: HashSet<_> = snapshot.historically_used_field_ids.iter().collect();
     let used_relationship_ids: HashSet<_> = snapshot
         .historically_used_relationship_type_ids

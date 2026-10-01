@@ -427,6 +427,19 @@ tests archived entries at every count boundary. The bounds do not authorize
 history cleanup or limit the number of historical revisions; B-005 owns their
 durable representation.
 
+<a id="d-031"></a>
+## D-031 — Archive status groups without cascading to statuses
+
+**Status: Accepted by the maintainer on 2026-10-01.** Archived groups reject new
+statuses and moves into them. Existing statuses remain usable and may be renamed
+or archived. Project administrators may restore groups. Group archival has no
+implicit status or WorkItem effect. Group IDs used in assignments or grants
+remain retained and cannot be deleted or reused.
+
+**Consequence:** B-003 checks new membership and historical group identities.
+B-005 and B-007 must maintain authoritative assignment and grant-use evidence
+and protect it through configuration acceptance.
+
 ## How to change a decision
 
 
