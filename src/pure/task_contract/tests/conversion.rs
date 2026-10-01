@@ -435,15 +435,61 @@ fn identical_recorded_conversion_replays_before_new_rules_and_versions() {
             &[],
             Some(&recorded),
             true,
+            true,
+            &request
+        ),
+        ConversionDecision::Replay(result.clone())
+    );
+    assert_eq!(
+        decide_conversion(
+            &changed,
+            &result.next_item,
+            &[],
+            Some(&recorded),
+            true,
             false,
             &request
         ),
-        ConversionDecision::Replay(result)
+        ConversionDecision::Reject(ConversionError::MigrationUnauthorized)
     );
     let mut reused = request.clone();
     reused.destination_values.clear();
     assert_eq!(
         decide_conversion(&changed, &source, &[], Some(&recorded), true, true, &reused),
         ConversionDecision::Reject(ConversionError::OperationIdReused)
+    );
+}
+
+#[test]
+fn conversion_without_workflow_migration_does_not_add_a_replay_migration_grant() {
+    let source = item("active");
+    let mut configuration = config();
+    configuration.types[1]
+        .permitted_workflows
+        .push(source.workflow_id.clone());
+    let mut request = command("active");
+    request.destination_workflow = source.workflow_id.clone();
+    let ConversionDecision::Apply(result) =
+        decide_conversion(&configuration, &source, &[], None, true, false, &request)
+    else {
+        panic!("no migration grant is needed")
+    };
+    assert!(!result.requires_migration_permission);
+    let recorded = SuccessfulConversion {
+        item_id: source.id.clone(),
+        request: request.clone(),
+        result: result.clone(),
+    };
+    assert_eq!(
+        decide_conversion(
+            &configuration,
+            &result.next_item,
+            &[],
+            Some(&recorded),
+            true,
+            false,
+            &request
+        ),
+        ConversionDecision::Replay(result)
     );
 }

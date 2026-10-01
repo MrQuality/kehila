@@ -24,6 +24,8 @@ pub struct ConversionCommand {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConversionResult {
+    /// Original permission requirement, independent of the item's later workflow.
+    pub requires_migration_permission: bool,
     pub next_item: WorkItem,
     pub phase: Phase,
     pub effect: LifecycleEffect,
@@ -100,6 +102,9 @@ pub fn decide_conversion(
         return Reject(C::Unauthorized);
     }
     if let Some(previous) = previous {
+        if previous.result.requires_migration_permission && !may_migrate {
+            return Reject(C::MigrationUnauthorized);
+        }
         if previous.item_id != item.id || previous.request.operation_id != command.operation_id {
             return Reject(C::InvalidReference);
         }
@@ -296,6 +301,7 @@ pub fn decide_conversion(
     next_item.status_id = command.destination_status.clone();
     next_item.version = version;
     Apply(ConversionResult {
+        requires_migration_permission: migration,
         next_item,
         phase: destination_status.phase,
         effect,

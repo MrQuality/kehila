@@ -183,6 +183,14 @@ values. Zero remains distinct from an absent estimate.
 
 ### Replay
 
+Replay requires all current grants required by the original mutation, checked
+against its retained scope. This includes Migration permission if the original
+conversion changed workflows, even when the item's current workflow now equals
+the destination. Conversion results retain that requirement explicitly. Grant
+revocation can deny a retry without undoing or re-executing the earlier success.
+B-007 must supply current grants, and B-005 must protect authorization through
+acceptance. Read permission alone is insufficient for replay.
+
 M1 operation IDs are case-sensitive opaque tokens of 1–128 printable ASCII bytes
 without whitespace. They are never trimmed or case-folded. The typed
 `operation::OperationKey` scopes lookup by authenticated actor, command family,

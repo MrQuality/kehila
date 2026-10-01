@@ -453,6 +453,19 @@ whether a retry is identical. IDs and values are not normalized.
 domain commands validate token bounds. B-005/B-007 must use the shared scoped
 lookup before domain acceptance; the provisional worker remains unchanged.
 
+<a id="d-033"></a>
+## D-033 — Require current original mutation grants before replay
+
+**Status: Accepted by the maintainer on 2026-10-01.** Replay checks all current
+grants required by the original successful mutation using its retained scope.
+This includes Migration permission for a conversion that changed workflows.
+Read permission alone does not authorize replay. Revocation may deny a retry
+without changing whether its original operation committed.
+
+**Consequence:** B-003's shared success envelope retains the permission scope;
+conversion retains its original migration requirement. B-007 resolves current
+grants and B-005 protects their validation through command acceptance.
+
 ## How to change a decision
 
 
