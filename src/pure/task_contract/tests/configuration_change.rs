@@ -9,6 +9,46 @@ use task_contract::field::{
 };
 
 #[test]
+fn replacement_cannot_archive_the_last_required_choice_option() {
+    let mut previous = config();
+    let mut choice = field(FieldUsage::Required);
+    choice.kind = FieldKind::SingleChoice;
+    choice.options = vec![ChoiceOption {
+        id: OptionId("first".into()),
+        name: "First".into(),
+        archived: false,
+    }];
+    previous.fields.push(choice);
+    let mut proposed = next(&previous);
+    proposed.fields[0].options[0].archived = true;
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Err(ConfigurationChangeError::InvalidConfiguration)
+    );
+    proposed.fields[0].options.push(ChoiceOption {
+        id: OptionId("replacement".into()),
+        name: "Replacement".into(),
+        archived: false,
+    });
+    assert_eq!(
+        validate_change(
+            &previous,
+            &proposed,
+            previous.revision,
+            &snapshot(vec![]),
+            true
+        ),
+        Ok(())
+    );
+}
+
+#[test]
 fn application_field_cannot_be_removed_archived_or_retyped() {
     let mut previous = config();
     let mut builtin = field(FieldUsage::Optional);

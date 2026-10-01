@@ -590,6 +590,12 @@ option eligible for new assignments again. Names must contain non-whitespace
 text, contain no control characters, and fit within 256 UTF-8 bytes. Identity
 is determined by ID, not name.
 
+An active required single-choice field on an active WorkItem type must have at
+least one active option. Archiving its last active option is rejected, including
+through complete configuration replacement. Add or restore a replacement
+option first. Optional, hidden, or archived fields and archived types may retain
+no active options without imposing an impossible new-item obligation.
+
 Administration requires authorization, an active project and field, and a
 single-choice field kind. An identical recorded success replays before mutable
 revision or definition checks. The accepted result is a complete next

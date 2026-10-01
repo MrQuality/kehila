@@ -315,6 +315,17 @@ impl Configuration {
             }
         }
         for item_type in &self.types {
+            if !item_type.archived
+                && self.fields.iter().any(|field| {
+                    field.owner_type == item_type.id
+                        && !field.archived
+                        && field.usage == FieldUsage::Required
+                        && field.kind == FieldKind::SingleChoice
+                        && !field.options.iter().any(|option| !option.archived)
+                })
+            {
+                return Err(Error::InvalidConfiguration);
+            }
             let required = self
                 .fields
                 .iter()

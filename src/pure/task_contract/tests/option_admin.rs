@@ -67,6 +67,44 @@ fn command(action: OptionAction) -> OptionAdminCommand {
 }
 
 #[test]
+fn required_choice_needs_an_active_option_for_an_active_type() {
+    let mut required = config();
+    required.fields[0].usage = FieldUsage::Required;
+    let archive = command(OptionAction::Archive {
+        id: OptionId("high".into()),
+    });
+    assert_eq!(
+        decide_option_admin(&required, None, true, &archive),
+        OptionAdminDecision::Reject(OptionAdminError::InvalidConfiguration)
+    );
+    let mut unavailable = required.clone();
+    unavailable.fields[0].options[0].archived = true;
+    assert!(unavailable.validate().is_err());
+    unavailable.fields[0].options.clear();
+    assert!(unavailable.validate().is_err());
+    for usage in [FieldUsage::Optional, FieldUsage::Hidden] {
+        unavailable.fields[0].usage = usage;
+        assert_eq!(unavailable.validate(), Ok(()));
+    }
+    unavailable.fields[0].usage = FieldUsage::Required;
+    unavailable.fields[0].archived = true;
+    assert_eq!(unavailable.validate(), Ok(()));
+    unavailable.fields[0].archived = false;
+    unavailable.types[0].archived = true;
+    assert_eq!(unavailable.validate(), Ok(()));
+
+    required.fields[0].options.push(ChoiceOption {
+        id: OptionId("low".into()),
+        name: "Low".into(),
+        archived: false,
+    });
+    assert!(matches!(
+        decide_option_admin(&required, None, true, &archive),
+        OptionAdminDecision::Apply(_)
+    ));
+}
+
+#[test]
 fn option_identity_survives_rename_and_archival() {
     let renamed = command(OptionAction::Rename {
         id: OptionId("high".into()),

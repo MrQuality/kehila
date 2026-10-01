@@ -375,6 +375,20 @@ Repair requires an explicit recovery path outside normal conversion.
 **Consequence:** B-003 validates source snapshots with existing-value rules;
 B-005/M1-05 supplies complete authoritative values and preserves their history.
 
+<a id="d-027"></a>
+## D-027 — Keep required choice fields satisfiable
+
+**Status: Accepted by the maintainer on 2026-10-01.** An active required
+single-choice field on an active WorkItem type needs at least one active option.
+Archiving the last active option is rejected until a replacement is available.
+The same rule applies to complete configuration replacement. Optional, hidden,
+or archived fields and archived types may retain no active options.
+
+**Consequence:** B-003 validates this invariant in the complete configuration,
+so option administration and configuration replacement enforce the same rule.
+B-005 must serialize configuration changes with item mutations.
+
 ## How to change a decision
+
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.
