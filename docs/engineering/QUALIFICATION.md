@@ -9,6 +9,10 @@ campaigns; approved spike procedures remain appropriate for uncertain boundaries
 
 ## Contract and invariant qualification
 
+**Status: partially evidenced.** Pure rules, bounded Go/Rust task-path tests and
+the Python spike support the current invariant table. Supported OpenAPI, event
+contracts and complete framework-control assessments remain pending.
+
 The standard's source references map to implementation obligations, not badges.
 ISO/IEC 25010:2023 guides measured product qualities: functional suitability
 (FUNC/API/DATA), performance efficiency (PERF/LIMIT), compatibility (COMPAT/EVENT),
@@ -71,6 +75,11 @@ state-machine or model tests before claiming stronger consistency.
 
 ## Failure hypotheses and dependency behavior
 
+**Status: partially evidenced.** Current tests cover finite worker contention,
+worker guards, database stalls/recovery and search-down authoritative operations.
+The full supported dependency matrix and restart/termination/resource campaigns
+remain pending; spike evidence applies only to its recorded adapters and cases.
+
 This matrix is the required supported behavior, not a claim that main implements
 the complete pipeline. Current Go/Rust evidence covers search-down saves/reads,
 worker boundaries, database stalls/recovery and finite contention. Other pipeline
@@ -106,6 +115,10 @@ retry-until-pass policy. Retain failed cases and convert fuzz discoveries into
 regression fixtures. No random disruption without a hypothesis and oracle.
 
 ## Reliability, telemetry and performance targets
+
+**Status: targets and qualification pending.** No application SLO, performance
+envelope or OpenTelemetry instrumentation has been qualified. Existing test
+deadlines and spike timings are bounded test observations, not service targets.
 
 No final numeric SLO, RPO/RTO or capacity targets are set here. Q-020 and Q-022
 remain decision destinations. B-026 must decide populations, measurement windows,
@@ -145,6 +158,10 @@ unmeasured millions-of-tasks aspiration.
 
 ## Backup, recovery and upgrade qualification
 
+**Status: supported recovery and upgrade qualification pending.** Existing
+database stall/recovery tests do not establish backups, clean-instance restore,
+machine-loss recovery or supported storage migrations.
+
 B-024 must preserve authoritative tasks, configuration/history, operation success
 records/tombstones and necessary identity/configuration state. Classify what can
 be reconstructed (search) versus what must be backed up. Automate daily backups,
@@ -167,6 +184,10 @@ client/event/config compatibility. Do not introduce a new migration framework
 until B-005's durable model and Q-019 are resolved.
 
 ## Release and compatibility qualification
+
+**Status: policy defined; supported release pipeline pending.** No supported
+release artifact, SBOM, signing/provenance qualification or tested support matrix
+is established by this guide. Existing CI verifies source, not release readiness.
 
 The future release pipeline is immutable source commit → shared verification →
 security checks → controlled hosted build → artifact/system tests → per-artifact
