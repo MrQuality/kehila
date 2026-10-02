@@ -32,6 +32,14 @@ class RegisterTests(unittest.TestCase):
         self.assertTrue(rendered.startswith('# Authored preamble\n\nContext.\n'))
         self.assertIn('## Requirement register', rendered)
 
+    def test_engineering_names_do_not_relabel_product_milestones(self):
+        preamble = (ROOT / ENGINEERING.PREAMBLE).read_text(encoding='utf-8')
+        self.assertIn('delivery milestones M0\u2013M4', preamble)
+        self.assertIn('child IDs M1-01\u2013M1-08', preamble)
+        self.assertIn('Product M1 does not mean', preamble)
+        for gate in range(6):
+            self.assertIn(f'| E{gate} ', preamble)
+
     def test_duplicate_and_invalid_ids_fail(self):
         self.data['requirements'].append(copy.deepcopy(self.data['requirements'][0]))
         self.assertTrue(any('duplicate ID' in e for e in ENGINEERING.validate(self.data)))

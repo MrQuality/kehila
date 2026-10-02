@@ -40,7 +40,8 @@ MUST remain below that gate. Review applicability on every scope/architecture
 change. The register deliberately has no blanket waived or compliant status.
 
 `python scripts/check_engineering.py --gate E1` fails on recorded mandatory cumulative
-gaps for Engineering Preview (use E2?E5 for later gates) and reports unsatisfied recommendations/options as nonblocking findings.
+gaps for Engineering Preview (use E2–E5 for later gates) and reports unsatisfied
+recommendations/options as nonblocking findings.
 Recommendations still require an evidence-based disposition or documented reason
 for departure in the qualification assessment; passing this check does not supply it.
 It is a necessary metadata check for qualification, not approval. Before claiming
@@ -51,7 +52,7 @@ during the sole-contributor phase; self-assessment remains required.
 ## Maturity gates
 
 Engineering gates below are independent of the backlog's existing **product
-delivery milestones E0–E4** and child IDs E1-01–E1-08. Product E1 does not mean
+delivery milestones M0–M4** and child IDs M1-01–M1-08. Product M1 does not mean
 Engineering Preview, and reaching a delivery milestone does not imply maturity.
 
 | Gate | Required observable outcome |
