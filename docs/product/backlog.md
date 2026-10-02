@@ -347,9 +347,9 @@ Every confirmed requirement has an implementation destination. Multiple destinat
 
 ## Definition of a completed implementation item
 
-The referenced behavior works through the interfaces the item promises; applicable product questions are resolved; meaningful acceptance and failure cases are verified; actual-service boundaries have actual-service evidence; documentation reflects delivered limits; and normal contribution/review requirements are met. A UI-only mockup, a passing connection probe, or a written acceptance scenario is not sufficient evidence for the complete feature.
-
-Record scope changes as proposals and update the affected requirements and backlog items after review.
+Use the canonical [Definition of Done](../engineering/DEFINITION-OF-DONE.md) for
+completion criteria, evidence boundaries and scope-change review. Apply criteria
+to the interfaces promised by each item with justified not-applicable entries.
 
 ## Engineering maturity initiatives
 
