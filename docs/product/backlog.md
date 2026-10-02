@@ -364,9 +364,14 @@ compliance is implied by a documented planning artifact.
 
 **Status:** Documented framework and implemented structural checks; qualification pending.
 **Dependencies:** B-001/B-002 and contribution policy.
-**Traceability:** GOV-001/GOV-002, ARC-001, TEST-001, DOC-001.
+**Traceability:** GOV-001/GOV-002, ARC-001, TEST-001, DOC-001, CODE-001.
 **Deliverable:** Standards/register, ADR boundary, Definition of Done, shared
 metadata validation and useful language checks.
+The [coding standard](../engineering/CODING-STANDARD.md) applies to new/materially
+changed code and inventories current gaps. Qualify boundary checks, Python static
+tooling and declared Rust compiler support incrementally; use B-022 for TypeScript/
+Go contract work and B-023 for failure-diagnostic retention. Do not require an
+unrelated legacy-code sweep to complete a scoped change.
 **Acceptance:** Regression tests reject invalid IDs/links/gaps; final full CI
 evidence is linked; remote protection/required checks and bypass restrictions are
 inspected; maintainer records final PR assessment. Preserve sole-contributor policy.

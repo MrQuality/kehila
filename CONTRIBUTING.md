@@ -55,6 +55,13 @@ remain D-* records. Follow the [dependency policy](docs/engineering/DEPENDENCIES
 for dependency changes. The [engineering standard](docs/engineering/ENGINEERING-STANDARD.md)
 defines release qualification, not automatic compliance from passing metadata checks.
 
+Apply the [Coding Standard](docs/engineering/CODING-STANDARD.md) to new and
+materially changed code. Identify the affected operation/module and relevant
+boundaries, record applicable rule evidence, and map remaining gaps or narrow
+exceptions to existing backlog work. Mechanical edits do not require an unrelated
+whole-file redesign. Existing untouched gaps remain visible; discovered security
+or integrity defects still require triage.
+
 Describe the resulting behavior, tests run, and any remaining limitations.
 Include relevant service versions and results for integration changes. Keep
 credentials, local environment files, and unrelated changes out of the PR.

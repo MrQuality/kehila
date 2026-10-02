@@ -12,6 +12,8 @@ reason** for criteria unrelated to the change. A checkbox alone is not evidence.
   works through the interfaces promised by the backlog item.
 - Relevant decisions/questions are resolved or explicitly bound outside this scope;
   material technical choices have an ADR.
+- New/materially changed code meets the applicable [coding rules](CODING-STANDARD.md);
+  the PR identifies scope, evidence, existing gaps and justified narrow exceptions.
 - Unit, negative/boundary, integration and critical-path tests appropriate to the
   change pass. Real I/O claims have actual-service evidence.
 - Security impact and changed trust boundaries are assessed; threats and scans

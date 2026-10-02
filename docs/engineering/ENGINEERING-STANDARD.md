@@ -86,7 +86,8 @@ consistency; Q-020 for recovery/runtime budgets; Q-022 for release scope/scale.
 See [architecture governance](../architecture/README.md),
 [threat model](THREAT-MODEL.md), [dependency policy](DEPENDENCIES.md),
 [qualification and operations](QUALIFICATION.md), and
-[Definition of Done](DEFINITION-OF-DONE.md). These define evidence obligations;
+[Definition of Done](DEFINITION-OF-DONE.md) and
+[coding standard](CODING-STANDARD.md). These define evidence obligations;
 they do not claim the future mechanisms already exist.
 
 ## Reference standards
@@ -682,3 +683,17 @@ Enterprise claims MUST be scoped to approved customer requirements and evidenced
 - **Current status:** planned. Candidate later scope only; multi-tenancy, SAML and certification are not implied requirements today.
 - **Current evidence:** None yet.
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-029](../../docs/product/backlog.md#b-029)
+
+<a id="code-001"></a>
+### CODE-001 — Scoped coding conformance
+
+New and materially changed code MUST apply the Coding Standard with scoped review/test evidence; existing untouched gaps SHALL remain recorded with implementation destinations, and narrow exceptions SHALL have owner, rationale, mitigation and expiry/review date.
+
+- **Rationale:** Coding rules must protect domain invariants and execution ownership without forcing unrelated legacy rewrites or claiming repository-wide conformance.
+- **First required gate:** M1 (cumulative thereafter).
+- **Sources:** ISO25010, SSDF.
+- **Required evidence:** PR scope and applicable-rule assessment, relevant compiler/format/lint and behavioral results, and existing gap or exception dispositions with backlog references.
+- **Enforcement:** Existing Rust/Go format/lint and unsafe checks, shared register validation, and maintainer assessment using the contribution policy, Definition of Done and PR template. Semantic conformance remains a review obligation.
+- **Current status:** partial. The scoped coding baseline and existing checks are documented; conformance across future material changes needs actual PR evidence. Architecture-boundary, Python/TypeScript and minimum-Rust-version qualification remain incomplete; no full legacy audit is claimed.
+- **Current evidence:** [docs/engineering/CODING-STANDARD.md](../../docs/engineering/CODING-STANDARD.md), [CONTRIBUTING.md](../../CONTRIBUTING.md), [docs/engineering/DEFINITION-OF-DONE.md](../../docs/engineering/DEFINITION-OF-DONE.md), [.github/pull_request_template.md](../../.github/pull_request_template.md), [.github/workflows/ci.yml](../../.github/workflows/ci.yml)
+- **Implementation / backlog / decisions:** [docs/product/backlog.md#b-019](../../docs/product/backlog.md#b-019), [docs/product/backlog.md#b-022](../../docs/product/backlog.md#b-022), [docs/product/backlog.md#b-023](../../docs/product/backlog.md#b-023)
