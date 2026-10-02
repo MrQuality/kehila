@@ -171,8 +171,8 @@ CI MUST execute the shared full unit/integration matrix, formatting and lint che
 - **Sources:** ISO25010, SSDF, OSPS.
 - **Required evidence:** Final-commit full verification, Rust fmt/Clippy and Go format/vet output against real services.
 - **Enforcement:** scripts/verify.py and ci.yml; CI status required by GOV-002.
-- **Current status:** partial. Executable matrix exists; a final-commit CI result and qualification assessment remain required.
-- **Current evidence:** [scripts/verify.py](../../scripts/verify.py), [.github/workflows/ci.yml](../../.github/workflows/ci.yml), [docs/TESTING.md](../../docs/TESTING.md)
+- **Current status:** partial. Source verification records are linked by immutable revision in the assessment; each candidate still requires its own final-source CI and qualification assessment.
+- **Current evidence:** [scripts/verify.py](../../scripts/verify.py), [.github/workflows/ci.yml](../../.github/workflows/ci.yml), [docs/TESTING.md](../../docs/TESTING.md), [docs/engineering/ASSESSMENT.md](../../docs/engineering/ASSESSMENT.md)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-019](../../docs/product/backlog.md#b-019)
 
 <a id="doc-001"></a>

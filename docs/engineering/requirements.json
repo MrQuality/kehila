@@ -150,9 +150,10 @@
       "evidence": [
         "scripts/verify.py",
         ".github/workflows/ci.yml",
-        "docs/TESTING.md"
+        "docs/TESTING.md",
+        "docs/engineering/ASSESSMENT.md"
       ],
-      "gap": "Executable matrix exists; a final-commit CI result and qualification assessment remain required.",
+      "gap": "Source verification records are linked by immutable revision in the assessment; each candidate still requires its own final-source CI and qualification assessment.",
       "work": [
         "docs/product/backlog.md#b-019"
       ],

@@ -7,6 +7,31 @@ current evidence explicitly establishes its scope. The existing
 [testing guide](../TESTING.md) remains the executable matrix. B-023–B-028 own these
 campaigns; approved spike procedures remain appropriate for uncertain boundaries.
 
+## Qualification evidence records
+
+**Status: record protocol defined; release qualification pending.** The
+[baseline assessment](ASSESSMENT.md) records dated source evidence and limitations.
+It does not approve a release or the maintainer's final PR disposition.
+
+A verification/qualification record MUST pair the immutable subject source SHA
+with check/run URLs, results, scope, runtime/service versions where relevant and
+known gaps. Identify the person assessing applicability and the disposition;
+author verification is not independent approval. Repository settings need their
+own dated inspection because they can change without a source commit.
+
+The subject commit and the document recording its result are different things.
+Record final-commit CI in the PR conversation or a separate qualification record
+after it finishes. A later documentation commit can cite an earlier immutable
+subject, but cannot claim that subject's run qualifies its own changed source.
+If merge-source verification is required, record that merge SHA/run separately.
+Do not repeatedly amend source just to insert its own future SHA or CI result.
+
+Update requirement status when its scoped obligations are actually evidenced and
+assessed, not because its policy file or PR was merged. A material change reviews
+affected evidence and requirements; it need not rewrite every register status.
+Passing metadata or CI checks alone is not qualification. Resolve SHOULD
+departures and applicability explicitly in the assessment before claiming a gate.
+
 ## Contract and invariant qualification
 
 **Status: partially evidenced.** Pure rules, bounded Go/Rust task-path tests and

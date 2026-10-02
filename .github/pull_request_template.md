@@ -6,6 +6,8 @@ What problem does this solve, and what behavior changes?
 
 List the checks run and their results. Include service versions for relevant
 integration tests and note any coverage gaps.
+After checks finish, link their immutable source SHA and CI run in this description
+or a PR conversation record. A run for an earlier SHA does not qualify changed code.
 
 ## Notes
 

@@ -66,3 +66,33 @@ result separately. SP-001 C01–C06
 were not rerun: their adapters, mapping and event experiment were unchanged.
 No ASVS/OSPS control qualification, SLSA level, security scan, production recovery,
 performance envelope or accessibility result is claimed.
+
+## Subsequent verification and current PR coding scope
+
+The pre-review coding-standard revision
+[`d7a15087586b7f6726a107a6afb28f90590ee168`](https://github.com/MrQuality/yaja/commit/d7a15087586b7f6726a107a6afb28f90590ee168)
+passed [hosted full verification](https://github.com/MrQuality/yaja/actions/runs/37006315943).
+This resolves the historical pending-CI observation for that source only. Review
+updates need their own final-source verification record in
+[PR #35](https://github.com/MrQuality/yaja/pull/35), following the
+[evidence-record protocol](QUALIFICATION.md#qualification-evidence-records).
+No maintainer approval or engineering gate advancement is recorded here.
+
+The executable scope is engineering-register validation/rendering, Go module
+scope and formatting/vet/test orchestration, staged-check selection and their
+Python regressions. Runtime task/API/storage behavior is unchanged.
+
+| Coding rule / impact | Applicability and disposition |
+| --- | --- |
+| Inputs, types and explicit errors | Register schema, obligations, gate IDs, references and evidence/backlog destinations fail closed. Workspace/source inventory mismatches fail before Go checks. Regression fixtures use real temporary files for filesystem behavior and test doubles for orchestration outcomes. |
+| Boundaries and resource ownership | Tools operate on reviewed repository metadata, fixed output paths and an explicit module inventory. This is not a network payload/parser service. Each subprocess has a fixed argument list, working directory, checked outcome and timeout. Existing temporary test-directory cleanup remains owned by the Go runner. |
+| Import safety and side effects | Operational execution uses guarded main entry points; imports define helpers/constants. Only the explicit regeneration command writes the fixed generated document; its authored preamble is preserved and invalid input prevents writing. Go's JSON workspace view does not rewrite go.work. |
+| Failure and diagnostics | Required failures propagate; formatting failure prevents vet and inventory failure prevents checking/testing a reduced source scope. The existing task-path failure-log retention gap remains B-023 work; it is not introduced or corrected by this PR. |
+| Tests and compatibility | Tests cover invalid metadata, obligation/gate semantics, source/reference scope, repeatable regeneration and failure propagation. The unpublished validator/register now uses E* gates and explicit obligation metadata; product M* IDs and application wire/storage contracts retain their meaning. |
+| Domain, mutation and persistence rules | Not applicable to these tooling changes: no task mutation, driver cancellation, event projection or authoritative persistence logic changes. Existing domain and real-service tests remain in the full suite. |
+| Performance, telemetry, migration and release artifacts | No supported runtime path, storage migration or artifact publication changes. Bounded tool subprocess deadlines apply; no application performance, observability, migration or supply-chain level is claimed. |
+| Style and remaining qualification | New inventory/regeneration helpers use standard-library dependencies and explicit failures. No repository-wide Python formatting/typing conformance is claimed; some existing validator/test lines remain longer than PEP 8's recommendation. Broad Python static, TypeScript consumer and minimum-Rust-version qualification remain B-019/B-022/B-028 work. |
+
+This is the implementation author's scoped technical assessment for review, not
+the maintainer's merge assessment. Final results must identify the actual tested
+source; no unbounded retry or test assertion weakening is authorized by this record.
