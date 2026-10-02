@@ -48,6 +48,13 @@ was not reproduced or explained; it remains a test-evidence limitation, not a
 proven product defect or a reason to weaken assertions. Do not report the failed
 run as successful or interpret diagnostic success as a fix.
 
+The maintainer subsequently reported that local endpoint security can suspend
+test processes for inspection and proposed this as the cause of the delay/failure.
+Host-security interference is a plausible hypothesis; no captured process or
+security-tool logs confirm it for this run. Preserve the failed result and
+existing deadlines. If it recurs, capture process exit diagnostics and correlate
+them with host-security events before attributing the failure or changing bounds.
+
 Working-tree full verification passed: 28 Python tests, the Rust workspace
 including real NATS handshake, Go tests/static checks, and all task-path contention,
 boundary, database recovery and search-outage cases. This successful run coexists
