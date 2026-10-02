@@ -3,13 +3,11 @@
 import subprocess
 import sys
 
-from go_test import GO_PACKAGES, ROOT
+from go_inventory import GO_PACKAGES, ROOT, go_files
 
 
 def main():
-    files = sorted(str(p.relative_to(ROOT)) for p in (ROOT / 'go').rglob('*.go'))
-    if not files:
-        raise RuntimeError('No Go files found; formatting check cannot be empty')
+    files = go_files()
     result = subprocess.run(['gofmt', '-l', *files], cwd=ROOT, check=True,
                             capture_output=True, text=True, timeout=60)
     if result.stdout.strip():

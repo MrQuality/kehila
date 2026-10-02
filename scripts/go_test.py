@@ -7,12 +7,10 @@ import subprocess
 import sys
 import tempfile
 import time
-
-ROOT = Path(__file__).resolve().parents[1]
-GO_PACKAGES = ["./go/pure/sync_contract/...", "./go/io/task_api/..."]
-
+from go_inventory import GO_PACKAGES, ROOT, go_files
 
 def main():
+    go_files()
     temporary_root = Path(tempfile.gettempdir()).resolve()
     work = Path(tempfile.mkdtemp(prefix="yaja-go-", dir=temporary_root)).resolve()
     if work.parent != temporary_root or not work.name.startswith("yaja-go-"):

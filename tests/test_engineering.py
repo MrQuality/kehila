@@ -177,13 +177,25 @@ class GoStaticTests(unittest.TestCase):
             sys.path.pop(0)
 
     def test_gofmt_violation_blocks_vet(self):
-        with patch.object(self.module.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, 'go/io/task_api/server.go\n')) as run:
+        result = subprocess.CompletedProcess([], 0, 'go/io/task_api/server.go\n')
+        with patch.object(self.module, 'go_files', return_value=['go/io/task_api/server.go']), \
+                patch.object(self.module.subprocess, 'run', return_value=result) as run:
             with self.assertRaisesRegex(RuntimeError, 'Run gofmt'):
                 self.module.main()
             self.assertEqual(run.call_count, 1)
 
     def test_vet_failure_is_not_swallowed(self):
-        with patch.object(self.module.subprocess, 'run', side_effect=[subprocess.CompletedProcess([], 0, ''), subprocess.CalledProcessError(1, ['go', 'vet'])]) as run:
+        results = [subprocess.CompletedProcess([], 0, ''),
+                   subprocess.CalledProcessError(1, ['go', 'vet'])]
+        with patch.object(self.module, 'go_files', return_value=['go/io/task_api/server.go']), \
+                patch.object(self.module.subprocess, 'run', side_effect=results) as run:
             with self.assertRaises(subprocess.CalledProcessError):
                 self.module.main()
             self.assertEqual(run.call_args.args[0], ['go', 'vet', *self.module.GO_PACKAGES])
+
+    def test_omitted_module_blocks_static_checks(self):
+        with patch.object(self.module, 'go_files', side_effect=RuntimeError('module omitted')), \
+                patch.object(self.module.subprocess, 'run') as run:
+            with self.assertRaisesRegex(RuntimeError, 'module omitted'):
+                self.module.main()
+            run.assert_not_called()

@@ -25,6 +25,10 @@ After editing `docs/engineering/requirements.json`, regenerate with
 recorded cumulative qualification gaps; it does not approve evidence or releases.
 Register regression tests cover stale generation, ID uniqueness, invalid metadata,
 missing evidence and broken references; Go static-check tests cover failing format/vet.
+Go formatting, vet and the default test runner share the explicit module inventory
+in `scripts/go_inventory.py`. It must agree with `go.work` and every module/source
+under `go/`; omitted modules or out-of-module Go files fail verification. Add a new
+module to both the inventory and workspace before relying on shared checks.
 See [qualification](engineering/QUALIFICATION.md) for future property, fault,
 performance, recovery and release campaigns and their current evidence boundaries.
 
