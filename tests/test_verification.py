@@ -24,7 +24,8 @@ class VerificationTests(unittest.TestCase):
         self.assertFalse(POLICY.requires_tests("docs/TESTING.md"))
 
     def test_engineering_metadata_cannot_take_documentation_only_bypass(self):
-        for path in ("docs/engineering/requirements.json", "docs/engineering/ENGINEERING-STANDARD.md"):
+        for path in ("docs/engineering/requirements.json", "docs/engineering/ENGINEERING-STANDARD.md",
+                     "docs/engineering/STANDARD-PREAMBLE.md"):
             self.assertTrue(POLICY.requires_tests(path), path)
             self.assertFalse(POLICY.requires_live([path]), path)
 

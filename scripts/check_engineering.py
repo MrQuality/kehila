@@ -11,6 +11,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTER = Path('docs/engineering/requirements.json')
+PREAMBLE = Path('docs/engineering/STANDARD-PREAMBLE.md')
 DOCUMENT = Path('docs/engineering/ENGINEERING-STANDARD.md')
 FIELDS = {'id', 'area', 'gate', 'statement', 'rationale', 'sources',
           'required_evidence', 'enforcement', 'status', 'evidence', 'gap', 'work'}
@@ -35,11 +36,10 @@ def reference_error(root, reference):
 
 def validate(data, root=ROOT):
     errors = []
-    if not isinstance(data, dict) or set(data) != {'version', 'introduction', 'sources', 'requirements'}:
+    if not isinstance(data, dict) or set(data) != {'version', 'sources', 'requirements'}:
         return ['invalid register fields']
-    if (type(data['version']) is not int or data['version'] != 1
-            or not isinstance(data['introduction'], str) or not data['introduction'].strip()):
-        errors.append('invalid version or introduction')
+    if type(data['version']) is not int or data['version'] != 2:
+        errors.append('invalid version')
     sources = data['sources']
     if not isinstance(sources, dict) or not sources:
         return errors + ['sources must be a nonempty object']
@@ -90,8 +90,10 @@ def validate(data, root=ROOT):
     return errors
 
 
-def render(data):
-    lines = [data['introduction'].rstrip(), '', '## Reference standards', '']
+def render(data, preamble):
+    if not preamble.strip():
+        raise ValueError('Authored preamble must not be empty')
+    lines = [preamble.rstrip(), '', '## Reference standards', '']
     for key, source in data['sources'].items():
         lines.append(f"- **{key}:** [{source['title']}]({source['url']}).")
     lines += ['', '## Requirement register', '',
@@ -121,7 +123,7 @@ def main():
     errors = validate(data)
     if errors:
         raise ValueError('\n'.join(errors))
-    expected = render(data)
+    expected = render(data, (ROOT / PREAMBLE).read_text(encoding='utf-8'))
     if args.write:
         (ROOT / DOCUMENT).write_text(expected, encoding='utf-8', newline='\n')
     elif (ROOT / DOCUMENT).read_text(encoding='utf-8') != expected:

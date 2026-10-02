@@ -20,7 +20,15 @@ class RegisterTests(unittest.TestCase):
 
     def test_real_register_and_generated_document(self):
         self.assertEqual(ENGINEERING.validate(self.data), [])
-        self.assertEqual(ENGINEERING.render(self.data), (ROOT / ENGINEERING.DOCUMENT).read_text(encoding='utf-8'))
+        preamble = (ROOT / ENGINEERING.PREAMBLE).read_text(encoding='utf-8')
+        self.assertEqual(ENGINEERING.render(self.data, preamble),
+                         (ROOT / ENGINEERING.DOCUMENT).read_text(encoding='utf-8'))
+
+    def test_preamble_is_authored_markdown_not_register_data(self):
+        self.assertNotIn('introduction', self.data)
+        rendered = ENGINEERING.render(self.data, '# Authored preamble\n\nContext.\n')
+        self.assertTrue(rendered.startswith('# Authored preamble\n\nContext.\n'))
+        self.assertIn('## Requirement register', rendered)
 
     def test_duplicate_and_invalid_ids_fail(self):
         self.data['requirements'].append(copy.deepcopy(self.data['requirements'][0]))

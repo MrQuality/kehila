@@ -7,7 +7,8 @@ qualification; its adoption does not approve a release or certify compliance.
 This directory keeps engineering qualification separate from product scope and
 approved SOPs. Existing R-, D-, B-, Q-, SOP-, and SP-* records remain authoritative
 for their subjects. Engineering IDs add independently verifiable quality gates.
-The source of this document is [requirements.json](requirements.json); regenerate
+The authored preamble is [STANDARD-PREAMBLE.md](STANDARD-PREAMBLE.md); structured
+requirements and references live in [requirements.json](requirements.json). Regenerate
 with `python scripts/check_engineering.py --write`. CI checks schema, unique IDs,
 references, backlog destinations, evidence presence, and the generated view.
 It cannot establish that an evidence claim is true.
