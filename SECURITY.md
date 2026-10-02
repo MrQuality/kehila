@@ -34,3 +34,16 @@ Before release, review supported FerretDB/backend versions and all image pins;
 configure TLS, credentials, least privilege, backups, resource limits, tenancy,
 dependency scanning, signed releases, and protected required CI. Never commit
 tokens or `.env` secrets. The local hook is a developer aid, not a security sandbox.
+
+The [initial threat model](docs/engineering/THREAT-MODEL.md) distinguishes current
+transport controls from planned identity and service security. Follow the
+[dependency policy](docs/engineering/DEPENDENCIES.md) for advisories and expiring
+exceptions. The [engineering standard](docs/engineering/ENGINEERING-STANDARD.md)
+requires scoped ASVS/OSPS evidence before supported adoption; no compliance or
+production security is claimed today.
+
+For future supported releases, private reports must lead to documented severity
+and exposure triage, remediation, verified patched artifacts, an advisory and
+CVE/GHSA where applicable, coordinated disclosure, and a postmortem. Retain the
+response targets above. Enable and exercise the private reporting and patch/advisory
+workflow before claiming Production readiness; track this work in B-020/B-028.

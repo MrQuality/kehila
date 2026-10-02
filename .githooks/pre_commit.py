@@ -27,7 +27,8 @@ def requires_tests(path):
     return (path.startswith(("src/", "go/", "packages/", "scripts/", ".githooks/", "tests/", ".github/workflows/"))
             and not path.endswith(".md")) or path in {
                 "Cargo.toml", "Cargo.lock", "go.work", "go.work.sum", "package.json",
-                "package-lock.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "docker-compose.yml"}
+                "package-lock.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "docker-compose.yml",
+                "docs/engineering/requirements.json", "docs/engineering/ENGINEERING-STANDARD.md"}
 
 
 def requires_live(paths):

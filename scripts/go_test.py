@@ -9,6 +9,7 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
+GO_PACKAGES = ["./go/pure/sync_contract/...", "./go/io/task_api/..."]
 
 
 def main():
@@ -20,9 +21,7 @@ def main():
     environment["GOTMPDIR"] = str(work)
     try:
         # -work delegates deletion to us; it does not skip compilation or tests.
-        command = ["go", "test", "-count=1", "-work", *(sys.argv[1:] or [
-            "./go/pure/sync_contract/...", "./go/io/task_api/...",
-        ])]
+        command = ["go", "test", "-count=1", "-work", *(sys.argv[1:] or GO_PACKAGES)]
         result = subprocess.run(command, cwd=ROOT, env=environment, timeout=300, check=False)
         return result.returncode
     finally:

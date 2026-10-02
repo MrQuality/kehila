@@ -47,6 +47,14 @@ separate roles defined by the product contracts.
 
 ## Pull requests and review
 
+Apply the [Definition of Done](docs/engineering/DEFINITION-OF-DONE.md), recording
+applicable evidence and justified not-applicable criteria. Link existing
+requirement/decision/backlog IDs and engineering IDs where relevant. Material
+technical decisions use [ADRs](docs/architecture/README.md); product decisions
+remain D-* records. Follow the [dependency policy](docs/engineering/DEPENDENCIES.md)
+for dependency changes. The [engineering standard](docs/engineering/ENGINEERING-STANDARD.md)
+defines release qualification, not automatic compliance from passing metadata checks.
+
 Describe the resulting behavior, tests run, and any remaining limitations.
 Include relevant service versions and results for integration changes. Keep
 credentials, local environment files, and unrelated changes out of the PR.
