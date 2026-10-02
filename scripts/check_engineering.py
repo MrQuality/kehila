@@ -18,6 +18,7 @@ FIELDS = {'id', 'area', 'gate', 'obligation', 'statement', 'rationale', 'sources
 STATUSES = {'satisfied', 'partial', 'planned'}
 OBLIGATIONS = {'required': {'MUST', 'SHALL'}, 'recommended': {'SHOULD'},
                'optional': {'MAY'}}
+GATE_RANK = {f'E{rank}': rank for rank in range(1, 6)}
 
 
 def reference_error(root, reference):
@@ -40,7 +41,7 @@ def validate(data, root=ROOT):
     errors = []
     if not isinstance(data, dict) or set(data) != {'version', 'sources', 'requirements'}:
         return ['invalid register fields']
-    if type(data['version']) is not int or data['version'] != 3:
+    if type(data['version']) is not int or data['version'] != 4:
         errors.append('invalid version')
     sources = data['sources']
     if not isinstance(sources, dict) or not sources:
@@ -63,7 +64,7 @@ def validate(data, root=ROOT):
             errors.append(f'invalid or duplicate ID: {identity}')
         else:
             seen.add(identity)
-        if type(row['gate']) is not int or row['gate'] not in range(1, 6):
+        if not isinstance(row['gate'], str) or row['gate'] not in GATE_RANK:
             errors.append(f'{identity}: invalid gate')
         for field in ('area', 'statement', 'rationale', 'required_evidence', 'enforcement', 'gap'):
             if not isinstance(row[field], str) or not row[field].strip():
@@ -115,7 +116,7 @@ def render(data, preamble):
         lines += [f'<a id="{row["id"].lower()}"></a>',
                   f"### {row['id']} — {row['area']}", '', row['statement'], '',
                   f"- **Rationale:** {row['rationale']}",
-                  f"- **First required gate:** M{row['gate']} (cumulative thereafter).",
+                  f"- **First applicable gate:** {row['gate']} (cumulative thereafter).",
                   f"- **Obligation:** {row['obligation']}.",
                   f"- **Sources:** {', '.join(row['sources'])}.",
                   f"- **Required evidence:** {row['required_evidence']}",
@@ -129,14 +130,14 @@ def render(data, preamble):
 def gate_blockers(data, gate):
     """Metadata gaps in mandatory controls; recommendations remain review inputs."""
     return [row['id'] for row in data['requirements']
-            if row['gate'] <= gate and row['obligation'] == 'required'
+            if GATE_RANK[row['gate']] <= GATE_RANK[gate] and row['obligation'] == 'required'
             and row['status'] != 'satisfied']
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--write', action='store_true', help='Regenerate the standard after changing the register')
-    parser.add_argument('--gate', type=int, choices=range(1, 6),
+    parser.add_argument('--gate', choices=GATE_RANK,
                         help='Fail on mandatory cumulative gaps; not release approval')
     args = parser.parse_args()
     data = json.loads((ROOT / REGISTER).read_text(encoding='utf-8'))
@@ -150,13 +151,14 @@ def main():
         raise ValueError('Standard is stale; run python scripts/check_engineering.py --write')
     if args.gate:
         advisory = [row['id'] for row in data['requirements']
-                    if row['gate'] <= args.gate and row['obligation'] != 'required'
+                    if GATE_RANK[row['gate']] <= GATE_RANK[args.gate]
+                    and row['obligation'] != 'required'
                     and row['status'] != 'satisfied']
         if advisory:
             print('Nonblocking recommendations/options needing assessment: ' + ', '.join(advisory))
         blockers = gate_blockers(data, args.gate)
         if blockers:
-            raise ValueError(f'M{args.gate} missing evidence: ' + ', '.join(blockers))
+            raise ValueError(f'{args.gate} missing evidence: ' + ', '.join(blockers))
     print(f"Engineering register: {len(data['requirements'])} valid requirements; document synchronized")
 
 

@@ -20,9 +20,12 @@ cargo fmt --all --check
 cargo clippy --locked --workspace --all-targets -- -D warnings
 ```
 
-After editing `docs/engineering/requirements.json`, regenerate with
-`python scripts/check_engineering.py --write`. `--gate N` additionally rejects
-recorded cumulative qualification gaps; it does not approve evidence or releases.
+After editing `docs/engineering/requirements.json` or the authored Markdown
+preamble, regenerate with `python scripts/check_engineering.py --write`.
+`--gate E1` (or E2–E5) additionally rejects recorded mandatory cumulative gaps
+and reports recommendations/options without blocking; it does not approve
+evidence, justified SHOULD departures or releases. Product M* IDs are not accepted
+as engineering gates.
 Register regression tests cover stale generation, ID uniqueness, invalid metadata,
 missing evidence and broken references; Go static-check tests cover failing format/vet.
 Go formatting, vet and the default test runner share the explicit module inventory

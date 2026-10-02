@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "sources": {
     "ISO25010": {
       "title": "ISO/IEC 25010:2023 product quality model",
@@ -58,7 +58,7 @@
     {
       "id": "GOV-001",
       "area": "Traceability and change completion",
-      "gate": 1,
+      "gate": "E1",
       "statement": "Changes MUST link acceptance criteria, decisions, backlog or issue, PR, evidence and release where applicable, and apply the Definition of Done with explicit justified not-applicable entries.",
       "rationale": "Review must distinguish specified behavior from shipped behavior.",
       "sources": [
@@ -82,7 +82,7 @@
     {
       "id": "GOV-002",
       "area": "Branch and review controls",
-      "gate": 1,
+      "gate": "E1",
       "statement": "Main and supported release branches MUST require PR-based changes and passing CI, prohibit force-push, restrict bypass and retain maintainer assessment; independent review SHALL become required when another qualified maintainer exists.",
       "rationale": "A workflow file cannot enforce repository access controls.",
       "sources": [
@@ -108,7 +108,7 @@
     {
       "id": "ARC-001",
       "area": "Architecture decision governance",
-      "gate": 1,
+      "gate": "E1",
       "statement": "Material technical choices MUST record context, alternatives, consequences, security, performance, operations, migration, reversibility and status in ADRs; product choices SHALL retain D-* records.",
       "rationale": "Technical acceptance must remain distinguishable from product scope.",
       "sources": [
@@ -136,7 +136,7 @@
     {
       "id": "TEST-001",
       "area": "Shared verification baseline",
-      "gate": 1,
+      "gate": "E1",
       "statement": "CI MUST execute the shared full unit/integration matrix, formatting and lint checks; unavailable dependencies or tools SHALL fail rather than report skipped checks as success.",
       "rationale": "Local and CI evidence must have the same scope.",
       "sources": [
@@ -161,7 +161,7 @@
     {
       "id": "DOC-001",
       "area": "Development and limitations",
-      "gate": 1,
+      "gate": "E1",
       "statement": "The repository MUST document reproducible development prerequisites, commands, component status, evidence boundaries, contribution rules and private vulnerability reporting.",
       "rationale": "Users must be able to reproduce bounded results without confusing a prototype with supported deployment.",
       "sources": [
@@ -188,7 +188,7 @@
     {
       "id": "FUNC-001",
       "area": "Usable accepted product slice",
-      "gate": 2,
+      "gate": "E2",
       "statement": "Alpha MUST deliver a coherent declared product slice through its promised interfaces, including access control, reload, conflict recovery and accepted domain rules.",
       "rationale": "Pure rules alone are not a usable product.",
       "sources": [
@@ -216,7 +216,7 @@
     {
       "id": "SEC-001",
       "area": "Threat modeling",
-      "gate": 2,
+      "gate": "E2",
       "statement": "Trust boundaries and abuse cases MUST have a reviewed threat model with mitigations, residual risks and test destinations, updated on boundary changes.",
       "rationale": "Security decisions need explicit adversaries and assets.",
       "sources": [
@@ -238,7 +238,7 @@
     {
       "id": "SEC-002",
       "area": "Identity and authorization",
-      "gate": 2,
+      "gate": "E2",
       "statement": "Every exposed read, mutation, configuration and replay path MUST authenticate and enforce current project/object grants; local owner onboarding, session expiry/recovery and browser CSRF protections SHALL be tested.",
       "rationale": "Loopback and origin checks do not establish identity or prevent IDOR.",
       "sources": [
@@ -264,7 +264,7 @@
     {
       "id": "SEC-003",
       "area": "Alpha security verification",
-      "gate": 2,
+      "gate": "E2",
       "statement": "Alpha MUST assess all applicable ASVS 5.0.0 Level 1 controls and OSPS 2025-02-25 Level 1 controls, retaining evidence and justified applicability decisions. An aggregate assessment score MUST NOT replace per-control evidence.",
       "rationale": "A targeted baseline requires complete scoped assessment rather than a badge.",
       "sources": [
@@ -284,7 +284,7 @@
     {
       "id": "SEC-004",
       "area": "Security analysis and scanning",
-      "gate": 2,
+      "gate": "E2",
       "statement": "SAST, direct/transitive dependency vulnerability scanning and secret scanning MUST run on changes and regularly on supported branches, with owned actionable findings and expiring exceptions.",
       "rationale": "New advisories affect unchanged code too.",
       "sources": [
@@ -306,7 +306,7 @@
     {
       "id": "SEC-005",
       "area": "Production security assurance",
-      "gate": 4,
+      "gate": "E4",
       "statement": "Production MUST satisfy all applicable ASVS 5 Level 2 and OSPS Level 2 controls with versioned evidence, secure deployment settings and closed critical/high exploitable findings. An aggregate assessment score MUST NOT replace per-control evidence.",
       "rationale": "Broad adoption requires stronger verification than local development.",
       "sources": [
@@ -328,7 +328,7 @@
     {
       "id": "DEP-001",
       "area": "Dependency and license governance",
-      "gate": 2,
+      "gate": "E2",
       "statement": "Dependencies MUST follow the dependency policy for licenses, direct/transitive advisories, maintenance, updates and owned expiring exceptions.",
       "rationale": "A lockfile is inventory evidence, not security or license clearance.",
       "sources": [
@@ -352,7 +352,7 @@
     {
       "id": "API-001",
       "area": "Public contract and error governance",
-      "gate": 2,
+      "gate": "E2",
       "statement": "Public HTTP APIs MUST be OpenAPI contract-first with tested schemas, stable error codes/envelope, pagination/filter/sort rules, authorization, bounded requests, resource limits, concurrency conflicts, replay, versioning and deprecation.",
       "rationale": "Polyglot adapters must not independently reinterpret errors and retry semantics.",
       "sources": [
@@ -380,7 +380,7 @@
     {
       "id": "API-002",
       "area": "Replay and conflict invariants",
-      "gate": 2,
+      "gate": "E2",
       "statement": "Same operation ID and intent MUST return the original accepted result within its retention contract; changed intent SHALL reject with operation_id_reused and stale unseen intent with version_conflict. Authentication/authorization MUST precede replay.",
       "rationale": "Unknown write outcomes must be safely reconciled without duplicate effects.",
       "sources": [
@@ -411,7 +411,7 @@
     {
       "id": "DATA-001",
       "area": "Authoritative integrity and consistency",
-      "gate": 2,
+      "gate": "E2",
       "statement": "Accepted task versions MUST increase monotonically; mutation/version/replay acceptance SHALL be atomic for the promised scope and independent of search. Cross-record invariants MUST have a demonstrated commit/recovery protocol before exposure.",
       "rationale": "Single-record success cannot justify consistent configuration, allocation or accounting.",
       "sources": [
@@ -440,7 +440,7 @@
     {
       "id": "EVENT-001",
       "area": "Event and projection contracts",
-      "gate": 3,
+      "gate": "E3",
       "statement": "Events MUST carry ID/type/schema version, aggregate ID/version, timestamp and correlation ID, with causation ID where useful; consumers SHALL define duplicate, delayed, reordered, missing, future-schema and poison handling. Projections and clients MUST never regress authoritative versions.",
       "rationale": "Search freshness and authority are different contracts.",
       "sources": [
@@ -468,7 +468,7 @@
     {
       "id": "PERSIST-001",
       "area": "Durability and supported storage",
-      "gate": 2,
+      "gate": "E2",
       "statement": "Supported installation MUST retain acknowledged writes, configuration and replay state across process crash, container recreation and ordinary machine restart, with verified storage mapping/index/CDC readiness and separate setup privileges.",
       "rationale": "Disposable Compose and DB acknowledgment do not establish restart durability.",
       "sources": [
@@ -493,7 +493,7 @@
     {
       "id": "REC-001",
       "area": "Backup and restore baseline",
-      "gate": 2,
+      "gate": "E2",
       "statement": "Supported real-data use MUST have automated daily backup with visible age/failure, an off-machine/failure-domain copy, clean-instance restore of authoritative/configuration/replay state, search reconstruction and stale-client/retry handling.",
       "rationale": "Backup execution alone is not recoverability.",
       "sources": [
@@ -516,7 +516,7 @@
     {
       "id": "REC-002",
       "area": "Recovery objectives",
-      "gate": 3,
+      "gate": "E3",
       "statement": "RPO/RTO MUST be explicitly decided for each supported failure class, with recovery procedures and measurable successful restore criteria.",
       "rationale": "A daily backup cannot justify an unconditional 24-hour RPO.",
       "sources": [
@@ -536,7 +536,7 @@
     {
       "id": "REC-003",
       "area": "Disaster recovery qualification",
-      "gate": 4,
+      "gate": "E4",
       "statement": "Production MUST demonstrate approved RPO/RTO under loss of the supported host/storage failure domain and verify source integrity, replay safety and rebuilt projections.",
       "rationale": "An in-place restore cannot establish disaster recovery.",
       "sources": [
@@ -556,7 +556,7 @@
     {
       "id": "TEST-002",
       "area": "Property and fuzz coverage",
-      "gate": 2,
+      "gate": "E2",
       "statement": "High-risk parsers and mutation contracts MUST have property/fuzz coverage for valid/invalid Unicode and escaping, size/complexity boundaries, replay intent, stale versions and nondecreasing projection versions.",
       "rationale": "Example cases leave large input/state spaces unexplored.",
       "sources": [
@@ -579,7 +579,7 @@
     {
       "id": "TEST-003",
       "area": "Concurrency and fault qualification",
-      "gate": 3,
+      "gate": "E3",
       "statement": "Critical invariants MUST be exercised by deterministic concurrency, sustained contention, state-machine/model tests where appropriate and hypothesis-driven dependency/crash fault injection.",
       "rationale": "Finite race tests are evidence, not proof; random chaos has no acceptance oracle.",
       "sources": [
@@ -603,7 +603,7 @@
     {
       "id": "TEST-004",
       "area": "Critical user-path end-to-end evidence",
-      "gate": 3,
+      "gate": "E3",
       "statement": "Beta MUST exercise critical supported user paths through client, API, worker, persistence, events and projection, including denied access, uncertain outcomes and reload.",
       "rationale": "Component probes cannot establish the integrated user experience.",
       "sources": [
@@ -624,7 +624,7 @@
     {
       "id": "PERF-001",
       "area": "Performance baseline",
-      "gate": 2,
+      "gate": "E2",
       "statement": "Alpha MUST measure p50/p95/p99 for mutation, authoritative read and available search/propagation operations with dataset, concurrency, hardware, versions and resource usage recorded.",
       "rationale": "Timeout constants are not measured latency or scale.",
       "sources": [
@@ -643,7 +643,7 @@
     {
       "id": "PERF-002",
       "area": "Operating envelope and scalability",
-      "gate": 3,
+      "gate": "E3",
       "statement": "Beta MUST publish a measured operating envelope for supported tasks/projects, fields, clients and throughput, including saturation, CDC propagation, index rebuild, startup, disk growth, CPU and memory; Production SHALL qualify the supported envelope.",
       "rationale": "An architectural ambition is not enterprise-scale evidence.",
       "sources": [
@@ -663,7 +663,7 @@
     {
       "id": "LIMIT-001",
       "area": "Explicit resource bounds",
-      "gate": 2,
+      "gate": "E2",
       "statement": "User/workload-controlled request/query complexity, filters, fields, task/event size, search results, concurrency and queue growth MUST have enforced bounds and rejection/backpressure contracts; future attachments SHALL be bounded before exposure.",
       "rationale": "Unbounded dimensions invite resource exhaustion and hidden growth.",
       "sources": [
@@ -694,7 +694,7 @@
     {
       "id": "OBS-001",
       "area": "OpenTelemetry-compatible signals",
-      "gate": 3,
+      "gate": "E3",
       "statement": "Services MUST expose structured logs, metrics and propagated trace context, including request rate/duration/errors/active requests, DB pools, mutation failures/retries, CDC lag, event backlog, projection lag, indexing failures and poison/dead-letter counts where applicable.",
       "rationale": "Projection lag must be diagnosable separately from durability.",
       "sources": [
@@ -714,7 +714,7 @@
     {
       "id": "REL-001",
       "area": "Measurable reliability objectives",
-      "gate": 3,
+      "gate": "E3",
       "statement": "Supported releases MUST define measurable SLIs/SLOs for API availability, mutation durability, authoritative-read/search latency, search freshness and recovery success, including windows, populations and exclusions.",
       "rationale": "Objectives require reliable measurements and failure attribution.",
       "sources": [
@@ -734,7 +734,7 @@
     {
       "id": "REL-002",
       "area": "Production reliability acceptance",
-      "gate": 4,
+      "gate": "E4",
       "statement": "Production MUST demonstrate its approved SLOs over the declared qualification window and close critical integrity architecture gaps for shipped capabilities.",
       "rationale": "Defining an objective does not demonstrate it is achieved.",
       "sources": [
@@ -755,7 +755,7 @@
     {
       "id": "OPS-001",
       "area": "Configuration and health",
-      "gate": 2,
+      "gate": "E2",
       "statement": "Supported configuration MUST have a schema, safe defaults, precedence, secret separation, startup validation, incompatible-combination rejection and compatibility rules; liveness, readiness and degraded capabilities SHALL be distinct.",
       "rationale": "A live process may be unable to serve authoritative operations.",
       "sources": [
@@ -779,7 +779,7 @@
     {
       "id": "OPS-002",
       "area": "Operational runbooks",
-      "gate": 3,
+      "gate": "E3",
       "statement": "Supported releases MUST provide tested install, upgrade, backup, restore, health, database failure, search rebuild, CDC backlog, poison recovery, disk-full, secret-rotation and crash-recovery runbooks.",
       "rationale": "Operators need a recoverable workflow rather than undocumented repair commands.",
       "sources": [
@@ -800,7 +800,7 @@
     {
       "id": "MIG-001",
       "area": "Storage upgrades and migrations",
-      "gate": 3,
+      "gate": "E3",
       "statement": "Migrations MUST be explicitly versioned and deterministic, test every supported previous-version upgrade at realistic volume, expose progress/failure, document recovery and require backup before destructive changes.",
       "rationale": "Schema changes must preserve history and operation state.",
       "sources": [
@@ -821,7 +821,7 @@
     {
       "id": "COMPAT-001",
       "area": "Beta compatibility policy",
-      "gate": 3,
+      "gate": "E3",
       "statement": "Beta MUST declare compatibility/version/deprecation rules for HTTP API, events, configuration, storage, CLI and public contracts, with supported upgrade paths; 0.x breaking changes SHALL be documented.",
       "rationale": "Clients and stored data cannot safely upgrade on implicit assumptions.",
       "sources": [
@@ -842,7 +842,7 @@
     {
       "id": "COMPAT-002",
       "area": "1.0 compatibility commitment",
-      "gate": 4,
+      "gate": "E4",
       "statement": "From 1.0, supported public surfaces MUST obey SemVer: incompatible changes require a major release; deprecations SHALL state replacement and removal version/window, and supported upgrades MUST preserve promised data/replay semantics.",
       "rationale": "Version numbers must carry a concrete supported behavior contract.",
       "sources": [
@@ -861,7 +861,7 @@
     {
       "id": "SUPPLY-001",
       "area": "Controlled build inputs",
-      "gate": 3,
+      "gate": "E3",
       "statement": "Release builds MUST bind an immutable source commit to pinned toolchains, lockfiles, digest-pinned images/actions and controlled fetched dependencies; OCI packaging SHALL apply where containers are distributed.",
       "rationale": "Mutable stable tags/version tags are insufficient release input control.",
       "sources": [
@@ -888,7 +888,7 @@
     {
       "id": "SUPPLY-002",
       "area": "SBOM and signed provenance",
-      "gate": 3,
+      "gate": "E3",
       "statement": "Beta releases MUST include per-artifact SPDX or CycloneDX SBOM, checksums and hosted signed build provenance verifiably bound to artifact digests and source, with an assessed SLSA 1.2 Build L2 builder and consumer verification instructions.",
       "rationale": "Provenance must be authenticated and checked against expected source/build identity.",
       "sources": [
@@ -910,7 +910,7 @@
     {
       "id": "SUPPLY-003",
       "area": "Production artifact authenticity",
-      "gate": 4,
+      "gate": "E4",
       "statement": "Production artifacts or a digest manifest covering every artifact MUST be signed, with checksums, SBOM, provenance and documented trusted identity/key verification and rotation/revocation procedures.",
       "rationale": "Signed provenance and release-artifact authenticity are separate requirements.",
       "sources": [
@@ -931,7 +931,7 @@
     {
       "id": "SUPPLY-004",
       "area": "Continuous project security assessment",
-      "gate": 3,
+      "gate": "E3",
       "statement": "The project SHOULD run OpenSSF Scorecard continuously where hosted access permits, retain per-check findings and triage trends.",
       "rationale": "Repository controls can drift independently of source tests.",
       "sources": [
@@ -951,7 +951,7 @@
     {
       "id": "INC-001",
       "area": "Security incident response",
-      "gate": 4,
+      "gate": "E4",
       "statement": "Supported releases MUST follow SECURITY.md response targets and a private-report → triage/severity → remediation → advisory/CVE or GHSA where applicable → patched release → coordinated disclosure → postmortem process.",
       "rationale": "Release users need a predictable remediation and learning path.",
       "sources": [
@@ -974,7 +974,7 @@
     {
       "id": "ACCESS-001",
       "area": "Web accessibility",
-      "gate": 4,
+      "gate": "E4",
       "statement": "The supported web UI MUST meet WCAG 2.2 AA, including keyboard operation, semantic HTML, screen-reader behavior, contrast, focus handling and accessible validation/errors.",
       "rationale": "Interaction capability includes access beyond pointer use.",
       "sources": [
@@ -996,7 +996,7 @@
     {
       "id": "ENT-001",
       "area": "Enterprise qualification",
-      "gate": 5,
+      "gate": "E5",
       "statement": "Enterprise claims MUST be scoped to approved customer requirements and evidenced identity (OIDC, justified SAML/SSO, MFA), RBAC/ABAC, audit, HA, horizontal scaling/multi-node recovery, stronger backup, isolation if multi-tenant, observability, hardening and external penetration/compliance assessments.",
       "rationale": "Enterprise readiness is a capability/evidence decision, not a marketing label.",
       "sources": [
@@ -1018,7 +1018,7 @@
     {
       "id": "CODE-001",
       "area": "Scoped coding conformance",
-      "gate": 1,
+      "gate": "E1",
       "statement": "New and materially changed code MUST apply the Coding Standard with scoped review/test evidence; existing untouched gaps SHALL remain recorded with implementation destinations, and narrow exceptions SHALL have owner, rationale, mitigation and expiry/review date.",
       "rationale": "Coding rules must protect domain invariants and execution ownership without forcing unrelated legacy rewrites or claiming repository-wide conformance.",
       "sources": [

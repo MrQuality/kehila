@@ -63,7 +63,8 @@ class RegisterTests(unittest.TestCase):
                 self.assertIsNotNone(ENGINEERING.reference_error(ROOT, reference))
 
     def test_gate_normative_status_and_schema_fail_closed(self):
-        for field, value in [('gate', True), ('gate', 6), ('status', 'waived'),
+        for field, value in [('gate', True), ('gate', 'E6'), ('gate', 'M1'),
+                             ('gate', 1), ('status', 'waived'),
                              ('statement', 'We aspire to quality'), ('enforcement', ''),
                              ('sources', []), ('work', None)]:
             data = copy.deepcopy(self.data)
@@ -128,23 +129,32 @@ class RegisterTests(unittest.TestCase):
                 self.assertEqual(document.read_bytes(), original)
 
     def test_cumulative_gate_refuses_partial_evidence(self):
-        for gate in (1, 2, 3, 4, 5):
+        for gate in ('E1', 'E2', 'E3', 'E4', 'E5'):
             with self.subTest(gate=gate), patch.object(sys, 'argv', ['check_engineering.py', '--gate', str(gate)]):
-                with self.assertRaisesRegex(ValueError, f'M{gate} missing evidence'):
+                with self.assertRaisesRegex(ValueError, f'{gate} missing evidence'):
                     ENGINEERING.main()
+
+    def test_cli_rejects_product_and_unqualified_numeric_gate_names(self):
+        for gate in ('M1', '1'):
+            with self.subTest(gate=gate), \
+                    patch.object(sys, 'argv', ['check_engineering.py', '--gate', gate]), \
+                    patch.object(sys, 'stderr'):
+                with self.assertRaises(SystemExit) as result:
+                    ENGINEERING.main()
+                self.assertEqual(result.exception.code, 2)
 
     def test_gate_blocks_only_required_unsatisfied_rows(self):
         rows = [
-            {'id': 'REQ-001', 'gate': 1, 'obligation': 'required', 'status': 'partial'},
-            {'id': 'REC-001', 'gate': 1, 'obligation': 'recommended', 'status': 'planned'},
-            {'id': 'OPT-001', 'gate': 1, 'obligation': 'optional', 'status': 'planned'},
-            {'id': 'REQ-002', 'gate': 2, 'obligation': 'required', 'status': 'planned'},
+            {'id': 'REQ-001', 'gate': 'E1', 'obligation': 'required', 'status': 'partial'},
+            {'id': 'REC-001', 'gate': 'E1', 'obligation': 'recommended', 'status': 'planned'},
+            {'id': 'OPT-001', 'gate': 'E1', 'obligation': 'optional', 'status': 'planned'},
+            {'id': 'REQ-002', 'gate': 'E2', 'obligation': 'required', 'status': 'planned'},
         ]
         data = {'requirements': rows}
-        self.assertEqual(ENGINEERING.gate_blockers(data, 1), ['REQ-001'])
+        self.assertEqual(ENGINEERING.gate_blockers(data, 'E1'), ['REQ-001'])
         rows[0]['status'] = 'satisfied'
-        self.assertEqual(ENGINEERING.gate_blockers(data, 1), [])
-        self.assertEqual(ENGINEERING.gate_blockers(data, 2), ['REQ-002'])
+        self.assertEqual(ENGINEERING.gate_blockers(data, 'E1'), [])
+        self.assertEqual(ENGINEERING.gate_blockers(data, 'E2'), ['REQ-002'])
 
     def test_obligation_is_explicit_and_mixed_strength_rows_fail(self):
         for obligation in ('unknown', None, 'recommended', 'optional'):

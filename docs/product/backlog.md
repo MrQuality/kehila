@@ -18,7 +18,7 @@ Backlog IDs are stable references, not strict execution order. The technical pat
 ## Proposed milestones and order
 
 These M0–M4 labels are **product delivery milestones**, not the independent
-[engineering maturity gates](../engineering/ENGINEERING-STANDARD.md). Existing
+[engineering maturity gates E0–E5](../engineering/ENGINEERING-STANDARD.md). Existing
 M1-01–M1-08 child IDs retain their product meaning. Engineering Preview/Alpha/Beta
 qualification requires its own cumulative evidence and does not reduce product scope.
 

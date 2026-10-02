@@ -6,7 +6,7 @@ evidence, not maintainer release approval. No supported artifact is produced.
 
 ## Maturity disposition
 
-M0 Experimental remains the defensible level. Documentation/metadata checks do
+E0 Experimental remains the defensible level. Documentation/metadata checks do
 not implement a usable authenticated product, durable supported installation,
 clean restore, production event path or qualified release. ARC-001 and DOC-001
 are satisfied within their limited record/documentation scope. Other obligations
