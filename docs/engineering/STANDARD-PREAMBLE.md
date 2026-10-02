@@ -16,8 +16,9 @@ It cannot establish that an evidence claim is true.
 ## Normative rules and qualification
 
 MUST and SHALL are mandatory; SHOULD requires a documented reason for departure;
-MAY is optional. Each requirement starts at its stated gate and remains required
-thereafter. All applicable clauses in a requirement must be satisfied. A partial
+MAY is optional. The register's explicit obligation field distinguishes required,
+recommended and optional controls. Each control applies from its stated gate
+onward. All applicable mandatory clauses must be satisfied. A partial
 implementation does not pass. M5 is a later target, not current delivery scope.
 No requirement permits weakening accepted product data-integrity rules.
 
@@ -38,7 +39,10 @@ An exception is not satisfaction: a release with unmet mandatory requirements
 MUST remain below that gate. Review applicability on every scope/architecture
 change. The register deliberately has no blanket waived or compliant status.
 
-`python scripts/check_engineering.py --gate N` fails on recorded cumulative gaps.
+`python scripts/check_engineering.py --gate N` fails on recorded mandatory cumulative
+gaps and reports unsatisfied recommendations/options as nonblocking findings.
+Recommendations still require an evidence-based disposition or documented reason
+for departure in the qualification assessment; passing this check does not supply it.
 It is a necessary metadata check for qualification, not approval. Before claiming
 a gate, the maintainer MUST inspect the evidence at the final commit and verify
 remote required-check settings separately. No self-review approval is required

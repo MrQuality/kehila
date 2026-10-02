@@ -13,9 +13,11 @@ ROOT = Path(__file__).resolve().parents[1]
 REGISTER = Path('docs/engineering/requirements.json')
 PREAMBLE = Path('docs/engineering/STANDARD-PREAMBLE.md')
 DOCUMENT = Path('docs/engineering/ENGINEERING-STANDARD.md')
-FIELDS = {'id', 'area', 'gate', 'statement', 'rationale', 'sources',
+FIELDS = {'id', 'area', 'gate', 'obligation', 'statement', 'rationale', 'sources',
           'required_evidence', 'enforcement', 'status', 'evidence', 'gap', 'work'}
 STATUSES = {'satisfied', 'partial', 'planned'}
+OBLIGATIONS = {'required': {'MUST', 'SHALL'}, 'recommended': {'SHOULD'},
+               'optional': {'MAY'}}
 
 
 def reference_error(root, reference):
@@ -38,7 +40,7 @@ def validate(data, root=ROOT):
     errors = []
     if not isinstance(data, dict) or set(data) != {'version', 'sources', 'requirements'}:
         return ['invalid register fields']
-    if type(data['version']) is not int or data['version'] != 2:
+    if type(data['version']) is not int or data['version'] != 3:
         errors.append('invalid version')
     sources = data['sources']
     if not isinstance(sources, dict) or not sources:
@@ -68,6 +70,15 @@ def validate(data, root=ROOT):
                 errors.append(f'{identity}: empty {field}')
         if isinstance(row['statement'], str) and not re.search(r'\b(MUST|SHALL|SHOULD|MAY)\b', row['statement']):
             errors.append(f'{identity}: missing normative language')
+        obligation = row['obligation']
+        if not isinstance(obligation, str) or obligation not in OBLIGATIONS:
+            errors.append(f'{identity}: invalid obligation')
+        elif isinstance(row['statement'], str):
+            tokens = set(re.findall(r'\b(MUST|SHALL|SHOULD|MAY)\b', row['statement']))
+            if not tokens.intersection(OBLIGATIONS[obligation]):
+                errors.append(f'{identity}: obligation does not match normative language')
+            if obligation != 'required' and tokens.intersection({'MUST', 'SHALL'}):
+                errors.append(f'{identity}: nonmandatory row contains mandatory clauses')
         if not isinstance(row['status'], str) or row['status'] not in STATUSES:
             errors.append(f'{identity}: invalid status')
         for field in ('sources', 'evidence', 'work'):
@@ -105,6 +116,7 @@ def render(data, preamble):
                   f"### {row['id']} — {row['area']}", '', row['statement'], '',
                   f"- **Rationale:** {row['rationale']}",
                   f"- **First required gate:** M{row['gate']} (cumulative thereafter).",
+                  f"- **Obligation:** {row['obligation']}.",
                   f"- **Sources:** {', '.join(row['sources'])}.",
                   f"- **Required evidence:** {row['required_evidence']}",
                   f"- **Enforcement:** {row['enforcement']}",
@@ -114,10 +126,18 @@ def render(data, preamble):
     return '\n'.join(lines)
 
 
+def gate_blockers(data, gate):
+    """Metadata gaps in mandatory controls; recommendations remain review inputs."""
+    return [row['id'] for row in data['requirements']
+            if row['gate'] <= gate and row['obligation'] == 'required'
+            and row['status'] != 'satisfied']
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--write', action='store_true', help='Regenerate the standard after changing the register')
-    parser.add_argument('--gate', type=int, choices=range(1, 6), help='Fail unless every cumulative requirement is recorded satisfied; not release approval')
+    parser.add_argument('--gate', type=int, choices=range(1, 6),
+                        help='Fail on mandatory cumulative gaps; not release approval')
     args = parser.parse_args()
     data = json.loads((ROOT / REGISTER).read_text(encoding='utf-8'))
     errors = validate(data)
@@ -129,7 +149,12 @@ def main():
     elif (ROOT / DOCUMENT).read_text(encoding='utf-8') != expected:
         raise ValueError('Standard is stale; run python scripts/check_engineering.py --write')
     if args.gate:
-        blockers = [r['id'] for r in data['requirements'] if r['gate'] <= args.gate and r['status'] != 'satisfied']
+        advisory = [row['id'] for row in data['requirements']
+                    if row['gate'] <= args.gate and row['obligation'] != 'required'
+                    and row['status'] != 'satisfied']
+        if advisory:
+            print('Nonblocking recommendations/options needing assessment: ' + ', '.join(advisory))
+        blockers = gate_blockers(data, args.gate)
         if blockers:
             raise ValueError(f'M{args.gate} missing evidence: ' + ', '.join(blockers))
     print(f"Engineering register: {len(data['requirements'])} valid requirements; document synchronized")

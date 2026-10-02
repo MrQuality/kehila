@@ -16,8 +16,9 @@ It cannot establish that an evidence claim is true.
 ## Normative rules and qualification
 
 MUST and SHALL are mandatory; SHOULD requires a documented reason for departure;
-MAY is optional. Each requirement starts at its stated gate and remains required
-thereafter. All applicable clauses in a requirement must be satisfied. A partial
+MAY is optional. The register's explicit obligation field distinguishes required,
+recommended and optional controls. Each control applies from its stated gate
+onward. All applicable mandatory clauses must be satisfied. A partial
 implementation does not pass. M5 is a later target, not current delivery scope.
 No requirement permits weakening accepted product data-integrity rules.
 
@@ -38,7 +39,10 @@ An exception is not satisfaction: a release with unmet mandatory requirements
 MUST remain below that gate. Review applicability on every scope/architecture
 change. The register deliberately has no blanket waived or compliant status.
 
-`python scripts/check_engineering.py --gate N` fails on recorded cumulative gaps.
+`python scripts/check_engineering.py --gate N` fails on recorded mandatory cumulative
+gaps and reports unsatisfied recommendations/options as nonblocking findings.
+Recommendations still require an evidence-based disposition or documented reason
+for departure in the qualification assessment; passing this check does not supply it.
 It is a necessary metadata check for qualification, not approval. Before claiming
 a gate, the maintainer MUST inspect the evidence at the final commit and verify
 remote required-check settings separately. No self-review approval is required
@@ -118,6 +122,7 @@ Changes MUST link acceptance criteria, decisions, backlog or issue, PR, evidence
 
 - **Rationale:** Review must distinguish specified behavior from shipped behavior.
 - **First required gate:** M1 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** SSDF, OSPS.
 - **Required evidence:** Final PR assessment, linked positive/negative evidence and scoped release record.
 - **Enforcement:** Register validator plus maintainer PR/release assessment; human semantic review is required.
@@ -132,6 +137,7 @@ Main and supported release branches MUST require PR-based changes and passing CI
 
 - **Rationale:** A workflow file cannot enforce repository access controls.
 - **First required gate:** M1 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** SSDF, OSPS, Scorecard.
 - **Required evidence:** Dated remote ruleset/branch protection and access assessment, required checks, and example final PR.
 - **Enforcement:** Remote rulesets and periodic maintainer inspection; CODEOWNERS routes ownership without fake self-review.
@@ -146,6 +152,7 @@ Material technical choices MUST record context, alternatives, consequences, secu
 
 - **Rationale:** Technical acceptance must remain distinguishable from product scope.
 - **First required gate:** M1 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, SSDF.
 - **Required evidence:** ADRs linked to accepted decisions/source and explicit unresolved consistency boundaries.
 - **Enforcement:** Maintainer design review using ADR template; register validates referenced files.
@@ -160,6 +167,7 @@ CI MUST execute the shared full unit/integration matrix, formatting and lint che
 
 - **Rationale:** Local and CI evidence must have the same scope.
 - **First required gate:** M1 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, SSDF, OSPS.
 - **Required evidence:** Final-commit full verification, Rust fmt/Clippy and Go format/vet output against real services.
 - **Enforcement:** scripts/verify.py and ci.yml; CI status required by GOV-002.
@@ -174,6 +182,7 @@ The repository MUST document reproducible development prerequisites, commands, c
 
 - **Rationale:** Users must be able to reproduce bounded results without confusing a prototype with supported deployment.
 - **First required gate:** M1 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, OSPS.
 - **Required evidence:** Setup/testing guides, implementation inventory, contribution/security policies and links.
 - **Enforcement:** Maintainer documentation review and setup regression tests.
@@ -188,6 +197,7 @@ Alpha MUST deliver a coherent declared product slice through its promised interf
 
 - **Rationale:** Pure rules alone are not a usable product.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010.
 - **Required evidence:** Acceptance-to-interface tests and maintainer scope decision, without silently reducing B-018 scope.
 - **Enforcement:** Product acceptance and release assessment.
@@ -202,6 +212,7 @@ Trust boundaries and abuse cases MUST have a reviewed threat model with mitigati
 
 - **Rationale:** Security decisions need explicit adversaries and assets.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** SSDF, ASVS.
 - **Required evidence:** Reviewed model and tests for authentication, authorization, replay, event and resource abuse.
 - **Enforcement:** Security-impact PR review and Alpha assessment.
@@ -216,6 +227,7 @@ Every exposed read, mutation, configuration and replay path MUST authenticate an
 
 - **Rationale:** Loopback and origin checks do not establish identity or prevent IDOR.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ASVS, SSDF.
 - **Required evidence:** Allow/deny, IDOR, cross-project, revoked-grant replay, session and CLI/browser negative tests.
 - **Enforcement:** Authoritative service boundaries and security integration suite.
@@ -226,10 +238,11 @@ Every exposed read, mutation, configuration and replay path MUST authenticate an
 <a id="sec-003"></a>
 ### SEC-003 — Alpha security verification
 
-Alpha MUST assess all applicable ASVS 5.0.0 Level 1 controls and OSPS 2025-02-25 Level 1 controls, retaining evidence and justified applicability decisions.
+Alpha MUST assess all applicable ASVS 5.0.0 Level 1 controls and OSPS 2025-02-25 Level 1 controls, retaining evidence and justified applicability decisions. An aggregate assessment score MUST NOT replace per-control evidence.
 
 - **Rationale:** A targeted baseline requires complete scoped assessment rather than a badge.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ASVS, OSPS.
 - **Required evidence:** Versioned per-control matrices and closed mandatory gaps, including repository MFA/access and private reporting availability.
 - **Enforcement:** Alpha security qualification; incomplete matrices block release.
@@ -244,6 +257,7 @@ SAST, direct/transitive dependency vulnerability scanning and secret scanning MU
 
 - **Rationale:** New advisories affect unchanged code too.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** SSDF, OSPS, Scorecard.
 - **Required evidence:** Pinned scanner configuration, real seeded detection regressions, scheduled output and triage records.
 - **Enforcement:** Future security CI and vulnerability response; current compiler lints are not SAST coverage.
@@ -254,10 +268,11 @@ SAST, direct/transitive dependency vulnerability scanning and secret scanning MU
 <a id="sec-005"></a>
 ### SEC-005 — Production security assurance
 
-Production MUST satisfy all applicable ASVS 5 Level 2 and OSPS Level 2 controls with versioned evidence, secure deployment settings and closed critical/high exploitable findings.
+Production MUST satisfy all applicable ASVS 5 Level 2 and OSPS Level 2 controls with versioned evidence, secure deployment settings and closed critical/high exploitable findings. An aggregate assessment score MUST NOT replace per-control evidence.
 
 - **Rationale:** Broad adoption requires stronger verification than local development.
 - **First required gate:** M4 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ASVS, OSPS, SSDF.
 - **Required evidence:** Complete matrices, hardened install tests and remediated findings; any source-standard exceptions disclosed.
 - **Enforcement:** Production security sign-off, never inferred from Alpha assessment.
@@ -272,6 +287,7 @@ Dependencies MUST follow the dependency policy for licenses, direct/transitive a
 
 - **Rationale:** A lockfile is inventory evidence, not security or license clearance.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** SSDF, OSPS.
 - **Required evidence:** Dependency/license inventory, update/triage record, notices and exception reviews.
 - **Enforcement:** Dependency PR review now; automated inventory/scanning qualification in B-021.
@@ -286,6 +302,7 @@ Public HTTP APIs MUST be OpenAPI contract-first with tested schemas, stable erro
 
 - **Rationale:** Polyglot adapters must not independently reinterpret errors and retry semantics.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** OpenAPI, ASVS, ISO25010.
 - **Required evidence:** Validated specification, cross-language positive/negative conformance and compatibility diff; documented endpoint applicability.
 - **Enforcement:** Future contract validation and API integration tests; design review now.
@@ -300,6 +317,7 @@ Same operation ID and intent MUST return the original accepted result within its
 
 - **Rationale:** Unknown write outcomes must be safely reconciled without duplicate effects.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, ASVS.
 - **Required evidence:** Pure and actual-storage replay/race tests, scope/fingerprint/expiry/restore tests and API mappings.
 - **Enforcement:** Domain replay logic, immutable storage uniqueness, service access checks and integration tests.
@@ -314,6 +332,7 @@ Accepted task versions MUST increase monotonically; mutation/version/replay acce
 
 - **Rationale:** Single-record success cannot justify consistent configuration, allocation or accounting.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010.
 - **Required evidence:** Storage uniqueness tests, contention/crash evidence and domain-to-enforcing-layer invariant table.
 - **Enforcement:** Domain rules, database keys and service tests; unresolved Q-019 blocks affected routes.
@@ -328,6 +347,7 @@ Events MUST carry ID/type/schema version, aggregate ID/version, timestamp and co
 
 - **Rationale:** Search freshness and authority are different contracts.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, OTel.
 - **Required evidence:** Versioned event schemas, producer/consumer tests, gap/rebuild and poison replay evidence.
 - **Enforcement:** Schema/contract tests, consumer version gates, client merge rules and recovery tooling.
@@ -342,6 +362,7 @@ Supported installation MUST retain acknowledged writes, configuration and replay
 
 - **Rationale:** Disposable Compose and DB acknowledgment do not establish restart durability.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010.
 - **Required evidence:** Actual supported-runtime termination/restart and durable-volume tests with independent reads.
 - **Enforcement:** Provisioning/readiness plus supported-runtime qualification.
@@ -356,6 +377,7 @@ Supported real-data use MUST have automated daily backup with visible age/failur
 
 - **Rationale:** Backup execution alone is not recoverability.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, SSDF.
 - **Required evidence:** Restore exercise, backup failure/sleep scenarios, replay/tombstone and concurrent rebuild checks.
 - **Enforcement:** Backup monitoring and restore qualification; no real-data readiness until demonstrated.
@@ -370,6 +392,7 @@ RPO/RTO MUST be explicitly decided for each supported failure class, with recove
 
 - **Rationale:** A daily backup cannot justify an unconditional 24-hour RPO.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010.
 - **Required evidence:** Approved objective record and timed exercises covering source data, replay state and search recovery.
 - **Enforcement:** Recovery qualification and Q-020 decision; no invented numerical targets.
@@ -384,6 +407,7 @@ Production MUST demonstrate approved RPO/RTO under loss of the supported host/st
 
 - **Rationale:** An in-place restore cannot establish disaster recovery.
 - **First required gate:** M4 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, SSDF.
 - **Required evidence:** Timed independent-environment recovery, integrity comparison and operator evidence.
 - **Enforcement:** Production release and recurring recovery campaigns.
@@ -398,6 +422,7 @@ High-risk parsers and mutation contracts MUST have property/fuzz coverage for va
 
 - **Rationale:** Example cases leave large input/state spaces unexplored.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, SSDF.
 - **Required evidence:** Seeded bounded PR properties, retained regression corpus and separate time-bounded Rust fuzz campaigns.
 - **Enforcement:** Deterministic CI properties and scheduled qualification; fuzz discovery must become regression tests.
@@ -412,6 +437,7 @@ Critical invariants MUST be exercised by deterministic concurrency, sustained co
 
 - **Rationale:** Finite race tests are evidence, not proof; random chaos has no acceptance oracle.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010.
 - **Required evidence:** Campaign parameters, interruption barriers, invariant oracles and failures across the QUALIFICATION matrix.
 - **Enforcement:** Real-service release campaigns and bounded CI regressions.
@@ -426,6 +452,7 @@ Beta MUST exercise critical supported user paths through client, API, worker, pe
 
 - **Rationale:** Component probes cannot establish the integrated user experience.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010.
 - **Required evidence:** Selective deterministic actual-stack E2E with bounded waits and final-state oracles.
 - **Enforcement:** Future system test suite and release qualification.
@@ -440,6 +467,7 @@ Alpha MUST measure p50/p95/p99 for mutation, authoritative read and available se
 
 - **Rationale:** Timeout constants are not measured latency or scale.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010.
 - **Required evidence:** Repeatable benchmark output including CPU, memory, storage growth and startup.
 - **Enforcement:** Benchmark qualification separate from noisy PR latency assertions.
@@ -454,6 +482,7 @@ Beta MUST publish a measured operating envelope for supported tasks/projects, fi
 
 - **Rationale:** An architectural ambition is not enterprise-scale evidence.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010.
 - **Required evidence:** Workload distributions, p50/p95/p99, errors, saturation limits and repeatable volume/rebuild results.
 - **Enforcement:** Beta/Production benchmark campaigns and release scope decisions in Q-022.
@@ -468,6 +497,7 @@ User/workload-controlled request/query complexity, filters, fields, task/event s
 
 - **Rationale:** Unbounded dimensions invite resource exhaustion and hidden growth.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ASVS, ISO25010.
 - **Required evidence:** Limit inventory, maximum/over-limit tests and reviewed justification for any unbounded dimension.
 - **Enforcement:** Domain limits, adapter admission and queue retention policies.
@@ -482,6 +512,7 @@ Services MUST expose structured logs, metrics and propagated trace context, incl
 
 - **Rationale:** Projection lag must be diagnosable separately from durability.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** OTel, ISO25010.
 - **Required evidence:** Telemetry schema, exporter/instrumentation tests, context propagation and bounded-cardinality/redaction checks.
 - **Enforcement:** Instrumentation tests and operational dashboards/alerts; avoid IDs as metric labels.
@@ -496,6 +527,7 @@ Supported releases MUST define measurable SLIs/SLOs for API availability, mutati
 
 - **Rationale:** Objectives require reliable measurements and failure attribution.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, OTel.
 - **Required evidence:** Approved SLI formulas/targets and telemetry queries; Production must retain achieved-window evidence.
 - **Enforcement:** SLO assessment, alert/runbook review and Q-020/Q-022 decisions; targets remain undecided.
@@ -510,6 +542,7 @@ Production MUST demonstrate its approved SLOs over the declared qualification wi
 
 - **Rationale:** Defining an objective does not demonstrate it is achieved.
 - **First required gate:** M4 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010.
 - **Required evidence:** Actual SLO reports, integrity disposition and operational qualification for the support matrix.
 - **Enforcement:** Production qualification review; unresolved Q-019 cannot be hidden by passing single-task tests.
@@ -524,6 +557,7 @@ Supported configuration MUST have a schema, safe defaults, precedence, secret se
 
 - **Rationale:** A live process may be unable to serve authoritative operations.
 - **First required gate:** M2 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, ASVS.
 - **Required evidence:** Invalid/startup configuration and dependency-failure tests with documented capability responses.
 - **Enforcement:** Startup/service validation and dependency matrix in QUALIFICATION; future config validation CLI requires design.
@@ -538,6 +572,7 @@ Supported releases MUST provide tested install, upgrade, backup, restore, health
 
 - **Rationale:** Operators need a recoverable workflow rather than undocumented repair commands.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, SSDF.
 - **Required evidence:** Runbooks executed by an operator with prerequisites, verification, rollback and escalation.
 - **Enforcement:** Operational qualification using runbook template; placeholders are not completion.
@@ -552,6 +587,7 @@ Migrations MUST be explicitly versioned and deterministic, test every supported 
 
 - **Rationale:** Schema changes must preserve history and operation state.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010.
 - **Required evidence:** Version fixtures, interruption/resume or rollback evidence and supported-path matrix.
 - **Enforcement:** Future migration suite and release qualification; no ad-hoc framework is mandated now.
@@ -566,6 +602,7 @@ Beta MUST declare compatibility/version/deprecation rules for HTTP API, events, 
 
 - **Rationale:** Clients and stored data cannot safely upgrade on implicit assumptions.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** SemVer, OpenAPI.
 - **Required evidence:** Compatibility matrix, schema diffs, old-client/event tests and upgrade fixtures.
 - **Enforcement:** Contract/release review and migration tests.
@@ -580,6 +617,7 @@ From 1.0, supported public surfaces MUST obey SemVer: incompatible changes requi
 
 - **Rationale:** Version numbers must carry a concrete supported behavior contract.
 - **First required gate:** M4 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** SemVer.
 - **Required evidence:** Published support matrix, changelog and deprecation policy with tested old/new paths.
 - **Enforcement:** Release compatibility assessment and artifact qualification.
@@ -594,6 +632,7 @@ Release builds MUST bind an immutable source commit to pinned toolchains, lockfi
 
 - **Rationale:** Mutable stable tags/version tags are insufficient release input control.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** SSDF, SLSA, OCI, Scorecard.
 - **Required evidence:** Build input inventory, resolved digests and clean hosted build record.
 - **Enforcement:** Future release pipeline and dependency pin/update review.
@@ -608,6 +647,7 @@ Beta releases MUST include per-artifact SPDX or CycloneDX SBOM, checksums and ho
 
 - **Rationale:** Provenance must be authenticated and checked against expected source/build identity.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** SLSA, SPDX, CycloneDX, SSDF.
 - **Required evidence:** Artifact-level inventories, signatures, verification tests and Build L2 control assessment.
 - **Enforcement:** Future hosted build/release pipeline; provenance file alone is not SLSA attainment.
@@ -622,6 +662,7 @@ Production artifacts or a digest manifest covering every artifact MUST be signed
 
 - **Rationale:** Signed provenance and release-artifact authenticity are separate requirements.
 - **First required gate:** M4 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** SLSA, OSPS, SSDF.
 - **Required evidence:** Consumer signature verification, tampered-artifact negative tests and signing incident procedure.
 - **Enforcement:** Publication gate after verification → security checks → build → tests → SBOM → provenance → signing → packaging.
@@ -632,10 +673,11 @@ Production artifacts or a digest manifest covering every artifact MUST be signed
 <a id="supply-004"></a>
 ### SUPPLY-004 — Continuous project security assessment
 
-The project SHOULD run OpenSSF Scorecard continuously where hosted access permits, retain per-check findings and triage trends; an aggregate score MUST NOT replace control evidence.
+The project SHOULD run OpenSSF Scorecard continuously where hosted access permits, retain per-check findings and triage trends.
 
 - **Rationale:** Repository controls can drift independently of source tests.
 - **First required gate:** M3 (cumulative thereafter).
+- **Obligation:** recommended.
 - **Sources:** Scorecard, OSPS.
 - **Required evidence:** Scheduled assessment and owned findings or a documented feasibility rationale with review date.
 - **Enforcement:** Future read-only scheduled assessment, kept separate from deterministic PR checks.
@@ -650,6 +692,7 @@ Supported releases MUST follow SECURITY.md response targets and a private-report
 
 - **Rationale:** Release users need a predictable remediation and learning path.
 - **First required gate:** M4 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** SSDF, OSPS.
 - **Required evidence:** Enabled private reporting, incident exercise, advisory/patch workflow and support contacts.
 - **Enforcement:** Maintainer incident procedure and Production exercise; existing targets remain unchanged.
@@ -664,6 +707,7 @@ The supported web UI MUST meet WCAG 2.2 AA, including keyboard operation, semant
 
 - **Rationale:** Interaction capability includes access beyond pointer use.
 - **First required gate:** M4 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** WCAG, ISO25010.
 - **Required evidence:** Scoped automated accessibility checks plus manual keyboard/screen-reader evaluation across supported browsers.
 - **Enforcement:** UI acceptance and Production qualification; automation cannot replace manual testing.
@@ -678,6 +722,7 @@ Enterprise claims MUST be scoped to approved customer requirements and evidenced
 
 - **Rationale:** Enterprise readiness is a capability/evidence decision, not a marketing label.
 - **First required gate:** M5 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, ASVS, SSDF, SLSA.
 - **Required evidence:** Scope/applicability decisions, independent security assessment and realistic enterprise failure/isolation/recovery qualification.
 - **Enforcement:** Later enterprise initiative; consider SLSA Build L3 after builder threat-model review.
@@ -692,6 +737,7 @@ New and materially changed code MUST apply the Coding Standard with scoped revie
 
 - **Rationale:** Coding rules must protect domain invariants and execution ownership without forcing unrelated legacy rewrites or claiming repository-wide conformance.
 - **First required gate:** M1 (cumulative thereafter).
+- **Obligation:** required.
 - **Sources:** ISO25010, SSDF.
 - **Required evidence:** PR scope and applicable-rule assessment, relevant compiler/format/lint and behavioral results, and existing gap or exception dispositions with backlog references.
 - **Enforcement:** Existing Rust/Go format/lint and unsafe checks, shared register validation, and maintainer assessment using the contribution policy, Definition of Done and PR template. Semantic conformance remains a review obligation.

@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "sources": {
     "ISO25010": {
       "title": "ISO/IEC 25010:2023 product quality model",
@@ -76,7 +76,8 @@
       "gap": "Product traceability exists; the extended completion and release chain has not been demonstrated.",
       "work": [
         "docs/product/backlog.md#b-019"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "GOV-002",
@@ -101,7 +102,8 @@
       "gap": "Main protection was inspected on 2026-10-02: required verify, admin enforcement, no force-push/deletion and zero required approvals. Final PR assessment and future release-branch settings remain unevidenced.",
       "work": [
         "docs/product/backlog.md#b-019"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "ARC-001",
@@ -128,7 +130,8 @@
         "docs/product/decisions.md#d-016",
         "docs/product/decisions.md#d-017",
         "docs/product/decisions.md#d-018"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "TEST-001",
@@ -152,7 +155,8 @@
       "gap": "Executable matrix exists; a final-commit CI result and qualification assessment remain required.",
       "work": [
         "docs/product/backlog.md#b-019"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "DOC-001",
@@ -178,7 +182,8 @@
       "gap": "Development documentation exists; this requirement does not claim supported installation or production security.",
       "work": [
         "docs/product/backlog.md#b-019"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "FUNC-001",
@@ -205,7 +210,8 @@
         "docs/product/backlog.md#b-018",
         "docs/product/decisions.md#d-019",
         "docs/product/decisions.md#d-024"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "SEC-001",
@@ -226,7 +232,8 @@
       "gap": "Initial current/planned boundary model exists; mitigations and formal assessment remain incomplete.",
       "work": [
         "docs/product/backlog.md#b-020"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "SEC-002",
@@ -251,13 +258,14 @@
         "docs/product/backlog.md#b-020",
         "docs/product/decisions.md#d-017",
         "docs/product/decisions.md#d-033"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "SEC-003",
       "area": "Alpha security verification",
       "gate": 2,
-      "statement": "Alpha MUST assess all applicable ASVS 5.0.0 Level 1 controls and OSPS 2025-02-25 Level 1 controls, retaining evidence and justified applicability decisions.",
+      "statement": "Alpha MUST assess all applicable ASVS 5.0.0 Level 1 controls and OSPS 2025-02-25 Level 1 controls, retaining evidence and justified applicability decisions. An aggregate assessment score MUST NOT replace per-control evidence.",
       "rationale": "A targeted baseline requires complete scoped assessment rather than a badge.",
       "sources": [
         "ASVS",
@@ -270,7 +278,8 @@
       "gap": "No full ASVS/OSPS assessment exists.",
       "work": [
         "docs/product/backlog.md#b-020"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "SEC-004",
@@ -291,13 +300,14 @@
       "work": [
         "docs/product/backlog.md#b-020",
         "docs/product/backlog.md#b-021"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "SEC-005",
       "area": "Production security assurance",
       "gate": 4,
-      "statement": "Production MUST satisfy all applicable ASVS 5 Level 2 and OSPS Level 2 controls with versioned evidence, secure deployment settings and closed critical/high exploitable findings.",
+      "statement": "Production MUST satisfy all applicable ASVS 5 Level 2 and OSPS Level 2 controls with versioned evidence, secure deployment settings and closed critical/high exploitable findings. An aggregate assessment score MUST NOT replace per-control evidence.",
       "rationale": "Broad adoption requires stronger verification than local development.",
       "sources": [
         "ASVS",
@@ -312,7 +322,8 @@
       "work": [
         "docs/product/backlog.md#b-020",
         "docs/product/backlog.md#b-021"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "DEP-001",
@@ -335,7 +346,8 @@
       "gap": "Policy and Rust lockfile exist; complete transitive/image license and advisory evidence is missing.",
       "work": [
         "docs/product/backlog.md#b-021"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "API-001",
@@ -362,7 +374,8 @@
         "docs/product/backlog.md#b-022",
         "docs/product/decisions.md#d-016",
         "docs/product/decisions.md#d-032"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "API-002",
@@ -392,7 +405,8 @@
         "docs/product/decisions.md#d-032",
         "docs/product/decisions.md#d-033",
         "docs/product/decisions.md#d-034"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "DATA-001",
@@ -420,7 +434,8 @@
         "docs/product/backlog.md#b-023",
         "docs/product/decisions.md#d-016",
         "docs/product/decisions.md#d-018"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "EVENT-001",
@@ -447,7 +462,8 @@
         "docs/product/backlog.md#b-023",
         "docs/product/decisions.md#d-016",
         "docs/product/decisions.md#d-017"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "PERSIST-001",
@@ -471,7 +487,8 @@
         "docs/product/backlog.md#b-024",
         "docs/product/decisions.md#d-016",
         "docs/product/decisions.md#d-017"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "REC-001",
@@ -493,7 +510,8 @@
         "docs/product/backlog.md#b-024",
         "docs/product/decisions.md#d-017",
         "docs/product/decisions.md#d-034"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "REC-002",
@@ -512,7 +530,8 @@
       "work": [
         "docs/product/backlog.md#b-024",
         "docs/product/backlog.md#b-018"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "REC-003",
@@ -531,7 +550,8 @@
       "gap": "Machine-loss recovery and tested objectives remain future work.",
       "work": [
         "docs/product/backlog.md#b-024"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "TEST-002",
@@ -553,7 +573,8 @@
       "gap": "Example/boundary tests exist; systematic properties/fuzzing and parser complexity bounds are incomplete.",
       "work": [
         "docs/product/backlog.md#b-023"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "TEST-003",
@@ -576,7 +597,8 @@
       "work": [
         "docs/product/backlog.md#b-023",
         "docs/product/backlog.md#b-024"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "TEST-004",
@@ -596,7 +618,8 @@
         "docs/product/backlog.md#b-006",
         "docs/product/backlog.md#b-018",
         "docs/product/backlog.md#b-023"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "PERF-001",
@@ -614,7 +637,8 @@
       "gap": "SP-001 resource observations are bounded prototype results, not application performance qualification.",
       "work": [
         "docs/product/backlog.md#b-025"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "PERF-002",
@@ -633,7 +657,8 @@
       "work": [
         "docs/product/backlog.md#b-025",
         "docs/product/backlog.md#b-018"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "LIMIT-001",
@@ -663,7 +688,8 @@
         "docs/product/decisions.md#d-021",
         "docs/product/decisions.md#d-023",
         "docs/product/decisions.md#d-030"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "OBS-001",
@@ -682,7 +708,8 @@
       "gap": "No integrated OTel-compatible model exists.",
       "work": [
         "docs/product/backlog.md#b-026"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "REL-001",
@@ -701,7 +728,8 @@
       "gap": "Neither final numerical targets nor instrumented SLO evidence exists.",
       "work": [
         "docs/product/backlog.md#b-026"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "REL-002",
@@ -721,7 +749,8 @@
         "docs/product/backlog.md#b-023",
         "docs/product/backlog.md#b-026",
         "docs/product/backlog.md#b-018"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "OPS-001",
@@ -744,7 +773,8 @@
       "work": [
         "docs/product/backlog.md#b-005",
         "docs/product/backlog.md#b-027"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "OPS-002",
@@ -764,7 +794,8 @@
       "work": [
         "docs/product/backlog.md#b-024",
         "docs/product/backlog.md#b-027"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "MIG-001",
@@ -784,7 +815,8 @@
         "docs/product/backlog.md#b-005",
         "docs/product/backlog.md#b-024",
         "docs/product/backlog.md#b-027"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "COMPAT-001",
@@ -804,7 +836,8 @@
       "work": [
         "docs/product/backlog.md#b-022",
         "docs/product/backlog.md#b-028"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "COMPAT-002",
@@ -822,7 +855,8 @@
       "gap": "Workspace 0.1.0 is not a supported compatibility commitment.",
       "work": [
         "docs/product/backlog.md#b-028"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "SUPPLY-001",
@@ -848,7 +882,8 @@
       "work": [
         "docs/product/backlog.md#b-021",
         "docs/product/backlog.md#b-028"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "SUPPLY-002",
@@ -869,7 +904,8 @@
       "gap": "No release SBOM, signed provenance or builder assessment.",
       "work": [
         "docs/product/backlog.md#b-028"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "SUPPLY-003",
@@ -889,13 +925,14 @@
       "gap": "No supported release signing/publication pipeline.",
       "work": [
         "docs/product/backlog.md#b-028"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "SUPPLY-004",
       "area": "Continuous project security assessment",
       "gate": 3,
-      "statement": "The project SHOULD run OpenSSF Scorecard continuously where hosted access permits, retain per-check findings and triage trends; an aggregate score MUST NOT replace control evidence.",
+      "statement": "The project SHOULD run OpenSSF Scorecard continuously where hosted access permits, retain per-check findings and triage trends.",
       "rationale": "Repository controls can drift independently of source tests.",
       "sources": [
         "Scorecard",
@@ -908,7 +945,8 @@
       "gap": "Hosted permissions/publication prerequisites have not been qualified.",
       "work": [
         "docs/product/backlog.md#b-021"
-      ]
+      ],
+      "obligation": "recommended"
     },
     {
       "id": "INC-001",
@@ -930,7 +968,8 @@
       "work": [
         "docs/product/backlog.md#b-020",
         "docs/product/backlog.md#b-028"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "ACCESS-001",
@@ -951,7 +990,8 @@
         "docs/product/backlog.md#b-006",
         "docs/product/backlog.md#b-018",
         "docs/product/backlog.md#b-027"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "ENT-001",
@@ -972,7 +1012,8 @@
       "gap": "Candidate later scope only; multi-tenancy, SAML and certification are not implied requirements today.",
       "work": [
         "docs/product/backlog.md#b-029"
-      ]
+      ],
+      "obligation": "required"
     },
     {
       "id": "CODE-001",
@@ -999,7 +1040,8 @@
         "docs/product/backlog.md#b-019",
         "docs/product/backlog.md#b-022",
         "docs/product/backlog.md#b-023"
-      ]
+      ],
+      "obligation": "required"
     }
   ]
 }

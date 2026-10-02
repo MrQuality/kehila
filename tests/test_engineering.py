@@ -85,6 +85,26 @@ class RegisterTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, f'M{gate} missing evidence'):
                     ENGINEERING.main()
 
+    def test_gate_blocks_only_required_unsatisfied_rows(self):
+        rows = [
+            {'id': 'REQ-001', 'gate': 1, 'obligation': 'required', 'status': 'partial'},
+            {'id': 'REC-001', 'gate': 1, 'obligation': 'recommended', 'status': 'planned'},
+            {'id': 'OPT-001', 'gate': 1, 'obligation': 'optional', 'status': 'planned'},
+            {'id': 'REQ-002', 'gate': 2, 'obligation': 'required', 'status': 'planned'},
+        ]
+        data = {'requirements': rows}
+        self.assertEqual(ENGINEERING.gate_blockers(data, 1), ['REQ-001'])
+        rows[0]['status'] = 'satisfied'
+        self.assertEqual(ENGINEERING.gate_blockers(data, 1), [])
+        self.assertEqual(ENGINEERING.gate_blockers(data, 2), ['REQ-002'])
+
+    def test_obligation_is_explicit_and_mixed_strength_rows_fail(self):
+        for obligation in ('unknown', None, 'recommended', 'optional'):
+            data = copy.deepcopy(self.data)
+            data['requirements'][0]['obligation'] = obligation
+            with self.subTest(obligation=obligation):
+                self.assertTrue(ENGINEERING.validate(data))
+
     def test_shared_matrix_includes_enforcement_in_both_modes(self):
         spec = importlib.util.spec_from_file_location('verify_engineering', ROOT / 'scripts/verify.py')
         verify = importlib.util.module_from_spec(spec)
