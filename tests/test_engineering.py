@@ -1,6 +1,7 @@
 """Regression coverage for enforceable metadata, not compliance conclusions."""
 import copy
 import importlib.util
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -127,6 +128,35 @@ class RegisterTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'duplicate ID'):
                     ENGINEERING.main()
                 self.assertEqual(document.read_bytes(), original)
+
+    def test_cli_allows_planned_recommendation_but_blocks_partial_requirement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            data = self.write_fixture(root)
+            required = data['requirements'][0]
+            required['status'] = 'satisfied'
+            recommendation = copy.deepcopy(required)
+            recommendation.update(id='ADVICE-001', obligation='recommended',
+                                  statement='The tool SHOULD retain assessment trends.',
+                                  status='planned', evidence=[])
+            data['requirements'].append(recommendation)
+            preamble = '# Fixture qualification\n'
+            (root / ENGINEERING.PREAMBLE).write_text(preamble, encoding='utf-8')
+            for status in ('satisfied', 'partial'):
+                required['status'] = status
+                (root / ENGINEERING.REGISTER).write_text(json.dumps(data), encoding='utf-8')
+                (root / ENGINEERING.DOCUMENT).write_text(
+                    ENGINEERING.render(data, preamble), encoding='utf-8')
+                output = io.StringIO()
+                with self.subTest(status=status), patch.object(ENGINEERING, 'ROOT', root), \
+                        patch.object(sys, 'argv', ['check_engineering.py', '--gate', 'E1']), \
+                        patch.object(sys, 'stdout', output):
+                    if status == 'satisfied':
+                        ENGINEERING.main()
+                    else:
+                        with self.assertRaisesRegex(ValueError, 'E1 missing evidence: GOV-001'):
+                            ENGINEERING.main()
+                    self.assertIn('ADVICE-001', output.getvalue())
 
     def test_cumulative_gate_refuses_partial_evidence(self):
         for gate in ('E1', 'E2', 'E3', 'E4', 'E5'):

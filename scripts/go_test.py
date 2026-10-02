@@ -9,6 +9,7 @@ import tempfile
 import time
 from go_inventory import GO_PACKAGES, ROOT, go_files
 
+
 def main():
     go_files()
     temporary_root = Path(tempfile.gettempdir()).resolve()
