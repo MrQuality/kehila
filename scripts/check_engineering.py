@@ -140,7 +140,7 @@ def main():
                         help='Fail on mandatory cumulative gaps; not release approval')
     args = parser.parse_args()
     data = json.loads((ROOT / REGISTER).read_text(encoding='utf-8'))
-    errors = validate(data)
+    errors = validate(data, ROOT)
     if errors:
         raise ValueError('\n'.join(errors))
     expected = render(data, (ROOT / PREAMBLE).read_text(encoding='utf-8'))

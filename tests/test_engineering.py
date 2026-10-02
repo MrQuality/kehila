@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -78,6 +79,53 @@ class RegisterTests(unittest.TestCase):
         with patch.object(sys, 'argv', ['check_engineering.py']), patch.object(Path, 'read_text', read):
             with self.assertRaisesRegex(ValueError, 'stale'):
                 ENGINEERING.main()
+
+    def write_fixture(self, root):
+        """Small valid register with real local evidence and backlog references."""
+        data = copy.deepcopy(self.data)
+        data['requirements'] = [data['requirements'][0]]
+        row = data['requirements'][0]
+        row['evidence'] = ['evidence.md']
+        row['work'] = ['docs/product/backlog.md#b-019']
+        (root / 'docs/product').mkdir(parents=True)
+        (root / 'docs/product/backlog.md').write_text('<a id="b-019"></a>', encoding='utf-8')
+        (root / 'evidence.md').write_text('Bounded fixture evidence.', encoding='utf-8')
+        (root / ENGINEERING.REGISTER).parent.mkdir(parents=True)
+        (root / ENGINEERING.REGISTER).write_text(json.dumps(data), encoding='utf-8')
+        return data
+
+    def test_write_regenerates_repeatably_and_preserves_authored_preamble(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            data = self.write_fixture(root)
+            authored = b'# Authored context\n\nMaintain this prose separately.\n'
+            (root / ENGINEERING.PREAMBLE).write_bytes(authored)
+            document = root / ENGINEERING.DOCUMENT
+            document.write_text('stale generated output', encoding='utf-8')
+            with patch.object(ENGINEERING, 'ROOT', root), \
+                    patch.object(sys, 'argv', ['check_engineering.py', '--write']):
+                ENGINEERING.main()
+                first = document.read_bytes()
+                self.assertEqual(first.decode(), ENGINEERING.render(data, authored.decode()))
+                ENGINEERING.main()
+                self.assertEqual(document.read_bytes(), first)
+                self.assertEqual((root / ENGINEERING.PREAMBLE).read_bytes(), authored)
+
+    def test_write_refuses_invalid_input_without_clobbering_document(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            data = self.write_fixture(root)
+            document = root / ENGINEERING.DOCUMENT
+            original = b'Previous generated evidence\n'
+            document.write_bytes(original)
+            (root / ENGINEERING.PREAMBLE).write_text('# Context\n', encoding='utf-8')
+            data['requirements'].append(copy.deepcopy(data['requirements'][0]))
+            (root / ENGINEERING.REGISTER).write_text(json.dumps(data), encoding='utf-8')
+            with patch.object(ENGINEERING, 'ROOT', root), \
+                    patch.object(sys, 'argv', ['check_engineering.py', '--write']):
+                with self.assertRaisesRegex(ValueError, 'duplicate ID'):
+                    ENGINEERING.main()
+                self.assertEqual(document.read_bytes(), original)
 
     def test_cumulative_gate_refuses_partial_evidence(self):
         for gate in (1, 2, 3, 4, 5):
