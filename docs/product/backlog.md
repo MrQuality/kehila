@@ -359,6 +359,15 @@ are maintained in the [engineering register](../engineering/ENGINEERING-STANDARD
 All are owned by the project maintainer until delegated. No release or security
 compliance is implied by a documented planning artifact.
 
+B-019–B-029 are grouped planning references, not eleven scheduled delivery
+commitments. Work in this PR is linked through [PR #35](https://github.com/MrQuality/yaja/pull/35);
+remaining initiative work is unscheduled unless an execution issue is linked.
+When selecting work, link an issue with bounded acceptance criteria, dependencies
+on the existing product items and the source/evidence needed to close it. Use an
+existing product issue when it owns that implementation; create an initiative
+issue only for independently actionable work. A standards reference alone does
+not activate an initiative or move it ahead of product delivery.
+
 <a id="b-019"></a>
 ### B-019 — Engineering governance and verification baseline
 
