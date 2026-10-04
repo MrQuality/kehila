@@ -11,7 +11,7 @@ Baseline: 2026-09-23. These documents describe planned product behavior. See
 
 ## Scope
 
-YAJA is intended to support local project and task management, task knowledge,
+Kehila is intended to support local project and task management, task knowledge,
 sprint and Gantt planning, shared resources, scheduling, time tracking, and
 resource costs. Local use is the initial deployment target; broader hosting
 requirements remain open.
@@ -49,7 +49,7 @@ and rates are illustrative, and the scenarios are specifications for future test
 
 ## Technical context
 
-The [v0.2 design](../reference/YAJA-v0.2.md) remains the architecture reference.
+The [v0.2 design](../reference/Kehila-v0.2.md) remains the architecture reference.
 It predates these requirements and does not fully define resource scheduling,
 cost accounting, or the phase/status model. Conflicts between the product rules
 and technical contracts need resolution before the affected work is implemented.

@@ -1,4 +1,4 @@
-# Contributing to YAJA
+# Contributing to Kehila
 
 Keep changes focused and explain the problem they solve. Discuss architectural
 changes in an issue before implementing them. Follow the
@@ -40,7 +40,7 @@ sole-contributor phase, the project maintainer also owns the proposed
 assigned. When these responsibilities are delegated, update this section and
 the relevant ownership records.
 
-CODEOWNERS routes review requests. It does not grant permissions inside YAJA,
+CODEOWNERS routes review requests. It does not grant permissions inside Kehila,
 identify an independent reviewer for an author's PR, or by itself require
 code-owner approval. Product project administrators and their grants are
 separate roles defined by the product contracts.
@@ -88,10 +88,10 @@ Contributions are licensed under Apache-2.0. Retain third-party license notices
 and credit contributors using their preferred public name or handle. Report
 vulnerabilities privately through [SECURITY.md](SECURITY.md).
 
-Use YAJA's [naming and third-party reference policy](docs/BRANDING.md). Submit
+Use Kehila's [naming and third-party reference policy](docs/BRANDING.md). Submit
 original work or material whose license permits its use here, identify its
 source and license in the contribution, and preserve required notices. This
 applies to code, grammar definitions, examples, documentation, and visual assets.
 Keep third-party product references factual and compatibility claims limited to
-documented, tested behavior. Do not introduce third-party branding into YAJA's
+documented, tested behavior. Do not introduce third-party branding into Kehila's
 name, module names, logo, or visual identity.

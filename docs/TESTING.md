@@ -71,10 +71,20 @@ The full suite runs Python tests for the development tools, service readiness
 checks, the NATS account API check, Rust workspace tests, and Go tests. Missing
 tools, unavailable services, and test failures produce a nonzero exit status.
 
-Both modes also run `python scripts/check_branding.py` to reject retired project
-names and identifiers in current source and documentation. The check permits
-factual third-party references and attribution; it is not a legal clearance
-check. Its regression fixture is excluded from the naming scan.
+Both modes also run `python scripts/check_branding.py`. It rejects the retired
+project spelling and former package/import, environment, repository and design
+document identifiers, plus the earlier retired JQL-related identifiers, in paths
+and UTF-8 text. Its explicit inventory covers public root files, source, packages,
+Go modules, documentation, scripts, tests, experiments, GitHub configuration,
+tracked commit-hook entry points, `.gitignore`, `.gitattributes` and `.env.example`.
+The inventory works in Git-free staged snapshots. Local instructions, environment
+files, local evidence, build/dependency directories and the exact naming regression
+fixture are excluded; binary and non-UTF-8 content is skipped.
+Retained storage and SP-001 identities have path-and-context exceptions, and the
+exact migration rows in [the naming policy](BRANDING.md) are allowed. Exceptions
+do not exempt whole files. Factual third-party references and attribution remain
+permitted. This bounded scan does not establish legal clearance or validate all
+semantic naming and attribution claims; those still require manual review.
 
 Individual commands:
 
@@ -181,10 +191,10 @@ API using a temporary subscription. It creates no streams or application data.
 Connections use three-second deadlines and bounded frame sizes and counts.
 
 The full suite also runs `python tests/integration/task_path.py`. This builds the
-Rust worker and Go API, installs indexes in a unique `yaja_test_` collection,
+Rust worker and Go API, installs indexes in a unique `kehila_test_` collection,
 starts two workers sharing that collection and an API on temporary loopback
 ports, and removes its processes and collection on success or failure. It needs
-FerretDB at `mongodb://127.0.0.1:27017`; override `YAJA_TEST_MONGO_URL` with a
+FerretDB at `mongodb://127.0.0.1:27017`; override `KEHILA_TEST_MONGO_URL` with a
 single-host MongoDB URI for a different disposable development instance. It uses
 the `yaja` database. Never point regression tests at a supported user installation.
 No host Python packages or production CDC/indexer are required.
@@ -197,7 +207,7 @@ Concurrent clients reach independent worker processes; the test does not rely on
 a single serial HTTP handler to establish storage exclusion. Finite race tests
 are regression evidence, not exhaustive linearizability proof.
 
-The pure command includes both `yaja_query` and `task_contract`; maintain this
+The pure command includes both `kehila_query` and `task_contract`; maintain this
 explicit list when adding a pure crate. Its selection test verifies that a
 failure in `task_contract` propagates. The full suite tests all Rust workspace
 crates, including adapter policy tests.

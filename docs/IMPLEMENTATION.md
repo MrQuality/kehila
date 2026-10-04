@@ -1,12 +1,12 @@
 # Implementation status
 
-The [engineering standard](engineering/ENGINEERING-STANDARD.md) assesses YAJA as
+The [engineering standard](engineering/ENGINEERING-STANDARD.md) assesses Kehila as
 E0 Experimental, independently of product delivery milestones. The register and
 its generated document are checked in shared verification; Go formatting/vet
 join the current CI baseline. These controls do not add supported product,
 authentication, recovery or release capabilities, or broaden existing evidence.
 
-YAJA is in early development. The current components are:
+Kehila is in early development. The current components are:
 
 | Component | Implemented behavior | Verification |
 | --- | --- | --- |
@@ -71,7 +71,7 @@ Documented requirements and planned backlog items are not implemented features.
 - React UI, optimistic state, and reconciliation.
 - Recovery and crash-isolation integration tests.
 
-The [v0.2 design](reference/YAJA-v0.2.md) now reflects the accepted
+The [v0.2 design](reference/Kehila-v0.2.md) now reflects the accepted
 [first-increment save contract](product/decisions.md#d-016): an acknowledged task
 action returns 200 and a persisted version independently of search visibility.
 The first Go/Rust mutation/read slice is implemented, but its operation-record

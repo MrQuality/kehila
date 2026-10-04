@@ -1,14 +1,19 @@
-# YAJA — Project and task management
+# Kehila — Project and task management
 
 ![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![Stage: early development](https://img.shields.io/badge/stage-early%20development-orange)
 
-YAJA is an open-source project management system in early development, designed
+Kehila is an open-source project management system in early development, designed
 around custom fields and real-time updates. This repository currently contains
 a Rust query parser, NATS connection checks, a bounded Go-to-Rust task path,
 shared synchronization types, and pure rules for the planned configurable
 project and WorkItem model. There is no application UI or supported installation
 yet; the configurable model is not wired into the task worker.
+
+The project and repository were renamed to Kehila on 2026-10-04. Package/import
+names now use `kehila`, and launch variables use `KEHILA_*`. Existing development
+storage and machine identifiers are retained to preserve data; see the
+[rename and storage notes](docs/BRANDING.md#rename-and-retained-storage-identities).
 
 ## Current components
 
@@ -73,10 +78,10 @@ before changing network exposure or using real data.
 
 ## Parser example
 
-The `yaja_query` crate accepts a single equality expression:
+The `kehila_query` crate accepts a single equality expression:
 
 ```rust
-use yaja_query::parse_filter;
+use kehila_query::parse_filter;
 
 let filter = parse_filter("status = 'Open'").unwrap();
 assert_eq!(filter.field, "status");
@@ -87,7 +92,7 @@ Identifiers use ASCII letters, digits, and underscores and cannot start with a
 digit. Values are nonempty single-quoted strings. Compound expressions and
 escaped quotes are not supported yet.
 
-This is YAJA's own filter grammar. Jira Query Language (JQL) compatibility is
+This is Kehila's own filter grammar. Jira Query Language (JQL) compatibility is
 not a current feature or requirement. See the [naming and third-party reference
 policy](docs/BRANDING.md) for terminology and compatibility claims.
 
@@ -98,7 +103,7 @@ NATS for events, and OpenSearch for search. A shared Rust compiler will support
 server queries and browser-side evaluation. The full application API, UI,
 change-data-capture pipeline, and query compiler remain to be implemented.
 
-The [v0.2 design](docs/reference/YAJA-v0.2.md) describes the target architecture
+The [v0.2 design](docs/reference/Kehila-v0.2.md) describes the target architecture
 and proposed contracts. It is a design reference, not a list of shipped features.
 The current development stack uses FerretDB 1.24.2 with PostgreSQL 16; a deployment
 requires a separate review of dependencies, authentication, and storage choices.
@@ -106,7 +111,7 @@ requires a separate review of dependencies, authentication, and storage choices.
 ## Contributing
 
 The [Engineering Standard](docs/engineering/ENGINEERING-STANDARD.md) defines
-evidence-based E1–E5 Engineering Preview through Enterprise gates. YAJA remains
+evidence-based E1–E5 Engineering Preview through Enterprise gates. Kehila remains
 Experimental; the backlog's product milestones are separate. See the
 [architecture records](docs/architecture/README.md) and
 [Definition of Done](docs/engineering/DEFINITION-OF-DONE.md) for change governance.
@@ -125,5 +130,5 @@ described in [SECURITY.md](SECURITY.md).
 Code is licensed under Apache-2.0. The Code of Conduct retains its upstream
 Contributor Covenant attribution.
 
-YAJA is an independent project and is not affiliated with, sponsored by, or
+Kehila is an independent project and is not affiliated with, sponsored by, or
 endorsed by Atlassian. Jira is a trademark of Atlassian.

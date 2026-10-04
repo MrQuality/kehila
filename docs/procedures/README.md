@@ -1,6 +1,6 @@
 # Project procedures
 
-This is the entry point for YAJA's standard operating procedures (SOPs) and
+This is the entry point for Kehila's standard operating procedures (SOPs) and
 existing contributor guides. The register distinguishes approval of a procedure
 from implementation of its automated checks. An entry here is not evidence that
 GitHub enforces it.

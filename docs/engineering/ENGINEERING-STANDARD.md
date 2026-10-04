@@ -1,4 +1,4 @@
-# YAJA Engineering Standard
+# Kehila Engineering Standard
 
 Version 1. Baseline assessment: 2026-10-02. Owner: the project maintainer defined
 in [CONTRIBUTING](../../CONTRIBUTING.md). This framework defines mandatory release
@@ -29,9 +29,9 @@ results, unresolved risks, and maintainer assessment. Link Requirement → Decis
 For each external framework, record the exact revision and a control-by-control
 applicability/evidence matrix. A reference here is a source, not full equivalence.
 ASVS L1/L2 and OSPS L1/L2 assessments must cover all applicable controls, not a
-selected sample. ISO quality characteristics guide YAJA-specific criteria rather
+selected sample. ISO quality characteristics guide Kehila-specific criteria rather
 than a certification claim. Include safety risks when loss or misleading state
-could affect downstream decisions; YAJA is not qualified for safety-critical use.
+could affect downstream decisions; Kehila is not qualified for safety-critical use.
 
 Exceptions MUST identify scope, owner, rationale, mitigation, approver, and expiry
 or review date. Not applicable MUST have evidence-based scope justification.
@@ -72,7 +72,7 @@ questions affecting its shipped behavior, even if a limited single-task test pas
 
 ## Current assessment and evidence boundaries
 
-YAJA is **E0 — Experimental**. Source tests and the historical full-suite evidence
+Kehila is **E0 — Experimental**. Source tests and the historical full-suite evidence
 in [IMPLEMENTATION](../IMPLEMENTATION.md) support bounded task semantics. E1 is
 not yet qualified: final change/release assessment is missing. The dated main
 protection inspection is recorded in [the assessment](ASSESSMENT.md). The setup is documented, but not a supported
@@ -428,7 +428,7 @@ High-risk parsers and mutation contracts MUST have property/fuzz coverage for va
 - **Required evidence:** Seeded bounded PR properties, retained regression corpus and separate time-bounded Rust fuzz campaigns.
 - **Enforcement:** Deterministic CI properties and scheduled qualification; fuzz discovery must become regression tests.
 - **Current status:** partial. Example/boundary tests exist; systematic properties/fuzzing and parser complexity bounds are incomplete.
-- **Current evidence:** [src/pure/yaja_query/src/lib.rs](../../src/pure/yaja_query/src/lib.rs), [src/pure/task_contract/tests/operation.rs](../../src/pure/task_contract/tests/operation.rs)
+- **Current evidence:** [src/pure/kehila_query/src/lib.rs](../../src/pure/kehila_query/src/lib.rs), [src/pure/task_contract/tests/operation.rs](../../src/pure/task_contract/tests/operation.rs)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-023](../../docs/product/backlog.md#b-023)
 
 <a id="test-003"></a>

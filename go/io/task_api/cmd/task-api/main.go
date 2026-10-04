@@ -6,18 +6,18 @@ import (
 	"os"
 	"time"
 
-	taskapi "yaja/task_api"
+	taskapi "kehila/task_api"
 )
 
 func main() {
-	worker := os.Getenv("YAJA_WORKER_URL")
-	search := os.Getenv("YAJA_SEARCH_URL")
-	listen := os.Getenv("YAJA_LISTEN_ADDR")
+	worker := os.Getenv("KEHILA_WORKER_URL")
+	search := os.Getenv("KEHILA_SEARCH_URL")
+	listen := os.Getenv("KEHILA_LISTEN_ADDR")
 	if listen == "" {
 		listen = "127.0.0.1:8080"
 	}
 	if worker == "" || search == "" {
-		log.Fatal("YAJA_WORKER_URL and YAJA_SEARCH_URL are required")
+		log.Fatal("KEHILA_WORKER_URL and KEHILA_SEARCH_URL are required")
 	}
 	server := &http.Server{
 		Addr:              listen,

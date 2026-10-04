@@ -1,5 +1,5 @@
 {
-  "name": "yaja", "version": "0.1.0", "private": true,
+  "name": "kehila", "version": "0.1.0", "private": true,
   "license": "Apache-2.0",
   "workspaces": ["packages/*"],
   "scripts": {"test": "python scripts/verify.py", "healthcheck": "python scripts/healthcheck.py"}

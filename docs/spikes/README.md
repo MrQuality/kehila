@@ -1,4 +1,4 @@
-# YAJA spike procedure and register
+# Kehila spike procedure and register
 
 Status: approved procedure, version 1, 2026-09-25. The
 [project maintainer](../../CONTRIBUTING.md#repository-roles) approved this

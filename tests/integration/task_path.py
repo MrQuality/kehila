@@ -1,7 +1,7 @@
 """Repeatable Go/Rust regression against disposable FerretDB (no CDC required).
 
 Builds and owns two workers, a Go API, a fault proxy, and one unique collection.
-Requires a running single-host FerretDB at YAJA_TEST_MONGO_URL (default localhost).
+Requires a running single-host FerretDB at KEHILA_TEST_MONGO_URL (default localhost).
 """
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
@@ -191,7 +191,7 @@ def database_outage(bases, proxy, processes):
 
 
 def main():
-    uri = os.environ.get('YAJA_TEST_MONGO_URL', 'mongodb://127.0.0.1:27017')
+    uri = os.environ.get('KEHILA_TEST_MONGO_URL', 'mongodb://127.0.0.1:27017')
     parsed = urllib.parse.urlsplit(uri)
     if parsed.scheme != 'mongodb' or not parsed.hostname or ',' in parsed.netloc:
         raise ValueError('The fault test requires a single-host mongodb URI')
@@ -199,9 +199,9 @@ def main():
     metadata = json.loads(subprocess.check_output(['cargo', 'metadata', '--no-deps', '--format-version', '1'], cwd=ROOT))
     extension = '.exe' if os.name == 'nt' else ''
     worker = str(Path(metadata['target_directory']) / 'debug' / ('task_worker' + extension))
-    environment = dict(os.environ, YAJA_MONGO_URL=uri, YAJA_TASK_DB='yaja',
-                       YAJA_TASK_COLLECTION='yaja_test_' + uuid.uuid4().hex)
-    with tempfile.TemporaryDirectory(prefix='yaja-task-path-') as folder, ExitStack() as owned:
+    environment = dict(os.environ, KEHILA_MONGO_URL=uri, KEHILA_TASK_DB='yaja',
+                       KEHILA_TASK_COLLECTION='kehila_test_' + uuid.uuid4().hex)
+    with tempfile.TemporaryDirectory(prefix='kehila-task-path-') as folder, ExitStack() as owned:
         api = str(Path(folder) / ('task-api' + extension))
         subprocess.run(['go', 'build', '-o', api, './go/io/task_api/cmd/task-api'], cwd=ROOT, check=True, timeout=90)
         # Register cleanup before installation, including partially created indexes.
@@ -221,10 +221,10 @@ def main():
         bases = []
         for index in range(2):
             address = '127.0.0.1:' + str(port())
-            worker_env = dict(environment, YAJA_WORKER_LISTEN_ADDR=address)
+            worker_env = dict(environment, KEHILA_WORKER_LISTEN_ADDR=address)
             if index == 0:
                 credentials = parsed.netloc.rsplit('@', 1)[0] + '@' if '@' in parsed.netloc else ''
-                worker_env['YAJA_MONGO_URL'] = urllib.parse.urlunsplit(parsed._replace(
+                worker_env['KEHILA_MONGO_URL'] = urllib.parse.urlunsplit(parsed._replace(
                     netloc=credentials + '127.0.0.1:' + str(proxy.server_address[1])))
             launch([worker], worker_env)
             bases.append('http://' + address)
@@ -236,8 +236,8 @@ def main():
         unavailable = owned.enter_context(socket.socket())
         unavailable.bind(('127.0.0.1', 0))
         address = '127.0.0.1:' + str(port())
-        launch([api], dict(environment, YAJA_LISTEN_ADDR=address, YAJA_WORKER_URL=bases[0],
-                           YAJA_SEARCH_URL='http://127.0.0.1:' + str(unavailable.getsockname()[1])))
+        launch([api], dict(environment, KEHILA_LISTEN_ADDR=address, KEHILA_WORKER_URL=bases[0],
+                           KEHILA_SEARCH_URL='http://127.0.0.1:' + str(unavailable.getsockname()[1])))
         api_base = 'http://' + address
         wait_ready(api_base, processes)
         first = mutation()

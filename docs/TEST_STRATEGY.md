@@ -1,8 +1,8 @@
-# YAJA Test Strategy
+# Kehila Test Strategy
 
 - **Document:** `docs/TEST_STRATEGY.md`
 - **Status:** Proposed
-- **Applies to:** YAJA repository and all supported YAJA distributions
+- **Applies to:** Kehila repository and all supported Kehila distributions
 - **Strategy owner:** [Project maintainer](../CONTRIBUTING.md#repository-roles),
   currently the account listed in [CODEOWNERS](../.github/CODEOWNERS). No
   separate quality owner is assigned.
@@ -20,7 +20,7 @@ hypotheses, dependency degradation and evidence destinations. This strategy
 remains Proposed; gate requirements do not imply that its future test methods
 or complete application stack are implemented. Current execution remains in TESTING.md.
 
-This document defines the long-term testing and quality strategy for YAJA.
+This document defines the long-term testing and quality strategy for Kehila.
 
 It is the north-star for:
 
@@ -39,7 +39,7 @@ This document defines **what must be demonstrated, at what stage, and to what le
 
 It intentionally does not contain volatile command-line instructions. Execution commands, current tooling, environment setup, and the exact composition of the automated suite belong in `docs/TESTING.md`.
 
-The strategy is risk-based. YAJA does not attempt to run every conceivable test for every change. Tests are selected according to the behavior changed, the architecture affected, the potential impact of failure, and the evidence needed to support the resulting claim.
+The strategy is risk-based. Kehila does not attempt to run every conceivable test for every change. Tests are selected according to the behavior changed, the architecture affected, the potential impact of failure, and the evidence needed to support the resulting claim.
 
 Passing tests is not equivalent to proving correctness. Tests provide evidence within a defined scope.
 
@@ -47,7 +47,7 @@ Passing tests is not equivalent to proving correctness. Tests provide evidence w
 
 # 2. Quality Objectives
 
-YAJA testing shall primarily protect the following qualities:
+Kehila testing shall primarily protect the following qualities:
 
 1. **Functional correctness**
    The system performs the behavior defined by product requirements and decisions.
@@ -81,13 +81,13 @@ YAJA testing shall primarily protect the following qualities:
 
 ---
 
-# 3. Current YAJA Quality Baseline
+# 3. Current Kehila Quality Baseline
 
-At the time this strategy is introduced, YAJA already contains several useful quality foundations.
+At the time this strategy is introduced, Kehila already contains several useful quality foundations.
 
 The current implementation separates pure logic from I/O boundaries:
 
-- `src/pure/yaja_query`
+- `src/pure/kehila_query`
 - `src/pure/task_contract`
 - `src/io/task_worker`
 - `src/io/event_dispatcher`
@@ -313,7 +313,7 @@ A documentation label must not be used to avoid testing when configuration, exec
 
 # 6. Test Levels
 
-YAJA uses complementary test levels rather than one giant regression suite.
+Kehila uses complementary test levels rather than one giant regression suite.
 
 ## Level 0: Static Verification
 
@@ -376,7 +376,7 @@ Examples:
 
 Contract tests shall verify both sides of important cross-language boundaries.
 
-YAJA is polyglot. Rust, Go, TypeScript/Wasm and external service contracts must not drift independently.
+Kehila is polyglot. Rust, Go, TypeScript/Wasm and external service contracts must not drift independently.
 
 ---
 
@@ -534,7 +534,7 @@ Nightly testing should use larger time-bounded or iteration-bounded campaigns wi
 
 Property-based testing should be preferred where the state space is much larger than useful hand-written examples.
 
-Priority YAJA targets:
+Priority Kehila targets:
 
 ### Query compiler
 
@@ -609,7 +609,7 @@ Every reproducible fuzz defect must become a permanent regression case.
 
 # 9. Model-Based and State-Machine Testing
 
-YAJA contains stateful behavior for which isolated examples will eventually be insufficient.
+Kehila contains stateful behavior for which isolated examples will eventually be insufficient.
 
 State-machine testing should be used for:
 
@@ -723,7 +723,7 @@ These invariants should eventually be referenced directly from automated test me
 
 # 12. Requirements Traceability
 
-YAJA already uses stable requirement, decision, question, backlog, and spike IDs.
+Kehila already uses stable requirement, decision, question, backlog, and spike IDs.
 
 Testing should preserve this strength.
 
@@ -1021,7 +1021,7 @@ Long-duration operation intended to reveal:
 
 Large persisted datasets.
 
-Especially important for YAJA because immutable operation history, custom fields, search indexes, planning history, and future cost/resource data can grow substantially.
+Especially important for Kehila because immutable operation history, custom fields, search indexes, planning history, and future cost/resource data can grow substantially.
 
 ### Recovery under load
 
@@ -1274,7 +1274,7 @@ Broader chaos campaigns belong in:
 - architecture spikes;
 - pre-release qualification.
 
-Production chaos should not be introduced until YAJA has:
+Production chaos should not be introduced until Kehila has:
 
 - production observability;
 - explicit blast-radius controls;
@@ -1335,7 +1335,7 @@ Migration tests must use realistic persisted data, not an empty database only.
 
 # 26. Custom Fields and WorkItem Types
 
-Custom fields are a core YAJA architectural differentiator and require dedicated coverage as implementation expands.
+Custom fields are a core Kehila architectural differentiator and require dedicated coverage as implementation expands.
 
 Testing should cover:
 
@@ -1386,7 +1386,7 @@ Important future properties include:
 
 # 28. Search and CQRS Verification
 
-YAJA explicitly separates authoritative state from search projection.
+Kehila explicitly separates authoritative state from search projection.
 
 Testing must therefore treat the following as separate states:
 
@@ -1448,7 +1448,7 @@ Personally identifiable or production data must not be copied casually into test
 
 Different claims require different environments.
 
-At minimum, YAJA should eventually maintain evidence for:
+At minimum, Kehila should eventually maintain evidence for:
 
 ### Developer environment
 
@@ -1492,7 +1492,7 @@ No environment should be called “production-like” without defining which pro
 | Release candidate | Full functional qualification, security, performance, chaos, backup/restore, upgrade, supported-runtime matrix |
 | Post-release | Operational health/SLO analysis, regression from escaped defects |
 
-Until the suite becomes expensive, YAJA should prefer running the full deterministic suite on PRs rather than prematurely building clever test-selection logic.
+Until the suite becomes expensive, Kehila should prefer running the full deterministic suite on PRs rather than prematurely building clever test-selection logic.
 
 Optimization comes after measurement.
 
@@ -1609,7 +1609,7 @@ A campaign passing 999 times and failing once is a failed campaign, not “99.9%
 
 Testability requires observability.
 
-As YAJA grows, tests should be able to correlate:
+As Kehila grows, tests should be able to correlate:
 
 - client operation ID;
 - request;
@@ -1683,7 +1683,7 @@ It need not run on every PR.
 
 Specific tools may change without changing this strategy.
 
-A sensible YAJA tool direction is:
+A sensible Kehila tool direction is:
 
 ### Rust
 
@@ -1849,7 +1849,7 @@ This is the primary mechanism by which this strategy drives future test planning
 
 ---
 
-# 45. Immediate YAJA Priorities
+# 45. Immediate Kehila Priorities
 
 The following work should be introduced progressively rather than creating one enormous “QA transformation” change.
 
@@ -1883,7 +1883,7 @@ Add:
 
 Start with:
 
-1. `yaja_query`
+1. `kehila_query`
 2. `task_contract`
 3. operation-ID validation
 4. HTTP mutation deserialization
@@ -1956,7 +1956,7 @@ These should be release blockers rather than optional demonstrations.
 
 # 46. Strategy Success Criteria
 
-This strategy is working when, for any important proposed YAJA change, the team can answer before implementation:
+This strategy is working when, for any important proposed Kehila change, the team can answer before implementation:
 
 1. What behavior are we promising?
 2. What must never happen?
@@ -1975,4 +1975,4 @@ If those questions cannot be answered, test planning is incomplete.
 
 The goal is not maximum test count.
 
-The goal is justified confidence in the claims YAJA makes about its behavior.
+The goal is justified confidence in the claims Kehila makes about its behavior.

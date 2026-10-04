@@ -1,6 +1,6 @@
 """Live Go API boundary check against a running task worker and search stack.
 
-Set YAJA_API_URL to a loopback Go task API. This is intentionally separate from
+Set KEHILA_API_URL to a loopback Go task API. This is intentionally separate from
 the default suite until the production worker and service orchestration exist.
 """
 import json
@@ -10,7 +10,7 @@ import urllib.error
 import urllib.request
 import uuid
 
-BASE = os.environ.get('YAJA_API_URL', 'http://127.0.0.1:8081')
+BASE = os.environ.get('KEHILA_API_URL', 'http://127.0.0.1:8081')
 
 
 def call(path, payload=None):

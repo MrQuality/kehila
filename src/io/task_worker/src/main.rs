@@ -122,14 +122,15 @@ async fn handle(State(app): State<App>, request: Request) -> Response {
 
 #[tokio::main(worker_threads = 2)]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let uri = env::var("YAJA_MONGO_URL")?;
-    let database = env::var("YAJA_TASK_DB").unwrap_or_else(|_| "yaja".into());
-    let collection = env::var("YAJA_TASK_COLLECTION").unwrap_or_else(|_| "task_operations".into());
+    let uri = env::var("KEHILA_MONGO_URL")?;
+    let database = env::var("KEHILA_TASK_DB").unwrap_or_else(|_| "yaja".into());
+    let collection =
+        env::var("KEHILA_TASK_COLLECTION").unwrap_or_else(|_| "task_operations".into());
     let policy = OperationPolicy {
-        admission_days: env::var("YAJA_OPERATION_ADMISSION_DAYS")
+        admission_days: env::var("KEHILA_OPERATION_ADMISSION_DAYS")
             .unwrap_or_else(|_| "90".into())
             .parse()?,
-        replay_days: env::var("YAJA_OPERATION_REPLAY_DAYS")
+        replay_days: env::var("KEHILA_OPERATION_REPLAY_DAYS")
             .unwrap_or_else(|_| "90".into())
             .parse()?,
     };
@@ -156,7 +157,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if !timeout(Duration::from_secs(5), store.check_indexes()).await?? {
         return Err("required task operation indexes are missing".into());
     }
-    let listen: SocketAddr = env::var("YAJA_WORKER_LISTEN_ADDR")
+    let listen: SocketAddr = env::var("KEHILA_WORKER_LISTEN_ADDR")
         .unwrap_or_else(|_| "127.0.0.1:8082".into())
         .parse()?;
     if !listen.ip().is_loopback() {

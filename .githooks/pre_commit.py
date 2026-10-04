@@ -78,7 +78,7 @@ def main():
         print("Documentation-only change; no test run required")
         return 0
     tree_before = git("write-tree")
-    with tempfile.TemporaryDirectory(prefix="yaja-index-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="kehila-index-") as temporary:
         snapshot = Path(temporary)
         git("checkout-index", "--all", "--force", "--prefix=" + snapshot.as_posix() + "/")
         # Reject symlinks/gitlinks in executable input, including Windows exports
