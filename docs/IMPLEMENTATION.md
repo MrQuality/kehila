@@ -148,3 +148,30 @@ suite passed on Windows/Podman with PostgreSQL 16.13, FerretDB 1.24.2, NATS
 contention pairs, worker boundary checks, stalled body and database recovery,
 and the Go-to-Rust search-outage case. SP-001 C01-C06 were not rerun: their
 Python adapters, mapping, CDC configuration, and projection were unchanged.
+
+## Startup configuration migration
+
+The task API and mutation worker reject recognized environment-variable names
+from before the Kehila rename before connecting to a database or binding an HTTP
+listener. This includes the worker's `install-indexes` and
+`drop-test-collection` commands. A retired key is rejected when present even if
+its value is empty or its current replacement is also set. The diagnostic names
+the first retired key in a fixed order and its `KEHILA_*` replacement; it does
+not print configuration values. Remove retired keys rather than setting them to
+empty strings. No compatibility aliases are read.
+
+The API checks former names corresponding to `KEHILA_WORKER_URL`,
+`KEHILA_SEARCH_URL`, and `KEHILA_LISTEN_ADDR`. The worker checks former names
+corresponding to `KEHILA_MONGO_URL`, `KEHILA_TASK_DB`,
+`KEHILA_TASK_COLLECTION`, `KEHILA_OPERATION_ADMISSION_DAYS`,
+`KEHILA_OPERATION_REPLAY_DAYS`, and `KEHILA_WORKER_LISTEN_ADDR`. Each component
+ignores unrelated names, including former-prefix settings owned by other
+components. Current setting parsing and defaults, including retained storage
+identities, are unchanged. See the [rename policy](BRANDING.md) for migration
+names and retained storage identities.
+
+Subprocess tests exercise each rejected key, empty values, old/new conflicts,
+all worker command modes, sanitized diagnostics, and deterministic first-error
+selection. A local TCP probe verifies that rejected worker startup makes no
+database connection. These tests require no running development services;
+existing live tests cover startup with current configuration and persistence.

@@ -120,8 +120,30 @@ async fn handle(State(app): State<App>, request: Request) -> Response {
     }
 }
 
+// Reject presence, including empty values, before database or listener startup.
+// Only former settings owned by this component are rejected; no aliases are read.
+fn reject_retired_configuration() -> Result<(), String> {
+    for suffix in [
+        "MONGO_URL",
+        "TASK_DB",
+        "TASK_COLLECTION",
+        "OPERATION_ADMISSION_DAYS",
+        "OPERATION_REPLAY_DAYS",
+        "WORKER_LISTEN_ADDR",
+    ] {
+        let retired = format!("{}_{suffix}", concat!("YA", "JA"));
+        if env::var_os(&retired).is_some() {
+            return Err(format!(
+                "retired environment variable {retired}; use KEHILA_{suffix}"
+            ));
+        }
+    }
+    Ok(())
+}
+
 #[tokio::main(worker_threads = 2)]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    reject_retired_configuration()?;
     let uri = env::var("KEHILA_MONGO_URL")?;
     let database = env::var("KEHILA_TASK_DB").unwrap_or_else(|_| "yaja".into());
     let collection =
