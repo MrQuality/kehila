@@ -105,6 +105,14 @@ requires a separate review of dependencies, authentication, and storage choices.
 
 ## Contributing
 
+The [Engineering Standard](docs/engineering/ENGINEERING-STANDARD.md) defines
+evidence-based E1–E5 Engineering Preview through Enterprise gates. YAJA remains
+Experimental; the backlog's product milestones are separate. See the
+[architecture records](docs/architecture/README.md) and
+[Definition of Done](docs/engineering/DEFINITION-OF-DONE.md) for change governance.
+The [Coding Standard](docs/engineering/CODING-STANDARD.md) applies design and
+language conventions to new/materially changed code, with existing gaps recorded.
+
 Use the [project procedure index](docs/procedures/README.md) to find SOPs,
 their approval status, and their enforcement coverage.
 

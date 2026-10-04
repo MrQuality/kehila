@@ -14,7 +14,9 @@ def main():
     parser.add_argument("--pure", action="store_true", help="Run unit tests without external services")
     args = parser.parse_args()
     commands = [[sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
-                [sys.executable, "scripts/check_branding.py"]]
+                [sys.executable, "scripts/check_branding.py"],
+                [sys.executable, "scripts/check_engineering.py"],
+                [sys.executable, "scripts/go_static.py"]]
     if not args.pure:
         commands += [[sys.executable, "scripts/healthcheck.py"], [sys.executable, "tests/integration/nats_probe.py"]]
     commands += [["cargo", "test", "--locked", "-p", "yaja_query", "-p", "task_contract"] if args.pure

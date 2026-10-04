@@ -29,6 +29,11 @@ approval or claim additional automation.
 | [Security](../../SECURITY.md) | Development exposure and vulnerability reporting | Contributor and maintainer responsibility |
 | [Naming and attribution](../BRANDING.md) | Project identity and attribution | Naming check plus manual review of matters the check cannot establish |
 | [Product planning](../product/README.md) | Requirements, decisions, questions, and backlog | Stable IDs, linked records, and maintainer assessment |
+| [Engineering standard](../engineering/ENGINEERING-STANDARD.md) | Cumulative maturity requirements and evidence gaps | Shared register validator; semantic release assessment remains manual |
+| [Architecture records](../architecture/README.md) | Technical decisions, product boundary and ADR template | Maintainer design review; current accepted behavior restated with evidence limits |
+| [Definition of Done](../engineering/DEFINITION-OF-DONE.md) | Applicable change completion criteria | PR evidence and maintainer assessment |
+| [Coding standard](../engineering/CODING-STANDARD.md) | New/materially changed code, language conventions and existing gaps | Existing format/lint checks plus scoped PR assessment; broader checks remain planned |
+| [Qualification and runbooks](../engineering/QUALIFICATION.md) | Future operational/release evidence and runbook template | Supported qualification remains backlog work |
 
 ## Proposed approval process for SOPs
 

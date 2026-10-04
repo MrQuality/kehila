@@ -38,7 +38,7 @@ jobs:
         run: python scripts/ci_prepare.py
       - name: Start test services
         run: python scripts/setup_env.py --start --engine docker
-      - name: Run unit and integration tests
+      - name: Run shared verification, engineering validation and Go static checks
         run: python scripts/verify.py
       - name: Verify changed code against event base
         run: python scripts/ci_enforce.py

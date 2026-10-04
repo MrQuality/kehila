@@ -13,6 +13,13 @@
 
 # 1. Purpose
 
+The [engineering standard](engineering/ENGINEERING-STANDARD.md) now assigns
+cumulative release gates to these quality goals. Its
+[qualification guide](engineering/QUALIFICATION.md) specifies invariants, fault
+hypotheses, dependency degradation and evidence destinations. This strategy
+remains Proposed; gate requirements do not imply that its future test methods
+or complete application stack are implemented. Current execution remains in TESTING.md.
+
 This document defines the long-term testing and quality strategy for YAJA.
 
 It is the north-star for:

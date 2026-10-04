@@ -9,6 +9,32 @@ results and link experiments to decisions and reusable regression coverage.
 
 ## Commands
 
+Both verification modes validate the [engineering register](engineering/ENGINEERING-STANDARD.md)
+and run Go formatting/vet checks in addition to the existing matrix. CI retains
+Rust formatting and Clippy checks. Run these individually with:
+
+```text
+python scripts/check_engineering.py
+python scripts/go_static.py
+cargo fmt --all --check
+cargo clippy --locked --workspace --all-targets -- -D warnings
+```
+
+After editing `docs/engineering/requirements.json` or the authored Markdown
+preamble, regenerate with `python scripts/check_engineering.py --write`.
+`--gate E1` (or E2–E5) additionally rejects recorded mandatory cumulative gaps
+and reports recommendations/options without blocking; it does not approve
+evidence, justified SHOULD departures or releases. Product M* IDs are not accepted
+as engineering gates.
+Register regression tests cover stale generation, ID uniqueness, invalid metadata,
+missing evidence and broken references; Go static-check tests cover failing format/vet.
+Go formatting, vet and the default test runner share the explicit module inventory
+in `scripts/go_inventory.py`. It must agree with `go.work` and every module/source
+under `go/`; omitted modules or out-of-module Go files fail verification. Add a new
+module to both the inventory and workspace before relying on shared checks.
+See [qualification](engineering/QUALIFICATION.md) for future property, fault,
+performance, recovery and release campaigns and their current evidence boundaries.
+
 Run the full suite after starting the development services:
 
 ```text

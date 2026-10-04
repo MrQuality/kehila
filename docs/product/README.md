@@ -1,5 +1,11 @@
 # Product planning
 
+The [engineering standard](../engineering/ENGINEERING-STANDARD.md) adds independent
+quality/release gates E0–E5. Product milestone M0–M4 and M1 child IDs here keep their
+delivery meaning. Technical decision governance lives in
+[architecture records](../architecture/README.md); existing D-* records remain
+the source of product decisions, including accepted architecture-facing behavior.
+
 Baseline: 2026-09-23. These documents describe planned product behavior. See
 [implementation status](../IMPLEMENTATION.md) for available components.
 

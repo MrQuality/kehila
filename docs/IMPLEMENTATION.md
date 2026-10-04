@@ -1,5 +1,11 @@
 # Implementation status
 
+The [engineering standard](engineering/ENGINEERING-STANDARD.md) assesses YAJA as
+E0 Experimental, independently of product delivery milestones. The register and
+its generated document are checked in shared verification; Go formatting/vet
+join the current CI baseline. These controls do not add supported product,
+authentication, recovery or release capabilities, or broaden existing evidence.
+
 YAJA is in early development. The current components are:
 
 | Component | Implemented behavior | Verification |

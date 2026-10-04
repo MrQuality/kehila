@@ -17,6 +17,11 @@ Backlog IDs are stable references, not strict execution order. The technical pat
 
 ## Proposed milestones and order
 
+These M0–M4 labels are **product delivery milestones**, not the independent
+[engineering maturity gates E0–E5](../engineering/ENGINEERING-STANDARD.md). Existing
+M1-01–M1-08 child IDs retain their product meaning. Engineering Preview/Alpha/Beta
+qualification requires its own cumulative evidence and does not reduce product scope.
+
 | Milestone | Items / order | Observable outcome |
 | --- | --- | --- |
 | M0 — Document and establish the path | B-001, B-002; resolve the blocking subset of B-003/B-007 | A traceable baseline and an evidence-backed implementation plan. |
@@ -342,6 +347,169 @@ Every confirmed requirement has an implementation destination. Multiple destinat
 
 ## Definition of a completed implementation item
 
-The referenced behavior works through the interfaces the item promises; applicable product questions are resolved; meaningful acceptance and failure cases are verified; actual-service boundaries have actual-service evidence; documentation reflects delivered limits; and normal contribution/review requirements are met. A UI-only mockup, a passing connection probe, or a written acceptance scenario is not sufficient evidence for the complete feature.
+Use the canonical [Definition of Done](../engineering/DEFINITION-OF-DONE.md) for
+completion criteria, evidence boundaries and scope-change review. Apply criteria
+to the interfaces promised by each item with justified not-applicable entries.
 
-Record scope changes as proposals and update the affected requirements and backlog items after review.
+## Engineering maturity initiatives
+
+These grouped initiatives extend existing items rather than duplicate their
+implementation. Engineering requirement IDs, exact first gates and evidence gaps
+are maintained in the [engineering register](../engineering/ENGINEERING-STANDARD.md).
+All are owned by the project maintainer until delegated. No release or security
+compliance is implied by a documented planning artifact.
+
+B-019–B-029 are grouped planning references, not eleven scheduled delivery
+commitments. Work in this PR is linked through [PR #35](https://github.com/MrQuality/yaja/pull/35);
+remaining initiative work is unscheduled unless an execution issue is linked.
+When selecting work, link an issue with bounded acceptance criteria, dependencies
+on the existing product items and the source/evidence needed to close it. Use an
+existing product issue when it owns that implementation; create an initiative
+issue only for independently actionable work. A standards reference alone does
+not activate an initiative or move it ahead of product delivery.
+
+<a id="b-019"></a>
+### B-019 — Engineering governance and verification baseline
+
+**Status:** Documented framework and implemented structural checks; qualification pending.
+**Dependencies:** B-001/B-002 and contribution policy.
+**Traceability:** GOV-001/GOV-002, ARC-001, TEST-001, DOC-001, CODE-001.
+**Deliverable:** Standards/register, ADR boundary, Definition of Done, shared
+metadata validation and useful language checks.
+The [coding standard](../engineering/CODING-STANDARD.md) applies to new/materially
+changed code and inventories current gaps. Qualify boundary checks, Python static
+tooling and declared Rust compiler support incrementally; use B-022 for TypeScript/
+Go contract work and B-023 for failure-diagnostic retention. Do not require an
+unrelated legacy-code sweep to complete a scoped change.
+**Acceptance:** Regression tests reject invalid IDs/links/gaps; final full CI
+evidence is linked; remote protection/required checks and bypass restrictions are
+inspected; maintainer records final PR assessment. Preserve sole-contributor policy.
+
+<a id="b-020"></a>
+### B-020 — Security baseline and incident qualification
+
+**Status:** Needs decisions and implementation. **Dependencies:** B-007, B-021/B-022.
+**Traceability:** SEC-001–SEC-005, INC-001; Q-014.
+**Deliverable:** Reviewed threat model, integrated identity/session/project grants,
+SAST/secret scans and exact versioned ASVS L1/OSPS L1 Alpha matrices; L2 Production
+assessment and supported-release incident workflow later.
+**Acceptance:** Negative auth/IDOR/cross-project/replay tests; real seeded scanner
+detection, actionable triage, secure deployment and expiring exceptions; enabled
+private reporting and exercised patch/advisory/disclosure/postmortem workflow.
+**Tooling gap:** Qualify CodeQL/equivalent and secret scanning against polyglot
+source, hosted availability and maintainable fixtures before adding CI jobs.
+
+<a id="b-021"></a>
+### B-021 — Dependency and repository supply-chain controls
+
+**Status:** Ready to investigate. **Dependencies:** B-019, B-020 for triage.
+**Traceability:** DEP-001, SEC-004/SEC-005, SUPPLY-001/SUPPLY-004.
+**Deliverable:** Direct/transitive/image/tool inventory, license/notices review,
+advisory scanning/update cadence and owned expiring exceptions; read-only scheduled
+Scorecard where practical.
+**Acceptance:** Validate cargo audit/govulncheck (and future JS dependency) coverage,
+pin scanner/tool inputs, distinguish advisory/network failure from clean findings,
+and demonstrate detection/expiry. Qualify GitHub dependency review availability
+and avoid redundant scanners. Assess immutable release action/image/toolchain pins
+with deliberate update procedure. No silent permanent vulnerability ignores.
+
+<a id="b-022"></a>
+### B-022 — API and event contract baseline
+
+**Status:** Waiting on dependencies. **Dependencies:** B-003/B-004/B-005/B-007.
+**Traceability:** API-001/API-002, EVENT-001, COMPAT-001, LIMIT-001; D-016/D-032–D-034.
+**Deliverable:** OpenAPI specification and cross-language conformance; stable
+errors, auth/grants, pagination/filter/sort, replay/conflict, limits/versioning;
+event schema/metadata, future-schema/poison/gap handling and compatibility policy.
+**Acceptance:** Positive/negative/old-client tests; unchanged-ID retry versus
+changed-intent distinction; monotonic projection/client versions; rebuild and
+quarantine/replay evidence. Preserve experimental error semantics without claiming
+they are already a supported API. Actual route integration remains B-004/B-005.
+
+<a id="b-023"></a>
+### B-023 — Integrity, concurrency, properties and fault qualification
+
+**Status:** Waiting on dependencies; bounded current regressions retained.
+**Dependencies:** B-005/B-022; Q-019 for cross-record protocols.
+**Traceability:** DATA-001, EVENT-001, TEST-002–TEST-004, REL-002.
+**Deliverable:** Seeded properties/parser fuzz corpus, deterministic/model and
+sustained concurrency campaigns, critical-path E2E and hypothesis-driven fault
+matrix from QUALIFICATION.md.
+**Acceptance:** Detect duplicate effects, stale acceptance/projection, acknowledged
+loss and partial cross-record acceptance under explicit interruption barriers;
+test malformed/duplicate/reordered/delayed events and dependency/resource failures.
+Use real boundaries, bounded tests and no retry-until-pass. Finite tests remain
+evidence, not linearizability proof. Pure B-003 rules must gain storage evidence.
+
+<a id="b-024"></a>
+### B-024 — Durable installation, backup, restore and migrations
+
+**Status:** Needs decisions. **Dependencies:** B-005, Q-019/Q-020, B-023.
+**Traceability:** PERSIST-001, REC-001–REC-003, MIG-001, OPS-002; D-017/D-034.
+**Deliverable:** Supported restart survival, automated visible daily backup and
+off-failure-domain copy, clean-instance restore including configuration/replay/
+tombstones, search rebuild and supported upgrade/migration qualification.
+**Acceptance:** Independent restored integrity checks, stale-client/retry-ID
+reconciliation, failure/sleep/destination cases, realistic-volume interrupted
+migrations and timed approved RPO/RTO/DR exercises. Index setup alone is not a
+migration framework; backup existence alone is not recovery evidence.
+
+<a id="b-025"></a>
+### B-025 — Performance envelope and resource qualification
+
+**Status:** Needs decisions and measurement. **Dependencies:** B-005/B-022, Q-022.
+**Traceability:** PERF-001/PERF-002, LIMIT-001.
+**Deliverable:** Repeatable Go/Rust workload baseline and later published envelope,
+including history growth, fields, clients, throughput, rebuild and startup.
+**Acceptance:** p50/p95/p99, errors, saturation, CPU/memory/disk and propagation
+measurements with fixtures/runtime/hardware; maximum/over-limit tests. Values are
+measured, not inferred from prototype ceilings or enterprise-scale aspirations.
+
+<a id="b-026"></a>
+### B-026 — Telemetry, SLIs/SLOs and reliability assessment
+
+**Status:** Needs decisions and implementation. **Dependencies:** B-022/B-025, Q-020/Q-022.
+**Traceability:** OBS-001, REL-001/REL-002.
+**Deliverable:** OTel-compatible logs/metrics/trace context, first-class projection
+lag, redaction/cardinality policy, operational queries and approved SLI/SLO targets.
+**Acceptance:** Propagation/metric tests, dependency/freshness alerts, declared
+windows/populations and achieved-window Production evidence. No final targets
+are invented here. Link recovery targets to B-024.
+
+<a id="b-027"></a>
+### B-027 — Operability, configuration and UI qualification
+
+**Status:** Waiting on dependencies. **Dependencies:** B-005/B-006/B-007/B-024/B-026.
+**Traceability:** OPS-001/OPS-002, MIG-001, ACCESS-001.
+**Deliverable:** Safe validated configuration/secret schema, capability-specific
+health/degradation, tested runbooks and later WCAG 2.2 AA web UI evidence.
+**Acceptance:** Invalid/unsupported configuration rejection, failure-matrix tests,
+operator-run install/upgrade/restore/repair/rotation/crash exercises; manual and
+automated accessibility checks once real UI exists. A config-validation CLI is
+a design candidate, not an obligation to implement a speculative command now.
+
+<a id="b-028"></a>
+### B-028 — Supported release and artifact pipeline
+
+**Status:** Waiting on dependencies. **Dependencies:** B-018/B-020/B-021/B-024/B-026.
+**Traceability:** COMPAT-001/COMPAT-002, SUPPLY-001–SUPPLY-003, INC-001.
+**Deliverable:** Immutable controlled hosted build, supported matrix, changelog/
+deprecation, artifact tests/checksums/SBOM/provenance/signing/packaging and consumer
+verification; SLSA 1.2 Build L2 assessment by Beta.
+**Acceptance:** Artifact-bound SBOM and authenticated provenance verification,
+tampering rejection, signing/rotation/revocation procedure, supported upgrade/API/
+event compatibility tests and final commit-specific cumulative gate assessment.
+No publication is required by this planning task; Build L3 remains later hardening.
+
+<a id="b-029"></a>
+### B-029 — Enterprise scope and qualification candidates
+
+**Status:** Needs decisions; later target outside current implementation scope.
+**Dependencies:** Production qualification and explicit customer/product decisions.
+**Traceability:** ENT-001.
+**Deliverable:** Justified applicability for OIDC, SAML/SSO, MFA, RBAC/ABAC, audit,
+HA/scaling, multi-node recovery, stronger backups, hardening, external assessment
+and compliance evidence; isolation only if multi-tenancy is actually adopted.
+**Acceptance:** Customer-relevant threat/operating models and independent security,
+failure/recovery/isolation evidence. No speculative enterprise features or formal
+certification claims are introduced by the standard.

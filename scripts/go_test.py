@@ -7,11 +7,11 @@ import subprocess
 import sys
 import tempfile
 import time
-
-ROOT = Path(__file__).resolve().parents[1]
+from go_inventory import GO_PACKAGES, ROOT, go_files
 
 
 def main():
+    go_files()
     temporary_root = Path(tempfile.gettempdir()).resolve()
     work = Path(tempfile.mkdtemp(prefix="yaja-go-", dir=temporary_root)).resolve()
     if work.parent != temporary_root or not work.name.startswith("yaja-go-"):
@@ -20,9 +20,7 @@ def main():
     environment["GOTMPDIR"] = str(work)
     try:
         # -work delegates deletion to us; it does not skip compilation or tests.
-        command = ["go", "test", "-count=1", "-work", *(sys.argv[1:] or [
-            "./go/pure/sync_contract/...", "./go/io/task_api/...",
-        ])]
+        command = ["go", "test", "-count=1", "-work", *(sys.argv[1:] or GO_PACKAGES)]
         result = subprocess.run(command, cwd=ROOT, env=environment, timeout=300, check=False)
         return result.returncode
     finally:
