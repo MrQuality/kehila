@@ -71,10 +71,20 @@ The full suite runs Python tests for the development tools, service readiness
 checks, the NATS account API check, Rust workspace tests, and Go tests. Missing
 tools, unavailable services, and test failures produce a nonzero exit status.
 
-Both modes also run `python scripts/check_branding.py` to reject retired project
-names and identifiers in current source and documentation. The check permits
-factual third-party references and attribution; it is not a legal clearance
-check. Its regression fixture is excluded from the naming scan.
+Both modes also run `python scripts/check_branding.py`. It rejects the retired
+project spelling and former package/import, environment, repository and design
+document identifiers, plus the earlier retired JQL-related identifiers, in paths
+and UTF-8 text. Its explicit inventory covers public root files, source, packages,
+Go modules, documentation, scripts, tests, experiments, GitHub configuration,
+tracked commit-hook entry points, `.gitignore`, `.gitattributes` and `.env.example`.
+The inventory works in Git-free staged snapshots. Local instructions, environment
+files, local evidence, build/dependency directories and the exact naming regression
+fixture are excluded; binary and non-UTF-8 content is skipped.
+Retained storage and SP-001 identities have path-and-context exceptions, and the
+exact migration rows in [the naming policy](BRANDING.md) are allowed. Exceptions
+do not exempt whole files. Factual third-party references and attribution remain
+permitted. This bounded scan does not establish legal clearance or validate all
+semantic naming and attribution claims; those still require manual review.
 
 Individual commands:
 

@@ -28,6 +28,22 @@ environment variables. Existing launch configurations must use `KEHILA_*` in
 place of the former environment-variable prefix. This is a naming change, not
 a domain, wire-format, or persistence migration.
 
+Update consumer imports and launch configuration using this migration table:
+
+| Former identifier | Current identifier |
+| --- | --- |
+| `YAJA_*` | `KEHILA_*` (same suffix) |
+| `yaja_query` / `src/pure/yaja_query/` | `kehila_query` / `src/pure/kehila_query/` |
+| `yaja/task_api` | `kehila/task_api` |
+| `yaja.local/sync_contract` | `kehila.local/sync_contract` |
+| `yaja` / `@yaja/contracts` | `kehila` / `@kehila/contracts` |
+| `docs/reference/YAJA-v0.2.md` | `docs/reference/Kehila-v0.2.md` |
+| `MrQuality/yaja` | `MrQuality/kehila` |
+
+The environment prefix changes for the worker's storage, operation-policy and
+listen settings, the API's worker/search URLs and listen setting, and integration
+test URLs and NATS settings. Retained storage identities below remain unchanged.
+
 Existing storage and machine identifiers intentionally remain unchanged:
 
 - The development Compose project and database remain `yaja`. The worker's
