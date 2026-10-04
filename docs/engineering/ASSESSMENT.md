@@ -70,11 +70,11 @@ performance envelope or accessibility result is claimed.
 ## Subsequent verification and current PR coding scope
 
 The pre-review coding-standard revision
-[`d7a15087586b7f6726a107a6afb28f90590ee168`](https://github.com/MrQuality/yaja/commit/d7a15087586b7f6726a107a6afb28f90590ee168)
-passed [hosted full verification](https://github.com/MrQuality/yaja/actions/runs/37006315943).
+[`d7a15087586b7f6726a107a6afb28f90590ee168`](https://github.com/MrQuality/kehila/commit/d7a15087586b7f6726a107a6afb28f90590ee168)
+passed [hosted full verification](https://github.com/MrQuality/kehila/actions/runs/37006315943).
 This resolves the historical pending-CI observation for that source only. Review
 updates need their own final-source verification record in
-[PR #35](https://github.com/MrQuality/yaja/pull/35), following the
+[PR #35](https://github.com/MrQuality/kehila/pull/35), following the
 [evidence-record protocol](QUALIFICATION.md#qualification-evidence-records).
 No maintainer approval or engineering gate advancement is recorded here.
 

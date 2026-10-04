@@ -1,4 +1,4 @@
-# YAJA Coding Standard
+# Kehila Coding Standard
 
 Version 1. Owner: the [project maintainer](../../CONTRIBUTING.md#repository-roles).
 Applies to new and materially changed code. This is the implementation/review

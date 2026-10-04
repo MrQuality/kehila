@@ -1,4 +1,4 @@
-# YAJA open questions and implementation blockers
+# Kehila open questions and implementation blockers
 
 Baseline: 2026-09-23. These product and technical choices remain unresolved. Each question links to the earliest affected backlog items so independent work can proceed.
 
@@ -65,7 +65,7 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 
 **Question:** Is an hour-based task estimate independent of resource requirements, derived from driving resources, or something else? What should happen when they disagree? How does a point-estimated task acquire resource demand for scheduling?
 
-**Accepted direction:** Projects select hours or points, and YAJA uses hours. A task estimate is an independent planning quantity; resource demand is recorded separately. There is no implicit points-to-hours conversion or aggregation of heterogeneous resource-hours into a task estimate. See [D-018](decisions.md#d-018).
+**Accepted direction:** Projects select hours or points, and Kehila uses hours. A task estimate is an independent planning quantity; resource demand is recorded separately. There is no implicit points-to-hours conversion or aggregation of heterogeneous resource-hours into a task estimate. See [D-018](decisions.md#d-018).
 
 **Further resolution, 2026-09-29:** [D-019](decisions.md#d-019) selects exact nonnegative decimals, distinguishes zero from absence, and prohibits M1 project-unit changes after the first recorded estimate. [D-021](decisions.md#d-021) fixes M1 precision and bounds. **Remaining outside B-003:** Detailed resource-demand input for scheduling. See C-08 in the [B-003 contract](B-003-contract.md).
 

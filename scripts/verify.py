@@ -23,7 +23,7 @@ def main():
     if not args.pure and not args.docs:
         commands += [[sys.executable, "scripts/healthcheck.py"], [sys.executable, "tests/integration/nats_probe.py"]]
     if not args.docs:
-        commands += [["cargo", "test", "--locked", "-p", "yaja_query", "-p", "task_contract"] if args.pure
+        commands += [["cargo", "test", "--locked", "-p", "kehila_query", "-p", "task_contract"] if args.pure
                      else ["cargo", "test", "--locked", "--workspace"],
                      [sys.executable, "scripts/go_test.py"]]
     if not args.pure and not args.docs:

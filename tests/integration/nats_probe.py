@@ -7,8 +7,8 @@ import sys
 
 
 def probe():
-    host = os.environ.get("YAJA_NATS_HOST", "127.0.0.1")
-    port = int(os.environ.get("YAJA_NATS_PORT", "4222"))
+    host = os.environ.get("KEHILA_NATS_HOST", "127.0.0.1")
+    port = int(os.environ.get("KEHILA_NATS_PORT", "4222"))
     with socket.create_connection((host, port), timeout=3) as conn:
         conn.settimeout(3)
         with conn.makefile("rb") as reader:
@@ -35,7 +35,7 @@ def probe():
                     raise ValueError(f"Unexpected handshake: {frame!r}")
             else:
                 raise ValueError("No PONG received")
-            inbox = ("_INBOX.yaja." + os.urandom(12).hex()).encode("ascii")
+            inbox = ("_INBOX.kehila." + os.urandom(12).hex()).encode("ascii")
             conn.sendall(b"SUB " + inbox + b" 1\r\nUNSUB 1 1\r\nPUB $JS.API.INFO " + inbox + b" 0\r\n\r\n")
             for _ in range(32):
                 frame = line()

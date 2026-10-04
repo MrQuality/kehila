@@ -30,7 +30,7 @@ class BrandingTests(unittest.TestCase):
 
     def test_allows_factual_references_and_current_names(self):
         self.assertFalse(self.check_text(
-            "YAJA — Project and task management. yaja_query CompiledQueryArtifact. "
+            "KEHILA — Project and task management. kehila_query CompiledQueryArtifact. "
             "Jira is a trademark of Atlassian. No JQL compatibility is claimed."))
 
     def test_skips_binary_files_and_reports_text_line(self):

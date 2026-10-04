@@ -1,4 +1,4 @@
-# YAJA Engineering Standard
+# Kehila Engineering Standard
 
 Version 1. Baseline assessment: 2026-10-02. Owner: the project maintainer defined
 in [CONTRIBUTING](../../CONTRIBUTING.md). This framework defines mandatory release
@@ -29,9 +29,9 @@ results, unresolved risks, and maintainer assessment. Link Requirement → Decis
 For each external framework, record the exact revision and a control-by-control
 applicability/evidence matrix. A reference here is a source, not full equivalence.
 ASVS L1/L2 and OSPS L1/L2 assessments must cover all applicable controls, not a
-selected sample. ISO quality characteristics guide YAJA-specific criteria rather
+selected sample. ISO quality characteristics guide Kehila-specific criteria rather
 than a certification claim. Include safety risks when loss or misleading state
-could affect downstream decisions; YAJA is not qualified for safety-critical use.
+could affect downstream decisions; Kehila is not qualified for safety-critical use.
 
 Exceptions MUST identify scope, owner, rationale, mitigation, approver, and expiry
 or review date. Not applicable MUST have evidence-based scope justification.
@@ -72,7 +72,7 @@ questions affecting its shipped behavior, even if a limited single-task test pas
 
 ## Current assessment and evidence boundaries
 
-YAJA is **E0 — Experimental**. Source tests and the historical full-suite evidence
+Kehila is **E0 — Experimental**. Source tests and the historical full-suite evidence
 in [IMPLEMENTATION](../IMPLEMENTATION.md) support bounded task semantics. E1 is
 not yet qualified: final change/release assessment is missing. The dated main
 protection inspection is recorded in [the assessment](ASSESSMENT.md). The setup is documented, but not a supported

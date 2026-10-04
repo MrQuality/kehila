@@ -13,8 +13,8 @@ from go_inventory import GO_PACKAGES, ROOT, go_files
 def main():
     go_files()
     temporary_root = Path(tempfile.gettempdir()).resolve()
-    work = Path(tempfile.mkdtemp(prefix="yaja-go-", dir=temporary_root)).resolve()
-    if work.parent != temporary_root or not work.name.startswith("yaja-go-"):
+    work = Path(tempfile.mkdtemp(prefix="kehila-go-", dir=temporary_root)).resolve()
+    if work.parent != temporary_root or not work.name.startswith("kehila-go-"):
         raise RuntimeError("Refusing cleanup outside the allocated temporary directory")
     environment = os.environ.copy()
     environment["GOTMPDIR"] = str(work)

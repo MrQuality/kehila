@@ -1,18 +1,18 @@
-# YAJA product decision record
+# Kehila product decision record
 
 Baseline: 2026-09-23. This record explains the choices behind the [requirements](requirements.md). Status labels refer to the product planning baseline; delivery proposals and unresolved technical choices are identified separately.
 
 <a id="d-001"></a>
 ## D-001 — Start with local project management
 
-**Status: Confirmed.** Local project and task management is the initial use case, including tracking YAJA development. It covers current work, task knowledge, dependencies, effort, and dates. Broader deployment requirements remain open.
+**Status: Confirmed.** Local project and task management is the initial use case, including tracking Kehila development. It covers current work, task knowledge, dependencies, effort, and dates. Broader deployment requirements remain open.
 
 **Consequence:** Evaluate the first increment using a complete local task-management workflow. Access from other devices remains an open deployment choice. References: [R-001](requirements.md#r-001), [Q-002](open-questions.md#q-002).
 
 <a id="d-002"></a>
 ## D-002 — Keep both planning approaches in the release
 
-**Status: Confirmed.** The first release includes both sprint planning and a Gantt schedule. Projects select hours or story points for estimates; YAJA uses hours. Both manual time entries and timers are required.
+**Status: Confirmed.** The first release includes both sprint planning and a Gantt schedule. Projects select hours or story points for estimates; Kehila uses hours. Both manual time entries and timers are required.
 
 **Consequence:** Delivery can be incremental, but release scope retains both views. Actual time and elapsed duration remain distinct. The relationship between task estimates and resource demand remains open. References: [R-002](requirements.md#r-002)–[R-004](requirements.md#r-004), [Q-006](open-questions.md#q-006).
 
@@ -115,7 +115,7 @@ Baseline: 2026-09-23. This record explains the choices behind the [requirements]
 
 **Status: Superseded for the first local task path by D-016; other capabilities remain proposals.** The v0.2 reference specifies React, a Go API, Rust workers, PostgreSQL through FerretDB, NATS, OpenSearch, and a Debezium-based change pipeline, with shared Rust query compilation. Current code implements only foundational components.
 
-**Consequence:** The architecture remains a starting point for evaluating the first increment. Any changes need a documented rationale and impact assessment; the product plan does not select a replacement architecture. Kubernetes is not a release requirement. References: [v0.2 design](../reference/YAJA-v0.2.md), [Q-001](open-questions.md#q-001), [Q-019](open-questions.md#q-019).
+**Consequence:** The architecture remains a starting point for evaluating the first increment. Any changes need a documented rationale and impact assessment; the product plan does not select a replacement architecture. Kubernetes is not a release requirement. References: [v0.2 design](../reference/Kehila-v0.2.md), [Q-001](open-questions.md#q-001), [Q-019](open-questions.md#q-019).
 
 <a id="d-016"></a>
 ## D-016 — Adopt the bounded local task path
@@ -480,6 +480,23 @@ rule. Full replay retention is bounded, but tombstone storage grows over time.
 **Consequence:** B-003 supplies full/tombstone lookup and compaction decisions.
 B-004/B-005 must freeze the exact-request fingerprint codec and prove durable
 replacement, restoration, and no duplicate execution before exposing M1 routes.
+
+<a id="d-035"></a>
+## D-035 — Name the project and repository Kehila
+
+**Status: Accepted by the maintainer on 2026-10-04.** Use Kehila as the project
+name, `MrQuality/kehila` as the existing repository's new name, `kehila` for
+package/import names, and `KEHILA_*` for configuration environment variables.
+The name reflects community, shared purpose, mutual responsibility, and
+interconnected work. The local checkout folder follows the repository name.
+
+**Consequence:** Update current source, documentation, repository links, and
+editable GitHub branding together. Preserve existing database, volume,
+container-project, and Podman machine identifiers to avoid a data migration.
+Preserve historical commits, comments, logs, and dated test evidence. The rename
+does not change domain behavior, maturity, storage contracts, or release scope.
+The [branding policy](../BRANDING.md#rename-and-retained-storage-identities)
+records namespace migration and retained identifiers.
 
 ## How to change a decision
 

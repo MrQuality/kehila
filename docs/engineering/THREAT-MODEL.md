@@ -1,4 +1,4 @@
-# Initial YAJA threat model
+# Initial Kehila threat model
 
 Baseline: 2026-10-02. Status: initial model; no production security qualification.
 Owner: project maintainer. Review on new authentication, storage, event, deployment

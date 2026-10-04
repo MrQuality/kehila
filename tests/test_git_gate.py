@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class GitGateTests(unittest.TestCase):
     def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory(prefix="yaja-gate-test-")
+        self.temporary = tempfile.TemporaryDirectory(prefix="kehila-gate-test-")
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
         self.environment = os.environ.copy()

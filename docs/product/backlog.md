@@ -1,4 +1,4 @@
-# YAJA implementation backlog
+# Kehila implementation backlog
 
 Baseline: 2026-09-23. This proposed delivery plan links to the [requirements](requirements.md) and [decisions](decisions.md). Backlog IDs are planning references; linked GitHub issues track execution. Dates and effort estimates remain unassigned.
 
@@ -25,7 +25,7 @@ qualification requires its own cumulative evidence and does not reduce product s
 | Milestone | Items / order | Observable outcome |
 | --- | --- | --- |
 | M0 — Document and establish the path | B-001, B-002; resolve the blocking subset of B-003/B-007 | A traceable baseline and an evidence-backed implementation plan. |
-| M1 — Use YAJA to record its own work | B-003 and B-007; B-005 and B-004; B-006, divided into M1-01–M1-08 | Create projects and work items with the full configurable model, including fields, types, workflows, conversion, migration, relationships, administration, estimates, and knowledge; retrieve saved records locally. |
+| M1 — Use Kehila to record its own work | B-003 and B-007; B-005 and B-004; B-006, divided into M1-01–M1-08 | Create projects and work items with the full configurable model, including fields, types, workflows, conversion, migration, relationships, administration, estimates, and knowledge; retrieve saved records locally. |
 | M2 — Track shared resources and execution | B-008, B-009, B-010; integrate B-011 and B-012 | Reserve shared resources, report actuals, compare plans, complete/reopen safely, and inspect costs. |
 | M3 — Plan across dates and sprints | B-013 and B-014; B-015, B-016, B-017 | Both sprint and Gantt planning with manual/automatic scheduling, multiple drivers, authorized overrides, and cost/time summaries. |
 | M4 — Validate the full first release | B-018 | Demonstrated end-to-end behavior, local recovery, and an explicit record of remaining limitations. |
@@ -42,14 +42,14 @@ applicable API, storage, access, and interface integration through its parents.
 
 | Child ID | Parent / dependencies | Deliverable and acceptance |
 | --- | --- | --- |
-| [M1-01](https://github.com/MrQuality/yaja/issues/26) | B-005; B-003 | Configuration revisions, history, reference integrity, and coordinated command acceptance. Track and protect historical status, status-group assignment/grant, workflow, type, field, and relationship-type use even after current items migrate away. Demonstrate configuration/item contention, replay after configuration changes, and recovery without partial accepted state. Use actor/family/target-scoped operation lookup, freeze versioned exact-request fingerprints, and demonstrate 90-day replay, gap-free compaction to permanent tombstones, and tombstone backup/restore. Establish a consistency protocol for archive and current-selection clearing under the single-document storage constraint; test crash, retry, concurrent selection, and recovery behavior before exposing archival routes. |
-| [M1-02](https://github.com/MrQuality/yaja/issues/27) | B-004/B-006; M1-01, B-007 | Project and WorkItem identity, Task/Milestone, estimates, replayable current selection, archival/restoration. Integrate the accepted trusted revision-one Task/Milestone seed and replayable project creation command. Verify untitled-item display, zero versus absent estimates, unit locking, selection retry after uncertain response, and selection clearing under the accepted project archival contract. |
-| [M1-03](https://github.com/MrQuality/yaja/issues/28) | B-004/B-006; M1-02 | Project-defined types, application/custom fields, hidden/optional/required modes, and five initial value kinds. Protect application-defined fields from project removal, archival, and retyping; specify trusted upgrade of built-in definitions. Verify hidden-value preservation/write rejection, required-field changes under contention, and safe definition evolution. |
-| [M1-04](https://github.com/MrQuality/yaja/issues/29) | B-004/B-006; M1-03 | Multiple workflows, statuses, defaults, permitted workflows per type, phase restrictions, and configuration archival. Verify phase derivation, initial/default replacements, reference preservation, and zero implicit usage. |
-| [M1-05](https://github.com/MrQuality/yaja/issues/30) | B-004/B-006; M1-04 | Explicit type conversion and workflow migration. Verify complete destination validation, both-workflow phase restrictions, current original migration grants on replay, retained archived references, source-snapshot validation, preserved source values/history, and no partial conversion. |
-| [M1-06](https://github.com/MrQuality/yaja/issues/31) | B-004/B-006; M1-02, B-003 | Relationship types and links, knowledge, and follow-up provenance under the resolved Q-016 contract. Verify cross-project authorization, canonical duplicate prevention, self-link rejection, inverse display, archival preservation, and history surviving conversion. Final integration includes M1-05. |
-| [M1-07](https://github.com/MrQuality/yaja/issues/32) | B-007/B-006; B-003, Q-014 | Configuration permissions and delegated administration, including status-group administration. Implement the accepted group-scoped status grants and project administration boundary; provision initial project access, define revocation, and verify authoritative allow/deny behavior across all slices. Initial access enforcement is required before dependent routes are exposed. |
-| [M1-08](https://github.com/MrQuality/yaja/issues/33) | B-006 with B-004/B-005/B-007; M1-01–M1-07 | Integrate the full configurable model into the local interface. Demonstrate administration, edits, conversion, migration, knowledge, relationships, reload, conflict recovery, and archival. Retain B-005 durability and authenticated-access gates before real data. |
+| [M1-01](https://github.com/MrQuality/kehila/issues/26) | B-005; B-003 | Configuration revisions, history, reference integrity, and coordinated command acceptance. Track and protect historical status, status-group assignment/grant, workflow, type, field, and relationship-type use even after current items migrate away. Demonstrate configuration/item contention, replay after configuration changes, and recovery without partial accepted state. Use actor/family/target-scoped operation lookup, freeze versioned exact-request fingerprints, and demonstrate 90-day replay, gap-free compaction to permanent tombstones, and tombstone backup/restore. Establish a consistency protocol for archive and current-selection clearing under the single-document storage constraint; test crash, retry, concurrent selection, and recovery behavior before exposing archival routes. |
+| [M1-02](https://github.com/MrQuality/kehila/issues/27) | B-004/B-006; M1-01, B-007 | Project and WorkItem identity, Task/Milestone, estimates, replayable current selection, archival/restoration. Integrate the accepted trusted revision-one Task/Milestone seed and replayable project creation command. Verify untitled-item display, zero versus absent estimates, unit locking, selection retry after uncertain response, and selection clearing under the accepted project archival contract. |
+| [M1-03](https://github.com/MrQuality/kehila/issues/28) | B-004/B-006; M1-02 | Project-defined types, application/custom fields, hidden/optional/required modes, and five initial value kinds. Protect application-defined fields from project removal, archival, and retyping; specify trusted upgrade of built-in definitions. Verify hidden-value preservation/write rejection, required-field changes under contention, and safe definition evolution. |
+| [M1-04](https://github.com/MrQuality/kehila/issues/29) | B-004/B-006; M1-03 | Multiple workflows, statuses, defaults, permitted workflows per type, phase restrictions, and configuration archival. Verify phase derivation, initial/default replacements, reference preservation, and zero implicit usage. |
+| [M1-05](https://github.com/MrQuality/kehila/issues/30) | B-004/B-006; M1-04 | Explicit type conversion and workflow migration. Verify complete destination validation, both-workflow phase restrictions, current original migration grants on replay, retained archived references, source-snapshot validation, preserved source values/history, and no partial conversion. |
+| [M1-06](https://github.com/MrQuality/kehila/issues/31) | B-004/B-006; M1-02, B-003 | Relationship types and links, knowledge, and follow-up provenance under the resolved Q-016 contract. Verify cross-project authorization, canonical duplicate prevention, self-link rejection, inverse display, archival preservation, and history surviving conversion. Final integration includes M1-05. |
+| [M1-07](https://github.com/MrQuality/kehila/issues/32) | B-007/B-006; B-003, Q-014 | Configuration permissions and delegated administration, including status-group administration. Implement the accepted group-scoped status grants and project administration boundary; provision initial project access, define revocation, and verify authoritative allow/deny behavior across all slices. Initial access enforcement is required before dependent routes are exposed. |
+| [M1-08](https://github.com/MrQuality/kehila/issues/33) | B-006 with B-004/B-005/B-007; M1-01–M1-07 | Integrate the full configurable model into the local interface. Demonstrate administration, edits, conversion, migration, knowledge, relationships, reload, conflict recovery, and archival. Retain B-005 durability and authenticated-access gates before real data. |
 
 M1-07's initial access boundary accompanies the early slices; its delegated
 administration surface expands with them. Q-016 is resolved for M1; Q-014 grant
@@ -135,7 +135,7 @@ Durable records and the configurable worker are not implemented here.
 
 **Deliverable:** Project/task identity, minimum fields, estimation configuration, status-to-phase mapping, and explicit transition rules.
 
-**Acceptance:** Multiple statuses can map to one system phase; a task cannot independently contradict its status's phase. The YAJA project can use hours and another project can select points without converting points to hours. Record what selects the current task. Invalid references and in-use status edits follow a decided policy. Ordinary status changes record no usage. Add pure rule checks for S-01's phase behavior.
+**Acceptance:** Multiple statuses can map to one system phase; a task cannot independently contradict its status's phase. The Kehila project can use hours and another project can select points without converting points to hours. Record what selects the current task. Invalid references and in-use status edits follow a decided policy. Ordinary status changes record no usage. Add pure rule checks for S-01's phase behavior.
 
 <a id="b-004"></a>
 ## B-004 — Implement project/task operations and manual knowledge
@@ -264,7 +264,7 @@ design's ban on multi-document database transactions.
 
 **Deliverable:** Sprint definition, task assignment, estimates/actuals, and per-sprint planning capacity alongside shared resource availability.
 
-**Acceptance:** Sprint totals use the configured units and preserve estimation units. Remaining sprint planning capacity does not imply available resources. Show usable slack only within valid dates. Cross-boundary tasks and unfinished work follow the decided policy. Support hour-estimated YAJA and a separately point-estimated example project.
+**Acceptance:** Sprint totals use the configured units and preserve estimation units. Remaining sprint planning capacity does not imply available resources. Show usable slack only within valid dates. Cross-boundary tasks and unfinished work follow the decided policy. Support hour-estimated Kehila and a separately point-estimated example project.
 
 <a id="b-015"></a>
 ## B-015 — Implement resource-constrained scheduling
@@ -286,7 +286,7 @@ design's ban on multi-document database transactions.
 
 **Deliverable:** Gantt dates/dependencies, project mode controls, item overrides, and clear conflict presentation linked with sprint planning.
 
-**Acceptance:** Demonstrate both modes in the YAJA project and mixed automatic/fixed items. Changes appear consistently across the agreed shared task model. Show the cause of infeasibility and permitted corrective actions. Switching modes follows explicit rules. Permission denial is enforced beyond hiding controls in the interface.
+**Acceptance:** Demonstrate both modes in the Kehila project and mixed automatic/fixed items. Changes appear consistently across the agreed shared task model. Show the cause of infeasibility and permitted corrective actions. Switching modes follows explicit rules. Permission denial is enforced beyond hiding controls in the interface.
 
 <a id="b-017"></a>
 ## B-017 — Provide effort, capacity, and cost summaries
@@ -360,7 +360,7 @@ All are owned by the project maintainer until delegated. No release or security
 compliance is implied by a documented planning artifact.
 
 B-019–B-029 are grouped planning references, not eleven scheduled delivery
-commitments. Work in this PR is linked through [PR #35](https://github.com/MrQuality/yaja/pull/35);
+commitments. Work in this PR is linked through [PR #35](https://github.com/MrQuality/kehila/pull/35);
 remaining initiative work is unscheduled unless an execution issue is linked.
 When selecting work, link an issue with bounded acceptance criteria, dependencies
 on the existing product items and the source/evidence needed to close it. Use an

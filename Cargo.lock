@@ -2071,7 +2071,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "yaja_query"
+name = "kehila_query"
 version = "0.1.0"
 
 [[package]]

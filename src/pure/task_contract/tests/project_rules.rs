@@ -9,7 +9,7 @@ fn project() -> Project {
     Project {
         id: ProjectId("p".into()),
         name: "Project".into(),
-        prefix: "YAJA".into(),
+        prefix: "KEHILA".into(),
         configuration_revision: 4,
         next_sequence: 12,
         archived: false,

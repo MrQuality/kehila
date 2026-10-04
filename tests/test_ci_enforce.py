@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class CiEnforceTests(unittest.TestCase):
     def test_root_push_from_detached_checkout_preserves_staged_tree(self):
-        with tempfile.TemporaryDirectory(prefix="yaja-ci-test-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="kehila-ci-test-") as temporary:
             root = Path(temporary)
             environment = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
             environment.update(GIT_AUTHOR_NAME="CI Test", GIT_COMMITTER_NAME="CI Test",

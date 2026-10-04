@@ -181,10 +181,10 @@ API using a temporary subscription. It creates no streams or application data.
 Connections use three-second deadlines and bounded frame sizes and counts.
 
 The full suite also runs `python tests/integration/task_path.py`. This builds the
-Rust worker and Go API, installs indexes in a unique `yaja_test_` collection,
+Rust worker and Go API, installs indexes in a unique `kehila_test_` collection,
 starts two workers sharing that collection and an API on temporary loopback
 ports, and removes its processes and collection on success or failure. It needs
-FerretDB at `mongodb://127.0.0.1:27017`; override `YAJA_TEST_MONGO_URL` with a
+FerretDB at `mongodb://127.0.0.1:27017`; override `KEHILA_TEST_MONGO_URL` with a
 single-host MongoDB URI for a different disposable development instance. It uses
 the `yaja` database. Never point regression tests at a supported user installation.
 No host Python packages or production CDC/indexer are required.
@@ -197,7 +197,7 @@ Concurrent clients reach independent worker processes; the test does not rely on
 a single serial HTTP handler to establish storage exclusion. Finite race tests
 are regression evidence, not exhaustive linearizability proof.
 
-The pure command includes both `yaja_query` and `task_contract`; maintain this
+The pure command includes both `kehila_query` and `task_contract`; maintain this
 explicit list when adding a pure crate. Its selection test verifies that a
 failure in `task_contract` propagates. The full suite tests all Rust workspace
 crates, including adapter policy tests.

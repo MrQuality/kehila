@@ -14,11 +14,11 @@ if base and set(base) != {"0"}:
 else:
     # Root push: simulate the initial staged commit only inside a disposable clone.
     import tempfile
-    with tempfile.TemporaryDirectory(prefix="yaja-ci-root-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="kehila-ci-root-") as temporary:
         subprocess.run(["git", "clone", "--no-hardlinks", str(ROOT), temporary], check=True)
         # A SHA checkout is detached: deleting HEAD would invalidate the repository.
         # Point HEAD at a fresh unborn branch while preserving the entire index.
-        branch = "refs/heads/yaja-ci-root"
+        branch = "refs/heads/kehila-ci-root"
         subprocess.run(["git", "update-ref", "-d", branch], cwd=temporary, check=True)
         subprocess.run(["git", "symbolic-ref", "HEAD", branch], cwd=temporary, check=True)
         subprocess.run([sys.executable, ".githooks/pre_commit.py"], cwd=temporary, check=True)

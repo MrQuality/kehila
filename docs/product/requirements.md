@@ -1,10 +1,10 @@
-# YAJA product requirements
+# Kehila product requirements
 
 Baseline: 2026-09-23. These requirements describe planned product behavior. The [planning guide](README.md) explains status labels, [open questions](open-questions.md) record unresolved choices, and the [backlog](backlog.md) maps requirements to implementation work.
 
 ## 1. Purpose and vocabulary
 
-YAJA supports local project planning: identifying current and upcoming work, retaining task knowledge, understanding dependencies, and tracking effort and dates.
+Kehila supports local project planning: identifying current and upcoming work, retaining task knowledge, understanding dependencies, and tracking effort and dates.
 
 | Term | Meaning in this baseline |
 | --- | --- |
@@ -33,7 +33,7 @@ Effort, elapsed duration, resource-hours, and money are separate quantities. Fou
 <a id="r-001"></a>
 ### R-001 — Initial use and local operation
 
-Support local project and task management, including tracking YAJA development. Identify current work, upcoming work, and progress. Broader deployment requirements and access from other devices remain open ([Q-002](open-questions.md#q-002)).
+Support local project and task management, including tracking Kehila development. Identify current work, upcoming work, and progress. Broader deployment requirements and access from other devices remain open ([Q-002](open-questions.md#q-002)).
 
 M1 includes the full configurable model accepted in [D-019](decisions.md#d-019),
 including custom fields/types, workflow migration, type conversion, relationship
@@ -47,7 +47,7 @@ history without implicit lifecycle or resource effects.
 <a id="r-002"></a>
 ### R-002 — Project-configurable estimates
 
-Projects choose hours or story points as their estimation unit. The YAJA project uses hours. Estimates describe expected work during planning and are independent of separately recorded resource demand ([D-018](decisions.md#d-018)). Resource usage does not automatically rewrite the task estimate. Heterogeneous resource-hours cannot be summed into a task estimate, and no points-to-hours conversion is defined. Estimates use exact nonnegative decimals; zero differs from absence. M1 prohibits project-unit changes after the first recorded estimate ([D-019](decisions.md#d-019)). Exact precision and bounds remain to specify ([Q-006](open-questions.md#q-006)).
+Projects choose hours or story points as their estimation unit. The Kehila project uses hours. Estimates describe expected work during planning and are independent of separately recorded resource demand ([D-018](decisions.md#d-018)). Resource usage does not automatically rewrite the task estimate. Heterogeneous resource-hours cannot be summed into a task estimate, and no points-to-hours conversion is defined. Estimates use exact nonnegative decimals; zero differs from absence. M1 prohibits project-unit changes after the first recorded estimate ([D-019](decisions.md#d-019)). Exact precision and bounds remain to specify ([Q-006](open-questions.md#q-006)).
 
 <a id="r-003"></a>
 ### R-003 — Actual time tracking and presentation
@@ -57,7 +57,7 @@ Support both manual time entries and a start/stop timer. Show actual work time a
 <a id="r-004"></a>
 ### R-004 — Both sprint and Gantt planning
 
-Both planning approaches are required in the first release and for the YAJA project. Delivering only one does not satisfy release scope. Using the same underlying tasks in both views is the proposed design; precise interaction and sprint-boundary rules remain open ([Q-007](open-questions.md#q-007)).
+Both planning approaches are required in the first release and for the Kehila project. Delivering only one does not satisfy release scope. Using the same underlying tasks in both views is the proposed design; precise interaction and sprint-boundary rules remain open ([Q-007](open-questions.md#q-007)).
 
 <a id="r-005"></a>
 ### R-005 — Task knowledge and originating work
@@ -141,7 +141,7 @@ The product model allows user-reported usage and automatic reporting depending o
 <a id="r-020"></a>
 ### R-020 — Project scheduling mode
 
-Project configuration must offer both manual and automatic scheduling, including for YAJA. Manual mode exposes conflicts for user adjustment; automatic mode recalculates affected dates using the agreed constraints. Mode-switch effects, previews, and recalculation triggers are open ([Q-013](open-questions.md#q-013)).
+Project configuration must offer both manual and automatic scheduling, including for Kehila. Manual mode exposes conflicts for user adjustment; automatic mode recalculates affected dates using the agreed constraints. Mode-switch effects, previews, and recalculation triggers are open ([Q-013](open-questions.md#q-013)).
 
 <a id="r-021"></a>
 ### R-021 — Authorized task and milestone overrides
@@ -239,7 +239,7 @@ After recording usage and cost at an applicable rate, configure a different rate
 <a id="s-10"></a>
 ### S-10 — Proposed first-use and reliability walkthrough
 
-Create the YAJA project with hour estimates; configure statuses; create tasks with knowledge and links; change a status; reload and retrieve the records. In the later full-release walkthrough, plan the work in both sprint and Gantt views, allocate shared resources, record manual and timed usage, complete and reopen a task, and inspect resource/cost history. Before relying on real project data, verify persistence across application/container recreation and machine restart, then restore a backup into a clean instance. Recovery scope and acceptable loss remain to be agreed in Q-020. Covers R-001–R-005 and the integrated lifecycle; proposed reliability work is B-005/B-018.
+Create the Kehila project with hour estimates; configure statuses; create tasks with knowledge and links; change a status; reload and retrieve the records. In the later full-release walkthrough, plan the work in both sprint and Gantt views, allocate shared resources, record manual and timed usage, complete and reopen a task, and inspect resource/cost history. Before relying on real project data, verify persistence across application/container recreation and machine restart, then restore a backup into a clean instance. Recovery scope and acceptable loss remain to be agreed in Q-020. Covers R-001–R-005 and the integrated lifecycle; proposed reliability work is B-005/B-018.
 
 ## 7. Release boundaries
 

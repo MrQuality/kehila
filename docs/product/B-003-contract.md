@@ -16,7 +16,7 @@ relationship, payload, and knowledge choices on 2026-09-30.
 logical behavior and pure decisions; it does not claim an implemented
 configurable worker or a physical storage format.
 
-**Tracking:** [Issue #7](https://github.com/MrQuality/yaja/issues/7),
+**Tracking:** [Issue #7](https://github.com/MrQuality/kehila/issues/7),
 [B-003](backlog.md#b-003), [Q-008](open-questions.md#q-008), and
 [Q-006](open-questions.md#q-006).
 

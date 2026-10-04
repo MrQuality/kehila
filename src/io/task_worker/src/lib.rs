@@ -222,8 +222,8 @@ impl Store {
     pub async fn drop_test_collection(
         &self,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if !self.records.name().starts_with("yaja_test_") {
-            return Err("cleanup requires a yaja_test_ collection".into());
+        if !self.records.name().starts_with("kehila_test_") {
+            return Err("cleanup requires a kehila_test_ collection".into());
         }
         self.execute(|store, _| async move { store.records.drop(None).await })
             .await?;

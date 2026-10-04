@@ -31,10 +31,10 @@ class VerificationTests(unittest.TestCase):
         for path in ("src/io/x/src/lib.rs", "Cargo.lock", "go/pure/x/go.mod",
                      "packages/x/package.json", "scripts/verify.py", ".githooks/pre_commit.py"):
             self.assertTrue(POLICY.requires_live([path]), path)
-        self.assertFalse(POLICY.requires_live(["src/pure/yaja_query/src/lib.rs", "README.md"]))
+        self.assertFalse(POLICY.requires_live(["src/pure/kehila_query/src/lib.rs", "README.md"]))
 
     def test_source_and_configuration_require_tests(self):
-        self.assertTrue(POLICY.requires_tests("src/pure/yaja_query/src/lib.rs"))
+        self.assertTrue(POLICY.requires_tests("src/pure/kehila_query/src/lib.rs"))
         self.assertTrue(POLICY.requires_tests("docker-compose.yml"))
         self.assertTrue(POLICY.requires_tests("pnpm-lock.yaml"))
         self.assertTrue(POLICY.requires_tests("package-lock.json"))

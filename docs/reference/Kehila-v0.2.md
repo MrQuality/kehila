@@ -1,5 +1,5 @@
 Version: 0.2
-# YAJA — Project and task management — Technical Specification
+# Kehila — Project and task management — Technical Specification
 
 This historical architecture reference predates the accepted product contracts.
 For project and WorkItem identity, configuration, workflow, knowledge, access
@@ -7,13 +7,13 @@ inputs, and mutation rules, follow the [B-003 contract](../product/B-003-contrac
 and [decisions](../product/decisions.md). The structures and flows illustrated
 below are design context, not the current typed contract or implemented M1 API.
 
-Query terminology in this design refers to YAJA's own grammar, not a claim of
+Query terminology in this design refers to Kehila's own grammar, not a claim of
 third-party query-language compatibility. The current parser supports only a
 single equality filter; see the [naming policy](../BRANDING.md).
 
 ## 1. System Overview & Invariants
 
-* **Objective**: A high-performance, open-source project management platform built for millions of tasks with totally dynamic custom fields. YAJA provides a real-time, optimistic frontend UX backed by an asynchronous, CQRS-driven, polyglot event-driven architecture.
+* **Objective**: A high-performance, open-source project management platform built for millions of tasks with totally dynamic custom fields. Kehila provides a real-time, optimistic frontend UX backed by an asynchronous, CQRS-driven, polyglot event-driven architecture.
 * **Target Stack**:
 * **Frontend**: React, React Query (for cache state), WebAssembly (Wasm) for embedded Rhai execution and local query compilation.
 * **API Edge**: Go (Auth, HTTP Routing, SSE Stream Management, NATS Ingress).
@@ -278,7 +278,7 @@ Feature: Single-Document Atomicity & Saga Distribution
 
 
 * [ ] **M2: The Isomorphic Query Compiler (Rust & Wasm)**
-* [ ] Extend the `yaja_query` Rust crate using `pest` or `nom`.
+* [ ] Extend the `kehila_query` Rust crate using `pest` or `nom`.
 * [ ] Implement the OpenSearch Query DSL emitter (Server-target).
 * [ ] Implement the Rhai script emitter with capability-tagging (`is_pure`) (Wasm/Server-target).
 * [ ] Expose the crate via `wasm-bindgen` and implement browser-based compilation unit tests.
@@ -297,7 +297,7 @@ Feature: Single-Document Atomicity & Saga Distribution
 
 
 * [ ] **M5: React Frontend, Wasm Integration & Optimistic UI**
-* [ ] Integrate the compiled `yaja-query` Wasm module into the React build pipeline.
+* [ ] Integrate the compiled `kehila-query` Wasm module into the React build pipeline.
 * [ ] Implement React Query cache isolation: create an ephemeral `OverlayCache` distinct from the `QueryCache`.
 * [ ] Implement the Tier 0 (Inject) / Tier 1 (Suppress) injection logic driven by the Wasm `is_pure` flag and Rhai evaluation.
 * [ ] Wire the SSE event listener to flush the `OverlayCache`, trigger OpenSearch refetches, and update Saga progress bars.

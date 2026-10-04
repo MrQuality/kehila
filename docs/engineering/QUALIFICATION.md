@@ -44,7 +44,7 @@ ISO/IEC 25010:2023 guides measured product qualities: functional suitability
 interaction capability (ACCESS/FUNC), reliability (REL/REC), security
 (SEC/DEP/SUPPLY/INC), maintainability (ARC/GOV/TEST), flexibility (OPS/MIG/support
 matrix), and safety-risk review where downstream consequences warrant it.
-This is a YAJA mapping, not a reproduction of ISO clauses or certification.
+This is a Kehila mapping, not a reproduction of ISO clauses or certification.
 
 SSDF 1.1 organizes follow-up work: PO.1/PO.2 requirements/roles (GOV), PO.3/PO.4
 tooling/security criteria (TEST/SEC); PS.1/PS.2/PS.3 source/release/archive
@@ -125,7 +125,7 @@ or stale while independent ones remain valid. Avoid one global dependency check
 that disables valid authoritative work during search outage. Existing `/health`
 is not a complete supported readiness contract. Configuration schema, safe defaults,
 secret delivery, override precedence, startup rejection and compatibility need
-B-027 design. A future `yaja config validate` is a candidate, not a shipped CLI.
+B-027 design. A future `kehila config validate` is a candidate, not a shipped CLI.
 
 Fault campaigns MUST state an invariant, controlled interruption point, expected
 outcome, workload, deadline, observation and cleanup. Cover DB/NATS/search/indexer

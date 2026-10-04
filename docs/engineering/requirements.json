@@ -568,7 +568,7 @@
       "enforcement": "Deterministic CI properties and scheduled qualification; fuzz discovery must become regression tests.",
       "status": "partial",
       "evidence": [
-        "src/pure/yaja_query/src/lib.rs",
+        "src/pure/kehila_query/src/lib.rs",
         "src/pure/task_contract/tests/operation.rs"
       ],
       "gap": "Example/boundary tests exist; systematic properties/fuzzing and parser complexity bounds are incomplete.",
