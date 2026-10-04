@@ -67,8 +67,11 @@ Include relevant service versions and results for integration changes. Keep
 credentials, local environment files, and unrelated changes out of the PR.
 
 The local commit hook tests staged source files in an isolated directory. Stage
-test fixes before retrying a failed commit. CI runs the full suite for pull
-requests and pushes to `main`.
+test fixes before retrying a failed commit. CI runs the full suite for executable,
+dependency, workflow, engineering qualification-input and unclassified changes
+in pull requests and pushes to `main`. Known ordinary prose-only changes run the
+shared documentation checks described in [the testing guide](docs/TESTING.md).
+Documentation-check results do not establish full-suite or release qualification.
 
 Changes to `main` require passing CI. During the sole-contributor phase, an
 independent approving PR review is optional. Before merging, the maintainer

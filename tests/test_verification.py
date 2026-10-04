@@ -10,6 +10,23 @@ SPEC.loader.exec_module(POLICY)
 
 
 class VerificationTests(unittest.TestCase):
+    def test_only_known_prose_paths_select_documentation_scope(self):
+        self.assertEqual(POLICY.verification_scope(['README.md', 'docs/TESTING.md']), 'docs')
+        self.assertEqual(POLICY.verification_scope(['.github/pull_request_template.md']), 'docs')
+        for paths in ([], ['new-config.toml'], ['docs/fixture.json'],
+                      ['README.md', 'scripts/verify.py'], ['.github/workflows/ci.yml'],
+                      ['Cargo.lock'], ['src/io/task_worker/src/lib.rs']):
+            with self.subTest(paths=paths):
+                self.assertEqual(POLICY.verification_scope(paths), 'full')
+
+    def test_engineering_inputs_and_pure_code_keep_tests(self):
+        for path in ('docs/engineering/requirements.json',
+                     'docs/engineering/STANDARD-PREAMBLE.md',
+                     'docs/engineering/ENGINEERING-STANDARD.md',
+                     'src/pure/task_contract/src/lib.rs'):
+            self.assertEqual(POLICY.verification_scope([path]), 'pure', path)
+            self.assertEqual(POLICY.verification_scope(['README.md', path]), 'pure', path)
+
     def test_live_scope_includes_dependencies_and_verifiers(self):
         for path in ("src/io/x/src/lib.rs", "Cargo.lock", "go/pure/x/go.mod",
                      "packages/x/package.json", "scripts/verify.py", ".githooks/pre_commit.py"):

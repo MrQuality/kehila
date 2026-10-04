@@ -9,7 +9,7 @@ results and link experiments to decisions and reusable regression coverage.
 
 ## Commands
 
-Both verification modes validate the [engineering register](engineering/ENGINEERING-STANDARD.md)
+Full and pure verification validate the [engineering register](engineering/ENGINEERING-STANDARD.md)
 and run Go formatting/vet checks in addition to the existing matrix. CI retains
 Rust formatting and Clippy checks. Run these individually with:
 
@@ -47,6 +47,25 @@ Run unit tests without external services:
 ```text
 python scripts/verify.py --pure
 ```
+
+Run lightweight documentation verification with:
+
+```text
+python scripts/verify.py --docs
+```
+
+This mode runs Python tooling regressions, naming and engineering metadata/
+generated-document checks without compilers or external services. CI keeps the
+always-triggered `verify` job and selects this path only when every changed file
+is a known ordinary prose document. The shared hook policy excludes engineering
+register/preamble/generated-standard inputs from that shortcut. All other CI
+changes retain full verification; an empty diff, unavailable event base, unknown
+input or code deletion/rename into documentation selects full verification.
+The hook retains its pure/full source distinction; CI is deliberately more
+conservative for every non-prose change. Workflow changes themselves select full
+verification. No workflow-level path ignore or commit-message bypass is added.
+Lightweight results establish only their documented scope; release qualification
+still requires full verification of its subject source and maintainer assessment.
 
 The full suite runs Python tests for the development tools, service readiness
 checks, the NATS account API check, Rust workspace tests, and Go tests. Missing

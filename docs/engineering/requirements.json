@@ -137,7 +137,7 @@
       "id": "TEST-001",
       "area": "Shared verification baseline",
       "gate": "E1",
-      "statement": "CI MUST execute the shared full unit/integration matrix, formatting and lint checks; unavailable dependencies or tools SHALL fail rather than report skipped checks as success.",
+      "statement": "For executable, dependency, workflow and engineering qualification-input changes, CI MUST execute the shared full unit/integration matrix, formatting and lint checks; unavailable dependencies or tools SHALL fail rather than report skipped checks as success. Ordinary prose-only changes MAY use shared documentation checks; qualification records MUST distinguish their scope and MUST NOT use that result as full verification evidence.",
       "rationale": "Local and CI evidence must have the same scope.",
       "sources": [
         "ISO25010",
