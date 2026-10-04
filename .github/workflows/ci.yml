@@ -22,29 +22,44 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Select verification scope using the commit policy
+        id: scope
+        run: python scripts/ci_scope.py
+      - name: Verify ordinary documentation and engineering metadata
+        if: steps.scope.outputs.scope == 'docs'
+        run: python scripts/verify.py --docs
       - uses: actions/setup-go@v5
+        if: steps.scope.outputs.scope != 'docs'
         with:
           go-version: '1.22.x'
           cache: false
       - name: Install Rust stable
+        if: steps.scope.outputs.scope != 'docs'
         run: rustup toolchain install stable --profile minimal --component clippy,rustfmt
       - name: Select Rust stable
+        if: steps.scope.outputs.scope != 'docs'
         run: rustup default stable
       - name: Check Rust formatting
+        if: steps.scope.outputs.scope != 'docs'
         run: cargo fmt --all --check
       - name: Lint Rust workspace
+        if: steps.scope.outputs.scope != 'docs'
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Prepare disposable host
+        if: steps.scope.outputs.scope != 'docs'
         run: python scripts/ci_prepare.py
       - name: Start test services
+        id: services
+        if: steps.scope.outputs.scope != 'docs'
         run: python scripts/setup_env.py --start --engine docker
       - name: Run shared verification, engineering validation and Go static checks
+        if: steps.scope.outputs.scope != 'docs'
         run: python scripts/verify.py
       - name: Verify changed code against event base
         run: python scripts/ci_enforce.py
       - name: Container diagnostics
-        if: failure()
+        if: failure() && (steps.services.outcome == 'success' || steps.services.outcome == 'failure')
         run: docker compose -f docker-compose.yml logs --no-color
       - name: Tear down ephemeral containers
-        if: always()
+        if: always() && (steps.services.outcome == 'success' || steps.services.outcome == 'failure')
         run: docker compose -f docker-compose.yml down --volumes --remove-orphans

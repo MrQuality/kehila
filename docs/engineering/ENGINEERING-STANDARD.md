@@ -164,7 +164,7 @@ Material technical choices MUST record context, alternatives, consequences, secu
 <a id="test-001"></a>
 ### TEST-001 — Shared verification baseline
 
-CI MUST execute the shared full unit/integration matrix, formatting and lint checks; unavailable dependencies or tools SHALL fail rather than report skipped checks as success.
+For executable, dependency, workflow and engineering qualification-input changes, CI MUST execute the shared full unit/integration matrix, formatting and lint checks; unavailable dependencies or tools SHALL fail rather than report skipped checks as success. Ordinary prose-only changes MAY use shared documentation checks; qualification records MUST distinguish their scope and MUST NOT use that result as full verification evidence.
 
 - **Rationale:** Local and CI evidence must have the same scope.
 - **First applicable gate:** E1 (cumulative thereafter).

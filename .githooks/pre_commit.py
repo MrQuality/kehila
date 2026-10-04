@@ -39,6 +39,24 @@ def requires_live(paths):
                or Path(path).name in manifests or path.endswith(("go.mod", "go.sum")) for path in paths)
 
 
+def verification_scope(paths):
+    """Share conservative selection with CI; unknown inputs never skip tests."""
+    root_docs = {"README.md", "CONTRIBUTING.md", "SECURITY.md", "CODE_OF_CONDUCT.md",
+                 ".github/pull_request_template.md"}
+
+    def ordinary_doc(path):
+        return (path in root_docs or (path.startswith("docs/") and path.endswith(".md")))
+
+    if not paths:
+        return "full"
+    if all(ordinary_doc(path) and not requires_tests(path) for path in paths):
+        return "docs"
+    if requires_live(paths) or any(not requires_tests(path) and not ordinary_doc(path)
+                                   for path in paths):
+        return "full"
+    return "pure"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", help="CI: compare this ancestor with checked-out HEAD")
@@ -55,7 +73,8 @@ def main():
     if not changed:
         print("No changes to verify")
         return 0
-    if not any(requires_tests(path) for path in changed):
+    scope = verification_scope(changed)
+    if scope == "docs":
         print("Documentation-only change; no test run required")
         return 0
     tree_before = git("write-tree")
@@ -67,7 +86,7 @@ def main():
         for entry in git("ls-files", "--stage", "-z").split(b"\0"):
             if entry and entry.split(b" ", 1)[0] not in (b"100644", b"100755"):
                 return fail(3, "Symlinks and submodules are unsupported in the verified snapshot")
-        live = requires_live(changed)
+        live = scope == "full"
         command = [sys.executable, str(snapshot / "scripts/verify.py")]
         if not live:
             command.append("--pure")
