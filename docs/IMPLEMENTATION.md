@@ -170,6 +170,13 @@ components. Current setting parsing and defaults, including retained storage
 identities, are unchanged. See the [rename policy](BRANDING.md) for migration
 names and retained storage identities.
 
+These guards do not cover probe and test-harness settings corresponding to
+`KEHILA_API_URL`, `KEHILA_NATS_ADDRESS`, `KEHILA_NATS_HOST`, `KEHILA_NATS_PORT`,
+or `KEHILA_TEST_MONGO_URL`. Their former-prefix keys remain ignored. When a
+current replacement is absent, a stale key can select the localhost default and
+run checks against an unintended available instance. Broader configuration
+validation remains [B-027](product/backlog.md#b-027).
+
 Subprocess tests exercise each rejected key, empty values, old/new conflicts,
 all worker command modes, sanitized diagnostics, and deterministic first-error
 selection. A local TCP probe verifies that rejected worker startup makes no

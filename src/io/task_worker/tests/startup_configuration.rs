@@ -90,23 +90,37 @@ fn retired_settings_fail_before_database_access_for_every_command() {
 }
 
 #[test]
-fn unrelated_retired_prefix_is_ignored_and_current_configuration_is_read() {
-    let mut process = Command::new(env!("CARGO_BIN_EXE_task_worker"));
-    for suffix in SUFFIXES {
-        process.env_remove(retired_key(suffix));
-        process.env_remove(format!("KEHILA_{suffix}"));
+fn other_component_and_unknown_retired_settings_allow_current_configuration() {
+    let unrelated_suffixes = [
+        "WORKER_URL",
+        "SEARCH_URL",
+        "LISTEN_ADDR",
+        "UNRELATED_SETTING",
+    ];
+    for suffix in unrelated_suffixes {
+        let mut process = Command::new(env!("CARGO_BIN_EXE_task_worker"));
+        for name in SUFFIXES {
+            process.env_remove(retired_key(name));
+            process.env_remove(format!("KEHILA_{name}"));
+        }
+        for name in unrelated_suffixes {
+            process.env_remove(retired_key(name));
+        }
+        process.env(retired_key(suffix), "secret");
+        process.env("KEHILA_MONGO_URL", "mongodb://127.0.0.1:1");
+        process.env("KEHILA_OPERATION_ADMISSION_DAYS", "0");
+        let output = startup(&mut process);
+        assert!(!output.status.success());
+        let diagnostics = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            diagnostics.contains("operation admission and replay periods must be positive"),
+            "{suffix}: {diagnostics}"
+        );
+        assert!(
+            !diagnostics.contains("retired environment variable"),
+            "{suffix}: {diagnostics}"
+        );
     }
-    process.env(retired_key("UNRELATED_SETTING"), "secret");
-    process.env("KEHILA_MONGO_URL", "mongodb://127.0.0.1:1");
-    process.env("KEHILA_OPERATION_ADMISSION_DAYS", "0");
-    let output = startup(&mut process);
-    assert!(!output.status.success());
-    let diagnostics = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        diagnostics.contains("operation admission and replay periods must be positive"),
-        "{diagnostics}"
-    );
-    assert!(!diagnostics.contains("retired environment variable"));
 }
 
 #[test]

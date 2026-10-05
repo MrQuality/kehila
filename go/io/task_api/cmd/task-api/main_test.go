@@ -11,6 +11,7 @@ import (
 )
 
 var configSuffixes = []string{"WORKER_URL", "SEARCH_URL", "LISTEN_ADDR"}
+var workerConfigSuffixes = []string{"MONGO_URL", "TASK_DB", "TASK_COLLECTION", "OPERATION_ADMISSION_DAYS", "OPERATION_REPLAY_DAYS", "WORKER_LISTEN_ADDR"}
 
 func retiredKey(suffix string) string { return ("YA" + "JA") + "_" + suffix }
 
@@ -25,6 +26,10 @@ func startup(t *testing.T, settings map[string]string) string {
 		for _, suffix := range configSuffixes {
 			skip = skip || name == retiredKey(suffix) || name == "KEHILA_"+suffix
 		}
+		for _, suffix := range workerConfigSuffixes {
+			skip = skip || name == retiredKey(suffix)
+		}
+		skip = skip || name == retiredKey("UNRELATED_SETTING")
 		if !skip {
 			command.Env = append(command.Env, entry)
 		}
@@ -76,10 +81,15 @@ func TestRetiredSettingsFailBeforeListening(t *testing.T) {
 	}
 }
 
-func TestCurrentSettingsAndUnrelatedRetiredPrefixAreAccepted(t *testing.T) {
-	output := startup(t, map[string]string{"KEHILA_WORKER_URL": "http://127.0.0.1:1", "KEHILA_SEARCH_URL": "http://127.0.0.1:1", "KEHILA_LISTEN_ADDR": "invalid-address", retiredKey("UNRELATED_SETTING"): "secret"})
-	if strings.Contains(output, "retired environment variable") || !strings.Contains(output, "missing port in address") {
-		t.Fatalf("current configuration not used: %s", output)
+func TestOtherComponentAndUnknownRetiredSettingsAllowCurrentConfiguration(t *testing.T) {
+	unrelatedSuffixes := append([]string{"UNRELATED_SETTING"}, workerConfigSuffixes...)
+	for _, suffix := range unrelatedSuffixes {
+		t.Run(suffix, func(t *testing.T) {
+			output := startup(t, map[string]string{"KEHILA_WORKER_URL": "http://127.0.0.1:1", "KEHILA_SEARCH_URL": "http://127.0.0.1:1", "KEHILA_LISTEN_ADDR": "invalid-address", retiredKey(suffix): "secret"})
+			if strings.Contains(output, "retired environment variable") || !strings.Contains(output, "missing port in address") {
+				t.Fatalf("current configuration not used: %s", output)
+			}
+		})
 	}
 }
 

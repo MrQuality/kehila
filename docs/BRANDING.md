@@ -44,6 +44,10 @@ The environment prefix changes for the worker's storage, operation-policy and
 listen settings, the API's worker/search URLs and listen setting, and integration
 test URLs and NATS settings. Retained storage identities below remain unchanged.
 
+The API and worker reject their recognized former-prefix settings at startup,
+even when empty or accompanied by the current replacement; see
+[startup configuration migration](IMPLEMENTATION.md#startup-configuration-migration).
+
 Existing storage and machine identifiers intentionally remain unchanged:
 
 - The development Compose project and database remain `yaja`. The worker's
