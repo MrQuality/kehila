@@ -11,6 +11,9 @@ One accepted creation saves the Project, trusted M1V1 Configuration, immutable
 revision-one history, initial access, and successful request result in one
 transaction. The existing experimental worker remains unchanged.
 
+The [seed/history tables](M1-project-create-seed.md) continue this SQL. Read both
+documents as one proposed schema; neither fragment is a complete migration.
+
 The schema is split into the permanent request core and an expiring payload.
 Deleting payload must never remove the request's unique identity. Product history
 references that permanent core, not the replay payload. Full replay retains exact
