@@ -30,7 +30,10 @@ def main():
         commands.append([sys.executable, "tests/integration/task_path.py"])
     for command in commands:
         print("VERIFY:", " ".join(command), flush=True)
-        subprocess.run(command, cwd=ROOT, check=True, timeout=300)
+        # Observed Windows workspace runs exceed 300s despite passing tests.
+        # Keep a finite command budget inside the staged hook's 600s deadline.
+        timeout = 450 if os.name == "nt" and command[0] == "cargo" else 300
+        subprocess.run(command, cwd=ROOT, check=True, timeout=timeout)
 
 
 if __name__ == "__main__":

@@ -63,6 +63,9 @@ Connection helpers reject calls before initialization instead of using driver de
 The response-loss proxy owns and cancels its listener and connections and joins
 both forwarding threads on success and failure, including failure to connect a
 client. Cleanup diagnostics preserve the original test error.
+Database initialization runs in a worker with a 30-second overall timeout;
+connection, statement and lock waits also have explicit limits. Setup failures
+retain `setup_database.py.log` and still enter resource cleanup.
 
 ## Cases and ownership
 

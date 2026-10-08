@@ -269,3 +269,11 @@ environment. It uses fresh containers/volumes and the frozen proposal baseline.
 Expected exit 2 preserves a known privileged integrity gap and missing product
 checks; it must not be counted as a complete application QA pass. Local Windows
 execution is observed; no Linux CI result or integrated native route is claimed.
+
+## Verification time budgets
+
+Shared verification commands have a 300-second deadline. Cargo verification on
+Windows has a 450-second deadline: observed workspace runs exceeded 300 seconds
+while individual tests passed. Linux retains the 300-second Cargo deadline. The
+staged hook still has its 600-second overall deadline; a timeout fails verification.
+These are tooling execution limits, not product performance requirements.

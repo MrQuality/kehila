@@ -81,6 +81,17 @@ class Sp002RunnerTests(unittest.TestCase):
                 (root / "case.py.log").read_bytes(), b"case reached\ndiagnostic\n"
             )
 
+    def test_setup_deadline_terminates_a_stalled_worker(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "stalled.py").write_text(
+                "import time; print('setup started', flush=True); time.sleep(120)",
+                encoding="utf-8",
+            )
+            with self.assertRaises(subprocess.TimeoutExpired):
+                RUNNER.run_phase(root, "stalled.py", timeout=1)
+            self.assertIn(b"setup started", (root / "stalled.py.log").read_bytes())
+
     def test_cleanup_stop_failure_recorded_and_bounded(self):
         inspect = subprocess.CompletedProcess(
             [],

@@ -70,20 +70,21 @@ def cargo_library(messages):
     return artifacts.pop()
 
 
-def run_phase(root, name):
+def run_phase(root, name, *, timeout=300, arguments=(), log_name=None):
+    log = root / (log_name or name + ".log")
     try:
         result = subprocess.run(
-            [sys.executable, str(root / name)],
+            [sys.executable, str(root / name), *arguments],
             cwd=root,
             capture_output=True,
-            timeout=300,
+            timeout=timeout,
         )
     except subprocess.TimeoutExpired as error:
-        (root / (name + ".log")).write_bytes(
+        log.write_bytes(
             (error.stdout or b"") + (error.stderr or b"")
         )
         raise
-    (root / (name + ".log")).write_bytes(result.stdout + result.stderr)
+    log.write_bytes(result.stdout + result.stderr)
     return result.returncode
 
 
@@ -180,8 +181,6 @@ def main():
     run_id = "sp002-" + uuid.uuid4().hex[:12]
     root = (args.output or REPO / ".kehila" / "spikes" / "SP-002" / run_id).resolve()
     root.mkdir(parents=True, exist_ok=False)
-    import psycopg
-
     resources = dict(
         available_memory_bytes=available_memory(),
         free_disk_bytes=shutil.disk_usage(root).free,
@@ -340,45 +339,8 @@ def main():
                 "max_connections=50",
             ]
         )
-        deadline = time.monotonic() + 30
-        while True:
-            try:
-                with psycopg.connect(**config, autocommit=True) as conn:
-                    if conn.info.server_version // 10000 != 16:
-                        raise RuntimeError("Experiment requires PostgreSQL 16")
-                    settings = {
-                        name: conn.execute("SHOW " + name).fetchone()[0]
-                        for name in [
-                            "server_version",
-                            "server_encoding",
-                            "fsync",
-                            "synchronous_commit",
-                            "full_page_writes",
-                            "block_size",
-                            "default_transaction_isolation",
-                        ]
-                    }
-                    if settings["server_encoding"] != "UTF8":
-                        raise RuntimeError("Experiment requires UTF8 server encoding")
-                    if not all(
-                        settings[name] == "on"
-                        for name in ["fsync", "synchronous_commit", "full_page_writes"]
-                    ):
-                        raise RuntimeError(
-                            "Experiment requires enabled durability settings"
-                        )
-                    (root / "server-settings.json").write_text(
-                        json.dumps(settings, indent=2)
-                    )
-                    conn.execute(schema.decode(), prepare=False)
-                break
-            except psycopg.OperationalError:
-                if time.monotonic() >= deadline:
-                    raise
-                time.sleep(0.1)
-        (root / "A01.json").write_text(
-            json.dumps(dict(case="A01.original-schema", status="PASS"))
-        )
+        if run_phase(root, "setup_database.py", timeout=30, arguments=(str(root),)):
+            raise RuntimeError("Database setup failed; inspect setup_database.py.log")
 
         def phase(name):
             return run_phase(root, name)
@@ -391,8 +353,11 @@ def main():
         failures = [row["case"] for row in results if row["status"] == "FAIL"]
         if failures != ["A12.privileged-old-core"]:
             raise RuntimeError("Unexpected schema failure set: " + str(failures))
-        with psycopg.connect(**config, autocommit=True) as conn:
-            conn.execute((root / "compactor-read-grant.sql").read_text())
+        if run_phase(
+            root, "setup_database.py", timeout=30,
+            arguments=(str(root), "compactor-grant"), log_name="setup-grant.log",
+        ):
+            raise RuntimeError("Compactor grant setup failed; inspect setup-grant.log")
         if phase("protocol_cases.py") != 2:
             raise RuntimeError(
                 "Protocol experiment did not finish with its declared product gaps"
