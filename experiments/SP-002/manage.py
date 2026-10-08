@@ -170,6 +170,49 @@ def free_port():
         return sock.getsockname()[1]
 
 
+def create_artifact_directory(root):
+    """Restrict the new directory before any credentials or artifacts are written."""
+    root.mkdir(mode=0o700, parents=True, exist_ok=False)
+    if os.name != "nt":
+        return
+    environment = os.environ.copy()
+    environment["KEHILA_SP002_OUTPUT"] = str(root)
+    script = r"""
+$ErrorActionPreference = 'Stop'
+$directory = $env:KEHILA_SP002_OUTPUT
+$identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+$acl = New-Object System.Security.AccessControl.DirectorySecurity
+$acl.SetAccessRuleProtection($true, $false)
+$acl.SetOwner($identity)
+$rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+    $identity, 'FullControl', 'ContainerInherit, ObjectInherit', 'None', 'Allow')
+$acl.AddAccessRule($rule)
+Set-Acl -LiteralPath $directory -AclObject $acl
+$actual = Get-Acl -LiteralPath $directory
+$rules = @($actual.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]))
+if (-not $actual.AreAccessRulesProtected -or $rules.Count -ne 1 -or
+    $rules[0].IdentityReference -ne $identity -or
+    $rules[0].AccessControlType -ne 'Allow' -or
+    $rules[0].FileSystemRights -ne 'FullControl') {
+    throw 'Artifact directory access rules are not restricted to the current user'
+}
+"""
+    result = subprocess.run(
+        ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
+        env=environment, capture_output=True, timeout=15,
+    )
+    if result.returncode:
+        # Do not include account names or host-specific ACL diagnostics in output.
+        raise RuntimeError("Cannot establish restricted artifact directory access")
+
+
+def write_secret(path, text):
+    """Create exclusively; Linux permissions apply at creation, Windows inherits ACLs."""
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as output:
+        output.write(text)
+
+
 def main():
     validate_runtime()
     parser = argparse.ArgumentParser(description=__doc__)
@@ -180,7 +223,7 @@ def main():
     validate_baseline()
     run_id = "sp002-" + uuid.uuid4().hex[:12]
     root = (args.output or REPO / ".kehila" / "spikes" / "SP-002" / run_id).resolve()
-    root.mkdir(parents=True, exist_ok=False)
+    create_artifact_directory(root)
     resources = dict(
         available_memory_bytes=available_memory(),
         free_disk_bytes=shutil.disk_usage(root).free,
@@ -246,14 +289,12 @@ def main():
         user="postgres",
         password=password,
     )
-    (root / "connection.json").write_text(json.dumps(config))
-    (root / "container.env").write_text(
+    write_secret(root / "connection.json", json.dumps(config))
+    write_secret(root / "container.env",
         "POSTGRES_PASSWORD="
         + password
         + "\nPOSTGRES_DB=qa_baseline\nPOSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C\n"
     )
-    for name in ["connection.json", "container.env"]:
-        (root / name).chmod(0o600)
     (root / "runtime.json").write_text(
         json.dumps(
             dict(

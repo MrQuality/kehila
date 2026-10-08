@@ -52,6 +52,11 @@ and inspect it. The runner returns no complete-pass exit for this frozen subject
 The runner stops its verified, labelled containers in `finally`, preserving data
 volumes for review. It does not remove existing resources. Inspect exact generated
 names in `runtime.json` before any manual cleanup; volume removal loses test data.
+The new artifact directory is restricted before files are written: Linux uses
+mode 0700 and creates credential files exclusively with mode 0600; Windows
+replaces inherited directory access rules with current-user-only access, verifies
+them, and lets files inherit those rules. Windows requires PowerShell for this
+step. Failure to establish access rules stops setup before credentials are written.
 Connection files contain synthetic passwords; do not publish them. Port allocation
 is checked before container start; a competing process taking that port causes
 setup failure, not fallback to another database.

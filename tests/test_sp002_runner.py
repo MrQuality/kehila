@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -17,6 +18,36 @@ SPEC.loader.exec_module(RUNNER)
 
 
 class Sp002RunnerTests(unittest.TestCase):
+    def test_artifact_directory_and_secret_creation_are_restricted(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "new-run"
+            RUNNER.create_artifact_directory(root)
+            secret = root / "synthetic.txt"
+            RUNNER.write_secret(secret, "test-only\n")
+            self.assertEqual(secret.read_bytes(), b"test-only\n")
+            if os.name == "nt":
+                environment = os.environ.copy()
+                environment["KEHILA_TEST_SECRET"] = str(secret)
+                result = subprocess.run(
+                    ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", """
+$ErrorActionPreference = 'Stop'
+$sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+$rules = @((Get-Acl -LiteralPath $env:KEHILA_TEST_SECRET).GetAccessRules(
+    $true, $true, [System.Security.Principal.SecurityIdentifier]))
+if ($rules.Count -ne 1 -or $rules[0].IdentityReference -ne $sid -or
+    $rules[0].AccessControlType -ne 'Allow' -or -not $rules[0].IsInherited) { exit 1 }
+"""],
+                    env=environment, capture_output=True, timeout=15,
+                )
+                self.assertEqual(result.returncode, 0, "Secret must inherit only current-user access")
+            else:
+                self.assertEqual(root.stat().st_mode & 0o777, 0o700)
+                self.assertEqual(secret.stat().st_mode & 0o777, 0o600)
+            with self.assertRaises(FileExistsError):
+                RUNNER.write_secret(secret, "replacement")
+            with self.assertRaises(FileExistsError):
+                RUNNER.create_artifact_directory(root)
+
     def test_unsupported_platform_fails_explicitly(self):
         with patch.object(RUNNER.sys, "platform", "darwin"):
             with self.assertRaisesRegex(RuntimeError, "Windows and Linux"):
