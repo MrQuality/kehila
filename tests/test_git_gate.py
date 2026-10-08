@@ -133,6 +133,28 @@ class GitGateTests(unittest.TestCase):
         result = self.git("commit", "-m", "Verify interpreter dispatch", check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(os.name == "nt", "Windows batch launcher")
+    def test_batch_forwards_arguments_and_preserves_exit_code(self):
+        self.write(".githooks/pre-commit.bat", (ROOT / ".githooks/pre-commit.bat").read_text())
+        self.write(".githooks/pre_commit.py", "import sys\nprint(repr(sys.argv[1:]))\nsys.exit(7)\n")
+        result = subprocess.run(
+            ["cmd.exe", "/d", "/c", ".githooks\\pre-commit.bat", "--base", "argument with spaces"],
+            cwd=self.root, env=self.environment, capture_output=True, text=True, timeout=15,
+        )
+        self.assertEqual(result.returncode, 7, result.stderr)
+        self.assertIn("['--base', 'argument with spaces']", result.stdout)
+
+    @unittest.skipUnless(os.name == "nt", "Windows batch launcher")
+    def test_batch_missing_interpreter_has_actionable_error(self):
+        self.write(".githooks/pre-commit.bat", (ROOT / ".githooks/pre-commit.bat").read_text())
+        environment = dict(self.environment, PATH="")
+        result = subprocess.run(
+            [str(Path(os.environ["SystemRoot"]) / "System32/cmd.exe"), "/d", "/c", ".githooks\\pre-commit.bat"],
+            cwd=self.root, env=environment, capture_output=True, text=True, timeout=15,
+        )
+        self.assertEqual(result.returncode, 127)
+        self.assertIn("Python 3.10+ is required", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
