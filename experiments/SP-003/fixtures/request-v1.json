@@ -1,0 +1,24 @@
+[
+  {
+    "request": {
+      "operation_id": "op",
+      "project_id": "project",
+      "name": "Project",
+      "prefix": "QA",
+      "estimate_unit": "hours"
+    },
+    "hex": "6b6568696c610070726f6a6563745f6372656174650000000001000000026f700000000770726f6a6563740000000750726f6a65637400000002514100",
+    "sha256": "890641668f33d58ed9642e35babef71c43dd19f96c15986fa3bd77a4ff04f79c"
+  },
+  {
+    "request": {
+      "operation_id": "op",
+      "project_id": "project",
+      "name": "??\"\\",
+      "prefix": "QA",
+      "estimate_unit": "points"
+    },
+    "hex": "6b6568696c610070726f6a6563745f6372656174650000000001000000026f700000000770726f6a656374000000043f3f225c00000002514101",
+    "sha256": "d8630109796237ca05a3241a1fede188a06d1d59823fca8e83debff6573c9294"
+  }
+]

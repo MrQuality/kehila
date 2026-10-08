@@ -1,0 +1,275 @@
+{
+  "result": {
+    "codec_version": 1,
+    "kind": "project_create_result",
+    "value": {
+      "seed_profile": "m1_v1",
+      "project": {
+        "id": "project",
+        "name": "Project",
+        "prefix": "QA",
+        "configuration_revision": "1",
+        "next_sequence": "1",
+        "archived": false,
+        "estimate_unit": "hours",
+        "ever_estimated": false
+      },
+      "configuration": {
+        "project_id": "project",
+        "revision": "1",
+        "project_archived": false,
+        "statuses": [
+          {
+            "id": "new",
+            "name": "New",
+            "group_id": null,
+            "phase": "new",
+            "archived": false
+          },
+          {
+            "id": "active",
+            "name": "Active",
+            "group_id": null,
+            "phase": "active",
+            "archived": false
+          },
+          {
+            "id": "done",
+            "name": "Done",
+            "group_id": null,
+            "phase": "done",
+            "archived": false
+          }
+        ],
+        "status_groups": [],
+        "workflows": [
+          {
+            "id": "default",
+            "status_ids": [
+              "new",
+              "active",
+              "done"
+            ],
+            "initial_status_id": "new",
+            "permitted_phase_changes": [
+              [
+                "new",
+                "active"
+              ],
+              [
+                "new",
+                "done"
+              ],
+              [
+                "active",
+                "new"
+              ],
+              [
+                "active",
+                "done"
+              ],
+              [
+                "done",
+                "active"
+              ]
+            ],
+            "archived": false
+          }
+        ],
+        "types": [
+          {
+            "id": "task",
+            "permitted_workflows": [
+              "default"
+            ],
+            "default_workflow_id": "default",
+            "title_field_id": "task-title",
+            "archived": false
+          },
+          {
+            "id": "milestone",
+            "permitted_workflows": [
+              "default"
+            ],
+            "default_workflow_id": "default",
+            "title_field_id": "milestone-title",
+            "archived": false
+          }
+        ],
+        "fields": [
+          {
+            "id": "task-title",
+            "owner_type": "task",
+            "name": "Title",
+            "kind": "text",
+            "origin": "application",
+            "usage": "optional",
+            "archived": false,
+            "options": []
+          },
+          {
+            "id": "task-description",
+            "owner_type": "task",
+            "name": "Description",
+            "kind": "text",
+            "origin": "application",
+            "usage": "optional",
+            "archived": false,
+            "options": []
+          },
+          {
+            "id": "milestone-title",
+            "owner_type": "milestone",
+            "name": "Title",
+            "kind": "text",
+            "origin": "application",
+            "usage": "optional",
+            "archived": false,
+            "options": []
+          },
+          {
+            "id": "milestone-description",
+            "owner_type": "milestone",
+            "name": "Description",
+            "kind": "text",
+            "origin": "application",
+            "usage": "optional",
+            "archived": false,
+            "options": []
+          }
+        ],
+        "relationship_types": []
+      }
+    }
+  },
+  "snapshot": {
+    "codec_version": 1,
+    "kind": "configuration_snapshot",
+    "value": {
+      "project_id": "project",
+      "revision": "1",
+      "project_archived": false,
+      "statuses": [
+        {
+          "id": "new",
+          "name": "New",
+          "group_id": null,
+          "phase": "new",
+          "archived": false
+        },
+        {
+          "id": "active",
+          "name": "Active",
+          "group_id": null,
+          "phase": "active",
+          "archived": false
+        },
+        {
+          "id": "done",
+          "name": "Done",
+          "group_id": null,
+          "phase": "done",
+          "archived": false
+        }
+      ],
+      "status_groups": [],
+      "workflows": [
+        {
+          "id": "default",
+          "status_ids": [
+            "new",
+            "active",
+            "done"
+          ],
+          "initial_status_id": "new",
+          "permitted_phase_changes": [
+            [
+              "new",
+              "active"
+            ],
+            [
+              "new",
+              "done"
+            ],
+            [
+              "active",
+              "new"
+            ],
+            [
+              "active",
+              "done"
+            ],
+            [
+              "done",
+              "active"
+            ]
+          ],
+          "archived": false
+        }
+      ],
+      "types": [
+        {
+          "id": "task",
+          "permitted_workflows": [
+            "default"
+          ],
+          "default_workflow_id": "default",
+          "title_field_id": "task-title",
+          "archived": false
+        },
+        {
+          "id": "milestone",
+          "permitted_workflows": [
+            "default"
+          ],
+          "default_workflow_id": "default",
+          "title_field_id": "milestone-title",
+          "archived": false
+        }
+      ],
+      "fields": [
+        {
+          "id": "task-title",
+          "owner_type": "task",
+          "name": "Title",
+          "kind": "text",
+          "origin": "application",
+          "usage": "optional",
+          "archived": false,
+          "options": []
+        },
+        {
+          "id": "task-description",
+          "owner_type": "task",
+          "name": "Description",
+          "kind": "text",
+          "origin": "application",
+          "usage": "optional",
+          "archived": false,
+          "options": []
+        },
+        {
+          "id": "milestone-title",
+          "owner_type": "milestone",
+          "name": "Title",
+          "kind": "text",
+          "origin": "application",
+          "usage": "optional",
+          "archived": false,
+          "options": []
+        },
+        {
+          "id": "milestone-description",
+          "owner_type": "milestone",
+          "name": "Description",
+          "kind": "text",
+          "origin": "application",
+          "usage": "optional",
+          "archived": false,
+          "options": []
+        }
+      ],
+      "relationship_types": []
+    }
+  }
+}
