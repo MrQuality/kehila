@@ -489,6 +489,12 @@ Use checked timestamp arithmetic and the recorded deadline for logical expiry,
 even when physical payload cleanup runs later. This revision applies to M1's
 shared contract, not a claim of changed provisional-worker behavior.
 
+**Bounded verification:** [SP-002](../spikes/SP-002-postgresql-project-create.md)
+tested recorded-time expiry, retirement/replay races, irreversible tombstones
+and logical restore on native PostgreSQL with explicit QA helpers. This supports
+the tested policy mechanics; it does not deliver final codecs, authenticated
+routes or a production compactor, and does not change this accepted decision.
+
 <a id="d-035"></a>
 ## D-035 — Name the project and repository Kehila
 

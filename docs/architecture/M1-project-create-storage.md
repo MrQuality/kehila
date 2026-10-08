@@ -2,7 +2,10 @@
 
 Status: Proposed, 2026-10-08. Scope: #26/B-005 with #27 and #11/#32.
 This is illustrative PostgreSQL 16 SQL for review, not an installed migration.
-No SQL in this document has been executed. [ADR-102](ADR-102-postgresql-transactions.md)
+The unchanged SQL at baseline 9f433f9 was executed in
+[SP-002](../spikes/SP-002-postgresql-project-create.md). The bounded tests found
+a privileged payload-identity move gap; the SQL remains proposed and uncorrected.
+[ADR-102](ADR-102-postgresql-transactions.md)
 accepts the storage direction; it does not approve the physical choices below.
 The typed-target layout below replaces the project-only key sketch. Its physical
 columns are a proposed realization of the agreed target-scope correction.
@@ -292,7 +295,10 @@ missing payload, clock rollback, restore, and core mutation attempts. Preserve t
 explicit trusted function search_path in executable migrations; serving roles
 must not own tables or be able to replace functions/triggers.
 
-This document establishes no native PostgreSQL behavior or successful I/O test.
+[SP-002](../spikes/SP-002-postgresql-project-create.md) records bounded native
+PostgreSQL evidence for the frozen proposal. It does not establish native
+application readiness. Preserve the reproduced payload-identity move failure;
+reject moves or check both identities before installing an executable migration.
 
 Owner-controlled repair/import migrations must preserve operation identity and
 audit corrections. Define backup, validation, rollback and retention/erasure

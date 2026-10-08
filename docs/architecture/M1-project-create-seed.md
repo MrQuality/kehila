@@ -1,6 +1,6 @@
 # M1 project creation: seed and history tables
 
-Status: Proposed, 2026-10-08. Continue the SQL in the [storage specification](M1-project-create-storage.md). This is unexecuted review SQL, not a migration. It covers creation only, not arbitrary configuration, WorkItem, or grant-administration routes.
+Status: Proposed, 2026-10-08. Continue the SQL in the [storage specification](M1-project-create-storage.md). This is proposed review SQL, not a migration. The frozen SQL and complete seed were executed in [SP-002](../spikes/SP-002-postgresql-project-create.md); its findings and limitations remain applicable. It covers creation only, not arbitrary configuration, WorkItem, or grant-administration routes.
 
 The [command and verification proposal](M1-project-create-protocol.md) describes
 how these rows become one action and which invariants need database evidence.

@@ -282,6 +282,9 @@ archival routes are exposed.
 **Evidence boundary:** [SP-001's design handoff](../../experiments/SP-001/README.md#design-handoff)
 identifies prerequisites for reservation/cost ledgers and compensating actions.
 Its passing single-task cases do not settle cross-document consistency.
+[SP-002](../spikes/SP-002-postgresql-project-create.md) adds native project-creation
+atomicity and selected replay/authorization/compaction evidence. Its bounded
+creation scope does not settle archive/selection or reservation/cost protocols.
 
 **Blocks:** Archive/selection storage coordination in [B-005](backlog.md#b-005)/M1-01, architecture disposition in [B-002](backlog.md#b-002), and integrated [B-011](backlog.md#b-011)/[B-012](backlog.md#b-012).
 
@@ -293,6 +296,12 @@ Its passing single-task cases do not settle cross-document consistency.
 **Accepted direction:** No acknowledged-save loss through process crash, container recreation, or ordinary machine restart. Automatic daily backups must show age and failure status. Test clean-instance restore of configuration and replay records, then reconstruct search. Machine-loss recovery requires an off-machine copy. Test stale browser versions and retry IDs against restored data. Daily backups do not guarantee a 24-hour recovery point when the machine sleeps or backup delivery fails. Exact restore/data-loss targets, destination, migration procedure, and operating budget remain open; see [D-017](decisions.md#d-017).
 
 **Blocks:** [B-005](backlog.md#b-005), [B-018](backlog.md#b-018). Disposable-data development can proceed without pretending to meet these gates.
+
+**Bounded evidence:** [SP-002](../spikes/SP-002-postgresql-project-create.md)
+demonstrates an isolated process crash and fresh-cluster logical restore of the
+proposal, including replay/tombstones and privileges. It does not establish daily
+backup delivery, off-machine recovery, power-loss resilience or supported
+installation/upgrade orchestration. Q-020 remains open.
 
 <a id="q-021"></a>
 ## Q-021 — Cost policies beyond the two accepted choices

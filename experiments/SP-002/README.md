@@ -1,4 +1,4 @@
-# SP-002 ? PostgreSQL project-creation experiment
+# SP-002 — PostgreSQL project-creation experiment
 
 See the [spike record](../../docs/spikes/SP-002-postgresql-project-create.md) for
 observations and limitations. This prototype tests the frozen proposed schema

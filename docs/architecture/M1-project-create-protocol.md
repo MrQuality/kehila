@@ -163,6 +163,9 @@ entry point must validate expiry and atomically retire the core/delete payload.
 Do not give a general serving role direct payload deletion or retirement rights.
 Review privileged function ownership and fixed trusted search_path together with
 role grants. Trigger shape checks alone do not establish authorization.
+SP-002 additionally demonstrated that deferred invoker triggers run at COMMIT
+after a SECURITY DEFINER helper returns. The compactor caller needs the reviewed
+read privileges for those checks; broad direct write grants are unnecessary.
 
 Locking functions use SECURITY DEFINER, schema-qualified objects, and a fixed
 trusted search_path with pg_temp last. Revoke PUBLIC EXECUTE and grant only the
@@ -212,12 +215,16 @@ constraints, privileges, isolation, durability, or lock behavior.
 - [ ] Demonstrate the invariant matrix on real PostgreSQL locally and in CI.
 - [ ] Update implementation status with evidence, not proposal claims.
 
-No native adapter, executable migration, database test, or new public route is
-delivered by these documents. Implement the approved first slice in small commits
+No native adapter, executable migration or new public route is delivered by
+these documents. [SP-002](../spikes/SP-002-postgresql-project-create.md) now
+provides bounded database/protocol experiments and a reproducible test runner.
+Implement the approved first slice in small commits
 once its unresolved behavioral and physical choices are settled.
 
-The next execution step is an isolated PostgreSQL verification harness for the
-corrected SQL and actual roles, before building the route/adapter. Prioritize
+The isolated PostgreSQL harness ran against the unchanged proposal in SP-002.
+Before the native migration/adapter, resolve its payload-identity move finding and
+[linked codec/access/allocation investigations](../spikes/README.md).
+Retain coverage for
 locking privileges, same-actor serialization, cross-actor target collisions,
 deferred rollback, structured errors, fresh-core/payload enforcement, and
 compaction/replay races and the agreed recorded-time expiry boundary. Remaining
