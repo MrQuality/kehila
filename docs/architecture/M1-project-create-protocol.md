@@ -5,6 +5,12 @@ Read with the [operation storage](M1-project-create-storage.md) and
 [seed/history tables](M1-project-create-seed.md). These are design documents,
 not executable migrations or evidence of PostgreSQL behavior.
 
+The maintainer agreed these corrections on 2026-10-08: restricted locking
+functions, exclusive actor coordination for creation, no Project lock on creation
+replay, typed permanent operation targets, and current grants separate from grant
+history. Detailed physical choices still require execution and review. P-07's
+possible grace period remains a proposal, not a change to D-034.
+
 ## Outcome and prerequisites
 
 One accepted ProjectCreateResult supplies the Project, ordered trusted M1V1
@@ -27,14 +33,17 @@ its protecting lock is acquired; an earlier unlocked read is not authoritative.
 1. Authenticate the actor, validate the request envelope, and decode exact typed
    intent. Preserve original strings and collection order. Validate storage
    bounds explicitly; do not silently truncate or normalize contract input.
-2. Begin the transaction and lock the actor row FOR SHARE. Read current active
+2. Begin the transaction and call a restricted locking function that locks the
+   actor row FOR NO KEY UPDATE. Read current active
    state and project-create capability. Reject inactive/unauthorized actors before
    exposing saved content or intent-conflict details, including on replay.
-3. For a previously created target, lock its Project FOR NO KEY UPDATE, after
-   verifying the target belongs to this actor's creation scope. For a new target
-   there is no row to lock: the project primary key arbitrates concurrent inserts.
+3. Verify the trusted target allocation belongs to this actor's creation scope.
+   Do not lock the Project for creation replay: the saved result does not depend
+   on its mutable state. For fresh creation, the project primary key arbitrates
+   target collisions; the actor lock does not protect other actors.
 4. Look up the complete operation key (actor, family, target, token). Lock an
-   existing core FOR SHARE, then read its payload while retaining that lock.
+   existing core FOR SHARE through a restricted locking function, then read its
+   payload while retaining that lock.
    Check its stored grant requirements against current authority before replay.
    Return the saved response only for equal typed intent within the full-replay
    period. Different intent conflicts. Expired equal intent returns the defined
@@ -53,14 +62,14 @@ its protecting lock is acquired; an earlier unlocked read is not authoritative.
    response around COMMIT can leave the outcome unknown; reconcile with the same
    operation key instead of claiming rollback or issuing a new creation.
 
-Lock hierarchy is actor, existing target Project, then operation core. Commands
-that need several actors/projects must specify sorted identity order before they
-are added. Permission revocation updates the same actor row and conflicts with
-FOR SHARE. Compaction takes the core FOR NO KEY UPDATE and must never acquire
-actor/Project locks afterward. Concurrent creations by one actor can share the
-actor lock; they need not serialize on an authority singleton. Test the actual
-lock waits and deadlocks rather than assuming this hierarchy proves every future
-command safe.
+Creation's lock hierarchy is actor, then operation core. Concurrent creation and
+creation replay by the same actor serialize; different actors share no authority
+singleton. Permission revocation updates the actor row and conflicts with its
+FOR NO KEY UPDATE lock. Compaction takes the core FOR NO KEY UPDATE and must never
+acquire actor/Project locks afterward. Commands needing several actors/Projects
+must specify their own sorted lock order. This does not mandate serialization
+of every future item command by actor. Test actual waits, foreign-key locks, and
+deadlocks rather than generalizing from creation.
 
 The actor lock protects the proposed P-03 capability only. It is not a proof that
 future project/group grants are safe: those routes need explicit shared lock
@@ -69,15 +78,17 @@ and foreign-key lock acquisition must be verified with real connections.
 
 ## Uniqueness races and bounded retries
 
-Two transactions can both observe an absent key. A matching unique-key collision
-must roll back the losing transaction, then start a fresh transaction and repeat
-authorization/key lookup. Reuse the same request; never continue a failed
-PostgreSQL transaction. Distinguish the named operation-key constraint from
-project-ID collisions and other constraints. A different token cannot adopt an
-existing Project or overwrite its saved result.
+Two cooperating same-actor creation requests cannot both observe an absent key:
+the second waits for the actor lock and repeats its lookup under READ COMMITTED.
+The permanent unique key remains a backstop. A named operation-key collision
+requires rollback and reconciliation in a fresh authorized transaction; examine
+whether a writer bypassed the protocol. Distinguish it from project-ID collisions
+and other constraints. A different token cannot adopt an existing Project or
+overwrite its saved result. Never continue a failed PostgreSQL transaction.
 
-Propose at most three complete attempts, all inside one application request
-deadline. Final deadline and per-statement/lock/idle timeout values require
+Remove the earlier arbitrary three-attempt proposal. Select a small complete-
+transaction retry budget from real deadlock/cancellation tests, inside one
+application request deadline. Deadline and per-statement/lock/idle values require
 measurement before release; server statement_timeout and
 idle_in_transaction_session_timeout do not bound an entire active transaction.
 Serialization failures (40001) and deadlocks (40P01) can retry the complete intent
@@ -113,13 +124,41 @@ before wiring timestamps. The presence/retirement constraints enforce shape;
 they cannot prove the compactor ran after expiry. Irreversible retirement must
 prevent clock rollback from reviving full replay.
 
+### Unaccepted alternative: minimum retention with bounded grace
+
+Let C be authoritative commit time, E the durable replay-expiry deadline, and G
+an explicitly documented maximum grace duration. The alternative would require
+C + 90 days <= E <= C + 90 days + G. G has no selected value yet. Until E, equal
+authorized retries return the saved result; at/after E they expire without
+re-execution. Changed intent and revoked authority retain their existing rules.
+Physical payload cleanup may happen later without extending logical replay.
+
+The current pure contract expires at exactly commit plus 90 days. Adoption of
+grace requires an explicit decision and coordinated updates to D-034, pure
+replay/compaction functions, fixtures, and timestamp schema. The existing
+operations_replay_window CHECK remains current-contract arithmetic, not approval
+of a pre-commit origin or implementation of grace.
+
+A margin on a pre-commit sample is safe only if the sample-to-commit delay and
+clock behavior have a proven bound. An HTTP deadline, average latency, or a
+statement timeout is insufficient. Post-commit finalization can preserve the
+minimum, but an indefinitely delayed finalizer cannot promise a finite G. Clock
+corrections, process crash, restart, uncertain commit, and finalization failure
+must be included in the guarantee or explicitly qualified. Do not invent a grace
+value or describe an unbounded fallback as bounded.
+
 ## Database roles and mutation ownership
 
 Use a migration owner distinct from the serving login. The serving login cannot
 own schema objects, replace functions/triggers, disable constraints, or run DDL.
-Grant only the operations this creation slice needs: SELECT on required tables
-and INSERT on its persistence tables. It must not UPDATE/DELETE operation cores,
-payloads, initial assignments, or immutable history. Provision generated-identity
+Grant SELECT on required tables, INSERT on creation persistence tables, and
+EXECUTE on reviewed locking functions. The serving login must not directly
+UPDATE/DELETE operation cores, payloads, current grants, or immutable history.
+Locking SELECT clauses require UPDATE privilege: do not grant permission-column
+UPDATE merely to make locking legal. The restricted function owner holds that
+privilege and cannot be assumed by the serving login. See
+[SELECT privileges](https://www.postgresql.org/docs/16/sql-select.html).
+Provision generated-identity
 sequence privileges only as required by the executable migration and role tests.
 
 Actor capability provisioning/revocation needs its own restricted, audited path;
@@ -128,6 +167,15 @@ entry point must validate expiry and atomically retire the core/delete payload.
 Do not give a general serving role direct payload deletion or retirement rights.
 Review privileged function ownership and fixed trusted search_path together with
 role grants. Trigger shape checks alone do not establish authorization.
+
+Locking functions use SECURITY DEFINER, schema-qualified objects, and a fixed
+trusted search_path with pg_temp last. Revoke PUBLIC EXECUTE and grant only the
+serving role atomically with creation. Functions lock/read protected state, never
+mutate capabilities or accept arbitrary SQL, and stay in the caller transaction.
+Authentication and trusted actor binding remain application prerequisites, not
+implied by a shared database login. Test successful locks and rejected direct
+UPDATE as the actual role. See
+[function security](https://www.postgresql.org/docs/16/sql-createfunction.html).
 
 ## Invariants and evidence required
 
@@ -138,7 +186,7 @@ role grants. Trigger shape checks alone do not establish authorization.
 | Exact request equality | Versioned typed codec and retained request bytes | Golden vectors for strings, order, scalar boundaries, codec upgrades |
 | Current permission before replay | Actor lock plus current grant evaluation | Replay after revocation; concurrent revoke/create/replay |
 | Historical creation attribution | Composite operation/project/actor foreign keys | Reject a valid operation attributed to the wrong target or actor |
-| Core permanence and coherent payload shape | Immutable core trigger and deferred shape triggers | Reject deletion, mutation, missing/unexpected payload, retirement reversal |
+| Core permanence and coherent payload shape | Fresh-insert guard, immutable core and deferred shape triggers | Reject initially retired inserts, deletion, mutation, missing/unexpected payload, retirement reversal; verify error metadata |
 | Safe expiry/compaction | Reviewed clock policy and restricted compactor | Before/at/after deadline, clock rollback, compaction/replay races |
 | Initial New status belongs to workflow | Phase and membership foreign keys | Reject missing membership and wrong initial phase |
 | Default workflow belongs to type | Deferred membership foreign key | Reject default outside permitted workflows |
@@ -146,7 +194,7 @@ role grants. Trigger shape checks alone do not establish authorization.
 | Ordered configuration matches trusted seed | Position uniqueness plus ordered adapter reconstruction | Compare every ordered collection, empty collections, and snapshots |
 | Exact unsigned scalar persistence | Integral numeric domain and exact adapter decode | Fractions, negative values, u64 maximum, overflow |
 | History remains readable after upgrades | Versioned immutable snapshot/result decoders | Fixtures from every supported stored version |
-| Least database privilege | Ownership and explicit role grants | Attempts to bypass history, access, core, and compaction restrictions |
+| Least database privilege | Restricted locking functions, ownership, explicit grants | Successful locks as serving role; rejected direct UPDATE/DELETE/TRUNCATE and unauthorized function calls |
 | Unknown commit outcome reconciles safely | Original key reuse and saved result | Disconnect around commit; retry returns one creation/result |
 
 Run those integration cases against supported PostgreSQL with separate serving,

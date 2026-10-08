@@ -27,10 +27,10 @@ typed request comparison; a digest is not a substitute for it.
 | --- | --- | --- |
 | P-01 | Opaque IDs use UTF8 text with C collation and a 128-byte limit. | A new bound on several String-backed IDs; must be explicitly approved and aligned with contract validation. Existing records require inspection before import. |
 | P-02 | Reject U+0000 in persisted identity/text input. | PostgreSQL text/JSONB cannot represent it. Do not silently normalize, truncate, or change pure acceptance. The project-name rule already rejects controls. |
-| P-03 | Creation permission is a capability on a stable actor row, protected by that row's lock. | Proposed #11 access mechanism; no global authority singleton and no new counter merely for locking. Login/session provisioning remains open. |
+| P-03 | Creation capability uses an exclusive actor lock through a restricted function; current grants are separate from immutable grant history. | Agreed correction; effective owner rights, provisioning, and grant-management locks remain #11/#32 work. No global authority singleton. |
 | P-04 | Permanent operation core plus optional replay payload, with an explicit irreversible retirement flag. | Requires atomic shape enforcement and compaction tests. Missing payload alone is not proof of intentional expiry. |
 | P-05 | Current relational seed plus complete immutable JSONB configuration/project snapshots. | One accepted typed result produces both; reconstruction/drift checks are required. Historical codec support must survive upgrades. |
-| P-06 | READ COMMITTED, defined row-lock order, bounded requests and full-transaction retry. | Proposed command protocol, not a database-wide default for all later operations. |
+| P-06 | READ COMMITTED with exclusive per-actor creation coordination, restricted locking functions, no Project lock on creation replay, and bounded retry. | Agreed creation direction, not a database-wide default. Function privileges and retry limits require real database tests. |
 | P-07 | Replay origin remains a separate reviewed time policy. | Preserve D-034's 90-days-after-commit semantics. A pre-commit clock sample must not silently replace the accepted origin. No route can promise the boundary until this is resolved. |
 
 Only project creation is represented here. WorkItem, relationship, knowledge,
@@ -128,7 +128,7 @@ on both tables. Immediate payload deletion alone would leave ambiguous state.
 
 ```sql
 CREATE FUNCTION kehila.check_operation_payload()
-RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila AS $$
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
 DECLARE
   checked_id bigint;
   retired boolean;
@@ -146,7 +146,9 @@ BEGIN
     FROM kehila.operations o
     WHERE o.operation_row_id = checked_id;
   IF NOT FOUND OR retired = has_payload THEN
-    RAISE EXCEPTION 'incoherent operation payload' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'incoherent operation payload'
+      USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_shape',
+            SCHEMA = 'kehila', TABLE = 'operations';
   END IF;
   RETURN NULL;
 END;
@@ -163,23 +165,50 @@ CREATE CONSTRAINT TRIGGER replay_payload_shape
   EXECUTE FUNCTION kehila.check_operation_payload();
 
 CREATE FUNCTION kehila.protect_operation_core()
-RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila AS $$
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
 BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.payload_retired THEN
+      RAISE EXCEPTION 'new operation requires a replay payload'
+        USING ERRCODE = '23514', CONSTRAINT = 'operation_core_fresh',
+              SCHEMA = 'kehila', TABLE = 'operations';
+    END IF;
+    RETURN NEW;
+  END IF;
   IF TG_OP = 'DELETE' THEN
-    RAISE EXCEPTION 'operation identity is permanent' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'operation identity is permanent'
+      USING ERRCODE = '23514', CONSTRAINT = 'operation_core_immutable',
+            SCHEMA = 'kehila', TABLE = 'operations';
   END IF;
   IF (to_jsonb(NEW) - 'payload_retired') IS DISTINCT FROM
      (to_jsonb(OLD) - 'payload_retired')
      OR OLD.payload_retired OR NOT NEW.payload_retired THEN
-    RAISE EXCEPTION 'invalid operation core update' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'invalid operation core update'
+      USING ERRCODE = '23514', CONSTRAINT = 'operation_core_immutable',
+            SCHEMA = 'kehila', TABLE = 'operations';
   END IF;
   RETURN NEW;
 END;
 $$;
 
 CREATE TRIGGER operation_core_immutable
-  BEFORE UPDATE OR DELETE ON kehila.operations FOR EACH ROW
+  BEFORE INSERT OR UPDATE OR DELETE ON kehila.operations FOR EACH ROW
   EXECUTE FUNCTION kehila.protect_operation_core();
+
+CREATE FUNCTION kehila.reject_operation_truncate()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
+BEGIN
+  RAISE EXCEPTION 'operation storage cannot be truncated'
+    USING ERRCODE = '23514', CONSTRAINT = 'operation_storage_no_truncate',
+          SCHEMA = TG_TABLE_SCHEMA, TABLE = TG_TABLE_NAME;
+END;
+$$;
+CREATE TRIGGER operation_core_no_truncate
+  BEFORE TRUNCATE ON kehila.operations FOR EACH STATEMENT
+  EXECUTE FUNCTION kehila.reject_operation_truncate();
+CREATE TRIGGER operation_payload_no_truncate
+  BEFORE TRUNCATE ON kehila.operation_payloads FOR EACH STATEMENT
+  EXECUTE FUNCTION kehila.reject_operation_truncate();
 ```
 
 These shape checks do not protect the replay deadline from premature compaction.
