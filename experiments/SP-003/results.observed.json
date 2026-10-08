@@ -1,0 +1,91 @@
+{
+  "runtime": {
+    "host": "win32",
+    "python": "3.10.11",
+    "database_executed": true,
+    "memory_available_bytes": 5530398720,
+    "artifact_disk_free_bytes": 144110874624,
+    "rootless": false,
+    "cgroup_controllers": [
+      "cpuset",
+      "cpu",
+      "io",
+      "memory",
+      "hugetlb",
+      "pids",
+      "rdma"
+    ],
+    "storage_free_bytes": 1019837927424,
+    "cpu_count": 20,
+    "podman": "podman version 5.8.3",
+    "rust": "rustc 1.93.0 (254b59607 2026-01-19)",
+    "image": "docker.io/library/postgres@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4",
+    "memory_max": "268435456",
+    "cpu_max": "100000 100000",
+    "pids_max": "128",
+    "postgres": "16.15 (Debian 16.15-1.pgdg12+2)",
+    "server_encoding": "UTF8"
+  },
+  "cases": [
+    {
+      "case": "R01-R02-request-goldens",
+      "status": "PASS"
+    },
+    {
+      "case": "R03-request-rejections",
+      "status": "PASS"
+    },
+    {
+      "case": "J01-J05-frozen-result-snapshot",
+      "status": "PASS"
+    },
+    {
+      "case": "J03-J05-wire-rejections",
+      "status": "PASS"
+    },
+    {
+      "case": "I01-pure-proposal-mismatch",
+      "status": "PASS"
+    },
+    {
+      "case": "D01-BYTEA-request-round-trip",
+      "status": "PASS"
+    },
+    {
+      "case": "D01-J02-J04-JSONB-round-trip",
+      "status": "PASS"
+    },
+    {
+      "case": "D01-numeric-versus-float",
+      "status": "PASS"
+    },
+    {
+      "case": "I01-PostgreSQL-NUL-rejection",
+      "status": "PASS"
+    },
+    {
+      "case": "I02-PostgreSQL-ID-domain",
+      "status": "PASS"
+    }
+  ],
+  "cleanup_errors": [],
+  "source_sha256": {
+    "codec.rs": "a6b8262c016d1da483fcda6b14764702b10ba8163b09f771ef8df172de362c83",
+    "main.rs": "9137d4049e01a151d70dbea7e50b6d5917adaf0dd85f2e11bc2043b512767903",
+    "tests.rs": "d96b231ca4fbb58ddb3f6bbfd808489f3acd87141006cdc621fdaa5c3832709d",
+    "build.py": "7c4f9a23c4ba47305c62467ca786999b418f8395ca528cf7c153636e6a3f5d18",
+    "check.py": "1bf29c43eb46c03e61881d827f898a005273a4d938ceb810305744fb85881ebf",
+    "run.py": "61d403fbcb79d365a3839d597ed06dc394544e89268cd35d5d1380310d1eb405",
+    "fixtures/request-v1.json": "4354dffe05780ad3c0d4c859cb06195672409998161c9545c608ead229029730",
+    "fixtures/result-v1.json": "d522bdc1b4f5c1cecbfc63afb1b25e70609d58bafdbe7a01b67b9c45bc211806"
+  },
+  "run": "SP-003-R08",
+  "local_date": "2026-10-09",
+  "rust_tests": {
+    "passed": 8,
+    "failed": 0,
+    "ignored": 0
+  },
+  "scope": "Bounded prototype and PostgreSQL round trips; recommendation awaits maintainer assessment",
+  "domain_baseline": "6315586d3fbe33052785dcbdbc3d4fb8d9d2514a"
+}
