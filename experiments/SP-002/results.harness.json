@@ -1,0 +1,46 @@
+{
+  "run": "SP-002-R05",
+  "date": "2026-10-08",
+  "baseline": "9f433f99b31d0a3e7378a6009fd319a6788640fe",
+  "schema_sha256": "004e3fe0a9d104df656f9b137fe6c608820b3ea5bfafe809fe48d2f9e3aad197",
+  "postgresql": "16.15",
+  "runtime": "Podman on Windows/WSL2",
+  "combined_outcomes": {
+    "PASS": 408,
+    "FAIL": 1,
+    "BLOCKED": 6
+  },
+  "cleanup_errors": [],
+  "focused_checks": [
+    "Real loopback proxy cancellation and thread joins for failure paths",
+    "Actual Windows current-user-only inherited credential file access rules",
+    "Real stalled TCP database handshake terminated under worker deadline",
+    "Compiled oracle accepts both units and rejects invalid units and argument counts",
+    "Valid oracle JSON byte-identical to prior executable for both units and escaped Unicode text"
+  ],
+  "limits": [
+    "Original frozen-schema failure and six product gaps remain unchanged",
+    "Native Linux PostgreSQL experiment not executed",
+    "No production migration, authentication, codec, adapter or compactor delivered"
+  ],
+  "source_hash_format": "SHA-256 of UTF-8 source with LF line endings",
+  "native_run_source_sha256": {
+    "manage.py": "66fcb0d26fc83d0be570816d43b5c4fbcd5431c69cabb594a0d722089286f91b",
+    "commit_loss_proxy.py": "b6dd6f674a1f62dcd3a30788c659f8304151da9e89031811328100607be2483c",
+    "recovery_cases.py": "eaced655379b161ebe613642e8a3786813bf1cb7bcb1f7cc40dd8929175a9a35",
+    "setup_database.py": "1e63ee1067381da97e63dae7ee5312bb692924af02aac4a9e79605eb01d152b0",
+    "phase_prerequisites.py": "733211a7809a96ca75d0419bb5d1df2d83216ed3a02ff928c291653a945bcbdb",
+    "additional_cases.py": "95c2ff67a9bbb4c471da47e124981b2a79bc9c56d8047cd457630250883f9e66",
+    "common.py": "01f97a72e783784a9902b4206c55386ee3187cd72e5d071484ad65b259487517",
+    "seed_oracle.rs": "759f90b5cbf2b6e733c85f1e730c5d3c3bb806f4d3b95e812522ec0b3f7c173d"
+  },
+  "prerequisite_followup": {
+    "date": "2026-10-09",
+    "missing_fixture_entrypoint": "PASS: explicit runner diagnostic before connection-file or database I/O",
+    "actual_completed_database_fixtures": "PASS: final preparation accepted existing restore artifacts and mapping tables",
+    "source_sha256": {
+      "additional_cases.py": "9c600654d5e99a06bc68e697fac4abe4dce1fb978243c90a7b00f1f771fa7084",
+      "phase_prerequisites.py": "f19c08c9e8f108dcd0a399e5812551175ceef869642b789623147b6aa58b6d24"
+    }
+  }
+}

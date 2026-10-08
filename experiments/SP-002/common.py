@@ -134,9 +134,9 @@ def origin(c):
     )
 
 
-def core(c, cmd, actor="qa_actor_a", o=None, **changes):
-    o = origin(c) if o is None else o
-    v = dict(
+def core(connection, cmd, actor="qa_actor_a", o=None, **changes):
+    replay_origin_ms = origin(connection) if o is None else o
+    values = dict(
         actor_id=actor,
         command_family="project_create",
         target_kind="project",
@@ -149,19 +149,19 @@ def core(c, cmd, actor="qa_actor_a", o=None, **changes):
         request_sha256=hashlib.sha256(request_bytes(cmd)).digest(),
         required_grant="project_create",
         grant_policy_version=1,
-        replay_origin_ms=o,
-        replay_deadline_ms=o + PERIOD,
+        replay_origin_ms=replay_origin_ms,
+        replay_deadline_ms=replay_origin_ms + PERIOD,
         payload_retired=False,
     )
-    v.update(changes)
+    values.update(changes)
     sql = (
         "INSERT INTO kehila.operations ("
-        + ",".join(v)
+        + ",".join(values)
         + ") VALUES ("
-        + ",".join(["%s"] * len(v))
+        + ",".join(["%s"] * len(values))
         + ") RETURNING operation_row_id"
     )
-    return c.execute(sql, list(v.values())).fetchone()[0]
+    return connection.execute(sql, list(values.values())).fetchone()[0]
 
 
 def payload(c, op, cmd, result=None):
@@ -171,108 +171,108 @@ def payload(c, op, cmd, result=None):
     )
 
 
-def statements(c, cmd, actor="qa_actor_a", o=None):
+def statements(connection, cmd, actor="qa_actor_a", o=None):
     """Yield after each of the 26 physical row writes, allowing fault injection."""
-    r = seed(cmd)
-    p = r["project"]
-    cfg = r["configuration"]
-    pid = cmd["project_id"]
-    op = core(c, cmd, actor, o)
-    yield "operations", op
-    payload(c, op, cmd, r)
-    yield "operation_payloads", op
-    c.execute(
+    seed_result = seed(cmd)
+    project = seed_result["project"]
+    configuration = seed_result["configuration"]
+    project_id = cmd["project_id"]
+    operation_row_id = core(connection, cmd, actor, o)
+    yield "operations", operation_row_id
+    payload(connection, operation_row_id, cmd, seed_result)
+    yield "operation_payloads", operation_row_id
+    connection.execute(
         "INSERT INTO kehila.projects(project_id,name,current_prefix,estimate_unit,configuration_revision,next_sequence,ever_estimated,archived,created_by,creation_operation_row_id,seed_profile) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
         (
-            pid,
-            p["name"],
-            p["prefix"],
-            p["estimate_unit"],
-            p["configuration_revision"],
-            p["next_sequence"],
-            p["ever_estimated"],
-            p["archived"],
+            project_id,
+            project["name"],
+            project["prefix"],
+            project["estimate_unit"],
+            project["configuration_revision"],
+            project["next_sequence"],
+            project["ever_estimated"],
+            project["archived"],
             actor,
-            op,
-            r["seed_profile"],
+            operation_row_id,
+            seed_result["seed_profile"],
         ),
     )
-    yield "projects", op
-    c.execute(
+    yield "projects", operation_row_id
+    connection.execute(
         "INSERT INTO kehila.configuration_revisions VALUES (%s,1,1,%s,%s,%s,%s,'project_create','project')",
-        (pid, Jsonb(cfg), Jsonb(p), actor, op),
+        (project_id, Jsonb(configuration), Jsonb(project), actor, operation_row_id),
     )
-    yield "configuration_revisions", op
-    c.execute(
+    yield "configuration_revisions", operation_row_id
+    connection.execute(
         "INSERT INTO kehila.project_grants VALUES (%s,%s,'initial_owner',true,1)",
-        (pid, actor),
+        (project_id, actor),
     )
-    yield "project_grants", op
-    c.execute(
+    yield "project_grants", operation_row_id
+    connection.execute(
         "INSERT INTO kehila.project_grant_events(project_id,actor_id,version,access_profile,active,granted_by,granting_operation_row_id,command_family) VALUES (%s,%s,1,'initial_owner',true,%s,%s,'project_create')",
-        (pid, actor, actor, op),
+        (project_id, actor, actor, operation_row_id),
     )
-    yield "project_grant_events", op
-    for i, s in enumerate(cfg["statuses"]):
-        c.execute(
+    yield "project_grant_events", operation_row_id
+    for position, status in enumerate(configuration["statuses"]):
+        connection.execute(
             "INSERT INTO kehila.statuses VALUES (%s,%s,%s,%s,%s,%s)",
-            (pid, s["id"], s["name"], s["phase"], s["archived"], i),
+            (project_id, status["id"], status["name"], status["phase"], status["archived"], position),
         )
-        yield "statuses", op
-    for i, w in enumerate(cfg["workflows"]):
-        c.execute(
+        yield "statuses", operation_row_id
+    for position, workflow in enumerate(configuration["workflows"]):
+        connection.execute(
             "INSERT INTO kehila.workflows VALUES (%s,%s,%s,'new',%s,%s)",
-            (pid, w["id"], w["initial_status_id"], w["archived"], i),
+            (project_id, workflow["id"], workflow["initial_status_id"], workflow["archived"], position),
         )
-        yield "workflows", op
-        for j, s in enumerate(w["status_ids"]):
-            c.execute(
+        yield "workflows", operation_row_id
+        for member_position, status_id in enumerate(workflow["status_ids"]):
+            connection.execute(
                 "INSERT INTO kehila.workflow_statuses VALUES (%s,%s,%s,%s)",
-                (pid, w["id"], s, j),
+                (project_id, workflow["id"], status_id, member_position),
             )
-            yield "workflow_statuses", op
-        for j, e in enumerate(w["permitted_phase_changes"]):
-            c.execute(
+            yield "workflow_statuses", operation_row_id
+        for member_position, phase_change in enumerate(workflow["permitted_phase_changes"]):
+            connection.execute(
                 "INSERT INTO kehila.workflow_phase_changes VALUES (%s,%s,%s,%s,%s)",
-                (pid, w["id"], *e, j),
+                (project_id, workflow["id"], *phase_change, member_position),
             )
-            yield "workflow_phase_changes", op
-    for i, t in enumerate(cfg["types"]):
-        c.execute(
+            yield "workflow_phase_changes", operation_row_id
+    for position, item_type in enumerate(configuration["types"]):
+        connection.execute(
             "INSERT INTO kehila.work_item_types VALUES (%s,%s,%s,%s,%s,%s)",
             (
-                pid,
-                t["id"],
-                t["default_workflow_id"],
-                t["title_field_id"],
-                t["archived"],
-                i,
+                project_id,
+                item_type["id"],
+                item_type["default_workflow_id"],
+                item_type["title_field_id"],
+                item_type["archived"],
+                position,
             ),
         )
-        yield "work_item_types", op
-        for j, w in enumerate(t["permitted_workflows"]):
-            c.execute(
+        yield "work_item_types", operation_row_id
+        for member_position, workflow_id in enumerate(item_type["permitted_workflows"]):
+            connection.execute(
                 "INSERT INTO kehila.type_workflows VALUES (%s,%s,%s,%s)",
-                (pid, t["id"], w, j),
+                (project_id, item_type["id"], workflow_id, member_position),
             )
-            yield "type_workflows", op
-    for i, f in enumerate(cfg["fields"]):
-        c.execute(
+            yield "type_workflows", operation_row_id
+    for position, field in enumerate(configuration["fields"]):
+        connection.execute(
             "INSERT INTO kehila.fields VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (
-                pid,
-                f["id"],
-                f["owner_type"],
-                f["name"],
-                f["kind"],
-                f["origin"],
-                f["usage"],
-                f["archived"],
-                i,
+                project_id,
+                field["id"],
+                field["owner_type"],
+                field["name"],
+                field["kind"],
+                field["origin"],
+                field["usage"],
+                field["archived"],
+                position,
             ),
         )
-        yield "fields", op
-    return op
+        yield "fields", operation_row_id
+    return operation_row_id
 
 
 def persist(c, cmd, actor="qa_actor_a", o=None):
@@ -509,48 +509,48 @@ def install_helpers():
         c.execute(s, prepare=False)
 
 
-def decide(c, cmd, actor="qa_actor_a", now=None):
-    auth = c.execute("SELECT * FROM kehila.qa_lock_actor(%s)", (actor,)).fetchone()
+def decide(connection, cmd, actor="qa_actor_a", now=None):
+    auth = connection.execute("SELECT * FROM kehila.qa_lock_actor(%s)", (actor,)).fetchone()
     if auth != (True, True):
         return "unauthorized", None
-    row = c.execute(
+    row = connection.execute(
         "SELECT operation_row_id FROM kehila.operations WHERE actor_id=%s AND command_family='project_create' AND target_kind='project' AND target_project_id=%s AND token=%s",
         (actor, cmd["project_id"], cmd["operation_id"]),
     ).fetchone()
     if row:
-        o = c.execute("SELECT * FROM kehila.qa_lock_core(%s)", (row[0],)).fetchone()
+        connection.execute("SELECT * FROM kehila.qa_lock_core(%s)", (row[0],)).fetchone()
         # Explicit columns rather than relying on table tuple layout.
-        retired, at, end, digest = c.execute(
+        retired, replay_origin_ms, replay_deadline_ms, digest = connection.execute(
             "SELECT payload_retired,replay_origin_ms,replay_deadline_ms,request_sha256 FROM kehila.operations WHERE operation_row_id=%s",
             (row[0],),
         ).fetchone()
-        n = origin(c) if now is None else now
+        current_ms = origin(connection) if now is None else now
         if retired:
             return (
                 "replay_expired"
                 if bytes(digest) == hashlib.sha256(request_bytes(cmd)).digest()
                 else "operation_id_reused"
             ), None
-        p = c.execute(
+        saved_payload = connection.execute(
             "SELECT request_bytes,result FROM kehila.operation_payloads WHERE operation_row_id=%s",
             (row[0],),
         ).fetchone()
-        require(p is not None)
-        if bytes(p[0]) != request_bytes(cmd):
+        require(saved_payload is not None)
+        if bytes(saved_payload[0]) != request_bytes(cmd):
             return "operation_id_reused", None
-        if bytes(digest) != hashlib.sha256(bytes(p[0])).digest():
+        if bytes(digest) != hashlib.sha256(bytes(saved_payload[0])).digest():
             return "invalid_operation", None
-        if n < at:
+        if current_ms < replay_origin_ms:
             return "invalid_operation", None
-        if n >= end:
+        if current_ms >= replay_deadline_ms:
             return "replay_expired", None
-        return "replay", p[1]
-    if c.execute(
+        return "replay", saved_payload[1]
+    if connection.execute(
         "SELECT 1 FROM kehila.projects WHERE project_id=%s", (cmd["project_id"],)
     ).fetchone():
         return "project_already_exists", None
-    persist(c, cmd, actor)
-    validate(c, cmd, actor)
+    persist(connection, cmd, actor)
+    validate(connection, cmd, actor)
     return "created", seed(cmd)
 
 

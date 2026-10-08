@@ -84,7 +84,10 @@ retain `setup_database.py.log` and still enter resource cleanup.
 - `recovery_cases.py`: before-COMMIT disconnect, protocol-aware withheld COMMIT
   response, isolated SIGKILL/restart, fresh-cluster logical restore and bounded
   descriptive measurements. Capture both log streams; binary dump uses stdout.
-- `additional_cases.py`: case-sensitive keys, maximum keys, QA digest coherence,
+- `additional_cases.py`: requires the mapping database from the schema phase and
+  dump/restore artifacts with a passing recovery restore result. It validates
+  prerequisites and does not construct missing fixtures. Cases cover
+  case-sensitive keys, maximum keys, QA digest coherence,
   exact restored table contents, roles, table/sequence ACLs and function ownership.
 - `concurrent_workload.py`, `maximum_key.py`: bounded two-actor observations and
   random maximum-key insertion without relying on repeating input compression.

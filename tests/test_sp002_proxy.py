@@ -5,6 +5,7 @@ from pathlib import Path
 import socket
 import threading
 import unittest
+from unittest.mock import patch
 
 SOURCE = Path(__file__).resolve().parents[1] / "experiments/SP-002"
 SPEC = importlib.util.spec_from_file_location("commit_loss_proxy", SOURCE / "commit_loss_proxy.py")
@@ -53,7 +54,15 @@ class CommitLossProxyTests(unittest.TestCase):
         self.assert_stopped(proxy)
 
     def test_missing_commit_observation_cancels_both_threads(self):
-        with socket.socket() as backend:
+        forward_started = threading.Event()
+
+        class ObservedThread(threading.Thread):
+            def start(self):
+                super().start()
+                if self.name == "commit-loss-forward":
+                    forward_started.set()
+
+        with socket.socket() as backend, patch.object(PROXY.threading, "Thread", ObservedThread):
             backend.bind(("127.0.0.1", 0))
             backend.listen(1)
             with self.assertRaisesRegex(ValueError, "commit not observed"):
@@ -63,6 +72,7 @@ class CommitLossProxyTests(unittest.TestCase):
                             client.sendall(b"\x00\x00\x00\x08\x00\x03\x00\x00")
                             server.settimeout(2)
                             PROXY.recv_exact(server, 8)
+                            self.assertTrue(forward_started.wait(2))
                             raise ValueError("commit not observed")
             self.assert_stopped(proxy)
 

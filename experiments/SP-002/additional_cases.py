@@ -19,6 +19,7 @@ import json
 import psycopg
 import subprocess
 import uuid
+from phase_prerequisites import require_restore_artifacts
 
 
 def case_keys():
@@ -195,8 +196,21 @@ def restore_compare():
         dest.close()
 
 
-def main():
+def prepare_phase():
+    require_restore_artifacts(ROOT)
     initialize()
+    with conn() as connection:
+        if not connection.execute("SELECT 1 FROM pg_database WHERE datname='qa_mapping'").fetchone():
+            raise RuntimeError("Additional cases require qa_mapping from schema_cases.py; run manage.py")
+    with conn(db="qa_mapping") as connection:
+        if not all(connection.execute(
+            "SELECT to_regclass('kehila.operations'), to_regclass('kehila.operation_payloads')"
+        ).fetchone()):
+            raise RuntimeError("Additional cases require completed qa_mapping schema fixtures; run manage.py")
+
+
+def main():
+    prepare_phase()
 
     test("A09.case-distinct-key", case_keys)
 

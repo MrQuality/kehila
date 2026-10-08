@@ -138,6 +138,32 @@ Focused host regressions exercise orchestration failure paths without claiming
 simulated database evidence. Native Linux execution remains unperformed; ordinary
 Linux CI is a separate verification boundary.
 
+### SP-002-R05 ? Harness failure handling and fixture validation
+
+Executed 2026-10-08 on Windows/WSL2 using Podman and PostgreSQL 16.15 after
+bounded proxy ownership, setup-worker deadlines, credential-file access rules,
+explicit phase prerequisites and fixture-validation corrections. The full native
+run retained 408 pass / one known frozen-subject fail / six blocked, with no
+cleanup errors. Commit-response loss, crash recovery, restore comparisons and
+separate corrected guard cases passed. The
+[harness summary](../../experiments/SP-002/results.harness.json) identifies the
+executed source files by SHA-256; historical summaries remain unchanged.
+
+Focused checks used real loopback sockets for proxy failures and a stalled
+database handshake. The setup deadline terminated the stalled worker and retained
+its log. Windows checks inspected the generated secret file's inherited access
+rules. Compiled oracle checks covered both supported units, invalid inputs and
+argument counts; valid fixture JSON remained byte-identical to the prior
+executable, including escaped Unicode text. These host checks do not establish
+production authentication or native Linux database behavior.
+
+On 2026-10-09, the final prerequisite entry point was tightened to reject missing
+fixtures before connection-file initialization. Its failure regression passed,
+and final preparation was checked against the completed run's actual mapping
+and restore fixtures. The summary distinguishes the full native run's source
+fingerprints from these two subsequent prerequisite-file fingerprints; database
+case behavior was unchanged by this entry-point correction.
+
 ## Conclusion and reuse boundary
 
 Keep the native PostgreSQL direction and useful deferred membership/attribution
@@ -173,7 +199,7 @@ be substituted for verification of delivered authenticated routes.
 
 ## Handoff
 
-Latest completed run: R04, with the frozen failure preserved, separate corrected
+Latest completed run: R05, with the frozen failure preserved, separate corrected
 guard cases passing, and six missing-product checks. Await maintainer review and
 merge of PR #42. Next, start SP-003/#39 on a separate branch from updated `main`,
 then deliver the native migration/role slice and applicable access/allocation
