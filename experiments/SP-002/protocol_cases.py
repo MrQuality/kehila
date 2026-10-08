@@ -1,6 +1,30 @@
-from common import *
-
-install_helpers()
+from common import (
+    PERIOD,
+    RESULTS,
+    ROOT,
+    TABLES,
+    assert_absent,
+    command,
+    conn,
+    core,
+    counts,
+    create,
+    decide,
+    expect_error,
+    initialize,
+    install_helpers,
+    origin,
+    payload,
+    persist,
+    rec,
+    require,
+    test,
+    validate,
+)
+import json
+import psycopg
+import threading
+import time
 
 
 def db_error(role, sql, args=()):
@@ -8,59 +32,20 @@ def db_error(role, sql, args=()):
         return expect_error(lambda: c.execute(sql, args), "42501")
 
 
-for role, sql, args in [
-    (
-        "qa_serving",
-        "SELECT * FROM kehila.actors WHERE actor_id='qa_actor_a' FOR NO KEY UPDATE",
-        (),
-    ),
-    ("qa_serving", "SELECT * FROM kehila.operations FOR SHARE", ()),
-    (
-        "qa_serving",
-        "UPDATE kehila.actors SET active=false WHERE actor_id='qa_actor_a'",
-        (),
-    ),
-    (
-        "qa_serving",
-        "UPDATE kehila.actors SET can_create_project=false WHERE actor_id='qa_actor_a'",
-        (),
-    ),
-    ("qa_serving", "UPDATE kehila.operations SET payload_retired=true", ()),
-    ("qa_serving", "DELETE FROM kehila.operations", ()),
-    ("qa_serving", "DELETE FROM kehila.project_grants", ()),
-    ("qa_serving", "ALTER TABLE kehila.actors ADD COLUMN forbidden int", ()),
-    ("qa_serving", "ALTER TABLE kehila.operations DISABLE TRIGGER ALL", ()),
-    ("qa_serving", "SET ROLE qa_migration", ()),
-    ("qa_serving", "SET ROLE qa_function_owner", ()),
-    ("qa_serving", "SELECT kehila.qa_compact(1,0)", ()),
-    ("qa_unrelated", "SELECT * FROM kehila.qa_lock_actor('qa_actor_a')", ()),
-    ("qa_unrelated", "SELECT * FROM kehila.qa_lock_core(1)", ()),
-    ("qa_unrelated", "SELECT kehila.qa_compact(1,0)", ()),
-    ("qa_serving", "CREATE TABLE kehila.forbidden(n int)", ()),
-]:
-    test(
-        ("B01." if "FOR " in sql or "UPDATE kehila.actors" in sql else "B02.")
-        + role
-        + "."
-        + sql,
-        lambda role=role, sql=sql, args=args: db_error(role, sql, args),
-        "experimental ACLs",
-    )
-
-
 def lock_helpers():
     with conn("qa_serving") as c:
         with c.transaction():
-            assert c.execute(
-                "SELECT * FROM kehila.qa_lock_actor('qa_actor_a')"
-            ).fetchone() == (True, True)
-            assert c.execute(
-                "SELECT operation_row_id FROM kehila.qa_lock_core(1)"
-            ).fetchone() == (1,)
+            require(
+                c.execute("SELECT * FROM kehila.qa_lock_actor('qa_actor_a')").fetchone()
+                == (True, True)
+            )
+            require(
+                c.execute(
+                    "SELECT operation_row_id FROM kehila.qa_lock_core(1)"
+                ).fetchone()
+                == (1,)
+            )
     return dict(role="qa_serving", actor_lock="NO KEY UPDATE", core_lock="SHARE")
-
-
-test("B01.helpers", lock_helpers, "experimental helpers")
 
 
 def search_path():
@@ -73,26 +58,31 @@ def search_path():
                 "INSERT INTO actors VALUES ('qa_denied',true,true); SET search_path=pg_temp,public",
                 prepare=False,
             )
-            assert c.execute(
-                "SELECT * FROM kehila.qa_lock_actor('qa_denied')"
-            ).fetchone() == (False, False)
+            require(
+                c.execute("SELECT * FROM kehila.qa_lock_actor('qa_denied')").fetchone()
+                == (False, False)
+            )
     with conn() as c:
         acl = c.execute(
             "SELECT p.proname,pg_get_userbyid(p.proowner),p.prosecdef,p.proconfig,p.proacl::text FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='kehila' ORDER BY proname"
         ).fetchall()
         (ROOT / "function-acls.json").write_text(json.dumps(acl, indent=2, default=str))
-        assert all(
-            not any(
-                entry.startswith("=") for entry in (row[4] or "").strip("{}").split(",")
+        require(
+            all(
+                (
+                    not any(
+                        (
+                            entry.startswith("=")
+                            for entry in (row[4] or "").strip("{}").split(",")
+                        )
+                    )
+                    for row in acl
+                )
             )
-            for row in acl
         )
     return dict(
         temp_shadowing="did not substitute actor", acl_snapshot="function-acls.json"
     )
-
-
-test("B02.search-path", search_path, "experimental helpers")
 
 
 def wait_blocked(pid, blocker, observer, timeout=4):
@@ -124,13 +114,13 @@ def worker(c, fn):
 
     t = threading.Thread(target=run)
     t.start()
-    assert started.wait(1)
+    require(started.wait(1))
     return t, box
 
 
 def join(t, box):
     t.join(12)
-    assert not t.is_alive(), "worker timeout"
+    require(not t.is_alive(), "worker timeout")
     if "error" in box:
         raise box["error"]
     return box["result"]
@@ -146,12 +136,12 @@ def same_key(commit, n):
         bp = b.info.backend_pid
         a.execute("BEGIN")
         first = decide(a, cmd)
-        assert first[0] == "created"
+        require(first[0] == "created")
         t, box = worker(b, lambda c: decide(c, cmd))
         trace = wait_blocked(bp, ap, obs)
         a.execute("COMMIT" if commit else "ROLLBACK")
         second = join(t, box)
-        assert second[0] == ("replay" if commit else "created"), second
+        require(second[0] == ("replay" if commit else "created"), lambda: second)
         validate(obs, cmd)
         return dict(
             iteration=n,
@@ -166,15 +156,6 @@ def same_key(commit, n):
         obs.close()
 
 
-for commit in [True, False]:
-    for n in range(20):
-        test(
-            "B03." + ("commit" if commit else "abort") + f".{n:02}",
-            lambda commit=commit, n=n: same_key(commit, n),
-            "experimental protocol",
-        )
-
-
 def independence(same_actor, n):
     ca = command()
     cb = command()
@@ -183,7 +164,7 @@ def independence(same_actor, n):
     obs = conn()
     try:
         a.execute("BEGIN")
-        assert decide(a, ca)[0] == "created"
+        require(decide(a, ca)[0] == "created")
         t, box = worker(
             b, lambda c: decide(c, cb, "qa_actor_a" if same_actor else "qa_actor_b")
         )
@@ -194,9 +175,9 @@ def independence(same_actor, n):
         else:
             out = join(t, box)
             trace = dict(second_committed_while_first_open=True)
-            assert counts(obs, ca["project_id"])["projects"] == 0
+            require(counts(obs, ca["project_id"])["projects"] == 0)
             a.execute("COMMIT")
-        assert out[0] == "created"
+        require(out[0] == "created")
         validate(obs, ca)
         validate(obs, cb, "qa_actor_a" if same_actor else "qa_actor_b")
         return trace
@@ -206,33 +187,21 @@ def independence(same_actor, n):
         obs.close()
 
 
-for same in [True, False]:
-    for n in range(20):
-        test(
-            "B04." + ("same-actor" if same else "independent-actors") + f".{n:02}",
-            lambda same=same, n=n: independence(same, n),
-            "experimental protocol",
-        )
-
-
 def collisions():
     cmd = command()
-    assert create(cmd)[0] == "created"
-    assert create(cmd, "qa_actor_b")[0] == "project_already_exists"
+    require(create(cmd)[0] == "created")
+    require(create(cmd, "qa_actor_b")[0] == "project_already_exists")
     other = dict(cmd, operation_id="different-token")
-    assert create(other)[0] == "project_already_exists"
+    require(create(other)[0] == "project_already_exists")
     with conn() as c:
-        assert counts(c, cmd["project_id"]) == TABLES
+        require(counts(c, cmd["project_id"]) == TABLES)
     return dict(no_adoption=True, no_new_rows=True)
-
-
-test("B05.collisions", collisions, "experimental protocol")
 
 
 def exact_replay():
     cmd = command()
     out = create(cmd)
-    assert out[0] == "created"
+    require(out[0] == "created")
     with conn() as c:
         before = c.execute(
             "SELECT replay_origin_ms,replay_deadline_ms FROM kehila.operations WHERE target_project_id=%s",
@@ -243,17 +212,17 @@ def exact_replay():
             (cmd["project_id"],),
         )
     for _ in range(3):
-        assert create(cmd) == ("replay", out[1])
+        require(create(cmd) == ("replay", out[1]))
     for change in [
         dict(name="Other"),
         dict(name="QA Project "),
         dict(prefix="QB"),
         dict(estimate_unit="points"),
     ]:
-        assert create(dict(cmd, **change))[0] == "operation_id_reused"
+        require(create(dict(cmd, **change))[0] == "operation_id_reused")
     with conn() as c:
-        assert counts(c, cmd["project_id"]) == TABLES
-        assert (
+        require(counts(c, cmd["project_id"]) == TABLES)
+        require(
             c.execute(
                 "SELECT replay_origin_ms,replay_deadline_ms FROM kehila.operations WHERE target_project_id=%s",
                 (cmd["project_id"],),
@@ -263,13 +232,10 @@ def exact_replay():
     return dict(replayed_original_result=True, origin_unchanged=True)
 
 
-test("B06.original-result-and-equality", exact_replay, "experimental protocol")
-
-
 def revocation_first(replay, n):
     cmd = command()
     if replay:
-        assert create(cmd)[0] == "created"
+        require(create(cmd)[0] == "created")
     a = conn()
     b = conn("qa_serving")
     obs = conn()
@@ -281,7 +247,7 @@ def revocation_first(replay, n):
         t, box = worker(b, lambda c: decide(c, cmd))
         trace = wait_blocked(b.info.backend_pid, a.info.backend_pid, obs)
         a.execute("COMMIT")
-        assert join(t, box)[0] == "unauthorized"
+        require(join(t, box)[0] == "unauthorized")
         if not replay:
             assert_absent(cmd["project_id"])
         return trace
@@ -297,13 +263,13 @@ def revocation_first(replay, n):
 def command_first(replay, n):
     cmd = command()
     if replay:
-        assert create(cmd)[0] == "created"
+        require(create(cmd)[0] == "created")
     a = conn("qa_serving")
     b = conn()
     obs = conn()
     try:
         a.execute("BEGIN")
-        assert decide(a, cmd)[0] == ("replay" if replay else "created")
+        require(decide(a, cmd)[0] == ("replay" if replay else "created"))
 
         def revoke(c):
             c.execute(
@@ -314,8 +280,8 @@ def command_first(replay, n):
         t, box = worker(b, revoke)
         trace = wait_blocked(b.info.backend_pid, a.info.backend_pid, obs)
         a.execute("COMMIT")
-        assert join(t, box) == "revoked"
-        assert create(cmd)[0] == "unauthorized"
+        require(join(t, box) == "revoked")
+        require(create(cmd)[0] == "unauthorized")
         return trace
     finally:
         b.execute(
@@ -324,20 +290,6 @@ def command_first(replay, n):
         a.close()
         b.close()
         obs.close()
-
-
-for replay in [False, True]:
-    for n in range(20):
-        test(
-            "B07.revoke-first." + str(replay) + f".{n:02}",
-            lambda replay=replay, n=n: revocation_first(replay, n),
-            "experimental authority protocol",
-        )
-        test(
-            "B07.command-first." + str(replay) + f".{n:02}",
-            lambda replay=replay, n=n: command_first(replay, n),
-            "experimental authority protocol",
-        )
 
 
 def mismatch():
@@ -360,23 +312,17 @@ def mismatch():
         c.execute("ROLLBACK")
         assert_absent(cmd["project_id"])
         return dict(
-            sql_allows_mismatch=True, harness_validation_rejects=True, rolled_back=True
+            sql_allows_mismatch=True,
+            harness_validation_rejects=True,
+            rolled_back=True,
         )
     finally:
         c.close()
 
 
-test("B08.current-history-mismatch", mismatch, "experimental validation")
-rec(
-    "B08.grant-management",
-    "BLOCKED",
-    reason="No grant-management route, final owner-right mapping or command family; baseline slice guard only permits version-one active creation event.",
-)
-
-
 def project_lock():
     cmd = command()
-    assert create(cmd)[0] == "created"
+    require(create(cmd)[0] == "created")
     a = conn()
     b = conn("qa_serving")
     try:
@@ -386,15 +332,12 @@ def project_lock():
             (cmd["project_id"],),
         )
         t, box = worker(b, lambda c: decide(c, cmd))
-        assert join(t, box)[0] == "replay"
+        require(join(t, box)[0] == "replay")
         a.execute("ROLLBACK")
         return dict(replay_completed_while_project_locked=True)
     finally:
         a.close()
         b.close()
-
-
-test("B09.no-project-lock", project_lock, "experimental protocol")
 
 
 def clock_sample():
@@ -408,7 +351,7 @@ def clock_sample():
         c.execute("SELECT * FROM kehila.qa_lock_actor('qa_actor_a')")
         c.execute("SELECT pg_sleep(0.2)")
         o = origin(c)
-        assert o - start >= 180
+        require(o - start >= 180)
         op = persist(c, cmd, o=o)
         c.execute("SELECT pg_sleep(0.1)")
         beforecommit = origin(c)
@@ -417,8 +360,8 @@ def clock_sample():
             "SELECT replay_origin_ms,replay_deadline_ms FROM kehila.operations WHERE operation_row_id=%s",
             (op,),
         ).fetchone()
-        assert v == (o, o + PERIOD)
-        assert beforecommit - o >= 90
+        require(v == (o, o + PERIOD))
+        require(beforecommit - o >= 90)
         return dict(
             transaction_start_ms=str(start),
             sample_ms=o,
@@ -428,9 +371,6 @@ def clock_sample():
         )
     finally:
         c.close()
-
-
-test("B10.recorded-clock", clock_sample, "experimental clock mapping")
 
 
 def boundaries():
@@ -446,31 +386,28 @@ def boundaries():
         (100 + PERIOD, "replay_expired"),
         (101 + PERIOD, "replay_expired"),
     ]:
-        assert create(cmd, now=n)[0] == expected
-        assert create(dict(cmd, name="changed"), now=n)[0] == "operation_id_reused"
+        require(create(cmd, now=n)[0] == expected)
+        require(create(dict(cmd, name="changed"), now=n)[0] == "operation_id_reused")
         with conn() as c:
             c.execute(
                 "UPDATE kehila.actors SET can_create_project=false WHERE actor_id='qa_actor_a'"
             )
         try:
-            assert create(cmd, now=n)[0] == "unauthorized"
-            assert create(dict(cmd, name="changed"), now=n)[0] == "unauthorized"
+            require(create(cmd, now=n)[0] == "unauthorized")
+            require(create(dict(cmd, name="changed"), now=n)[0] == "unauthorized")
         finally:
             with conn() as c:
                 c.execute(
                     "UPDATE kehila.actors SET can_create_project=true WHERE actor_id='qa_actor_a'"
                 )
     with conn() as c:
-        assert counts(c, cmd["project_id"]) == TABLES
+        require(counts(c, cmd["project_id"]) == TABLES)
     return dict(
         origin=100,
         deadline=100 + PERIOD,
         payload_still_present=True,
         all_boundaries_and_authority_precedence=True,
     )
-
-
-test("B11.boundaries", boundaries, "experimental injected trusted time")
 
 
 def compaction():
@@ -494,32 +431,33 @@ def compaction():
         )
         failure = expect_error(lambda: c.execute("SELECT 1/0"), "22012")
         c.execute("ROLLBACK")
-        assert counts(c, cmd["project_id"]) == TABLES
+        require(counts(c, cmd["project_id"]) == TABLES)
     with conn("qa_compactor") as c:
-        assert c.execute(
-            "SELECT kehila.qa_compact(%s,%s)", (op, 100 + PERIOD)
-        ).fetchone() == (True,)
-        assert c.execute("SELECT kehila.qa_compact(%s,%s)", (op, 0)).fetchone() == (
-            False,
+        require(
+            c.execute("SELECT kehila.qa_compact(%s,%s)", (op, 100 + PERIOD)).fetchone()
+            == (True,)
+        )
+        require(
+            c.execute("SELECT kehila.qa_compact(%s,%s)", (op, 0)).fetchone() == (False,)
         )
     with conn() as c:
-        assert c.execute(
-            "SELECT payload_retired FROM kehila.operations WHERE operation_row_id=%s",
-            (op,),
-        ).fetchone() == (True,)
-        assert counts(c, cmd["project_id"]) == dict(TABLES, operation_payloads=0)
+        require(
+            c.execute(
+                "SELECT payload_retired FROM kehila.operations WHERE operation_row_id=%s",
+                (op,),
+            ).fetchone()
+            == (True,)
+        )
+        require(counts(c, cmd["project_id"]) == dict(TABLES, operation_payloads=0))
     for n in [0, 99, 100, 100 + PERIOD - 1, 100 + PERIOD, 2**64 - 1]:
-        assert create(cmd, now=n)[0] == "replay_expired"
-        assert create(dict(cmd, name="changed"), now=n)[0] == "operation_id_reused"
+        require(create(cmd, now=n)[0] == "replay_expired")
+        require(create(dict(cmd, name="changed"), now=n)[0] == "operation_id_reused")
     return dict(
         early_rejected=early,
         mid_failure=failure,
         permanent_core_retained=True,
         tombstone_no_revival=True,
     )
-
-
-test("B12.compaction", compaction, "experimental compactor with injected trusted time")
 
 
 def race(replay_first, n):
@@ -534,7 +472,7 @@ def race(replay_first, n):
     try:
         a.execute("BEGIN")
         if replay_first:
-            assert decide(a, cmd, now=100)[0] == "replay"
+            require(decide(a, cmd, now=100)[0] == "replay")
             t, box = worker(
                 b,
                 lambda c: c.execute(
@@ -542,16 +480,19 @@ def race(replay_first, n):
                 ).fetchone()[0],
             )
         else:
-            assert a.execute(
-                "SELECT kehila.qa_compact(%s,%s)", (op, 100 + PERIOD)
-            ).fetchone() == (True,)
+            require(
+                a.execute(
+                    "SELECT kehila.qa_compact(%s,%s)", (op, 100 + PERIOD)
+                ).fetchone()
+                == (True,)
+            )
             t, box = worker(b, lambda c: decide(c, cmd, now=100))
         trace = wait_blocked(b.info.backend_pid, a.info.backend_pid, obs)
         a.execute("COMMIT")
         out = join(t, box)
-        assert out is True if replay_first else out[0] == "replay_expired"
-        assert create(cmd, now=99)[0] == "replay_expired"
-        assert counts(obs, cmd["project_id"]) == dict(TABLES, operation_payloads=0)
+        require(out is True if replay_first else out[0] == "replay_expired")
+        require(create(cmd, now=99)[0] == "replay_expired")
+        require(counts(obs, cmd["project_id"]) == dict(TABLES, operation_payloads=0))
         return dict(
             trace=trace,
             ordering="replay-first" if replay_first else "compact-first",
@@ -563,29 +504,17 @@ def race(replay_first, n):
         obs.close()
 
 
-for first in [True, False]:
-    for n in range(20):
-        test(
-            "B13." + ("replay-first" if first else "compact-first") + f".{n:02}",
-            lambda first=first, n=n: race(first, n),
-            "experimental race protocol",
-        )
-
-
 def full_rollback():
     cmd = command()
     c = conn()
     with c.transaction():
         persist(c, cmd, o=100)
     c.close()
-    assert create(cmd, now=100 + PERIOD)[0] == "replay_expired"
-    assert create(cmd, now=100 + PERIOD - 1)[0] == "replay"
+    require(create(cmd, now=100 + PERIOD)[0] == "replay_expired")
+    require(create(cmd, now=100 + PERIOD - 1)[0] == "replay")
     return dict(
         full_record_can_replay_after_clock_rollback=True, no_highwater_claim=True
     )
-
-
-test("B13.full-clock-rollback", full_rollback, "experimental injected time")
 
 
 def json_numbers():
@@ -601,19 +530,11 @@ def json_numbers():
             "SELECT result FROM kehila.operation_payloads WHERE operation_row_id=%s",
             (op,),
         ).fetchone()[0]
-        assert got == data
-        assert got["unicode"][0] != got["unicode"][1]
+        require(got == data)
+        require(got["unicode"][0] != got["unicode"][1])
         return dict(values=values, preserved=True, scope="JSONB + Python driver only")
     finally:
         c.close()
-
-
-test("B14.jsonb-exactness", json_numbers, "storage/driver experiment")
-rec(
-    "B14.final-codec",
-    "BLOCKED",
-    reason="Final canonical request/result/snapshot codec and old-version decoders are not implemented. QA JSON bytes are not a substitute.",
-)
 
 
 def timeout_cancel(cancel=False):
@@ -633,8 +554,8 @@ def timeout_cancel(cancel=False):
             trace = wait_blocked(b.info.backend_pid, a.info.backend_pid, obs)
             b.cancel()
             t.join(5)
-            assert isinstance(box.get("error"), psycopg.Error)
-            assert box["error"].sqlstate == "57014"
+            require(isinstance(box.get("error"), psycopg.Error))
+            require(box["error"].sqlstate == "57014")
             d = dict(sqlstate="57014", trace=trace)
         else:
 
@@ -643,10 +564,10 @@ def timeout_cancel(cancel=False):
                     decide(b, cmd)
 
             d = expect_error(run, "55P03")
-        assert b.execute("SELECT 1").fetchone() == (1,)
+        require(b.execute("SELECT 1").fetchone() == (1,))
         assert_absent(cmd["project_id"])
         a.execute("ROLLBACK")
-        assert create(cmd)[0] == "created"
+        require(create(cmd)[0] == "created")
         return dict(
             error=d,
             retry_same_token=True,
@@ -656,10 +577,6 @@ def timeout_cancel(cancel=False):
         a.close()
         b.close()
         obs.close()
-
-
-test("B15.lock-timeout", timeout_cancel, "experimental bounded retry")
-test("B15.cancellation", lambda: timeout_cancel(True), "experimental bounded retry")
 
 
 def deadlock():
@@ -703,14 +620,14 @@ def deadlock():
             errors.append(e.sqlstate)
             b.execute("ROLLBACK")
         t.join(5)
-        assert not t.is_alive()
+        require(not t.is_alive())
         if "error" in box:
             errors.append(box["error"].sqlstate)
         a.execute("ROLLBACK")
         b.execute("ROLLBACK")
-        assert "40P01" in errors, errors
+        require("40P01" in errors, lambda: errors)
         cmd = command()
-        assert create(cmd)[0] == "created"
+        require(create(cmd)[0] == "created")
         return dict(errors=errors, trace=trace, complete_transaction_retry=True)
     finally:
         a.close()
@@ -718,22 +635,154 @@ def deadlock():
         obs.close()
 
 
-test("B15.deadlock", deadlock, "experimental bounded retry")
-for case, reason in [
-    (
-        "B01.production-session-binding",
-        "Trusted actor supplied by harness, not real authenticated session",
-    ),
-    (
-        "B05.target-allocation",
-        "Targets generated by harness; production allocation absent",
-    ),
-    ("B10.production-clock", "Harness mapping verified; native adapter absent"),
-    (
-        "B12.production-compactor",
-        "QA helper accepts injected time; not production-safe API",
-    ),
-]:
-    rec(case, "BLOCKED", reason=reason)
-(ROOT / "phase-b-results.json").write_text(json.dumps(RESULTS, indent=2, default=str))
-raise SystemExit(1 if any(x["status"] == "FAIL" for x in RESULTS) else 2)
+def main():
+    initialize()
+
+    install_helpers()
+
+    for role, sql, args in [
+        (
+            "qa_serving",
+            "SELECT * FROM kehila.actors WHERE actor_id='qa_actor_a' FOR NO KEY UPDATE",
+            (),
+        ),
+        ("qa_serving", "SELECT * FROM kehila.operations FOR SHARE", ()),
+        (
+            "qa_serving",
+            "UPDATE kehila.actors SET active=false WHERE actor_id='qa_actor_a'",
+            (),
+        ),
+        (
+            "qa_serving",
+            "UPDATE kehila.actors SET can_create_project=false WHERE actor_id='qa_actor_a'",
+            (),
+        ),
+        ("qa_serving", "UPDATE kehila.operations SET payload_retired=true", ()),
+        ("qa_serving", "DELETE FROM kehila.operations", ()),
+        ("qa_serving", "DELETE FROM kehila.project_grants", ()),
+        ("qa_serving", "ALTER TABLE kehila.actors ADD COLUMN forbidden int", ()),
+        ("qa_serving", "ALTER TABLE kehila.operations DISABLE TRIGGER ALL", ()),
+        ("qa_serving", "SET ROLE qa_migration", ()),
+        ("qa_serving", "SET ROLE qa_function_owner", ()),
+        ("qa_serving", "SELECT kehila.qa_compact(1,0)", ()),
+        ("qa_unrelated", "SELECT * FROM kehila.qa_lock_actor('qa_actor_a')", ()),
+        ("qa_unrelated", "SELECT * FROM kehila.qa_lock_core(1)", ()),
+        ("qa_unrelated", "SELECT kehila.qa_compact(1,0)", ()),
+        ("qa_serving", "CREATE TABLE kehila.forbidden(n int)", ()),
+    ]:
+        test(
+            ("B01." if "FOR " in sql or "UPDATE kehila.actors" in sql else "B02.")
+            + role
+            + "."
+            + sql,
+            lambda role=role, sql=sql, args=args: db_error(role, sql, args),
+            "experimental ACLs",
+        )
+
+    test("B01.helpers", lock_helpers, "experimental helpers")
+
+    test("B02.search-path", search_path, "experimental helpers")
+
+    for commit in [True, False]:
+        for n in range(20):
+            test(
+                "B03." + ("commit" if commit else "abort") + f".{n:02}",
+                lambda commit=commit, n=n: same_key(commit, n),
+                "experimental protocol",
+            )
+
+    for same in [True, False]:
+        for n in range(20):
+            test(
+                "B04." + ("same-actor" if same else "independent-actors") + f".{n:02}",
+                lambda same=same, n=n: independence(same, n),
+                "experimental protocol",
+            )
+
+    test("B05.collisions", collisions, "experimental protocol")
+
+    test("B06.original-result-and-equality", exact_replay, "experimental protocol")
+
+    for replay in [False, True]:
+        for n in range(20):
+            test(
+                "B07.revoke-first." + str(replay) + f".{n:02}",
+                lambda replay=replay, n=n: revocation_first(replay, n),
+                "experimental authority protocol",
+            )
+            test(
+                "B07.command-first." + str(replay) + f".{n:02}",
+                lambda replay=replay, n=n: command_first(replay, n),
+                "experimental authority protocol",
+            )
+
+    test("B08.current-history-mismatch", mismatch, "experimental validation")
+
+    rec(
+        "B08.grant-management",
+        "BLOCKED",
+        reason="No grant-management route, final owner-right mapping or command family; baseline slice guard only permits version-one active creation event.",
+    )
+
+    test("B09.no-project-lock", project_lock, "experimental protocol")
+
+    test("B10.recorded-clock", clock_sample, "experimental clock mapping")
+
+    test("B11.boundaries", boundaries, "experimental injected trusted time")
+
+    test(
+        "B12.compaction",
+        compaction,
+        "experimental compactor with injected trusted time",
+    )
+
+    for first in [True, False]:
+        for n in range(20):
+            test(
+                "B13." + ("replay-first" if first else "compact-first") + f".{n:02}",
+                lambda first=first, n=n: race(first, n),
+                "experimental race protocol",
+            )
+
+    test("B13.full-clock-rollback", full_rollback, "experimental injected time")
+
+    test("B14.jsonb-exactness", json_numbers, "storage/driver experiment")
+
+    rec(
+        "B14.final-codec",
+        "BLOCKED",
+        reason="Final canonical request/result/snapshot codec and old-version decoders are not implemented. QA JSON bytes are not a substitute.",
+    )
+
+    test("B15.lock-timeout", timeout_cancel, "experimental bounded retry")
+
+    test("B15.cancellation", lambda: timeout_cancel(True), "experimental bounded retry")
+
+    test("B15.deadlock", deadlock, "experimental bounded retry")
+
+    for case, reason in [
+        (
+            "B01.production-session-binding",
+            "Trusted actor supplied by harness, not real authenticated session",
+        ),
+        (
+            "B05.target-allocation",
+            "Targets generated by harness; production allocation absent",
+        ),
+        ("B10.production-clock", "Harness mapping verified; native adapter absent"),
+        (
+            "B12.production-compactor",
+            "QA helper accepts injected time; not production-safe API",
+        ),
+    ]:
+        rec(case, "BLOCKED", reason=reason)
+
+    (ROOT / "phase-b-results.json").write_text(
+        json.dumps(RESULTS, indent=2, default=str)
+    )
+
+    raise SystemExit(1 if any(x["status"] == "FAIL" for x in RESULTS) else 2)
+
+
+if __name__ == "__main__":
+    main()

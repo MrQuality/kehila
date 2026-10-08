@@ -7,6 +7,11 @@ authentication system, final storage codec or production compactor.
 
 ## Prerequisites and execution
 
+Supported host platforms are Windows and Linux ([D-036](../../docs/product/decisions.md#d-036)).
+macOS and other hosts are explicitly rejected. Python optimization (`-O`, `-OO`,
+or `PYTHONOPTIMIZE`) is rejected before setup; case invariants are evaluated
+through an explicit checker, including operations with side effects.
+
 Use PostgreSQL 16 through Podman only. Start your selected Podman machine first
 on Windows; the runner checks connectivity but does not choose or start a machine.
 Inspect free space in the Podman VM as well as the host. Budget 3 GiB available
@@ -27,6 +32,10 @@ The runner freezes the original schema and pure-contract baseline at
 `9f433f99b31d0a3e7378a6009fd319a6788640fe` and pulls an immutable PostgreSQL image.
 It refuses a changed pure contract instead of silently testing a different seed.
 No Docker executable or Compose provider is used.
+The Git checkout must contain that baseline commit; a shallow clone must fetch it
+or be unshallowed before execution. Source archives are not supported reproductions.
+The fixture library is selected from Cargo's compiler-artifact messages, including
+custom target directories; artifact modification times are not used.
 
 Each execution creates fresh names, loopback ports, synthetic credentials,
 containers and persistent volumes. Artifacts default to an ignored run directory
@@ -45,6 +54,10 @@ names in `runtime.json` before any manual cleanup; volume removal loses test dat
 Connection files contain synthetic passwords; do not publish them. Port allocation
 is checked before container start; a competing process taking that port causes
 setup failure, not fallback to another database.
+Phase timeouts retain both captured output streams. Cleanup inspection and stop
+operations have finite timeouts; `cleanup.json` records failures instead of
+silently claiming that resources stopped. Importing case modules does not read
+runtime connection files or run cases; their `main()` entry points load fixtures.
 
 ## Cases and ownership
 
@@ -64,6 +77,7 @@ setup failure, not fallback to another database.
   random maximum-key insertion without relying on repeating input compression.
 - `seed_oracle.rs`: emits fixture values from the actual pure ProjectCreate result,
   including complete ordered configuration; its JSON format is QA-only.
+
 
 The experiment's actor/time inputs are trusted test inputs. Helpers that accept
 arbitrary actor or time parameters must not be installed as public application

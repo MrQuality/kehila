@@ -1,5 +1,24 @@
-from common import *
-import zipfile
+from common import (
+    CONF,
+    RESULTS,
+    ROOT,
+    TABLES,
+    command,
+    conn,
+    core,
+    create,
+    expect_error,
+    initialize,
+    payload,
+    require,
+    seed,
+    test,
+)
+import hashlib
+import json
+import psycopg
+import subprocess
+import uuid
 
 
 def case_keys():
@@ -11,15 +30,16 @@ def case_keys():
                 cmd = command(p, token)
                 op = core(c, cmd)
                 payload(c, op, cmd)
-        assert c.execute(
-            "SELECT count(*) FROM kehila.operations WHERE target_project_id=%s", (p,)
-        ).fetchone() == (2,)
+        require(
+            c.execute(
+                "SELECT count(*) FROM kehila.operations WHERE target_project_id=%s",
+                (p,),
+            ).fetchone()
+            == (2,)
+        )
         return dict(case_distinct=True)
     finally:
         c.close()
-
-
-test("A09.case-distinct-key", case_keys)
 
 
 def max_index():
@@ -49,9 +69,6 @@ def max_index():
         c.close()
 
 
-test("A07.maximum-index-key", max_index, "modified-schema compatibility experiment")
-
-
 def digest():
     cmd = command()
     c = conn()
@@ -59,13 +76,11 @@ def digest():
         op = core(c, cmd, request_sha256=b"x" * 32)
         payload(c, op, cmd, seed(cmd))
     c.close()
-    assert create(cmd)[0] == "invalid_operation"
+    require(create(cmd)[0] == "invalid_operation")
     return dict(
-        incoherent_digest_rejected=True, scope="QA JSON v1 only; final codec blocked"
+        incoherent_digest_rejected=True,
+        scope="QA JSON v1 only; final codec blocked",
     )
-
-
-test("B14.qa-digest-coherence", digest, "experimental QA codec")
 
 
 def restore_compare():
@@ -100,7 +115,7 @@ def restore_compare():
         ],
         capture_output=True,
     )
-    assert p.returncode == 0, p.stderr.decode()
+    require(p.returncode == 0, lambda: p.stderr.decode())
     source = conn(db="qa_dump_reference")
     cfg = dict(CONF, port=runtime["restore_port"])
     dest = psycopg.connect(**cfg, autocommit=True)
@@ -116,7 +131,7 @@ def restore_compare():
             )
         ]
         # One explicit post-restore creation is excluded from the content comparison.
-        assert len(extra) == 1, extra
+        require(len(extra) == 1, lambda: extra)
         inventory = {}
         for table in [*TABLES, "actors"]:
             if table == "actors":
@@ -140,18 +155,18 @@ def restore_compare():
             )
             rows1 = [x[0] for x in source.execute(q, args)]
             rows2 = [x[0] for x in dest.execute(q, args)]
-            assert rows1 == rows2, table
+            require(rows1 == rows2, lambda: table)
             inventory[table] = dict(
                 rows=len(rows1),
                 sha256=hashlib.sha256("\n".join(rows1).encode()).hexdigest(),
             )
         # Compare role attributes and object ACLs, not only successful admin reads.
         roles = "SELECT rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin FROM pg_roles WHERE rolname LIKE 'qa_%' ORDER BY rolname"
-        assert source.execute(roles).fetchall() == dest.execute(roles).fetchall()
+        require(source.execute(roles).fetchall() == dest.execute(roles).fetchall())
         acls = "SELECT c.relname,c.relacl::text,pg_get_userbyid(c.relowner) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='kehila' ORDER BY c.relname"
-        assert source.execute(acls).fetchall() == dest.execute(acls).fetchall()
+        require(source.execute(acls).fetchall() == dest.execute(acls).fetchall())
         funcs = "SELECT p.proname,p.proacl::text,pg_get_userbyid(p.proowner),p.proconfig,p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='kehila' ORDER BY p.proname"
-        assert source.execute(funcs).fetchall() == dest.execute(funcs).fetchall()
+        require(source.execute(funcs).fetchall() == dest.execute(funcs).fetchall())
         # After restoration, the fresh-retired insert guard is active again.
         orig = CONF["port"]
         CONF["port"] = runtime["restore_port"]
@@ -180,12 +195,27 @@ def restore_compare():
         dest.close()
 
 
-test(
-    "C03.exact-restored-content-and-acls",
-    restore_compare,
-    "owner-controlled restore experiment",
-)
-(ROOT / "additional-results.json").write_text(
-    json.dumps(RESULTS, indent=2, default=str)
-)
-raise SystemExit(1 if any(x["status"] == "FAIL" for x in RESULTS) else 0)
+def main():
+    initialize()
+
+    test("A09.case-distinct-key", case_keys)
+
+    test("A07.maximum-index-key", max_index, "modified-schema compatibility experiment")
+
+    test("B14.qa-digest-coherence", digest, "experimental QA codec")
+
+    test(
+        "C03.exact-restored-content-and-acls",
+        restore_compare,
+        "owner-controlled restore experiment",
+    )
+
+    (ROOT / "additional-results.json").write_text(
+        json.dumps(RESULTS, indent=2, default=str)
+    )
+
+    raise SystemExit(1 if any(x["status"] == "FAIL" for x in RESULTS) else 0)
+
+
+if __name__ == "__main__":
+    main()

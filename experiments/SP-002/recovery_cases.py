@@ -1,9 +1,28 @@
-from common import *
+from common import (
+    CONF,
+    PERIOD,
+    RESULTS,
+    ROOT,
+    assert_absent,
+    command,
+    conn,
+    counts,
+    create,
+    decide,
+    expect_error,
+    initialize,
+    persist,
+    require,
+    test,
+    validate,
+)
+import hashlib
+import json
+import psycopg
+import subprocess
+import threading
+import time
 import socket, struct, statistics
-
-RUNTIME = json.loads((ROOT / "runtime.json").read_text())
-CONTAINER = RUNTIME["container"]
-RESTORE = RUNTIME["restore_container"]
 
 
 def podman(*args, input=None):
@@ -104,50 +123,51 @@ class CommitLossProxy:
 
     def finish(self):
         self.thread.join(20)
-        assert not self.thread.is_alive()
-        assert not self.errors, self.errors
+        require(not self.thread.is_alive())
+        require(not self.errors, lambda: self.errors)
 
 
 def disconnect_before():
     cmd = command()
     c = conn("qa_serving")
     c.execute("BEGIN")
-    assert decide(c, cmd)[0] == "created"
+    require(decide(c, cmd)[0] == "created")
     c.close()
     with conn() as obs:
         end = time.monotonic() + 3
         while counts(obs, cmd["project_id"])["projects"] and time.monotonic() < end:
             time.sleep(0.01)
     assert_absent(cmd["project_id"])
-    assert create(cmd)[0] == "created"
+    require(create(cmd)[0] == "created")
     return dict(before_commit_disconnect="no committed rows", retry="created once")
-
-
-test("C01.before-commit", disconnect_before, "native database fault experiment")
 
 
 def response_loss():
     cmd = command()
     proxy = CommitLossProxy()
     cfg = dict(
-        CONF, user="qa_serving", port=proxy.port, sslmode="disable", connect_timeout=5
+        CONF,
+        user="qa_serving",
+        port=proxy.port,
+        sslmode="disable",
+        connect_timeout=5,
     )
     c = psycopg.connect(**cfg, autocommit=True)
     try:
         c.execute("SET statement_timeout='15s'")
         c.execute("BEGIN")
-        assert decide(c, cmd)[0] == "created"
+        require(decide(c, cmd)[0] == "created")
         try:
             c.execute("COMMIT")
         except psycopg.OperationalError as e:
             error = type(e).__name__
         else:
             raise AssertionError("Commit response unexpectedly reached client")
-        assert proxy.committed.wait(2)
+        require(proxy.committed.wait(2))
         proxy.finish()
         with conn() as obs:
             validate(obs, cmd)
-        assert create(cmd)[0] == "replay"
+        require(create(cmd)[0] == "replay")
         return dict(
             client_error=error,
             proxy_trace=proxy.log,
@@ -158,17 +178,14 @@ def response_loss():
         c.close()
 
 
-test("C01.commit-response-loss", response_loss, "native database fault experiment")
-
-
 def crash():
     good = command()
-    assert create(good)[0] == "created"
+    require(create(good)[0] == "created")
     bad = command()
     c = conn("qa_serving")
     c.execute("BEGIN")
-    assert decide(c, bad)[0] == "created"
-    assert (
+    require(decide(c, bad)[0] == "created")
+    require(
         json.loads(podman("inspect", CONTAINER))[0]["Config"]["Labels"]["purpose"]
         == "kehila-sp002"
     )
@@ -188,10 +205,10 @@ def crash():
     else:
         raise AssertionError("Restart failed " + str(last))
     assert_absent(bad["project_id"])
-    assert create(good)[0] == "replay"
+    require(create(good)[0] == "replay")
     logs = podman("logs", CONTAINER).decode(errors="replace")
     (ROOT / "postgres-crash-recovery.log").write_text(logs)
-    assert "automatic recovery in progress" in logs or "redo starts" in logs
+    require("automatic recovery in progress" in logs or "redo starts" in logs)
     return dict(
         fault="SIGKILL isolated PostgreSQL container",
         acknowledged_survived=True,
@@ -199,9 +216,6 @@ def crash():
         replayed=True,
         settings=json.loads((ROOT / "server-settings.json").read_text()),
     )
-
-
-test("C02.durable-process-crash", crash, "native database durability experiment")
 
 
 def restore():
@@ -304,19 +318,19 @@ def restore():
             incoherent = c.execute(
                 "SELECT count(*) FROM kehila.operations o WHERE o.payload_retired = EXISTS(SELECT 1 FROM kehila.operation_payloads p WHERE p.operation_row_id=o.operation_row_id)"
             ).fetchone()[0]
-            assert incoherent == 0
+            require(incoherent == 0)
             full = c.execute(
                 "SELECT p.request_bytes FROM kehila.operations o JOIN kehila.operation_payloads p USING(operation_row_id) WHERE NOT payload_retired AND o.replay_origin_ms>100"
             ).fetchall()
-            assert full
+            require(full)
             tomb = c.execute(
                 "SELECT actor_id,target_project_id,token,payload_retired,replay_origin_ms,replay_deadline_ms FROM kehila.operations WHERE payload_retired"
             ).fetchall()
-            assert tomb
+            require(tomb)
             before = c.execute(
                 "SELECT max(operation_row_id) FROM kehila.operations"
             ).fetchone()[0]
-            assert (
+            require(
                 c.execute(
                     "SELECT count(*) FROM pg_trigger t JOIN pg_class r ON t.tgrelid=r.oid JOIN pg_namespace n ON r.relnamespace=n.oid WHERE n.nspname='kehila' AND NOT t.tgisinternal AND t.tgenabled='O'"
                 ).fetchone()[0]
@@ -325,19 +339,20 @@ def restore():
             acls = c.execute(
                 "SELECT tablename,tableowner FROM pg_tables WHERE schemaname='kehila'"
             ).fetchall()
-            assert all(owner == "qa_migration" for _, owner in acls)
+            require(all((owner == "qa_migration" for (_, owner) in acls)))
         # Full record created by QA protocol; mutated current Project need not match saved result.
         cmd = json.loads(bytes(full[0][0]))
-        assert create(cmd)[0] == "replay"
+        require(create(cmd)[0] == "replay")
         actor, p, token, _, _, _ = tomb[0]
         tcmd = command(p, token)
-        assert create(tcmd, actor, now=0)[0] == "replay_expired"
-        assert (
+        require(create(tcmd, actor, now=0)[0] == "replay_expired")
+        require(
             create(dict(tcmd, name="changed"), actor, now=0)[0] == "operation_id_reused"
         )
         with conn("qa_serving") as c:
             mutation = expect_error(
-                lambda: c.execute("UPDATE kehila.operations SET token=token"), "42501"
+                lambda: c.execute("UPDATE kehila.operations SET token=token"),
+                "42501",
             )
         with conn() as c:
             immutable = expect_error(
@@ -351,9 +366,9 @@ def restore():
                 "operation_storage_no_truncate",
             )
         new = command()
-        assert create(new)[0] == "created"
+        require(create(new)[0] == "created")
         with conn() as c:
-            assert (
+            require(
                 c.execute(
                     "SELECT operation_row_id FROM kehila.operations WHERE target_project_id=%s",
                     (new["project_id"],),
@@ -378,15 +393,12 @@ def restore():
     test_dummy = None
 
 
-test("C03.clean-cluster-restore", restore, "owner-controlled restore experiment")
-
-
 def measurements():
     timings = []
     for i in range(30):
         cmd = command()
         start = time.perf_counter()
-        assert create(cmd)[0] == "created"
+        require(create(cmd)[0] == "created")
         timings.append((time.perf_counter() - start) * 1000)
     c = conn()
     try:
@@ -413,9 +425,12 @@ def measurements():
         with conn("qa_compactor") as compact:
             with compact.transaction():
                 for op in ids:
-                    assert compact.execute(
-                        "SELECT kehila.qa_compact(%s,%s)", (op, 100 + PERIOD)
-                    ).fetchone() == (True,)
+                    require(
+                        compact.execute(
+                            "SELECT kehila.qa_compact(%s,%s)", (op, 100 + PERIOD)
+                        ).fetchone()
+                        == (True,)
+                    )
         elapsed = (time.perf_counter() - start) * 1000
         bytes_wal = c.execute(
             "SELECT pg_wal_lsn_diff(pg_current_wal_insert_lsn(),%s)", (wal,)
@@ -445,10 +460,36 @@ def measurements():
         c.close()
 
 
-test(
-    "C04.bounded-measurements",
-    measurements,
-    "descriptive experiment, no performance pass threshold",
-)
-(ROOT / "phase-c-results.json").write_text(json.dumps(RESULTS, indent=2, default=str))
-raise SystemExit(1 if any(x["status"] == "FAIL" for x in RESULTS) else 0)
+def main():
+    global RUNTIME, CONTAINER, RESTORE
+    initialize()
+
+    RUNTIME = json.loads((ROOT / "runtime.json").read_text())
+
+    CONTAINER = RUNTIME["container"]
+
+    RESTORE = RUNTIME["restore_container"]
+
+    test("C01.before-commit", disconnect_before, "native database fault experiment")
+
+    test("C01.commit-response-loss", response_loss, "native database fault experiment")
+
+    test("C02.durable-process-crash", crash, "native database durability experiment")
+
+    test("C03.clean-cluster-restore", restore, "owner-controlled restore experiment")
+
+    test(
+        "C04.bounded-measurements",
+        measurements,
+        "descriptive experiment, no performance pass threshold",
+    )
+
+    (ROOT / "phase-c-results.json").write_text(
+        json.dumps(RESULTS, indent=2, default=str)
+    )
+
+    raise SystemExit(1 if any(x["status"] == "FAIL" for x in RESULTS) else 0)
+
+
+if __name__ == "__main__":
+    main()

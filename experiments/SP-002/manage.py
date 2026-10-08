@@ -30,7 +30,109 @@ def command(args, *, cwd=None, timeout=120):
     return result.stdout
 
 
+def validate_runtime():
+    if sys.platform not in {"win32", "linux"}:
+        raise RuntimeError("SP-002 supports Windows and Linux hosts only")
+    if sys.flags.optimize:
+        raise RuntimeError(
+            "SP-002 refuses optimized Python; unset PYTHONOPTIMIZE and omit -O"
+        )
+
+
+def validate_baseline():
+    try:
+        command(["git", "cat-file", "-e", BASELINE + "^{commit}"], cwd=REPO)
+    except (OSError, RuntimeError) as error:
+        raise RuntimeError(
+            "A Git checkout containing the frozen baseline is required; fetch the baseline "
+            + BASELINE
+            + " (or unshallow the checkout) before running SP-002"
+        ) from error
+
+
+def cargo_library(messages):
+    artifacts = set()
+    for line in messages.splitlines():
+        record = json.loads(line)
+        target = record.get("target", {})
+        if (
+            record.get("reason") == "compiler-artifact"
+            and target.get("name") == "task_contract"
+            and target.get("kind") == ["lib"]
+        ):
+            artifacts.update(
+                Path(name) for name in record["filenames"] if name.endswith(".rlib")
+            )
+    if len(artifacts) != 1:
+        raise RuntimeError(
+            "Cargo must report exactly one task_contract library artifact"
+        )
+    return artifacts.pop()
+
+
+def run_phase(root, name):
+    try:
+        result = subprocess.run(
+            [sys.executable, str(root / name)],
+            cwd=root,
+            capture_output=True,
+            timeout=300,
+        )
+    except subprocess.TimeoutExpired as error:
+        (root / (name + ".log")).write_bytes(
+            (error.stdout or b"") + (error.stderr or b"")
+        )
+        raise
+    (root / (name + ".log")).write_bytes(result.stdout + result.stderr)
+    return result.returncode
+
+
+def cleanup_resources(root, names):
+    errors = []
+    for name in names:
+        try:
+            inspection = subprocess.run(
+                ["podman", "inspect", name], capture_output=True, timeout=15
+            )
+            if inspection.returncode:
+                # Confirm absence separately; an inspect error is not proof of absence.
+                exists = subprocess.run(
+                    ["podman", "container", "exists", name],
+                    capture_output=True,
+                    timeout=15,
+                )
+                if exists.returncode == 1:
+                    continue
+                raise RuntimeError(inspection.stderr.decode(errors="replace"))
+            details = json.loads(inspection.stdout)[0]
+            if details["Config"]["Labels"].get("purpose") not in {
+                "kehila-sp002",
+                "kehila-sp002-restore",
+            }:
+                raise RuntimeError("Refusing cleanup: purpose label does not match")
+            stopped = subprocess.run(
+                ["podman", "stop", "--time", "15", name],
+                capture_output=True,
+                timeout=30,
+            )
+            if stopped.returncode:
+                raise RuntimeError(stopped.stderr.decode(errors="replace"))
+        except (
+            OSError,
+            ValueError,
+            KeyError,
+            subprocess.SubprocessError,
+            RuntimeError,
+        ) as error:
+            errors.append(name + ": " + str(error))
+    (root / "cleanup.json").write_text(
+        json.dumps(dict(errors=errors), indent=2), encoding="utf-8"
+    )
+    return errors
+
+
 def available_memory():
+    validate_runtime()
     if os.name == "nt":
 
         class MemoryStatus(ctypes.Structure):
@@ -68,11 +170,13 @@ def free_port():
 
 
 def main():
+    validate_runtime()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output", type=Path, help="New artifact directory; never overwritten"
     )
     args = parser.parse_args()
+    validate_baseline()
     run_id = "sp002-" + uuid.uuid4().hex[:12]
     root = (args.output or REPO / ".kehila" / "spikes" / "SP-002" / run_id).resolve()
     root.mkdir(parents=True, exist_ok=False)
@@ -176,19 +280,33 @@ def main():
         timeout=300,
     )
     (root / "pure-oracle.log").write_bytes(oracle)
-    libraries = sorted(
-        (REPO / "target" / "debug" / "deps").glob("libtask_contract-*.rlib"),
-        key=lambda p: p.stat().st_mtime,
+    build = command(
+        [
+            "cargo",
+            "build",
+            "--locked",
+            "-p",
+            "task_contract",
+            "--lib",
+            "--message-format=json",
+        ],
+        cwd=REPO,
+        timeout=300,
     )
+    (root / "oracle-build.jsonl").write_bytes(build)
+    library = cargo_library(build)
+    oracle_name = "seed_oracle" + (".exe" if os.name == "nt" else "")
     command(
         [
             "rustc",
             "--edition=2021",
             str(root / "seed_oracle.rs"),
             "--extern",
-            "task_contract=" + str(libraries[-1]),
+            "task_contract=" + str(library),
+            "-L",
+            "dependency=" + str(library.parent),
             "-o",
-            str(root / "seed_oracle.exe"),
+            str(root / oracle_name),
         ]
     )
     command(["podman", "pull", IMAGE], timeout=300)
@@ -226,7 +344,8 @@ def main():
         while True:
             try:
                 with psycopg.connect(**config, autocommit=True) as conn:
-                    assert conn.info.server_version // 10000 == 16
+                    if conn.info.server_version // 10000 != 16:
+                        raise RuntimeError("Experiment requires PostgreSQL 16")
                     settings = {
                         name: conn.execute("SHOW " + name).fetchone()[0]
                         for name in [
@@ -239,11 +358,15 @@ def main():
                             "default_transaction_isolation",
                         ]
                     }
-                    assert settings["server_encoding"] == "UTF8"
-                    assert all(
+                    if settings["server_encoding"] != "UTF8":
+                        raise RuntimeError("Experiment requires UTF8 server encoding")
+                    if not all(
                         settings[name] == "on"
                         for name in ["fsync", "synchronous_commit", "full_page_writes"]
-                    )
+                    ):
+                        raise RuntimeError(
+                            "Experiment requires enabled durability settings"
+                        )
                     (root / "server-settings.json").write_text(
                         json.dumps(settings, indent=2)
                     )
@@ -258,14 +381,7 @@ def main():
         )
 
         def phase(name):
-            result = subprocess.run(
-                [sys.executable, str(root / name)],
-                cwd=root,
-                capture_output=True,
-                timeout=300,
-            )
-            (root / (name + ".log")).write_bytes(result.stdout + result.stderr)
-            return result.returncode
+            return run_phase(root, name)
 
         if phase("common.py"):
             raise RuntimeError("Role setup failed")
@@ -306,21 +422,13 @@ def main():
         )
         return 2
     finally:
-        for name in [restore, container]:
-            inspection = subprocess.run(
-                ["podman", "inspect", name], capture_output=True
-            )
-            if inspection.returncode == 0:
-                details = json.loads(inspection.stdout)[0]
-                if details["Config"]["Labels"].get("purpose") in {
-                    "kehila-sp002",
-                    "kehila-sp002-restore",
-                }:
-                    subprocess.run(
-                        ["podman", "stop", "--time", "15", name],
-                        capture_output=True,
-                        timeout=30,
-                    )
+        errors = cleanup_resources(root, [restore, container])
+        if errors:
+            print("Cleanup failed: " + "; ".join(errors), file=sys.stderr)
+            if sys.exc_info()[0] is None:
+                raise RuntimeError(
+                    "Experiment completed but cleanup failed; inspect cleanup.json"
+                )
 
 
 if __name__ == "__main__":

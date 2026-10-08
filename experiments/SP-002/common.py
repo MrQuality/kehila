@@ -1,11 +1,11 @@
 """Experimental protocol; not a product adapter or approved storage codec."""
 
-import json, pathlib, subprocess, hashlib, time, uuid, copy, decimal, traceback, threading
+import json, pathlib, subprocess, hashlib, uuid, traceback, os, sys
 import psycopg
 from psycopg.types.json import Jsonb
 
 ROOT = pathlib.Path(__file__).resolve().parent
-CONF = json.loads((ROOT / "connection.json").read_text())
+CONF = {}
 PERIOD = 7776000000
 RESULTS = []
 TABLES = {
@@ -25,11 +25,30 @@ TABLES = {
 }
 
 
+def initialize():
+    """Load runtime fixtures explicitly; importing cases never starts an experiment."""
+    if sys.platform not in {"win32", "linux"}:
+        raise RuntimeError("SP-002 supports Windows and Linux hosts only")
+    if sys.flags.optimize:
+        raise RuntimeError(
+            "SP-002 refuses optimized Python; omit -O and unset PYTHONOPTIMIZE"
+        )
+    CONF.clear()
+    CONF.update(json.loads((ROOT / "connection.json").read_text(encoding="utf-8")))
+    RESULTS.clear()
+
+
+def require(condition, message="Experiment invariant failed"):
+    """Evaluate invariants explicitly; callable diagnostics are evaluated only on failure."""
+    if not condition:
+        raise AssertionError(message() if callable(message) else message)
+
+
 def conn(role="postgres", db=None):
     cfg = dict(CONF, user=role)
     if db:
         cfg["dbname"] = db
-    c = psycopg.connect(**cfg, autocommit=True)
+    c = psycopg.connect(**cfg, autocommit=True, connect_timeout=5)
     c.execute("SET statement_timeout='15s'; SET lock_timeout='8s'", prepare=False)
     return c
 
@@ -64,9 +83,9 @@ def expect_error(fn, state, constraint=None):
             table=e.diag.table_name,
             message=e.diag.message_primary,
         )
-        assert e.sqlstate == state, d
+        require(e.sqlstate == state, lambda: d)
         if constraint:
-            assert e.diag.constraint_name == constraint, d
+            require(e.diag.constraint_name == constraint, lambda: d)
         return d
     raise AssertionError("Expected error " + state + " but operation succeeded")
 
@@ -85,7 +104,7 @@ def seed(cmd):
     return json.loads(
         subprocess.check_output(
             [
-                str(ROOT / "seed_oracle.exe"),
+                str(ROOT / ("seed_oracle" + (".exe" if os.name == "nt" else ""))),
                 cmd["project_id"],
                 cmd["operation_id"],
                 cmd["name"],
@@ -94,6 +113,7 @@ def seed(cmd):
             ],
             text=True,
             encoding="utf-8",
+            timeout=15,
         )
     )
 
@@ -275,7 +295,7 @@ def counts(c, p):
 
 def assert_absent(p):
     with conn() as c:
-        assert all(n == 0 for n in counts(c, p).values()), counts(c, p)
+        require(all((n == 0 for n in counts(c, p).values())), lambda: counts(c, p))
 
 
 def load_result(c, p):
@@ -389,29 +409,23 @@ def reconstruct(c, p):
 def validate(c, cmd, actor="qa_actor_a"):
     p = cmd["project_id"]
     expected = seed(cmd)
-    assert counts(c, p) == TABLES, counts(c, p)
-    assert reconstruct(c, p) == expected
-    assert load_result(c, p) == expected
+    require(counts(c, p) == TABLES, lambda: counts(c, p))
+    require(reconstruct(c, p) == expected)
+    require(load_result(c, p) == expected)
     snap = c.execute(
         "SELECT configuration_snapshot,project_snapshot FROM kehila.configuration_revisions WHERE project_id=%s",
         (p,),
     ).fetchone()
-    assert snap == (expected["configuration"], expected["project"])
+    require(snap == (expected["configuration"], expected["project"]))
     grant = c.execute(
         "SELECT g.actor_id,g.access_profile,g.active,g.version,e.actor_id,e.access_profile,e.active,e.version,e.granted_by FROM kehila.project_grants g JOIN kehila.project_grant_events e USING(project_id,actor_id) WHERE g.project_id=%s",
         (p,),
     ).fetchone()
-    assert grant == (
-        actor,
-        "initial_owner",
-        True,
-        1,
-        actor,
-        "initial_owner",
-        True,
-        1,
-        actor,
-    ), grant
+    require(
+        grant
+        == (actor, "initial_owner", True, 1, actor, "initial_owner", True, 1, actor),
+        lambda: grant,
+    )
     return expected
 
 
@@ -519,7 +533,7 @@ def decide(c, cmd, actor="qa_actor_a", now=None):
             "SELECT request_bytes,result FROM kehila.operation_payloads WHERE operation_row_id=%s",
             (row[0],),
         ).fetchone()
-        assert p is not None
+        require(p is not None)
         if bytes(p[0]) != request_bytes(cmd):
             return "operation_id_reused", None
         if bytes(digest) != hashlib.sha256(bytes(p[0])).digest():
@@ -545,5 +559,6 @@ def create(cmd, actor="qa_actor_a", now=None):
 
 
 if __name__ == "__main__":
+    initialize()
     install_roles()
     print("Roles installed")
