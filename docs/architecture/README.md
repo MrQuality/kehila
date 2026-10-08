@@ -16,8 +16,10 @@ and retain history. Code evidence cannot silently resolve a product question.
 | Record | Status and boundary |
 | --- | --- |
 | [ADR-101: Task authority, replay and projection](ADR-101-task-authority.md) | Accepted behavior restated from D-016/D-017; implementation evidence remains bounded. |
+| [ADR-102: Native PostgreSQL and bounded transactions](ADR-102-postgresql-transactions.md) | Accepted direction for new M1 storage; schema and adapter implementation pending. |
 
 Future cross-record coordination, compaction/rebuild, CDC schema, event envelope
 and storage upgrade decisions require further evidence and ADRs. In particular,
-[Q-019](../product/open-questions.md#q-019) remains unresolved; this register does
-not choose a transaction, saga or locking protocol for it.
+[Q-019](../product/open-questions.md#q-019) remains unresolved; ADR-102 records
+the transaction direction but does not settle individual
+command isolation/locking, large-job visibility, or resource/cost protocols.

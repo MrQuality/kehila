@@ -8,6 +8,11 @@ authentication, recovery or release capabilities, or broaden existing evidence.
 
 Kehila is in early development. The current components are:
 
+[ADR-102](architecture/ADR-102-postgresql-transactions.md) records the accepted
+native PostgreSQL/JSONB and bounded-transaction direction for new M1 storage.
+The running task worker and development stack still use FerretDB. No native
+adapter, storage migration, or configurable-model persistence is implemented.
+
 | Component | Implemented behavior | Verification |
 | --- | --- | --- |
 | Rust query parser | Single `identifier = 'nonempty value'` expression; rejects trailing clauses | Unit tests |

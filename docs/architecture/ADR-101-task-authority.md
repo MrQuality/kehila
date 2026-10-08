@@ -5,6 +5,10 @@ Owner: project maintainer. Acceptance source:
 [D-016](../product/decisions.md#d-016) and
 [D-017](../product/decisions.md#d-017); this record makes no new architecture choice.
 
+[ADR-102](ADR-102-postgresql-transactions.md) supersedes the FerretDB storage
+direction for new M1 implementation. This record retains the current task-path
+evidence and accepted save/replay/projection behavior.
+
 ## Context
 
 The bounded task path separates database acknowledgment from asynchronous search

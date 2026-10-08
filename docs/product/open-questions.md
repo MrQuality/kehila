@@ -9,7 +9,12 @@ Backlog IDs link to the [implementation backlog](backlog.md). Proposals below ar
 
 **Resolved first-increment choice:** [D-016](decisions.md#d-016) adopts the reference task path, resolves the contradictory `CDC_PIPELINE_STALLED` response in favor of an acknowledged 200 with pending search visibility, and accepts operation IDs, expected versions, distinct conflicts, and explicit replication provisioning. A null synchronization token does not diagnose indexer health. The 30-second experiment deadline is not a product delivery guarantee.
 
-**Known:** The design includes separated write/read paths, independent durable change capture, shared query compilation, single-document mutations, and asynchronous multi-document workflows. The repository lacks a usable API/UI and the full pipeline. No architecture replacement has been approved.
+**Known:** The reference includes separated write/read paths, independent durable
+change capture, shared query compilation, and asynchronous workflows.
+[ADR-102](../architecture/ADR-102-postgresql-transactions.md) replaces its
+single-document/FerretDB storage direction for new M1 work with native PostgreSQL
+and bounded transactions. The repository lacks a usable configurable-model API/UI
+and the full pipeline; the existing adapter remains experimental.
 
 **Remaining design:** [D-017](decisions.md#d-017) sets a provisional 90-day post-commit replay period, separate from unseen-ID admission and physical retention. Prove safe compaction, current-task preservation, concurrent next-version writes, non-regressing projection, index rebuild during writes, and practical project lists before real data. Product history needs a separate retention policy. Validate mapping/provisioning drift and measure `REPLICA IDENTITY FULL` WAL cost. Broader schema lifecycle, deletion, WAL retention, and recovery remain open. A broker handshake is not evidence of durable delivery or database correctness.
 
@@ -259,7 +264,12 @@ the other permissions in this question remain open.
 
 **Question:** How will a task transition, multiple releases, cost adjustments, and cross-project availability stay consistent under retries, competing requests, or process failure?
 
-**Known:** The v0.2 design forbids multi-document transactions and proposes asynchronous sagas. Completion/reopening spans multiple kinds of records. Simply updating them one after another without a recovery design would not establish the agreed behavior.
+**Accepted direction:** [ADR-102](../architecture/ADR-102-postgresql-transactions.md)
+adopts native PostgreSQL with bounded transactions and supersedes the reference's
+single-document restriction for new M1 storage. Completion/reopening spans
+multiple kinds of records. Command-specific isolation, locking, event delivery,
+large-job visibility, and resource/cost protocols remain open; sequential writes
+without coherent acceptance/recovery do not establish the agreed behavior.
 
 The accepted B-003 archive contract also requires an item or project archive,
 all affected current-work selection clears, and its success record to appear

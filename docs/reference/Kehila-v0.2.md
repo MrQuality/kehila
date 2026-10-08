@@ -7,6 +7,12 @@ inputs, and mutation rules, follow the [B-003 contract](../product/B-003-contrac
 and [decisions](../product/decisions.md). The structures and flows illustrated
 below are design context, not the current typed contract or implemented M1 API.
 
+[ADR-102](../architecture/ADR-102-postgresql-transactions.md) supersedes this
+reference's FerretDB/MongoDB-interface direction and blanket prohibition on
+multi-document transactions for new M1 storage. Native PostgreSQL with JSONB
+and bounded transactions is accepted; the existing adapter is unchanged.
+The diagrams and single-document scenarios below remain historical context.
+
 Query terminology in this design refers to Kehila's own grammar, not a claim of
 third-party query-language compatibility. The current parser supports only a
 single equality filter; see the [naming policy](../BRANDING.md).
