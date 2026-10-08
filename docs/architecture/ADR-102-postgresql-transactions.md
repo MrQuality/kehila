@@ -81,6 +81,9 @@ migrations. Review exact-value encodings, identifier/key budgets, grant scopes,
 immutable history, and replay timestamp semantics without silently changing
 product contracts.
 
+The [project-creation storage specification](M1-project-create-storage.md) is a
+proposal for that first slice, with its own acceptance and execution limits.
+
 Implementation requires real PostgreSQL constraint, concurrency, rollback,
 uncertain-response retry, compaction, and clean-instance restore tests. Existing
 FerretDB/SP-001 results apply only to their recorded stack and scope. There is no
