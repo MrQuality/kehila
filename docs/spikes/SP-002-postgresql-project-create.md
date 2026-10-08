@@ -131,7 +131,7 @@ no production migration has been installed.
 
 Host preflight explicitly supports Windows/Linux under D-036 and rejects other
 platforms and optimized Python. Case modules use explicit imports and entry
-points; runtime fixtures load on execution. Invariant checks execute independently
+points; runtime fixtures load on execution and uninitialized connections are rejected. Invariant checks execute independently
 of Python assertion optimization, with lazy failure diagnostics. Phase timeout
 output is retained and cleanup inspection/stop calls are bounded and checked.
 Focused host regressions exercise orchestration failure paths without claiming

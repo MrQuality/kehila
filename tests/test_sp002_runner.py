@@ -118,6 +118,13 @@ import additional_cases, concurrent_workload, maximum_key
 import payload_guard_cases
 assert common.CONF == {}
 assert common.RESULTS == []
+try:
+    common.conn()
+except RuntimeError as error:
+    if 'initialize' not in str(error):
+        raise
+else:
+    raise RuntimeError('Uninitialized connection allowed')
 """
         result = subprocess.run(
             [sys.executable, "-c", code, str(SOURCE)],

@@ -59,6 +59,7 @@ Phase timeouts retain both captured output streams. Cleanup inspection and stop
 operations have finite timeouts; `cleanup.json` records failures instead of
 silently claiming that resources stopped. Importing case modules does not read
 runtime connection files or run cases; their `main()` entry points load fixtures.
+Connection helpers reject calls before initialization instead of using driver defaults.
 
 ## Cases and ownership
 

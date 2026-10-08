@@ -45,6 +45,8 @@ def require(condition, message="Experiment invariant failed"):
 
 
 def conn(role="postgres", db=None):
+    if not CONF:
+        raise RuntimeError("Call initialize() before opening an experiment connection")
     cfg = dict(CONF, user=role)
     if db:
         cfg["dbname"] = db
