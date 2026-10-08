@@ -7,7 +7,7 @@ how these rows become one action and which invariants need database evidence.
 
 The trusted seed follows [D-029](../product/decisions.md#d-029) and [project_create.rs](../../src/pure/task_contract/src/project_create.rs): Task/Milestone, optional application Title/Description text fields per type, one New/Active/Done workflow, configuration revision one, next sequence one, and no recorded estimate.
 
-## Project, history, and typed initial access
+## Project, history, current grants, and grant events
 
 ```sql
 CREATE DOMAIN kehila.project_prefix AS text COLLATE "C"
@@ -27,10 +27,16 @@ CREATE TABLE kehila.projects (
   archived boolean NOT NULL DEFAULT false,
   created_by kehila.ident NOT NULL,
   creation_operation_row_id bigint NOT NULL UNIQUE,
-  seed_profile text COLLATE "C" NOT NULL CHECK (seed_profile = 'm1_v1'),
-  FOREIGN KEY (creation_operation_row_id, project_id, created_by)
+  creation_command_family text COLLATE "C" NOT NULL DEFAULT 'project_create'
+    CHECK (creation_command_family = 'project_create'),
+  creation_target_kind text COLLATE "C" NOT NULL DEFAULT 'project'
+    CHECK (creation_target_kind = 'project'),
+  seed_profile text COLLATE "C" NOT NULL,
+  FOREIGN KEY (creation_operation_row_id, creation_command_family,
+               creation_target_kind, project_id, created_by)
     REFERENCES kehila.operations
-      (operation_row_id, target_project_id, actor_id) ON DELETE RESTRICT
+      (operation_row_id, command_family, target_kind, target_project_id, actor_id)
+    ON DELETE RESTRICT
 );
 
 CREATE TABLE kehila.configuration_revisions (
@@ -44,41 +50,78 @@ CREATE TABLE kehila.configuration_revisions (
     CHECK (jsonb_typeof(project_snapshot) = 'object'),
   actor_id kehila.ident NOT NULL,
   operation_row_id bigint NOT NULL,
+  command_family text COLLATE "C" NOT NULL,
+  target_kind text COLLATE "C" NOT NULL DEFAULT 'project' CHECK (target_kind = 'project'),
   PRIMARY KEY (project_id, revision),
-  FOREIGN KEY (operation_row_id, project_id, actor_id)
+  FOREIGN KEY (operation_row_id, command_family, target_kind, project_id, actor_id)
     REFERENCES kehila.operations
-      (operation_row_id, target_project_id, actor_id) ON DELETE RESTRICT
+      (operation_row_id, command_family, target_kind, target_project_id, actor_id)
+    ON DELETE RESTRICT
 );
 ALTER TABLE kehila.projects ADD CONSTRAINT projects_current_revision
   FOREIGN KEY (project_id, configuration_revision)
   REFERENCES kehila.configuration_revisions(project_id, revision)
   ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE kehila.operations ADD CONSTRAINT operations_created_project
-  FOREIGN KEY (target_project_id) REFERENCES kehila.projects(project_id)
-  ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
-
-CREATE TABLE kehila.initial_project_access (
+CREATE TABLE kehila.project_grants (
   project_id kehila.ident NOT NULL REFERENCES kehila.projects(project_id)
     ON DELETE RESTRICT,
   actor_id kehila.ident NOT NULL REFERENCES kehila.actors(actor_id)
     ON DELETE RESTRICT,
-  access_profile text COLLATE "C" NOT NULL CHECK (access_profile = 'initial_owner'),
+  access_profile text COLLATE "C" NOT NULL,
+  active boolean NOT NULL,
+  version kehila.u64 NOT NULL CHECK (version >= 1),
+  PRIMARY KEY (project_id, actor_id)
+);
+CREATE INDEX project_grants_by_actor ON kehila.project_grants(actor_id, project_id);
+
+CREATE TABLE kehila.project_grant_events (
+  project_id kehila.ident NOT NULL,
+  actor_id kehila.ident NOT NULL,
+  version kehila.u64 NOT NULL CHECK (version >= 1),
+  access_profile text COLLATE "C" NOT NULL,
+  active boolean NOT NULL,
   granted_by kehila.ident NOT NULL,
   granting_operation_row_id bigint NOT NULL,
+  command_family text COLLATE "C" NOT NULL,
+  target_kind text COLLATE "C" NOT NULL DEFAULT 'project' CHECK (target_kind = 'project'),
   recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
-  PRIMARY KEY (project_id, actor_id),
-  FOREIGN KEY (granting_operation_row_id, project_id, granted_by)
+  PRIMARY KEY (project_id, actor_id, version),
+  FOREIGN KEY (project_id, actor_id) REFERENCES kehila.project_grants(project_id, actor_id)
+    ON DELETE RESTRICT,
+  FOREIGN KEY (granting_operation_row_id, command_family, target_kind,
+               project_id, granted_by)
     REFERENCES kehila.operations
-      (operation_row_id, target_project_id, actor_id) ON DELETE RESTRICT,
-  CHECK (actor_id = granted_by)
+      (operation_row_id, command_family, target_kind, target_project_id, actor_id)
+    ON DELETE RESTRICT
 );
-CREATE INDEX initial_access_by_actor
-  ON kehila.initial_project_access(actor_id, project_id);
+
+-- Temporary slice guards, separately named for deliberate evolution.
+ALTER TABLE kehila.projects ADD CONSTRAINT slice1_seed_profile CHECK (seed_profile = 'm1_v1');
+ALTER TABLE kehila.configuration_revisions ADD CONSTRAINT slice1_revision_family
+  CHECK (command_family = 'project_create');
+ALTER TABLE kehila.project_grants ADD CONSTRAINT slice1_grant_profile
+  CHECK (access_profile = 'initial_owner');
+ALTER TABLE kehila.project_grant_events ADD CONSTRAINT slice1_grant_event
+  CHECK (command_family = 'project_create' AND access_profile = 'initial_owner'
+         AND active AND version = 1 AND actor_id = granted_by);
 ```
 
 The name byte bound does not replace Rust's Unicode whitespace/control checks. Prefixes have no global uniqueness constraint. The allocator must honor its checked u64::MAX failure, not overflow or wrap.
 
-initial_project_access records who received creation access, who assigned it, and which operation did so. These assignments are immutable in this slice. Their effective rights and auditable revocation are P-03/#11/#32 decisions; this is not a complete authorization system or an unchecked polymorphic scope. Login, actor authority provisioning/audit, and identity reservation require separate access specifications before routes are exposed.
+The agreed access direction replaces immutable-only initial assignments with a
+current project_grants row and append-only project_grant_events. Creation inserts
+one active version-one initial_owner grant plus its attributed event in the same
+transaction. Reload and compare both; the FK alone does not prove a current row
+has a matching event. recorded_at is event-recording time, not authoritative
+commit time. The physical layout is proposed; profile-to-permission mapping
+remains P-03/#11/#32 work before any route is exposed.
+
+Future revocation updates the current row/version and appends an event atomically
+through a restricted audited path. Define its lock ownership with protected
+commands and the current permission evaluator. Creation serving has no direct
+grant UPDATE/DELETE. A revoked grant remains as an inactive current row; history
+is not deleted and cannot authorize a request by itself. Provisioning, sessions,
+profile semantics, and stable target allocation remain prerequisites.
 
 ## Relational trusted configuration
 
@@ -171,10 +214,10 @@ CREATE TABLE kehila.fields (
   field_id kehila.ident NOT NULL,
   owner_type_id kehila.ident NOT NULL,
   name text NOT NULL CHECK (octet_length(name) BETWEEN 1 AND 256),
-  value_kind text COLLATE "C" NOT NULL CHECK (value_kind = 'text'),
-  origin text COLLATE "C" NOT NULL CHECK (origin = 'application'),
-  usage text COLLATE "C" NOT NULL CHECK (usage = 'optional'),
-  archived boolean NOT NULL CHECK (NOT archived),
+  value_kind text COLLATE "C" NOT NULL,
+  origin text COLLATE "C" NOT NULL,
+  usage text COLLATE "C" NOT NULL,
+  archived boolean NOT NULL,
   position smallint NOT NULL CHECK (position >= 0),
   PRIMARY KEY (project_id, field_id),
   UNIQUE (project_id, owner_type_id, field_id),
@@ -190,16 +233,39 @@ ALTER TABLE kehila.work_item_types ADD CONSTRAINT type_title_field
 
 The initial_phase discriminator enforces New-phase eligibility without a literal in a foreign key. The title FK enforces type ownership; this slice's field-kind CHECK guarantees text. If later kinds are admitted, that title-kind guarantee needs explicit replacement.
 
+```sql
+-- First-loader restrictions, not the complete field vocabulary.
+ALTER TABLE kehila.fields ADD CONSTRAINT slice1_field_kind CHECK (value_kind = 'text');
+ALTER TABLE kehila.fields ADD CONSTRAINT slice1_field_origin CHECK (origin = 'application');
+ALTER TABLE kehila.fields ADD CONSTRAINT slice1_field_usage CHECK (usage = 'optional');
+ALTER TABLE kehila.fields ADD CONSTRAINT slice1_field_archival CHECK (NOT archived);
+```
+
+In executable migrations, separate temporary guards from lasting rules. Prefix
+syntax, New initial phase, allowed phase edges, and ownership/membership are
+domain rules. Cross-check supported SQL values and family/target mappings against
+the pure contract; unsupported slices remain explicitly rejected. Removing a
+guard must replace any invariant relying on it. NOT VALID avoids the initial
+validation scan, not all DDL locks.
+
 The SQL protects structure but cannot alone prove the exact trusted seed. Insert every definition from the single ProjectCreateResult, not a separately maintained seed. Positions preserve typed vector order and are not definition identities. Deferred constraints allow cyclic seed dependencies, not partially accepted state.
 
 ## Historical reconstruction
 
 configuration_snapshot retains complete Configuration including empty collections; project_snapshot retains the recorded Project. Document the storage codec and keep decoders/golden fixtures for old versions. JSONB object-key order is immaterial to these structs; vector order and exact scalar values are not. Never derive historical state from current definitions.
 
+Relational rows own current configuration; snapshots own recorded history. The
+trusted pure result produces both. Snapshot/response copies are not independently
+editable current sources. Keep this hybrid direction for upcoming WorkItem
+references; do not copy a complete seed on each item transition. Measure creation
+before attributing a throughput limit to its row count. Retain useful deferred
+membership constraints; remove the generic operation-to-Project back-reference,
+not all cycles by rule.
+
 At creation, reload ordered current rows and compare typed equality against the trusted result and snapshots in the same transaction. Later drift audits require one database snapshot. Compare only revision-owned metadata: next_sequence and ever_estimated can change through item commands without a configuration-revision increment, so historical Project snapshots will legitimately differ on those fields.
 
 ## Index ownership and later scope
 
-Primary/unique keys already supply indexes. The actor-first access index serves immediate lookup. Before later mutation/deletion or audited joins, assess referencing-side indexes on workflow_statuses(project_id,status_id), workflows(project_id,initial_status_id), type_workflows(project_id,workflow_id), fields(project_id,owner_type_id), work_item_types(project_id,default_workflow_id), work_item_types(project_id,type_id,title_field_id), and each history/access attribution triple. Include the exact inventory in executable migrations; do not create a duplicate index for a primary/unique prefix without a query need.
+Primary/unique keys already supply indexes. The actor-first grant index serves immediate lookup. Before later mutation/deletion or audited joins, assess referencing-side indexes on workflow_statuses(project_id,status_id), workflows(project_id,initial_status_id), type_workflows(project_id,workflow_id), fields(project_id,owner_type_id), work_item_types(project_id,default_workflow_id), work_item_types(project_id,type_id,title_field_id), and each history/grant attribution key. Include the exact inventory in executable migrations; do not create a duplicate index for a primary/unique prefix without a query need.
 
-This slice grants no definition deletion/update route. Historical identity registries, group/option scopes, and historical-use aggregates belong to the command slices that specify their ownership and retention. The immutable configuration snapshot and initial assignment attribution already preserve creation history.
+This slice grants no definition deletion/update route. Historical identity registries, group/option scopes, and historical-use aggregates belong to the command slices that specify their ownership and retention. Immutable snapshots and attributed grant events preserve creation history. Later grants need their own permission vocabulary, command families and management protocol before expanding the temporary guards.

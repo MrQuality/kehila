@@ -14,8 +14,8 @@ possible grace period remains a proposal, not a change to D-034.
 ## Outcome and prerequisites
 
 One accepted ProjectCreateResult supplies the Project, ordered trusted M1V1
-configuration, initial access assignment, immutable revision-one snapshots, and
-saved successful response. All become visible together at commit. A caller that
+configuration, current access grant and immutable grant event, revision-one
+snapshots, and saved successful response. All become visible together at commit. A caller that
 loses the response retries the original intent with the original identity/token.
 
 Before implementing a route, settle actor/session provisioning and the initial
@@ -50,12 +50,14 @@ its protecting lock is acquired; an earlier unlocked read is not authoritative.
    expiry outcome; it does not execute the command again. Use the permanent core
    even when payload has been retired.
 5. For a fresh key, run the trusted pure creation operation. Insert the permanent
-   core, Project, ordered seed rows, revision-one snapshots, attributed initial
-   access assignment, and saved response payload. Only this trusted result is
-   eligible for persistence; callers cannot submit arbitrary seed definitions.
+   core, Project, ordered seed rows, revision-one snapshots, active version-one
+   grant and attributed grant event, and saved response payload. Only the trusted
+   result is eligible for persistence; callers cannot submit arbitrary seed definitions.
 6. Reload the persisted Project and ordered configuration in the transaction.
-   Compare typed equality with the trusted result and snapshots. Force deferred
-   constraints with SET CONSTRAINTS ALL IMMEDIATE after all writes. Any failure
+   Compare typed equality with the trusted result and snapshots. Check that the
+   current grant and event agree in actor, project, version, profile and active
+   state; foreign keys alone do not enforce this equality. After all writes/checks,
+   force deferred constraints with SET CONSTRAINTS ALL IMMEDIATE. Any failure
    rolls back the complete action; it is not a partially successful creation.
 7. Commit, then return the saved result. A failure received from PostgreSQL while
    committing deferred constraints is a known rollback. A lost connection or
@@ -185,7 +187,9 @@ UPDATE as the actual role. See
 | Unique scoped request identity | Permanent composite unique key | Concurrent same-key requests; independent actors/targets/tokens |
 | Exact request equality | Versioned typed codec and retained request bytes | Golden vectors for strings, order, scalar boundaries, codec upgrades |
 | Current permission before replay | Actor lock plus current grant evaluation | Replay after revocation; concurrent revoke/create/replay |
-| Historical creation attribution | Composite operation/project/actor foreign keys | Reject a valid operation attributed to the wrong target or actor |
+| Historical creation attribution | Composite operation/family/target-kind/project/actor foreign keys | Reject a valid operation attributed to the wrong family, target kind, target or actor |
+| Typed target scope | Target-shape/family checks and NULLS NOT DISTINCT scoped key | Test pure target variants, absent components, duplicate keys; future families require deliberately expanded slice guards |
+| Current access and immutable grant history | Restricted mutation ownership and transactional reconstruction | Creation installs matching active version-one rows; historical events alone cannot authorize; future revocation updates current state with an event |
 | Core permanence and coherent payload shape | Fresh-insert guard, immutable core and deferred shape triggers | Reject initially retired inserts, deletion, mutation, missing/unexpected payload, retirement reversal; verify error metadata |
 | Safe expiry/compaction | Reviewed clock policy and restricted compactor | Before/at/after deadline, clock rollback, compaction/replay races |
 | Initial New status belongs to workflow | Phase and membership foreign keys | Reject missing membership and wrong initial phase |
@@ -206,7 +210,7 @@ constraints, privileges, isolation, durability, or lock behavior.
 
 ## Definition of done for the design and next implementation gate
 
-- [ ] Review P-01 through P-07 and record acceptance or changes individually.
+- [ ] Settle remaining physical/behavioral choices in P-01 through P-07; preserve the agreed corrections recorded above.
 - [ ] Resolve creation-target identity and effective initial-access behavior.
 - [ ] Specify canonical request/result/snapshot codecs and historical support.
 - [ ] Turn reviewed SQL into one ordered migration with explicit role grants.
@@ -217,3 +221,10 @@ constraints, privileges, isolation, durability, or lock behavior.
 No native adapter, executable migration, database test, or new public route is
 delivered by these documents. Implement the approved first slice in small commits
 once its unresolved behavioral and physical choices are settled.
+
+The next execution step is an isolated PostgreSQL verification harness for the
+corrected SQL and actual roles, before building the route/adapter. Prioritize
+locking privileges, same-actor serialization, cross-actor target collisions,
+deferred rollback, structured errors, fresh-core/payload enforcement, and
+compaction/replay races. Clock-independent checks can proceed while P-07 remains
+open. Keep SQL execution evidence separate from documentation-only checks.
