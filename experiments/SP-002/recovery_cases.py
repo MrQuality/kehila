@@ -20,9 +20,9 @@ import hashlib
 import json
 import psycopg
 import subprocess
-import threading
 import time
-import socket, struct, statistics
+import statistics
+from commit_loss_proxy import CommitLossProxy
 
 
 def podman(*args, input=None):
@@ -32,99 +32,6 @@ def podman(*args, input=None):
             "Podman " + str(args) + ": " + p.stderr.decode(errors="replace")
         )
     return p.stdout + p.stderr if args[0] == "logs" else p.stdout
-
-
-def recv_exact(s, n):
-    b = b""
-    while len(b) < n:
-        x = s.recv(n - len(b))
-        if not x:
-            raise EOFError()
-        b += x
-    return b
-
-
-class CommitLossProxy:
-    """Forward COMMIT; observe server COMMIT+idle, suppress responses, close client."""
-
-    def __init__(self):
-        self.listener = socket.socket()
-        self.listener.bind(("127.0.0.1", 0))
-        self.listener.listen(1)
-        self.port = self.listener.getsockname()[1]
-        self.commit_sent = threading.Event()
-        self.committed = threading.Event()
-        self.log = []
-        self.errors = []
-        self.thread = threading.Thread(target=self.run)
-        self.thread.start()
-
-    def run(self):
-        client = None
-        server = None
-        try:
-            client, _ = self.listener.accept()
-            server = socket.create_connection((CONF["host"], CONF["port"]), timeout=15)
-            client.settimeout(15)
-            header = recv_exact(client, 4)
-            size = struct.unpack("!I", header)[0]
-            server.sendall(header + recv_exact(client, size - 4))
-
-            def forward():
-                try:
-                    while True:
-                        kind = recv_exact(client, 1)
-                        header = recv_exact(client, 4)
-                        n = struct.unpack("!I", header)[0]
-                        data = recv_exact(client, n - 4)
-                        if (
-                            kind == b"Q"
-                            and data.rstrip(b"\0").strip().upper() == b"COMMIT"
-                        ):
-                            self.commit_sent.set()
-                            self.log.append("forwarding client COMMIT")
-                        server.sendall(kind + header + data)
-                except (EOFError, OSError):
-                    pass
-
-            tx = threading.Thread(target=forward)
-            tx.start()
-            seen = False
-            while True:
-                kind = recv_exact(server, 1)
-                header = recv_exact(server, 4)
-                n = struct.unpack("!I", header)[0]
-                data = recv_exact(server, n - 4)
-                if self.commit_sent.is_set():
-                    if kind == b"C" and data == b"COMMIT\0":
-                        seen = True
-                        self.log.append(
-                            "observed server CommandComplete COMMIT; withheld"
-                        )
-                    if kind == b"Z" and data == b"I" and seen:
-                        self.log.append("observed server ReadyForQuery idle; withheld")
-                        self.committed.set()
-                        break
-                else:
-                    client.sendall(kind + header + data)
-            client.shutdown(socket.SHUT_RDWR)
-            client.close()
-            server.close()
-            tx.join(2)
-        except Exception as e:
-            self.errors.append(str(e))
-        finally:
-            for s in [client, server, self.listener]:
-                if s:
-                    try:
-                        s.close()
-                    except OSError:
-                        pass
-
-    def finish(self):
-        self.thread.join(20)
-        require(not self.thread.is_alive())
-        require(not self.errors, lambda: self.errors)
 
 
 def disconnect_before():
@@ -144,38 +51,35 @@ def disconnect_before():
 
 def response_loss():
     cmd = command()
-    proxy = CommitLossProxy()
-    cfg = dict(
-        CONF,
-        user="qa_serving",
-        port=proxy.port,
-        sslmode="disable",
-        connect_timeout=5,
-    )
-    c = psycopg.connect(**cfg, autocommit=True)
-    try:
-        c.execute("SET statement_timeout='15s'")
-        c.execute("BEGIN")
-        require(decide(c, cmd)[0] == "created")
-        try:
-            c.execute("COMMIT")
-        except psycopg.OperationalError as e:
-            error = type(e).__name__
-        else:
-            raise AssertionError("Commit response unexpectedly reached client")
-        require(proxy.committed.wait(2))
-        proxy.finish()
-        with conn() as obs:
-            validate(obs, cmd)
-        require(create(cmd)[0] == "replay")
-        return dict(
-            client_error=error,
-            proxy_trace=proxy.log,
-            independent_complete_state=True,
-            retry="original result once",
+    with CommitLossProxy(CONF["host"], CONF["port"]) as proxy:
+        cfg = dict(
+            CONF,
+            user="qa_serving",
+            port=proxy.port,
+            sslmode="disable",
+            connect_timeout=5,
         )
-    finally:
-        c.close()
+        with psycopg.connect(**cfg, autocommit=True) as c:
+            c.execute("SET statement_timeout='15s'")
+            c.execute("BEGIN")
+            require(decide(c, cmd)[0] == "created")
+            try:
+                c.execute("COMMIT")
+            except psycopg.OperationalError as e:
+                error = type(e).__name__
+            else:
+                raise AssertionError("Commit response unexpectedly reached client")
+            require(proxy.committed.wait(2))
+            proxy.finish()
+            with conn() as obs:
+                validate(obs, cmd)
+            require(create(cmd)[0] == "replay")
+            return dict(
+                client_error=error,
+                proxy_trace=proxy.log,
+                independent_complete_state=True,
+                retry="original result once",
+            )
 
 
 def crash():
@@ -390,7 +294,6 @@ def restore():
         )
     finally:
         CONF["port"] = old
-    test_dummy = None
 
 
 def measurements():

@@ -60,6 +60,9 @@ operations have finite timeouts; `cleanup.json` records failures instead of
 silently claiming that resources stopped. Importing case modules does not read
 runtime connection files or run cases; their `main()` entry points load fixtures.
 Connection helpers reject calls before initialization instead of using driver defaults.
+The response-loss proxy owns and cancels its listener and connections and joins
+both forwarding threads on success and failure, including failure to connect a
+client. Cleanup diagnostics preserve the original test error.
 
 ## Cases and ownership
 
