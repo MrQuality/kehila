@@ -512,6 +512,21 @@ does not change domain behavior, maturity, storage contracts, or release scope.
 The [branding policy](../BRANDING.md#rename-and-retained-storage-identities)
 records namespace migration and retained identifiers.
 
+<a id="d-036"></a>
+## D-036 — Limit backend host platforms to Windows and Linux
+
+**Status: Accepted by the maintainer on 2026-10-08.** Target backend execution
+and its host-side operational tooling at Windows and Linux machines, including
+datacenter deployments. macOS, BSD, and other host operating systems are outside
+the supported backend scope. Browser-client platform support is a separate concern.
+
+**Consequence:** Platform-specific preflight must measure actual available
+resources on Windows and Linux and explicitly reject unsupported hosts. Do not
+invent resource values or add macOS-specific backends. This defines the support
+target; it does not certify an installation, a Linux native-database experiment,
+or a production datacenter deployment. Existing local-runtime and qualification
+limits remain in force.
+
 ## How to change a decision
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.

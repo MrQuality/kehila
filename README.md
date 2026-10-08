@@ -42,6 +42,12 @@ API, and interface implementation of that model.
 
 ## Development setup
 
+Backend host platforms target Windows and Linux; macOS and other host operating
+systems are unsupported ([D-036](docs/product/decisions.md#d-036)). This scope
+does not establish production deployment readiness or restrict browser clients.
+On Linux installations without a `python` command, use `python3` in the commands
+below. The Git verification launcher accepts either name for Python 3.10+.
+
 Install Python 3.10+, Git, Rust stable, Go 1.22+, and Podman or Docker with a
 Compose provider. Allow about 4 GiB of memory and ports 5432, 27017, 4222, 8222,
 and 9200 for the development services. Initial image pulls need Internet access.
