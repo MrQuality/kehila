@@ -402,6 +402,7 @@ def main():
             "additional_cases.py",
             "concurrent_workload.py",
             "maximum_key.py",
+            "payload_guard_cases.py",
         ]:
             if phase(name):
                 raise RuntimeError("Experiment failure: " + name)
@@ -413,11 +414,12 @@ def main():
             "additional-results.json",
             "concurrent-results.json",
             "max-random-key-results.json",
+            "guard-results.json",
         ]:
             combined.extend(json.loads((root / name).read_text()))
         (root / "final-results.json").write_text(json.dumps(combined, indent=2))
         print(
-            "Completed bounded experiment. Known privileged move failure and six product checks remain. Artifact directory:",
+            "Completed bounded experiment. Frozen baseline retains its known failure; corrected guard tested separately. Six product checks remain. Artifact directory:",
             root,
         )
         return 2

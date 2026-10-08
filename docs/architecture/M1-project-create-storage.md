@@ -210,6 +210,22 @@ BEGIN
 END;
 $$;
 
+CREATE FUNCTION kehila.protect_payload_identity()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
+BEGIN
+  IF NEW.operation_row_id IS DISTINCT FROM OLD.operation_row_id THEN
+    RAISE EXCEPTION 'operation payload identity is immutable'
+      USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_identity_immutable',
+            SCHEMA = 'kehila', TABLE = 'operation_payloads';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER operation_payload_identity_immutable
+  BEFORE UPDATE ON kehila.operation_payloads FOR EACH ROW
+  EXECUTE FUNCTION kehila.protect_payload_identity();
+
 CREATE CONSTRAINT TRIGGER operation_payload_shape
   AFTER INSERT OR UPDATE OR DELETE ON kehila.operations
   DEFERRABLE INITIALLY DEFERRED FOR EACH ROW
@@ -277,9 +293,11 @@ The fresh-insert guard applies to normal serving. Restoration of tombstones
 needs a reviewed owner-controlled load procedure and final validation; do not
 weaken normal INSERT to accommodate it. TRUNCATE guards protect against mistakes,
 not an owner able to disable them. The serving role has no TRUNCATE privilege.
-If a future privileged path moves payload identity, forbid it or validate both
-old and new cores: the current shape function checks one operation ID. Serving
-payload UPDATE is forbidden here.
+The identity guard rejects payload reassignment before UPDATE; same-identity
+updates still undergo the deferred shape check. Serving payload UPDATE remains
+forbidden. SP-002 retains its frozen pre-correction schema to reproduce the old
+gap and tests this guard separately; the corrected proposal is not an installed
+application migration.
 
 Retirement changes a partial-index column and prevents HOT updates. Measure
 compaction batch size, lock waits, WAL and vacuum behavior. The attribution index

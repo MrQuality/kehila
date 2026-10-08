@@ -43,8 +43,9 @@ under `.kehila/spikes/SP-002/`; `--output` accepts another NEW directory. Existi
 artifact directories are never overwritten. Copies of the executable cases run
 there; generated credentials, raw logs and dumps must not be committed.
 
-Expected exit **2** means the bounded run completed with the known privileged
-payload-move failure and six declared product checks blocked. It is not an overall
+Expected exit **2** means the bounded run completed with the frozen schema's known
+payload-move failure and six declared product checks blocked, plus the separate
+corrected guard cases passing. It is not an overall
 QA pass. Exit **1** means setup or another experiment failed: retain the evidence
 and inspect it. The runner returns no complete-pass exit for this frozen subject.
 
@@ -77,14 +78,18 @@ runtime connection files or run cases; their `main()` entry points load fixtures
   random maximum-key insertion without relying on repeating input compression.
 - `seed_oracle.rs`: emits fixture values from the actual pure ProjectCreate result,
   including complete ordered configuration; its JSON format is QA-only.
-
+- `payload_guard_cases.py`: applies the proposed immutable payload-identity guard
+  in a separate database and verifies creation, identity-preserving UPDATE,
+  reassignment rejection/rollback, serving denial, and retirement. These results
+  do not replace the original frozen-schema failure.
 
 The experiment's actor/time inputs are trusted test inputs. Helpers that accept
 arbitrary actor or time parameters must not be installed as public application
 interfaces. The baseline serving login has INSERT privileges for the experiment;
 a real application must bind authenticated identity and validate pure decisions.
 
-`results.observed.json` is a compact sanitized result summary. Per-case generated
+`results.observed.json` preserves the original R02 summary; `results.review.json`
+records the R03/R04 corrections and separate guard cases. Per-case generated
 records include error diagnostics, final-state assertions and observed lock waits.
 Initial observations and corrected reruns are described in the spike record.
 Publicly share only reviewed synthetic summaries. Local execution establishes

@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Concluded / bounded database and protocol feasibility supported, with a reproduced privileged integrity gap |
+| Status / outcome | Concluded / bounded feasibility supported; original integrity gap retained and proposed guard separately verified |
 | Owner / assessor | Project maintainer; observations recorded for maintainer assessment; recommendations are not new accepted decisions |
 | Created / last updated | 2026-10-08 / 2026-10-08 |
 | Related work | [#26](https://github.com/MrQuality/kehila/issues/26), [B-005/#9](https://github.com/MrQuality/kehila/issues/9), [#27](https://github.com/MrQuality/kehila/issues/27), [#11](https://github.com/MrQuality/kehila/issues/11), [#32](https://github.com/MrQuality/kehila/issues/32) |
@@ -111,13 +111,41 @@ excluded an open transaction. Fresh-cluster pg_restore loaded full operations an
 tombstones before post-data triggers, then passed shape, identity, replay, mutation,
 sequence and exact content/role/ACL/function comparisons.
 
+### SP-002-R03 and R04 — Review corrections and separate identity guard
+
+Executed 2026-10-08 on Windows/WSL2 with Podman and PostgreSQL 16.15. Both full
+native reproductions retained the original 403 pass / one fail / six blocked
+records, then passed five additional cases in a separate corrected-schema database:
+complete creation, same-identity UPDATE, reassignment rejection with complete
+rollback, serving-role UPDATE denial, and full-to-tombstone retirement. Combined
+counts are 408 pass / one intentional frozen-subject fail / six blocked. The old
+failure is not relabeled successful. See the separate
+[review summary](../../experiments/SP-002/results.review.json); R01/R02 evidence
+and its original schema hash remain unchanged.
+
+R04 used a custom `CARGO_TARGET_DIR`, selected the exact Cargo-reported library,
+completed with expected runner exit 2, and recorded no cleanup errors. R03 also
+completed the bounded cases with no cleanup errors. The proposed schema now
+rejects payload identity changes using a dedicated guard and named 23514 error;
+no production migration has been installed.
+
+Host preflight explicitly supports Windows/Linux under D-036 and rejects other
+platforms and optimized Python. Case modules use explicit imports and entry
+points; runtime fixtures load on execution. Invariant checks execute independently
+of Python assertion optimization, with lazy failure diagnostics. Phase timeout
+output is retained and cleanup inspection/stop calls are bounded and checked.
+Focused host regressions exercise orchestration failure paths without claiming
+simulated database evidence. Native Linux execution remains unperformed; ordinary
+Linux CI is a separate verification boundary.
+
 ## Conclusion and reuse boundary
 
 Keep the native PostgreSQL direction and useful deferred membership/attribution
 constraints. The database can support the tested bounded creation protocol.
-Before executable migration, reject payload identity moves or validate both old
-and new cores; make deferred-trigger privilege requirements explicit. Align
-identifier acceptance and final codecs before exposing the native route.
+The revised proposal rejects payload identity moves, with separate G01–G05
+regressions. Install that protection and explicit deferred-trigger privileges in
+the eventual executable migration. Align identifier acceptance and final codecs
+before exposing the native route.
 
 Full records may replay again after a backward wall-clock jump into their valid
 window; retired tombstones cannot revive. No durable clock high-water mark was
@@ -134,8 +162,8 @@ orchestration. Schema, clock, ACL, codec or runtime changes require targeted rer
 - [SP-003/#39](SP-003-replay-codecs.md): codec/identifier representation under #26.
 - [SP-004/#40](SP-004-actor-authority.md): trusted actor binding and owner authority under #11/#32.
 - [SP-005/#41](SP-005-project-target-allocation.md): stable creation allocation under #27.
-- #26 retains payload identity protection, executable migration/role provisioning,
-  native clock sampling and production compactor integration. Those are delivery
+- #26 retains installation of the verified payload guard, executable migration/role
+  provisioning, native clock sampling and production compactor integration. Those are delivery
   follow-ups to observed mechanics, not three additional engine investigations.
 
 D-032–D-034 remain accepted choices; recommendations above are not new D-decisions.
@@ -145,7 +173,8 @@ be substituted for verification of delivered authenticated routes.
 
 ## Handoff
 
-Latest completed run: R02, bounded feasibility supported with known failure and
-six missing-product checks. Next: resolve the codec/identifier and access/identity
-questions in the linked planned investigations, then implement the small native
-migration/role slice and payload identity guard. No linked product issue is closed.
+Latest completed run: R04, with the frozen failure preserved, separate corrected
+guard cases passing, and six missing-product checks. Await maintainer review and
+merge of PR #42. Next, start SP-003/#39 on a separate branch from updated `main`,
+then deliver the native migration/role slice and applicable access/allocation
+integration. No linked product issue is closed.

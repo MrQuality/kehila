@@ -115,6 +115,7 @@ module.Jsonb = object
 sys.modules[module.__name__] = module
 import common, schema_cases, protocol_cases, recovery_cases
 import additional_cases, concurrent_workload, maximum_key
+import payload_guard_cases
 assert common.CONF == {}
 assert common.RESULTS == []
 """
@@ -162,6 +163,15 @@ else:
             timeout=15,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_proposed_guard_matches_executable_regression(self):
+        guard = (
+            (SOURCE / "payload-identity-guard.sql").read_text(encoding="utf-8").strip()
+        )
+        proposal = (ROOT / "docs/architecture/M1-project-create-storage.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(guard, proposal)
 
 
 if __name__ == "__main__":

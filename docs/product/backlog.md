@@ -64,7 +64,7 @@ It does not complete M1-01 or the access/identity slices. Planned follow-ups are
 [SP-004/#40](../spikes/SP-004-actor-authority.md) under #11 (related #32), and
 [SP-005/#41](../spikes/SP-005-project-target-allocation.md) under #27.
 Migration, payload identity protection, native clock and compactor integration
-remain #26 delivery work. Preserve the spike's known privileged failure and
+remain #26 delivery work. Install the separately verified payload-identity guard; preserve the frozen failure and
 missing-product checks when promoting experiments into regressions.
 
 <a id="b-001"></a>
