@@ -183,12 +183,16 @@ values. Zero remains distinct from an absent estimate.
 
 ### Replay
 
-All M1 command families guarantee full replay for 90 days after authoritative
-commit, measured as 7,776,000,000 milliseconds. The full-result window is
-`committed_at <= now < committed_at + period`; at the deadline, an identical
+All M1 command families retain full replay for 90 days from the server-recorded
+operation timestamp, measured as 7,776,000,000 milliseconds. Sample the timestamp
+near the end of the successful transaction; the remaining persistence/commit
+delay is accepted and is not added back. There is no additional grace period.
+Only a committed success establishes a retained record. The full-result window is
+`recorded_at <= now < recorded_at + period`; at the deadline, an identical
 retry returns `replay_expired`, even if physical compaction has not run. Changed
 typed content still conflicts. Checked arithmetic rejects an overflowing
-deadline; trusted time earlier than the recorded commit is incoherent.
+deadline; trusted time earlier than the recorded origin is incoherent. Logical
+expiry does not wait for physical cleanup. A retry cannot reset the origin.
 
 `operation::OperationRecord` distinguishes full successes from tombstones.
 Compaction retains the scoped key, a versioned SHA-256 request fingerprint, and

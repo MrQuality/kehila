@@ -33,7 +33,7 @@ typed request comparison; a digest is not a substitute for it.
 | P-04 | Permanent typed operation core plus optional replay payload, with irreversible retirement and fresh-insert enforcement. | Preserve permanent retry identity and exact comparison. Proposed typed columns and atomic shape enforcement require real database tests. |
 | P-05 | Relational current configuration plus complete immutable JSONB historical snapshots. | Agreed hybrid direction with explicit ownership. One typed result produces both; reconstruction/drift and historical-codec checks remain required. |
 | P-06 | READ COMMITTED with exclusive per-actor creation coordination, restricted locking functions, no Project lock on creation replay, and bounded retry. | Agreed creation direction, not a database-wide default. Function privileges and retry limits require real database tests. |
-| P-07 | Replay origin remains a separate reviewed time policy. | Preserve D-034's 90-days-after-commit semantics. A pre-commit clock sample must not silently replace the accepted origin. No route can promise the boundary until this is resolved. |
+| P-07 | Replay expires 90 days from the server-recorded operation timestamp, with no additional grace or post-commit adjustment. | Agreed on 2026-10-08; remaining persistence/commit delay is accepted. Sampling, trusted clock, boundary/overflow and compactor behavior require implementation tests. |
 
 Only project creation is represented here. WorkItem, relationship, knowledge,
 status-group grant, and archival routes need their own scoped schema changes.
@@ -142,8 +142,14 @@ CREATE INDEX operations_full_expiry
   WHERE NOT payload_retired;
 ```
 
-The origin/deadline domains reject overflow; they do not resolve when a timestamp
-is authoritative. The permanent original grant is creation permission on actor_id
+The origin/deadline domains reject overflow. replay_origin_ms corresponds to the
+pure record's recorded_at_ms: a server timestamp, not a client timestamp or the
+future commit instant. Sample it after locks, replay lookup and pure acceptance,
+immediately before inserting the accepted persistence batch. Use the same sample
+for the deadline and never reset it on replay. The remaining batch/commit delay
+is accepted; keep transactions bounded. Prefer the database clock for sampling
+and expiry/compaction decisions; verify its mapping and rollback behavior in the
+adapter. The permanent original grant is creation permission on actor_id
 for this family, checked on every retry. Other grant scopes are not encoded here.
 Request and result codecs must be specified and versioned before implementation.
 

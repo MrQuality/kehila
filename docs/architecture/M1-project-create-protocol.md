@@ -8,8 +8,8 @@ not executable migrations or evidence of PostgreSQL behavior.
 The maintainer agreed these corrections on 2026-10-08: restricted locking
 functions, exclusive actor coordination for creation, no Project lock on creation
 replay, typed permanent operation targets, and current grants separate from grant
-history. Detailed physical choices still require execution and review. P-07's
-possible grace period remains a proposal, not a change to D-034.
+history. Detailed physical choices still require execution and review. P-07 now
+records the agreed 90-day operation-timestamp policy without additional grace.
 
 ## Outcome and prerequisites
 
@@ -20,7 +20,7 @@ loses the response retries the original intent with the original identity/token.
 
 Before implementing a route, settle actor/session provisioning and the initial
 owner's effective permissions (#11/#32), stable creation-target allocation (#27),
-and the replay time policy (P-07). A lost creation response must not cause a new
+and the replay clock implementation (P-07). A lost creation response must not cause a new
 target ID or token to be allocated. A client-supplied ID must not let one actor
 claim another actor's target. This draft does not solve those identity rules by
 adding an unexplained reservation table.
@@ -49,7 +49,10 @@ its protecting lock is acquired; an earlier unlocked read is not authoritative.
    period. Different intent conflicts. Expired equal intent returns the defined
    expiry outcome; it does not execute the command again. Use the permanent core
    even when payload has been retired.
-5. For a fresh key, run the trusted pure creation operation. Insert the permanent
+5. For a fresh key, run the trusted pure creation operation. After locks and
+   acceptance, sample the server operation timestamp immediately before the
+   persistence batch. Store that origin and its checked 90-day deadline once.
+   Insert the permanent
    core, Project, ordered seed rows, revision-one snapshots, active version-one
    grant and attributed grant event, and saved response payload. Only the trusted
    result is eligible for persistence; callers cannot submit arbitrary seed definitions.
@@ -118,36 +121,27 @@ arrays and exact scalar values are not. Replay returns the recorded result, not
 a reconstruction from subsequently edited current tables. Test large u64 values
 without a lossy floating-point JSON bridge.
 
-P-07 remains an implementation blocker: the accepted full-replay duration is
-90 days after authoritative commit. A pre-commit timestamp can shorten it and
-does not satisfy that promise. Specify the origin/clock/commit relationship,
-overflow handling, equality-at-deadline behavior, and permitted compactor clock
-before wiring timestamps. The presence/retirement constraints enforce shape;
-they cannot prove the compactor ran after expiry. Irreversible retirement must
-prevent clock rollback from reviving full replay.
+P-07 is settled as a product policy: E = recorded_at_ms + 7,776,000,000, with
+checked arithmetic. Equal authorized intent replays while recorded_at_ms <= now
+< E; it expires at/after E even if payload still exists. No added grace or
+post-commit deadline adjustment applies. The pre-commit sample is intentional:
+remaining persistence/commit delay slightly shortens availability after commit.
+Only committed successful operations are replayable, and retries never move E.
 
-### Unaccepted alternative: minimum retention with bounded grace
+Implement server-controlled sampling after coordination/pure acceptance, just
+before the persistence batch. Prefer PostgreSQL clock_timestamp() converted to
+integer UTC epoch milliseconds for origin and expiry decisions; unlike now(), it
+does not retain the transaction-start time. The concrete clock conversion is a
+proposal to verify. Do not accept origin/deadline from a client. Test late cleanup,
+overflow, equality at E, rollback, and a delayed commit without deadline extension.
+Full-record time before the origin is incoherent. Irreversible retirement prevents
+clock rollback from reviving a tombstone. The accepted policy does not introduce
+a durable clock high-water mark: before retirement, backward movement to a valid
+pre-expiry time can affect full-record replay under the existing pure decision.
+Document that behavior and test it rather than claiming all wall-clock rollback
+is eliminated. Shape constraints cannot prove the compactor ran after expiry.
 
-Let C be authoritative commit time, E the durable replay-expiry deadline, and G
-an explicitly documented maximum grace duration. The alternative would require
-C + 90 days <= E <= C + 90 days + G. G has no selected value yet. Until E, equal
-authorized retries return the saved result; at/after E they expire without
-re-execution. Changed intent and revoked authority retain their existing rules.
-Physical payload cleanup may happen later without extending logical replay.
-
-The current pure contract expires at exactly commit plus 90 days. Adoption of
-grace requires an explicit decision and coordinated updates to D-034, pure
-replay/compaction functions, fixtures, and timestamp schema. The existing
-operations_replay_window CHECK remains current-contract arithmetic, not approval
-of a pre-commit origin or implementation of grace.
-
-A margin on a pre-commit sample is safe only if the sample-to-commit delay and
-clock behavior have a proven bound. An HTTP deadline, average latency, or a
-statement timeout is insufficient. Post-commit finalization can preserve the
-minimum, but an indefinitely delayed finalizer cannot promise a finite G. Clock
-corrections, process crash, restart, uncertain commit, and finalization failure
-must be included in the guarantee or explicitly qualified. Do not invent a grace
-value or describe an unbounded fallback as bounded.
+See [PostgreSQL clock semantics](https://www.postgresql.org/docs/16/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT).
 
 ## Database roles and mutation ownership
 
@@ -226,5 +220,6 @@ The next execution step is an isolated PostgreSQL verification harness for the
 corrected SQL and actual roles, before building the route/adapter. Prioritize
 locking privileges, same-actor serialization, cross-actor target collisions,
 deferred rollback, structured errors, fresh-core/payload enforcement, and
-compaction/replay races. Clock-independent checks can proceed while P-07 remains
-open. Keep SQL execution evidence separate from documentation-only checks.
+compaction/replay races and the agreed recorded-time expiry boundary. Remaining
+role/codec/clock implementation gaps must be reported explicitly. Keep SQL
+execution evidence separate from documentation-only checks.
