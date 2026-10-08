@@ -1,2 +1,9 @@
 #!/bin/sh
-exec python .githooks/pre_commit.py
+for interpreter in python3 python; do
+    if command -v "$interpreter" >/dev/null 2>&1 &&
+       "$interpreter" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
+        exec "$interpreter" .githooks/pre_commit.py "$@"
+    fi
+done
+printf '%s\n' 'VERIFICATION_FAILED: Python 3.10+ is required (python3 or python)' >&2
+exit 127
