@@ -25,6 +25,7 @@ def main():
     if not args.docs:
         commands += [["cargo", "test", "--locked", "-p", "kehila_query", "-p", "task_contract"] if args.pure
                      else ["cargo", "test", "--locked", "--workspace"],
+                     [sys.executable, "experiments/SP-002/check_seed_oracle.py"],
                      [sys.executable, "scripts/go_test.py"]]
     if not args.pure and not args.docs:
         commands.append([sys.executable, "tests/integration/task_path.py"])

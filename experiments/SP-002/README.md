@@ -89,7 +89,12 @@ retain `setup_database.py.log` and still enter resource cleanup.
 - `concurrent_workload.py`, `maximum_key.py`: bounded two-actor observations and
   random maximum-key insertion without relying on repeating input compression.
 - `seed_oracle.rs`: emits fixture values from the actual pure ProjectCreate result,
-  including complete ordered configuration; its JSON format is QA-only.
+  including complete ordered configuration; its JSON format is QA-only. It
+  accepts exactly five positional inputs and only `hours` or `points`; malformed
+  inputs exit 2 with a diagnostic and emit no fixture.
+  `check_seed_oracle.py` compiles its Rust tests and exercises its real CLI in
+  local/CI verification. Compiler outputs remain under the selected Cargo
+  artifact directory, including custom target directories.
 - `payload_guard_cases.py`: applies the proposed immutable payload-identity guard
   in a separate database and verifies creation, identity-preserving UPDATE,
   reassignment rejection/rollback, serving denial, and retirement. These results
