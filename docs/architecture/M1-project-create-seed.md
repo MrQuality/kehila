@@ -2,6 +2,9 @@
 
 Status: Proposed, 2026-10-08. Continue the SQL in the [storage specification](M1-project-create-storage.md). This is unexecuted review SQL, not a migration. It covers creation only, not arbitrary configuration, WorkItem, or grant-administration routes.
 
+The [command and verification proposal](M1-project-create-protocol.md) describes
+how these rows become one action and which invariants need database evidence.
+
 The trusted seed follows [D-029](../product/decisions.md#d-029) and [project_create.rs](../../src/pure/task_contract/src/project_create.rs): Task/Milestone, optional application Title/Description text fields per type, one New/Active/Done workflow, configuration revision one, next sequence one, and no recorded estimate.
 
 ## Project, history, and typed initial access

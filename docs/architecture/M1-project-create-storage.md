@@ -13,6 +13,8 @@ transaction. The existing experimental worker remains unchanged.
 
 The [seed/history tables](M1-project-create-seed.md) continue this SQL. Read both
 documents as one proposed schema; neither fragment is a complete migration.
+The [command and verification proposal](M1-project-create-protocol.md) defines
+the locking, retry, privilege, and evidence requirements for this slice.
 
 The schema is split into the permanent request core and an expiring payload.
 Deleting payload must never remove the request's unique identity. Product history
