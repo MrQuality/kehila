@@ -10,7 +10,8 @@ Procedure ID: **SOP-001**. Owner and approver: project maintainer. Approval
 record: SOP-001 version 1 approved for initial use on 2026-09-25, with manual
 assessment while automation is built. See the
 [project procedure index](../procedures/README.md) for enforcement status. The
-spike validator and automated runner preflight are not implemented. Independent
+procedure-wide spike validator is not implemented; individual experiment runners
+may implement their own preflight. Independent
 PR approval is optional during the sole-contributor phase; record the
 maintainer's assessment instead.
 
@@ -25,6 +26,10 @@ and [testing guide](../TESTING.md).
 | ID | Investigation | Status | Linked work | Outcome |
 | --- | --- | --- | --- | --- |
 | [SP-001](SP-001-task-path.md) | First task create/update/read path | Concluded | [B-002](../product/backlog.md#b-002) | R04: bounded Python-adapter C01-C06 and full suite passed locally; 3.125 GiB container ceilings; first-increment direction accepted in [D-016](../product/decisions.md#d-016) |
+| [SP-002](SP-002-postgresql-project-create.md) | Native PostgreSQL project-creation feasibility | Concluded | [#26](https://github.com/MrQuality/kehila/issues/26), B-005 | R04: original gap retained; separate corrected guard cases pass; six product checks remain |
+| [SP-003](SP-003-replay-codecs.md) | Replay codecs and identifier representation | Planned | [#39](https://github.com/MrQuality/kehila/issues/39), parent #26 | No execution; bounded codec/identity recommendation needed |
+| [SP-004](SP-004-actor-authority.md) | Trusted actor binding and initial-owner authority | Planned | [#40](https://github.com/MrQuality/kehila/issues/40), parents #11/#32 | No execution; trust/permission boundary needs a decision |
+| [SP-005](SP-005-project-target-allocation.md) | Stable project-target allocation across retries | Planned | [#41](https://github.com/MrQuality/kehila/issues/41), parent #27 | No execution; allocation/reconciliation protocol needed |
 
 Use sequential `SP-NNN` IDs, distinct from the existing acceptance scenario IDs.
 Create each record from [TEMPLATE.md](TEMPLATE.md). Keep its ID and links stable.

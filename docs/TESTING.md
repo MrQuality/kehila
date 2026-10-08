@@ -259,3 +259,21 @@ Required CI settings on the hosting service provide the shared automated merge
 gate; local hooks alone cannot enforce it. Independent review is optional during
 the sole-contributor phase described in the contribution guide. Consult the
 [procedure index](procedures/README.md) for planned and implemented SOP checks.
+
+## Native PostgreSQL creation experiment
+
+[SP-002](spikes/SP-002-postgresql-project-create.md) records bounded native
+PostgreSQL structure/protocol evidence. Reproduce with the documented
+[Podman-only runner](../experiments/SP-002/README.md) and its isolated Python
+environment. It uses fresh containers/volumes and the frozen proposal baseline.
+Expected exit 2 preserves a known privileged integrity gap and missing product
+checks; it must not be counted as a complete application QA pass. Local Windows
+execution is observed; no Linux CI result or integrated native route is claimed.
+
+## Verification time budgets
+
+Shared verification commands have a 300-second deadline. Cargo verification on
+Windows has a 450-second deadline: observed workspace runs exceeded 300 seconds
+while individual tests passed. Linux retains the 300-second Cargo deadline. The
+staged hook still has its 600-second overall deadline; a timeout fails verification.
+These are tooling execution limits, not product performance requirements.

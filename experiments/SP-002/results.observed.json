@@ -1,0 +1,134 @@
+{
+  "run": "SP-002-R02",
+  "date": "2026-10-08",
+  "baseline": "9f433f99b31d0a3e7378a6009fd319a6788640fe",
+  "schema_sha256": "004e3fe0a9d104df656f9b137fe6c608820b3ea5bfafe809fe48d2f9e3aad197",
+  "postgresql": "16.15",
+  "runtime": "Podman on Windows/WSL2",
+  "durability": {
+    "fsync": "on",
+    "synchronous_commit": "on",
+    "full_page_writes": "on"
+  },
+  "outcomes": {
+    "PASS": 403,
+    "FAIL": 1,
+    "BLOCKED": 6
+  },
+  "groups": {
+    "A01": {
+      "PASS": 1
+    },
+    "A02": {
+      "PASS": 1
+    },
+    "A03": {
+      "PASS": 28
+    },
+    "A04": {
+      "PASS": 2
+    },
+    "A05": {
+      "PASS": 14
+    },
+    "A06": {
+      "PASS": 7
+    },
+    "A07": {
+      "PASS": 62
+    },
+    "A08": {
+      "PASS": 12
+    },
+    "A09": {
+      "PASS": 23
+    },
+    "A10": {
+      "PASS": 8
+    },
+    "A11": {
+      "PASS": 6
+    },
+    "A12": {
+      "PASS": 1,
+      "FAIL": 1
+    },
+    "B01": {
+      "PASS": 5,
+      "BLOCKED": 1
+    },
+    "B02": {
+      "PASS": 13
+    },
+    "B03": {
+      "PASS": 40
+    },
+    "B04": {
+      "PASS": 40
+    },
+    "B05": {
+      "PASS": 1,
+      "BLOCKED": 1
+    },
+    "B06": {
+      "PASS": 1
+    },
+    "B07": {
+      "PASS": 80
+    },
+    "B08": {
+      "PASS": 1,
+      "BLOCKED": 1
+    },
+    "B09": {
+      "PASS": 1
+    },
+    "B10": {
+      "PASS": 1,
+      "BLOCKED": 1
+    },
+    "B11": {
+      "PASS": 1
+    },
+    "B12": {
+      "PASS": 1,
+      "BLOCKED": 1
+    },
+    "B13": {
+      "PASS": 41
+    },
+    "B14": {
+      "PASS": 2,
+      "BLOCKED": 1
+    },
+    "B15": {
+      "PASS": 3
+    },
+    "C01": {
+      "PASS": 2
+    },
+    "C02": {
+      "PASS": 1
+    },
+    "C03": {
+      "PASS": 2
+    },
+    "C04": {
+      "PASS": 2
+    }
+  },
+  "known_failure": {
+    "case": "A12.privileged-old-core",
+    "boundary": "Privileged payload identity move checks only new core; probe rolled back; serving UPDATE denied"
+  },
+  "product_gaps": [
+    "B08.grant-management",
+    "B14.final-codec",
+    "B01.production-session-binding",
+    "B05.target-allocation",
+    "B10.production-clock",
+    "B12.production-compactor"
+  ],
+  "selected_concurrency_schedule_trials": 200,
+  "standard_pure_verification": "passed in R01; repeated before publication"
+}

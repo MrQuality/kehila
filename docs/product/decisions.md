@@ -467,10 +467,15 @@ conversion retains its original migration requirement. B-007 resolves current
 grants and B-005 protects their validation through command acceptance.
 
 <a id="d-034"></a>
-## D-034 — Guarantee 90-day M1 replay and retain operation tombstones
+## D-034 — Set 90-day M1 replay and retain operation tombstones
 
 **Status: Accepted by the maintainer on 2026-10-01.** Extend D-017's provisional
-task-path direction to all M1 commands: full replay lasts 90 days after commit.
+task-path direction to all M1 commands. **Origin revised by the maintainer on
+2026-10-08:** full replay expires 90 days (7,776,000,000 milliseconds) after the
+server-recorded operation timestamp, sampled near the end of the successful
+transaction. There is no additional grace or post-commit adjustment. The remaining
+persistence/commit delay slightly reduces replay time after commit; this is
+accepted. A rejected or rolled-back transaction establishes no successful record.
 At expiry an identical retry returns `replay_expired` and never executes again.
 Compaction retains a permanent scoped operation tombstone, versioned request
 fingerprint, and original grant scope. Changed-content reuse still conflicts.
@@ -480,6 +485,15 @@ rule. Full replay retention is bounded, but tombstone storage grows over time.
 **Consequence:** B-003 supplies full/tombstone lookup and compaction decisions.
 B-004/B-005 must freeze the exact-request fingerprint codec and prove durable
 replacement, restoration, and no duplicate execution before exposing M1 routes.
+Use checked timestamp arithmetic and the recorded deadline for logical expiry,
+even when physical payload cleanup runs later. This revision applies to M1's
+shared contract, not a claim of changed provisional-worker behavior.
+
+**Bounded verification:** [SP-002](../spikes/SP-002-postgresql-project-create.md)
+tested recorded-time expiry, retirement/replay races, irreversible tombstones
+and logical restore on native PostgreSQL with explicit QA helpers. This supports
+the tested policy mechanics; it does not deliver final codecs, authenticated
+routes or a production compactor, and does not change this accepted decision.
 
 <a id="d-035"></a>
 ## D-035 — Name the project and repository Kehila
@@ -497,6 +511,21 @@ Preserve historical commits, comments, logs, and dated test evidence. The rename
 does not change domain behavior, maturity, storage contracts, or release scope.
 The [branding policy](../BRANDING.md#rename-and-retained-storage-identities)
 records namespace migration and retained identifiers.
+
+<a id="d-036"></a>
+## D-036 — Limit backend host platforms to Windows and Linux
+
+**Status: Accepted by the maintainer on 2026-10-08.** Target backend execution
+and its host-side operational tooling at Windows and Linux machines, including
+datacenter deployments. macOS, BSD, and other host operating systems are outside
+the supported backend scope. Browser-client platform support is a separate concern.
+
+**Consequence:** Platform-specific preflight must measure actual available
+resources on Windows and Linux and explicitly reject unsupported hosts. Do not
+invent resource values or add macOS-specific backends. This defines the support
+target; it does not certify an installation, a Linux native-database experiment,
+or a production datacenter deployment. Existing local-runtime and qualification
+limits remain in force.
 
 ## How to change a decision
 

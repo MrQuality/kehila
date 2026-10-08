@@ -1,0 +1,35 @@
+{
+  "runs": [
+    "SP-002-R03",
+    "SP-002-R04"
+  ],
+  "date": "2026-10-08",
+  "baseline": "9f433f99b31d0a3e7378a6009fd319a6788640fe",
+  "schema_sha256": "004e3fe0a9d104df656f9b137fe6c608820b3ea5bfafe809fe48d2f9e3aad197",
+  "postgresql": "16.15",
+  "runtime": "Podman on Windows/WSL2",
+  "corrected_guard_sha256": "ce1f6b35a81488bd9ab6d2d14e9bd011e489c99121cd81ff541f10516fad53ad",
+  "original_subject_outcomes": {
+    "PASS": 403,
+    "FAIL": 1,
+    "BLOCKED": 6
+  },
+  "corrected_guard_outcomes": {
+    "PASS": 5,
+    "FAIL": 0,
+    "BLOCKED": 0
+  },
+  "combined_outcomes": {
+    "PASS": 408,
+    "FAIL": 1,
+    "BLOCKED": 6
+  },
+  "r04_exit_code": 2,
+  "r04_custom_cargo_target_directory": true,
+  "cleanup_errors": [],
+  "limits": [
+    "Frozen failure retained; corrected guard checked in a separate database",
+    "No native Linux experiment executed",
+    "No production migration, authentication, codec, adapter or compactor delivered"
+  ]
+}

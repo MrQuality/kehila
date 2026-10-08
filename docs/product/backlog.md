@@ -42,7 +42,7 @@ applicable API, storage, access, and interface integration through its parents.
 
 | Child ID | Parent / dependencies | Deliverable and acceptance |
 | --- | --- | --- |
-| [M1-01](https://github.com/MrQuality/kehila/issues/26) | B-005; B-003 | Configuration revisions, history, reference integrity, and coordinated command acceptance. Track and protect historical status, status-group assignment/grant, workflow, type, field, and relationship-type use even after current items migrate away. Demonstrate configuration/item contention, replay after configuration changes, and recovery without partial accepted state. Use actor/family/target-scoped operation lookup, freeze versioned exact-request fingerprints, and demonstrate 90-day replay, gap-free compaction to permanent tombstones, and tombstone backup/restore. Establish a consistency protocol for archive and current-selection clearing under the single-document storage constraint; test crash, retry, concurrent selection, and recovery behavior before exposing archival routes. |
+| [M1-01](https://github.com/MrQuality/kehila/issues/26) | B-005; B-003 | Configuration revisions, history, reference integrity, and coordinated command acceptance. Track and protect historical status, status-group assignment/grant, workflow, type, field, and relationship-type use even after current items migrate away. Demonstrate configuration/item contention, replay after configuration changes, and recovery without partial accepted state. Use actor/family/target-scoped operation lookup, freeze versioned exact-request fingerprints, and demonstrate 90-day replay, gap-free compaction to permanent tombstones, and tombstone backup/restore. Establish a consistency protocol for archive and current-selection clearing using native PostgreSQL and bounded transactions (ADR-102); test crash, retry, concurrent selection, and recovery behavior before exposing archival routes. |
 | [M1-02](https://github.com/MrQuality/kehila/issues/27) | B-004/B-006; M1-01, B-007 | Project and WorkItem identity, Task/Milestone, estimates, replayable current selection, archival/restoration. Integrate the accepted trusted revision-one Task/Milestone seed and replayable project creation command. Verify untitled-item display, zero versus absent estimates, unit locking, selection retry after uncertain response, and selection clearing under the accepted project archival contract. |
 | [M1-03](https://github.com/MrQuality/kehila/issues/28) | B-004/B-006; M1-02 | Project-defined types, application/custom fields, hidden/optional/required modes, and five initial value kinds. Protect application-defined fields from project removal, archival, and retyping; specify trusted upgrade of built-in definitions. Verify hidden-value preservation/write rejection, required-field changes under contention, and safe definition evolution. |
 | [M1-04](https://github.com/MrQuality/kehila/issues/29) | B-004/B-006; M1-03 | Multiple workflows, statuses, defaults, permitted workflows per type, phase restrictions, and configuration archival. Verify phase derivation, initial/default replacements, reference preservation, and zero implicit usage. |
@@ -56,6 +56,16 @@ administration surface expands with them. Q-016 is resolved for M1; Q-014 grant
 assignment and revocation remain B-007 work. Resource reservations, costs, and
 scheduling retain their later milestone placement. Their lifecycle effects
 must not be claimed by M1 checks.
+
+**Native storage evidence (2026-10-08):** [SP-002](../spikes/SP-002-postgresql-project-create.md)
+records bounded project-creation structure, role/protocol and fault/restore tests.
+It does not complete M1-01 or the access/identity slices. Planned follow-ups are
+[SP-003/#39](../spikes/SP-003-replay-codecs.md) under #26,
+[SP-004/#40](../spikes/SP-004-actor-authority.md) under #11 (related #32), and
+[SP-005/#41](../spikes/SP-005-project-target-allocation.md) under #27.
+Migration, payload identity protection, native clock and compactor integration
+remain #26 delivery work. Install the separately verified payload-identity guard; preserve the frozen failure and
+missing-product checks when promoting experiments into regressions.
 
 <a id="b-001"></a>
 ## B-001 — Establish the product planning baseline
@@ -165,7 +175,7 @@ Show that readers never observe an accepted archive with a stale current-work
 selection, or an accepted selection clear with an uncommitted archive. Exercise
 crashes between physical steps, racing selection changes, duplicate retries,
 and restore from a backup. The chosen protocol must respect the reference
-design's ban on multi-document database transactions.
+design's accepted [bounded-transaction direction](../architecture/ADR-102-postgresql-transactions.md).
 
 <a id="b-006"></a>
 ## B-006 — Deliver the first local project/task interface

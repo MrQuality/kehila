@@ -110,7 +110,7 @@ fn decide_replay<Request: Eq + Clone, Result: Clone, Scope: Clone>(
     let recorded = recorded.cloned().map(|success| {
         OperationRecord::Full(RetainedOperation {
             success,
-            committed_at_ms: 1,
+            recorded_at_ms: 1,
             request_fingerprint: RequestFingerprint {
                 codec_version: 1,
                 sha256: [1; 32],
@@ -140,7 +140,7 @@ fn expiry_boundary_and_tombstones_never_become_unseen_operations() {
             result: 7,
             required_grants: vec!["edit"],
         },
-        committed_at_ms: 100,
+        recorded_at_ms: 100,
         request_fingerprint: RequestFingerprint {
             codec_version: 1,
             sha256: [1; 32],
@@ -251,6 +251,52 @@ fn expiry_boundary_and_tombstones_never_become_unseen_operations() {
 }
 
 #[test]
+fn recorded_origin_sets_expiry_without_commit_adjustment_or_grace() {
+    let origin = 100;
+    let observed_commit = origin + 2_000;
+    let full = RetainedOperation {
+        success: OperationSuccess {
+            key: key(),
+            request: 1,
+            result: 7,
+            required_grants: vec!["edit"],
+        },
+        recorded_at_ms: origin,
+        request_fingerprint: RequestFingerprint {
+            codec_version: 1,
+            sha256: [1; 32],
+        },
+    };
+    let fingerprint = full.request_fingerprint;
+    let record = OperationRecord::Full(full.clone());
+    // Synthetic commit time illustrates policy; this is not a database test.
+    for now in [
+        origin + REPLAY_PERIOD_MS,
+        observed_commit + REPLAY_PERIOD_MS,
+    ] {
+        assert_eq!(
+            decide_retained_replay(&key(), &1, Some(&record), &vec![], fingerprint, now, |_| {
+                true
+            }),
+            ReplayDecision::Reject(OperationError::ReplayExpired)
+        );
+    }
+    assert!(compact_expired(&full, origin + REPLAY_PERIOD_MS).is_ok());
+    assert_eq!(
+        decide_retained_replay(
+            &key(),
+            &1,
+            Some(&record),
+            &vec![],
+            fingerprint,
+            origin - 1,
+            |_| true
+        ),
+        ReplayDecision::Reject(OperationError::InvalidOperation)
+    );
+}
+
+#[test]
 fn retention_rejects_timestamp_overflow_and_incoherent_fingerprints() {
     let mut full = RetainedOperation {
         success: OperationSuccess {
@@ -259,7 +305,7 @@ fn retention_rejects_timestamp_overflow_and_incoherent_fingerprints() {
             result: 7,
             required_grants: vec!["edit"],
         },
-        committed_at_ms: u64::MAX,
+        recorded_at_ms: u64::MAX,
         request_fingerprint: RequestFingerprint {
             codec_version: 1,
             sha256: [1; 32],
@@ -285,7 +331,7 @@ fn retention_rejects_timestamp_overflow_and_incoherent_fingerprints() {
         ),
         ReplayDecision::Reject(OperationError::InvalidOperation)
     );
-    full.committed_at_ms = 1;
+    full.recorded_at_ms = 1;
     let record = OperationRecord::Full(full);
     assert_eq!(
         decide_retained_replay(

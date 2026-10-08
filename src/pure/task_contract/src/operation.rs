@@ -137,7 +137,9 @@ pub struct RequestFingerprint {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RetainedOperation<Request, Result, Scope> {
     pub success: OperationSuccess<Request, Result, Scope>,
-    pub committed_at_ms: u64,
+    /// Server-recorded origin sampled near the end of the successful transaction.
+    /// The remaining persistence/commit delay is accepted; replay adds no grace.
+    pub recorded_at_ms: u64,
     pub request_fingerprint: RequestFingerprint,
 }
 
@@ -166,7 +168,7 @@ pub fn compact_expired<Request, Outcome, Scope: Clone>(
         return Err(OperationError::InvalidReference);
     }
     let deadline = record
-        .committed_at_ms
+        .recorded_at_ms
         .checked_add(REPLAY_PERIOD_MS)
         .ok_or(OperationError::InvalidOperation)?;
     if now_ms < deadline {
@@ -236,10 +238,10 @@ pub fn decide_replay<Request: Eq, Result: Clone, Scope>(
             if record.request_fingerprint != request_fingerprint {
                 return ReplayDecision::Reject(OperationError::InvalidReference);
             }
-            let Some(deadline) = record.committed_at_ms.checked_add(REPLAY_PERIOD_MS) else {
+            let Some(deadline) = record.recorded_at_ms.checked_add(REPLAY_PERIOD_MS) else {
                 return ReplayDecision::Reject(OperationError::InvalidOperation);
             };
-            if now_ms < record.committed_at_ms {
+            if now_ms < record.recorded_at_ms {
                 return ReplayDecision::Reject(OperationError::InvalidOperation);
             }
             if now_ms >= deadline {
