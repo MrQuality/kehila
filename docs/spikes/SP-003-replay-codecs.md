@@ -45,13 +45,14 @@
 | R01 exact request goldens, both units, UTF8/escaping | Rust/Python bytes and digest agree; Rust decode equals the actual typed command |
 | R02 changed field, boundary concatenation and Unicode normalization pairs | Different typed requests produce distinct bytes; no normalization |
 | R03 truncated/trailing/invalid UTF8/enum/version | Decoder rejects; no default/current-version fallback |
-| R04 retained request/fingerprint and tombstone retry | Equal intent replays before expiry; changed intent conflicts; equal expired intent stays expired using stored version |
+| R04 version-one request/fingerprint and tombstone retry | Equal intent replays before expiry; changed intent conflicts; equal expired intent stays expired with an explicitly supplied version-one fingerprint; production dispatch remains separate |
 | J01 complete result and configuration snapshot | Actual Rust result equals decoded saved data; every field retained, including populated normally empty seed collections |
 | J02 0, 2^53-1, 2^53, 2^53+1, i64::MAX+1, u64::MAX | Exact decimal strings and exact typed u64 after JSONB retrieval |
 | J03 fractional/negative/overflow/leading-zero/null/missing/extra fields | Strict wire decoder rejects rather than rounds/defaults/ignores |
 | J04 vector reorder, object-key reorder, Unicode | Array order remains meaningful; object order does not; exact strings retained |
 | J05 stored version, unknown versions, frozen version-one fixtures | Version one remains readable; unknown versions fail closed; future codecs explicitly untested |
 | I01 empty/128/129-byte IDs, multibyte boundary, NUL | Record current pure acceptance and proposed storage acceptance separately; NUL rejected by PostgreSQL text/JSONB |
+| I03 identifier whitespace fidelity | Persist leading/trailing, whitespace-only, tab/newline and non-breaking-space IDs; raw single-cell and JSON retrieval preserve exact UTF8 bytes |
 | D01 BYTEA, JSONB and unrestricted numeric | Actual PostgreSQL round trips match Rust/Python expectations; numeric can retain u64 but float bridges can lose precision |
 
 ## Environment and reproduction
@@ -155,6 +156,38 @@ The reproduction guide now states Rust 1.88+ and explains the temporary
 task_worker -> mongodb -> sha2 build coupling. Production hashing ownership
 requires a direct dependency before promotion. No codec/identifier product
 decision or additional database-engine spike follows automatically from R09.
+
+### SP-003-R10 - 2026-10-09, identifier fidelity follow-up completed
+
+The expanded matrix reproduced the SQL reader defect before repair: the ten
+existing groups passed and I03 failed because broad whitespace stripping
+changed the retrieved identifier. Cleanup completed without errors. Focused
+output-format regression tests also failed against that reader and passed
+after it was changed to remove only psql's final record newline.
+
+R10 passed eight Rust tests and all eleven grouped Rust/Python/PostgreSQL
+records on Windows/WSL2 and PostgreSQL 16.15, with no failed/blocked records
+or cleanup errors. Seven identifier cases cover leading/trailing spaces,
+whitespace-only values, tabs/newlines and non-breaking spaces. Each was
+persisted in a proposed-domain column and retrieved through both raw single-
+cell output and JSON string encoding, preserving exact content and UTF8 bytes.
+The unchanged 256 MiB/one-CPU/128-process ceilings, isolation and memory/storage
+preflights were verified again.
+
+The [R10 summary](../../experiments/SP-003/results.identifiers.json) records
+the final source fingerprints and the expected pre-fix I03 failure with its
+runner fingerprint. R08 and R09 summaries remain unchanged. Two shared Python
+tests guard output formatting without services; actual persistence is proved
+by the separate native matrix. Full staged verification of the correction code
+passed, including 88 Python tests (86 passed, two POSIX-only skips on Windows),
+workspace Rust/Go checks, pure codec checks and live task-path regression,
+including 48 competing schedules. Final-head hosted CI is reported on PR #43.
+
+The replay test and DoD now name the evidence precisely: version-one replay,
+fingerprint coherence and unsupported-version rejection. They do not verify
+an adapter selecting its encoder from a stored database record. That dispatch,
+direct production hashing ownership, first-parse duplicate-key rejection and
+coordinated identifier acceptance remain #26 prerequisites.
 
 ### Earlier bounded attempts
 
@@ -270,7 +303,7 @@ fixtures and add genuine older/newer fixtures when a second version is designed.
 
 ## Handoff
 
-Latest completed native run: R09, with R08 retained as historical evidence.
+Latest completed native run: R10, with R08/R09 retained as historical evidence.
 The bounded recommendation is ready for
 maintainer assessment. No additional database-engine spike is required for
 these questions. Next decision: accept or revise the representations and
@@ -296,14 +329,14 @@ identifier policy before promoting them into production code.
 
 1. **Goal & Context:** Preserve identifier whitespace in the PostgreSQL verification harness and distinguish tested version-one replay from future stored-version adapter dispatch. Retain direct hashing ownership, duplicate-key rejection and coordinated identifier acceptance as production prerequisites.
 2. **Definition of Done:**
-   - [ ] Real PostgreSQL regression cases detect the current whitespace loss before repair, then preserve leading, trailing, whitespace-only and embedded whitespace identifiers after repair.
-   - [ ] Identifier values are persisted in the proposed text domain and retrieved through a lossless JSON representation, with an additional raw single-cell reader check.
-   - [ ] Pure acceptance remains unchanged; Rust/Python checks explicitly cover whitespace identifiers.
+   - [x] Real PostgreSQL regression cases detect the current whitespace loss before repair, then preserve leading, trailing, whitespace-only and embedded whitespace identifiers after repair.
+   - [x] Identifier values are persisted in the proposed text domain and retrieved through a lossless JSON representation, with an additional raw single-cell reader check.
+   - [x] Pure acceptance remains unchanged; Rust/Python checks explicitly cover whitespace identifiers.
    - [x] Evidence wording limits completed work to version-one replay/fingerprint coherence and unknown-version rejection; production dispatch stays in #26.
-   - [ ] Separate native evidence records final source fingerprints while R08/R09 summaries remain unchanged.
-   - [ ] Required staged checks pass; final-head CI and issue/PR publication are reported on GitHub. PR #43 retains its existing status.
+   - [x] Separate native evidence records final source fingerprints while R08/R09 summaries remain unchanged.
+   - [x] Correction code passes required staged checks; final-head CI and issue/PR publication completion are tracked on GitHub. PR #43 retains its existing status.
 3. **Dependencies & Prerequisites:** Existing locked tools and pinned PostgreSQL image, Podman with enforced resource ceilings, unchanged 3 GiB memory and 2 GiB storage preflights. Existing development services are required separately for full staged verification.
 4. **Risks & Mitigations:** Broad whitespace stripping destroys valid identifiers. Remove only psql's final record newline from raw single-cell output; JSON-encode retrieved identifiers to preserve data independently of line framing. Compare exact UTF8 bytes and include whitespace-only and embedded-newline cases. Preserve earlier run summaries.
 5. **Spikes & Open Questions:** No new design spike or invented version two. Actual stored-version dispatch belongs to the production adapter. Codec/identifier product acceptance remains separate.
-6. **High-Level Architecture / File Changes:** Extend experiments/SP-003/run.py and tests.rs with whitespace cases, correct the SQL output reader, clarify this record and the reproduction guide, and publish a new native observation summary. No production schema, dependency graph or domain-validation change.
+6. **High-Level Architecture / File Changes:** Extend experiments/SP-003/run.py and tests.rs with whitespace cases, correct the SQL output reader, add shared Python output-format regression tests, clarify this record and the reproduction guide, and publish a new native observation summary. No production schema, dependency graph or domain-validation change.
 7. **Verification & Testing Plan:** Retain a failing real-database run against the new cases before repairing the reader. Run the complete native matrix and pure checks after repair, verify source fingerprints and prior-summary stability, then complete staged verification and final-head CI. Update #26/#39 and add a final summary comment to PR #43 without changing its status or merging.

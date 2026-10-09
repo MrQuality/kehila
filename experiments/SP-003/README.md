@@ -103,6 +103,10 @@ R08's original observation summary is retained unchanged; the corrected vector
 has separate follow-up evidence in [results.followup.json](results.followup.json)
 (R09), including the executed source hashes and real probe results.
 
+Whitespace identifier fidelity has separate R10 evidence in
+[results.identifiers.json](results.identifiers.json). The complete native matrix
+has eleven grouped checks; R08/R09 summaries retain their original fingerprints.
+
 The storage probe and database both have unique names and ownership labels
 registered before launch. Probe cleanup runs in finally, including after the
 local Podman client times out. Cleanup diagnostics cannot replace the primary
