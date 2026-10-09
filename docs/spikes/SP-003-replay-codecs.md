@@ -99,9 +99,18 @@ Eight actual Rust domain/codec tests passed. Ten grouped Python/PostgreSQL
 records passed; there were no failing or blocked records and no cleanup errors
 in this final run. Group counts are not independent product acceptance cases.
 
+Subsequent fixture inspection found that R08's second frozen request name
+contained two ASCII question marks instead of its intended multibyte characters.
+Its frozen bytes and digest agreed with that corrupted name, so consistency
+alone did not detect the loss. Separate dynamic Unicode and database cases
+were intact, but R08 does not establish the intended frozen multibyte vector.
+The original summary and source hashes remain unchanged. A new code-point/byte-
+length guard detects this regression independently; corrected execution must
+be reported separately rather than attributed to R08.
+
 | Case | Observed | Outcome |
 | --- | --- | --- |
-| R01/R02 | Frozen Rust/Python request bytes and SHA-256 agree for both units; escaping, exact Unicode and length boundaries distinguish intent | PASS |
+| R01/R02 | Frozen Rust/Python bytes and SHA-256 agree for both units, including the corrupted ASCII replacement; separate dynamic Unicode/escaping cases distinguish intent | PASS with frozen-vector limitation above |
 | R03 | Every truncated prefix, trailing bytes, invalid field UTF8, unit and version fail explicitly | PASS |
 | R04 | Pure retained records replay the saved result, changed intent conflicts, inconsistent fingerprints reject; permanent tombstones remain expired/conflicting with version-one hashing | PASS, pure protocol only |
 | J01 | Complete actual Rust result/configuration equality after decode; optional IDs, all enum variants and populated normally empty seed collections covered | PASS |
@@ -116,6 +125,36 @@ domain-invalid combinations, rather than certifying configuration admission.
 Database JSONB fixtures cover the real revision-one seed with scalar/order
 variants. Production relational reconstruction of all configuration variants
 remains outside this spike.
+
+### SP-003-R09 - 2026-10-09, correction follow-up completed
+
+Eight Rust tests and all ten grouped Rust/Python/PostgreSQL records passed
+again on Windows/WSL2, Podman and PostgreSQL 16.15, with no failed/blocked
+records or cleanup errors. This run verifies the corrected frozen multibyte
+request vector with its independent code-point and seven-byte UTF8 guard,
+and the request decoder that moves owned strings without cloning. Actual
+256 MiB/one-CPU/128-process database ceilings were verified again, with
+networking and TCP listening disabled. Production/domain inputs are unchanged.
+
+Separate real Podman checks passed for storage-probe success, nonzero exit and
+timeout after confirmed container startup. Each verified container absence
+after finally cleanup. Before the fix, the timeout check detected a leftover
+named --rm probe and recovered it. Three shared Python tests cover primary-error
+preservation, cleanup-failure rejection and missing/malformed ownership data;
+they complement the actual container checks rather than certifying remote I/O.
+
+The [R09 summary](../../experiments/SP-003/results.followup.json) records its
+own source fingerprints and probe results. R08's summary remains unchanged
+and identifies the earlier corrupted fixture. Full staged verification of the
+correction code passed: 86 Python tests (two POSIX-only skips on Windows),
+workspace Rust/Go checks, SP-003 pure cases and live task-path regression,
+including 48 competing create/update/retry/reuse pairs. Final-head hosted CI
+status is recorded on PR #43 separately from native database evidence.
+
+The reproduction guide now states Rust 1.88+ and explains the temporary
+task_worker -> mongodb -> sha2 build coupling. Production hashing ownership
+requires a direct dependency before promotion. No codec/identifier product
+decision or additional database-engine spike follows automatically from R09.
 
 ### Earlier bounded attempts
 
@@ -224,7 +263,8 @@ fixtures and add genuine older/newer fixtures when a second version is designed.
 
 ## Handoff
 
-Latest completed native run: R08. The bounded recommendation is ready for
+Latest completed native run: R09, with R08 retained as historical evidence.
+The bounded recommendation is ready for
 maintainer assessment. No additional database-engine spike is required for
 these questions. Next decision: accept or revise the representations and
 identifier policy before promoting them into production code.
@@ -233,12 +273,12 @@ identifier policy before promoting them into production code.
 
 1. **Goal & Context:** Repair the frozen multibyte request fixture and prevent a self-consistent ASCII replacement from passing unnoticed. Give the storage-preflight container the same explicit ownership and cleanup guarantees as the database. Preserve the original R08 execution evidence.
 2. **Definition of Done:**
-   - [ ] An independent expected-code-point check fails against the existing corrupted fixture and passes after correction.
-   - [ ] Normal, failing and timed-out probes leave no owned container; timeout verification uses a real Podman process and retains its primary error.
-   - [ ] Request decoding moves owned strings without extra clones or unchecked conversion.
-   - [ ] Rust 1.88+ and temporary MongoDB-to-sha2 build coupling are documented.
-   - [ ] A new native run records corrected source fingerprints; R08 observations remain unchanged.
-   - [ ] Full staged verification and final-head CI pass; related public review records are updated.
+   - [x] An independent expected-code-point check fails against the existing corrupted fixture and passes after correction.
+   - [x] Normal, failing and timed-out probes leave no owned container; timeout verification uses a real Podman process and retains its primary error.
+   - [x] Request decoding moves owned strings without extra clones or unchecked conversion.
+   - [x] Rust 1.88+ and temporary MongoDB-to-sha2 build coupling are documented.
+   - [x] A new native run records corrected source fingerprints; R08 observations remain unchanged.
+   - [x] Full staged verification passes for correction code. Final-head CI and public publication completion are tracked on PR #43 and issues #39/#26.
 3. **Dependencies & Prerequisites:** Existing locked Rust dependencies, Python 3.10+, Podman with enforceable cgroup limits, pinned PostgreSQL image, unchanged 3 GiB host-memory and storage preflights. Existing development services are needed separately for full staged verification.
 4. **Risks & Mitigations:** UTF8 output cannot repair characters already lost upstream: pin expected Unicode code points and byte lengths independently. Client timeout does not guarantee remote container exit: register an explicit name/label before launch and reconcile/remove it in finally. Keep original execution errors and expose cleanup failures.
 5. **Spikes & Open Questions:** No new design spike. Verify the identified timeout path against an actual disposable Podman container. Existing production codec/identifier recommendations remain pending assessment.

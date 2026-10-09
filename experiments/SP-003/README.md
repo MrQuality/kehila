@@ -92,7 +92,8 @@ The second request vector pins U+5B57, U+00E9, quote and backslash: seven
 UTF8 bytes. The pure check independently pins these code points and length,
 in addition to comparing Rust/Python encodings and the frozen SHA-256 digest.
 R08's original observation summary is retained unchanged; the corrected vector
-requires separate follow-up execution evidence.
+has separate follow-up evidence in [results.followup.json](results.followup.json)
+(R09), including the executed source hashes and real probe results.
 
 The storage probe and database both have unique names and ownership labels
 registered before launch. Probe cleanup runs in finally, including after the
