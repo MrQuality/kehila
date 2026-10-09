@@ -20,7 +20,7 @@
 2. **Definition of Done:**
    - [x] Compare binary request bytes with incidental/canonical JSON alternatives and document a version-one recommendation.
    - [x] Verify actual ProjectCreateCommand and ProjectCreateResult Rust types, complete configuration fields, both units, ordered arrays, optional values and enum labels.
-   - [x] Verify u64 precision, malformed values, digest coherence, changed intent and stored-version dispatch.
+   - [x] Verify u64 precision, malformed values, version-one digest/replay coherence, changed intent and unknown-version rejection. Production stored-version adapter dispatch remains in #26.
    - [x] Document the mismatch between current String-backed ID acceptance and the proposed text domain; recommend a boundary without changing pure acceptance.
    - [x] Publish source-linked observations, failed/blocked cases, reproduction instructions and production follow-up. No E2E creation-route claim.
 3. **Dependencies & Prerequisites:** Existing Rust domain crate, existing locked serde_json/SHA-256 tooling, Podman and the SP-002 PostgreSQL 16 image pin. Inspect installed versions, free RAM/disk, machine/container state and image availability before database startup. Use one disposable, labelled database with no published ports or credentials. Shared full verification requires the existing development services, separately from this database.
@@ -254,6 +254,13 @@ Recommendation awaits maintainer assessment; no new D-* decision is accepted
 by executing this spike. #39 can be assessed against its scoped deliverables;
 keep it open until that assessment. #26 retains production implementation.
 
+Production promotion also requires direct sha2 dependency ownership in the
+fingerprinting crate and duplicate-key rejection during the first parse of
+original request JSON, before Value/JSONB loses that information. The application
+parser can enforce this without requiring a separate gateway. After identifier
+policy acceptance, align authoritative domain validation, storage constraints,
+interfaces and imports together, coordinating identity types with B-007.
+
 After acceptance, record the chosen codec and identifier policy, align pure
 ID validation and schemas without silent compatibility changes, then implement
 the native migration/roles and adapter with stored-version dispatch, exact
@@ -284,3 +291,19 @@ identifier policy before promoting them into production code.
 5. **Spikes & Open Questions:** No new design spike. Verify the identified timeout path against an actual disposable Podman container. Existing production codec/identifier recommendations remain pending assessment.
 6. **High-Level Architecture / File Changes:** Correct request-v1.json and its pure guard; move shared container cleanup into a small experiment resource module used by the probe and database; add an explicit real-probe verification command; simplify decoder ownership; publish a separate follow-up summary and documentation.
 7. **Verification & Testing Plan:** Retain the failing fixture guard before repair, then run pure codec checks. Verify real probe success, nonzero exit and deadline cleanup. Run a fresh native PostgreSQL matrix with final source hashes and required staged checks. Preserve R08 rather than relabeling its fixture evidence.
+
+## Identifier fidelity and evidence clarification plan (2026-10-09)
+
+1. **Goal & Context:** Preserve identifier whitespace in the PostgreSQL verification harness and distinguish tested version-one replay from future stored-version adapter dispatch. Retain direct hashing ownership, duplicate-key rejection and coordinated identifier acceptance as production prerequisites.
+2. **Definition of Done:**
+   - [ ] Real PostgreSQL regression cases detect the current whitespace loss before repair, then preserve leading, trailing, whitespace-only and embedded whitespace identifiers after repair.
+   - [ ] Identifier values are persisted in the proposed text domain and retrieved through a lossless JSON representation, with an additional raw single-cell reader check.
+   - [ ] Pure acceptance remains unchanged; Rust/Python checks explicitly cover whitespace identifiers.
+   - [x] Evidence wording limits completed work to version-one replay/fingerprint coherence and unknown-version rejection; production dispatch stays in #26.
+   - [ ] Separate native evidence records final source fingerprints while R08/R09 summaries remain unchanged.
+   - [ ] Required staged checks pass; final-head CI and issue/PR publication are reported on GitHub. PR #43 retains its existing status.
+3. **Dependencies & Prerequisites:** Existing locked tools and pinned PostgreSQL image, Podman with enforced resource ceilings, unchanged 3 GiB memory and 2 GiB storage preflights. Existing development services are required separately for full staged verification.
+4. **Risks & Mitigations:** Broad whitespace stripping destroys valid identifiers. Remove only psql's final record newline from raw single-cell output; JSON-encode retrieved identifiers to preserve data independently of line framing. Compare exact UTF8 bytes and include whitespace-only and embedded-newline cases. Preserve earlier run summaries.
+5. **Spikes & Open Questions:** No new design spike or invented version two. Actual stored-version dispatch belongs to the production adapter. Codec/identifier product acceptance remains separate.
+6. **High-Level Architecture / File Changes:** Extend experiments/SP-003/run.py and tests.rs with whitespace cases, correct the SQL output reader, clarify this record and the reproduction guide, and publish a new native observation summary. No production schema, dependency graph or domain-validation change.
+7. **Verification & Testing Plan:** Retain a failing real-database run against the new cases before repairing the reader. Run the complete native matrix and pure checks after repair, verify source fingerprints and prior-summary stability, then complete staged verification and final-head CI. Update #26/#39 and add a final summary comment to PR #43 without changing its status or merging.
