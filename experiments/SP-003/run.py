@@ -58,6 +58,11 @@ class Cases:
 def pure_cases(cases):
     def request_goldens():
         golden = json.loads((SOURCE / "fixtures/request-v1.json").read_text(encoding="utf-8"))
+        require(len(golden) == 2, "Expected two frozen request vectors")
+        unicode_name = golden[1]["request"]["name"]
+        require([ord(c) for c in unicode_name] == [0x5B57, 0xE9, 0x22, 0x5C]
+                and len(unicode_name.encode("utf-8")) == 7,
+                "Frozen Unicode vector lost its intended codepoints or UTF8 byte length")
         for row in golden:
             value = cases.oracle("request", row["request"])
             expected = request_bytes(row["request"])
