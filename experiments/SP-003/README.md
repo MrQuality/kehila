@@ -7,7 +7,7 @@ of codec/identifier choices remains separate.
 
 ## Reproduction
 
-Use Python 3.10+, the repository's locked Rust toolchain/dependencies and Podman
+Use Python 3.10+, Rust 1.88+ with the repository's locked dependencies and Podman
 on Windows or Linux. Build the existing workspace normally first if its locked
 dependencies are not cached; the oracle build then uses Cargo offline. No new
 package graph or Python database driver is required. Rustfmt applies to these
@@ -99,6 +99,14 @@ upstream notices when packaging. These libraries are already workspace inputs;
 dependency security/maintenance qualification remains subject to the repository
 dependency policy, not established by this experiment. Changes use the existing
 locked update/review process. No library source was copied into this prototype.
+
+The build temporarily obtains sha2 through task_worker -> mongodb -> sha2.
+Changing the legacy worker's dependency graph can therefore break this prototype
+build even when the codec is unchanged. Building that worker also brings its
+existing Rust 1.88 minimum and adapter compilation into shared pure verification;
+pure verification still performs no service I/O. This is bounded spike coupling,
+not the production dependency design. Before promotion, the crate that owns
+hashing must declare sha2 directly and own its dependency/update review.
 
 The build selects exact Cargo-reported artifacts, rejects ambiguous libraries
 and preserves compiler outputs under Cargo's artifact directory. It does not

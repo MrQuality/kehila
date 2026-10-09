@@ -36,7 +36,7 @@
 - experiments/SP-002/common.py hashes experimental JSON bytes. It is not the proposed production binary codec.
 - ProjectCreateResult includes the Project, complete Configuration and SeedProfile. Revision/sequence values are u64; configuration vectors retain order under derived equality.
 - The legacy Rust task worker and Go task API carry the old task contract, not the M1 creation command. No Go/browser M1 creation consumer is implemented. Existing task-path integration does not establish M1 codec compatibility.
-- Operation tokens already require 1?128 ASCII graphic bytes. Project/actor/other opaque IDs currently lack the proposed universal 128-byte/NUL restriction. Project names already reject controls. The proposed ID limit remains subject to maintainer acceptance and later pure-contract alignment.
+- Operation tokens already require 1 to 128 ASCII graphic bytes. Project/actor/other opaque IDs currently lack the proposed universal 128-byte/NUL restriction. Project names already reject controls. The proposed ID limit remains subject to maintainer acceptance and later pure-contract alignment.
 
 ### Planned test matrix
 
@@ -93,7 +93,7 @@ the observed rootless resource-control limitation.
 
 ## Run summaries
 
-### SP-003-R08 ? 2026-10-09, completed
+### SP-003-R08 - 2026-10-09, completed
 
 Eight actual Rust domain/codec tests passed. Ten grouped Python/PostgreSQL
 records passed; there were no failing or blocked records and no cleanup errors
@@ -228,3 +228,19 @@ Latest completed native run: R08. The bounded recommendation is ready for
 maintainer assessment. No additional database-engine spike is required for
 these questions. Next decision: accept or revise the representations and
 identifier policy before promoting them into production code.
+
+## Verification correction plan (2026-10-09)
+
+1. **Goal & Context:** Repair the frozen multibyte request fixture and prevent a self-consistent ASCII replacement from passing unnoticed. Give the storage-preflight container the same explicit ownership and cleanup guarantees as the database. Preserve the original R08 execution evidence.
+2. **Definition of Done:**
+   - [ ] An independent expected-code-point check fails against the existing corrupted fixture and passes after correction.
+   - [ ] Normal, failing and timed-out probes leave no owned container; timeout verification uses a real Podman process and retains its primary error.
+   - [ ] Request decoding moves owned strings without extra clones or unchecked conversion.
+   - [ ] Rust 1.88+ and temporary MongoDB-to-sha2 build coupling are documented.
+   - [ ] A new native run records corrected source fingerprints; R08 observations remain unchanged.
+   - [ ] Full staged verification and final-head CI pass; related public review records are updated.
+3. **Dependencies & Prerequisites:** Existing locked Rust dependencies, Python 3.10+, Podman with enforceable cgroup limits, pinned PostgreSQL image, unchanged 3 GiB host-memory and storage preflights. Existing development services are needed separately for full staged verification.
+4. **Risks & Mitigations:** UTF8 output cannot repair characters already lost upstream: pin expected Unicode code points and byte lengths independently. Client timeout does not guarantee remote container exit: register an explicit name/label before launch and reconcile/remove it in finally. Keep original execution errors and expose cleanup failures.
+5. **Spikes & Open Questions:** No new design spike. Verify the identified timeout path against an actual disposable Podman container. Existing production codec/identifier recommendations remain pending assessment.
+6. **High-Level Architecture / File Changes:** Correct request-v1.json and its pure guard; move shared container cleanup into a small experiment resource module used by the probe and database; add an explicit real-probe verification command; simplify decoder ownership; publish a separate follow-up summary and documentation.
+7. **Verification & Testing Plan:** Retain the failing fixture guard before repair, then run pure codec checks. Verify real probe success, nonzero exit and deadline cleanup. Run a fresh native PostgreSQL matrix with final source hashes and required staged checks. Preserve R08 rather than relabeling its fixture evidence.
