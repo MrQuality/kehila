@@ -13,6 +13,7 @@ import time
 import uuid
 
 from build import build, command, SOURCE, REPO
+from containers import cleanup, run_probe
 
 # Reuse the established host/resource checks and immutable PostgreSQL image pin.
 sys.path.insert(0, str(REPO / "experiments/SP-002"))
@@ -131,22 +132,6 @@ def literal(value):
     return "'" + value.replace("'", "''") + "'"
 
 
-def cleanup(container):
-    """Remove only this run's labelled container and its anonymous volumes."""
-    try:
-        inspection = subprocess.run(["podman", "inspect", container], capture_output=True, timeout=15)
-        if inspection.returncode:
-            exists = subprocess.run(["podman", "container", "exists", container], capture_output=True, timeout=15)
-            return [] if exists.returncode == 1 else ["Unable to prove owned container absence"]
-        details = json.loads(inspection.stdout)[0]
-        if details["Config"]["Labels"].get("purpose") != "kehila-sp003":
-            return ["Unexpected container ownership label; cleanup refused"]
-        removal = subprocess.run(["podman", "rm", "--force", "--volumes", container], capture_output=True, timeout=30)
-        return [] if removal.returncode == 0 else ["Owned container removal failed"]
-    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
-        return ["Cleanup failed: " + type(error).__name__]
-
-
 def source_fingerprints():
     inputs = [*SOURCE.glob("*.rs"), *SOURCE.glob("*.py"), *SOURCE.glob("fixtures/*.json")]
     return {p.relative_to(SOURCE).as_posix(): hashlib.sha256(p.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
@@ -248,8 +233,9 @@ def main():
             runtime["rootless"] = info["host"]["security"]["rootless"]
             runtime["cgroup_controllers"] = info["host"]["cgroupControllers"]
             command(["podman", "image", "inspect", IMAGE], timeout=20)
-            storage_free = int(command(["podman", "run", "--rm", "--network=none", "--memory=128m", IMAGE,
-                                        "sh", "-c", "df -Pk / | tail -1 | awk '{print $4}'"]).strip())*1024
+            storage_free = int(run_probe(IMAGE, container + "-preflight",
+                                         ["sh", "-c", "df -Pk / | tail -1 | awk '{print $4}'"],
+                                         cleanup_errors).strip())*1024
             require(storage_free >= 2*1024**3, "At least 2 GiB free container storage required")
             runtime.update(storage_free_bytes=storage_free, cpu_count=os.cpu_count(),
                            podman=command(["podman", "--version"]).decode().strip(),

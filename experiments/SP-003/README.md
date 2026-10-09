@@ -88,6 +88,28 @@ units. `fixtures/result-v1.json` freezes the actual trusted Rust revision-one
 seed result and snapshot. Changes to these fixtures require explicit review;
 do not regenerate them automatically to conceal compatibility changes.
 
+The second request vector pins U+5B57, U+00E9, quote and backslash: seven
+UTF8 bytes. The pure check independently pins these code points and length,
+in addition to comparing Rust/Python encodings and the frozen SHA-256 digest.
+R08's original observation summary is retained unchanged; the corrected vector
+requires separate follow-up execution evidence.
+
+The storage probe and database both have unique names and ownership labels
+registered before launch. Probe cleanup runs in finally, including after the
+local Podman client times out. Cleanup diagnostics cannot replace the primary
+execution error and also block successful runs when removal fails. To exercise
+real probe success, nonzero exit and deadline paths on an existing connection:
+
+```sh
+python experiments/SP-003/check_probe.py --podman-connection YOUR_EXISTING_CONNECTION
+```
+
+This command uses the pinned image, no networking, 128 MiB memory, one CPU and
+64 processes per disposable probe. The timeout case proves actual startup from
+captured container output, then verifies container absence. It also removes
+leftovers if the verification detects a regression. Error bookkeeping tests
+in the shared Python suite complement these real Podman checks.
+
 ## Dependencies and reuse
 
 The prototype links Cargo-reported artifacts from the existing locked workspace:
