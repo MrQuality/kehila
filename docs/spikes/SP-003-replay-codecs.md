@@ -368,3 +368,18 @@ Production duplicate-key handling, direct hashing ownership, coordinated identif
 validation and stored-version/corruption handling remain #26 prerequisites. Public
 String-backed wrappers require an authoritative enforcement boundary; adding a
 constructor without controlling direct construction would not enforce the policy.
+
+## Build lifecycle and formatting enforcement plan (2026-10-09)
+
+1. **Goal & Context:** Bound disposable SP-003 compiler output lifetime while keeping frozen codec checks in shared verification. Enforce standalone Rust formatting automatically. Preserve native evidence and production scope.
+2. **Definition of Done:**
+   - [ ] Each invocation owns a unique temporary build directory that stays alive through oracle use and is removed after success or failure.
+   - [ ] Compilation failures, consumer failures and overlapping invocations have regression coverage; shared Cargo dependencies and retained observations are not removed.
+   - [ ] All oracle build entry points reject standalone Rust formatting failures before compilation.
+   - [ ] Pure checks, native PostgreSQL execution, full staged checks and final-head CI pass with separate evidence.
+   - [ ] Update reproduction documentation, #26/#39 and the final PR #43 summary without merging or changing PR status.
+3. **Dependencies & Prerequisites:** Existing locked Rust dependencies, Python 3.10+, rustfmt and Podman. Existing native memory/storage/cgroup requirements remain unchanged. No dependency graph change.
+4. **Risks & Mitigations:** A shared output path would collide across runs and with Windows executable locks. Use unique context-managed output directories; callers retain ownership until their subprocesses finish. Do not delete old build directories or shared Cargo cache automatically. Preserve all historical source fingerprints and observation files.
+5. **Spikes & Open Questions:** No new design spike. Narrow worker dependency coupling remains a P2 build-boundary follow-up; production decoder bounds remain a P1 requirement in #26. NULL-versus-empty SQL output is a P3 limitation for future nullable checks; use typed output rather than a colliding sentinel when that support is needed.
+6. **High-Level Architecture / File Changes:** Make build.py a context-managed owner, update check.py/run.py callers and standalone behavior, add lifecycle tests, enforce rustfmt for the three standalone Rust files, and update experiment/report documentation. Keep codec bytes, domain policy and database schema unchanged.
+7. **Verification & Testing Plan:** Retain failing lifecycle regressions before repair. Verify cleanup after partial compile, consumer failure and concurrent use; independently verify a real rustfmt failure. Run pure codec checks and an isolated native PostgreSQL run with exact source hashes. Complete staged and hosted checks, retaining older observations unchanged.
