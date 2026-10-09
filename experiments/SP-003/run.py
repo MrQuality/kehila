@@ -232,7 +232,11 @@ def main():
         raise RuntimeError("Artifacts must be under the ignored .kehila directory")
     create_artifact_directory(root)
     fingerprints = source_fingerprints()
-    binary, rust_output = build()
+    with build() as (binary, rust_output):
+        execute_run(args, root, fingerprints, binary, rust_output)
+
+
+def execute_run(args, root, fingerprints, binary, rust_output):
     (root / "rust-tests.txt").write_text(rust_output, encoding="utf-8")
     cases = Cases(binary)
     pure_cases(cases)

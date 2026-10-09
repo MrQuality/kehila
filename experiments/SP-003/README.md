@@ -144,7 +144,15 @@ not the production dependency design. Before promotion, the crate that owns
 hashing must declare sha2 directly and own its dependency/update review.
 
 The build selects exact Cargo-reported artifacts, rejects ambiguous libraries
-and preserves compiler outputs under Cargo's artifact directory. It does not
+and creates uniquely owned temporary compiler outputs under Cargo's artifact
+directory. Callers hold a build context through all oracle use; outputs are removed
+on success, compilation/test failure or caller failure. Windows sharing/lock
+violations receive a bounded five-second cleanup retry; other errors fail
+immediately and exhausted retries fail visibly. Shared Cargo libraries
+and retained observation summaries are outside this cleanup scope. The standalone
+`python experiments/SP-003/build.py` command runs Rust tests and prints their
+output; it does not return an executable path for later use. Old build directories
+from previous versions are not automatically removed. It does not
 guess an rlib from a wildcard or mutate the production crate's derives.
 
 The proposed identifier rule is nonempty UTF8, at most 128 bytes, no U+0000,
