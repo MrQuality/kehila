@@ -2,6 +2,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -28,6 +29,7 @@ class BuildLifecycleTests(unittest.TestCase):
         self.artifacts = "\n".join(artifacts).encode()
         self.failure = None
         self.commands = []
+        self.actual_command = BUILD.command
         patcher = patch.object(BUILD, "command", side_effect=self.command)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -36,7 +38,9 @@ class BuildLifecycleTests(unittest.TestCase):
         self.commands.append(args)
         if args[0] == "cargo":
             return self.artifacts
-        if args[0] == "rustc":
+        if args[0] == "rustfmt":
+            stage = "format"
+        elif args[0] == "rustc":
             Path(args[args.index("-o") + 1]).write_bytes(b"partial executable")
             stage = "compile-tests" if "--test" in args else "compile-oracle"
         else:
@@ -109,3 +113,20 @@ class BuildLifecycleTests(unittest.TestCase):
                         BUILD.remove_build_directory(self.dependencies / "owned")
                 self.assertIs(raised.exception, error)
                 sleep.assert_not_called()
+
+    def test_format_failure_prevents_compilation(self):
+        self.failure = "format"
+        with self.assertRaisesRegex(RuntimeError, "format"):
+            with BUILD.build():
+                self.fail("Formatting failure must prevent compilation")
+        self.assertEqual(self.commands, [["rustfmt", "--edition", "2021", "--check",
+                                         str(SOURCE / "main.rs"), str(SOURCE / "codec.rs"),
+                                         str(SOURCE / "tests.rs")]])
+        self.assert_no_builds()
+
+    def test_command_failure_retains_stdout_diagnostics(self):
+        completed = subprocess.CompletedProcess([], 1, b"format diff", b"")
+        with patch.object(BUILD.subprocess, "run", return_value=completed):
+            # Bypass this class's build-command double to test real error reporting.
+            with self.assertRaisesRegex(RuntimeError, "format diff"):
+                self.actual_command(["rustfmt"])

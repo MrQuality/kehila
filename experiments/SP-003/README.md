@@ -11,7 +11,9 @@ Use Python 3.10+, Rust 1.88+ with the repository's locked dependencies and Podma
 on Windows or Linux. Build the existing workspace normally first if its locked
 dependencies are not cached; the oracle build then uses Cargo offline. No new
 package graph or Python database driver is required. Rustfmt applies to these
-standalone files separately from the workspace:
+standalone files separately from the workspace. Every oracle build now runs
+this formatting check before Cargo/rustc, including shared verification and
+direct runner commands; formatting failures retain their diff diagnostics:
 
 ```text
 rustfmt --edition 2021 --check experiments/SP-003/main.rs experiments/SP-003/codec.rs experiments/SP-003/tests.rs
@@ -202,3 +204,17 @@ declare sha2 in the crate that owns fingerprinting, and coordinate identifier
 validation across authoritative domain, storage, interface and import boundaries
 after policy acceptance. Constructors alone cannot enforce an invariant while
 public String-backed wrappers can still be constructed directly.
+
+
+Build lifecycle and formatting have separate R11 native observations in
+[results.lifecycle.json](results.lifecycle.json). Eight Rust tests and eleven
+grouped checks passed, with no final-run container cleanup errors and no newly
+owned build directory remaining. R08/R09/R10 evidence and fixtures remain
+unchanged. Eight shared Python tests cover build ownership, failures, overlapping
+contexts, Windows cleanup retry limits and formatting rejection/diagnostics.
+The build still obtains hashing transitively through the worker; replacing that
+coupling is a separate P2 follow-up, while codec goldens stay in shared verification.
+The raw SQL helper remains intended for known non-null single cells. Future
+nullable checks must use typed output to distinguish NULL from empty text without
+a sentinel collision. Production decoder resource bounds remain #26 delivery work,
+separate from accepting identifier-policy limits or validating historical values.

@@ -15,7 +15,7 @@ REPO = SOURCE.parents[1]
 def command(args, *, input=None, timeout=120):
     result = subprocess.run(args, cwd=REPO, input=input, capture_output=True, timeout=timeout)
     if result.returncode:
-        raise RuntimeError(result.stderr.decode(errors="replace"))
+        raise RuntimeError((result.stderr or result.stdout).decode(errors="replace"))
     return result.stdout
 
 
@@ -36,6 +36,8 @@ def remove_build_directory(root):
 @contextmanager
 def build():
     """Keep unique compiler outputs alive only while the caller uses the oracle."""
+    command(["rustfmt", "--edition", "2021", "--check",
+             *(str(SOURCE / name) for name in ("main.rs", "codec.rs", "tests.rs"))])
     messages = command(["cargo", "build", "--locked", "--offline", "-p", "task_worker",
                         "--lib", "--message-format=json"], timeout=450)
     artifacts = {name: set() for name in ("task_contract", "serde_json", "sha2")}

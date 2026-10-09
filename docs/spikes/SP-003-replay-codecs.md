@@ -303,7 +303,7 @@ fixtures and add genuine older/newer fixtures when a second version is designed.
 
 ## Handoff
 
-Latest completed native run: R10, with R08/R09 retained as historical evidence.
+Latest completed native run: R11, with R08/R09/R10 retained as historical evidence.
 The bounded recommendation is ready for
 maintainer assessment. No additional database-engine spike is required for
 these questions. Next decision: accept or revise the representations and
@@ -373,13 +373,44 @@ constructor without controlling direct construction would not enforce the policy
 
 1. **Goal & Context:** Bound disposable SP-003 compiler output lifetime while keeping frozen codec checks in shared verification. Enforce standalone Rust formatting automatically. Preserve native evidence and production scope.
 2. **Definition of Done:**
-   - [ ] Each invocation owns a unique temporary build directory that stays alive through oracle use and is removed after success or failure.
-   - [ ] Compilation failures, consumer failures and overlapping invocations have regression coverage; shared Cargo dependencies and retained observations are not removed.
-   - [ ] All oracle build entry points reject standalone Rust formatting failures before compilation.
-   - [ ] Pure checks, native PostgreSQL execution, full staged checks and final-head CI pass with separate evidence.
-   - [ ] Update reproduction documentation, #26/#39 and the final PR #43 summary without merging or changing PR status.
+   - [x] Each invocation owns a unique temporary build directory that stays alive through oracle use and is removed after success or failure.
+   - [x] Compilation failures, consumer failures and overlapping invocations have regression coverage; shared Cargo dependencies and retained observations are not removed.
+   - [x] All oracle build entry points reject standalone Rust formatting failures before compilation.
+   - [x] Pure checks, native PostgreSQL execution, full staged checks and final-head CI pass with separate evidence.
+   - [x] Publication completion and final-head CI are tracked in #26/#39 and PR #43; no merge or status change is authorized.
 3. **Dependencies & Prerequisites:** Existing locked Rust dependencies, Python 3.10+, rustfmt and Podman. Existing native memory/storage/cgroup requirements remain unchanged. No dependency graph change.
 4. **Risks & Mitigations:** A shared output path would collide across runs and with Windows executable locks. Use unique context-managed output directories; callers retain ownership until their subprocesses finish. Do not delete old build directories or shared Cargo cache automatically. Preserve all historical source fingerprints and observation files.
 5. **Spikes & Open Questions:** No new design spike. Narrow worker dependency coupling remains a P2 build-boundary follow-up; production decoder bounds remain a P1 requirement in #26. NULL-versus-empty SQL output is a P3 limitation for future nullable checks; use typed output rather than a colliding sentinel when that support is needed.
 6. **High-Level Architecture / File Changes:** Make build.py a context-managed owner, update check.py/run.py callers and standalone behavior, add lifecycle tests, enforce rustfmt for the three standalone Rust files, and update experiment/report documentation. Keep codec bytes, domain policy and database schema unchanged.
 7. **Verification & Testing Plan:** Retain failing lifecycle regressions before repair. Verify cleanup after partial compile, consumer failure and concurrent use; independently verify a real rustfmt failure. Run pure codec checks and an isolated native PostgreSQL run with exact source hashes. Complete staged and hosted checks, retaining older observations unchanged.
+
+
+## Build lifecycle and formatting observations (R11)
+
+Each build owns unique temporary compiler outputs through the caller's entire
+oracle use. Context exit removes them after success, partial compilation, test
+failure or consumer failure. Overlapping owners retain independent directories.
+Windows sharing/lock violations receive up to five seconds of bounded retry;
+other cleanup errors and deadline exhaustion fail visibly. Existing shared Cargo
+libraries and old build directories are outside this invocation's cleanup scope.
+The standalone build command now prints test results without an executable path
+that would become invalid after context exit.
+
+The eight new Python tests failed before their corresponding repairs and now
+pass. A real misformatted temporary source was rejected by rustfmt before
+Cargo/rustc, retaining its diff. All oracle build entry points enforce the three
+standalone Rust files' formatting before compilation, including shared checks.
+
+R11 on Windows/WSL2, Podman and PostgreSQL passed eight Rust tests and eleven
+grouped pure/native records. Actual cgroup ceilings and disabled TCP listening
+were verified. Container cleanup reported no errors and the build-directory set
+was unchanged after completion. Separate observations and source fingerprints are
+retained in [results.lifecycle.json](../../experiments/SP-003/results.lifecycle.json).
+R08/R09/R10 observations and frozen fixtures remain unchanged. Final staged and
+hosted verification are recorded in PR #43; native Linux PostgreSQL is unverified.
+
+Remaining work: remove worker/transitive hashing build coupling without dropping
+shared codec goldens (P2); add typed nullable SQL output if needed (P3); implement
+production decoder/transport/allocation bounds in #26 before exposure (P1).
+Decoder resource safety must not silently impose an unaccepted identifier rule
+or apply current product constraints to historical reconstruction.
