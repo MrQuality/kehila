@@ -184,7 +184,7 @@ fn array_order_is_typed_intent() {
     assert_ne!(decode_result(&value).unwrap(), r);
 }
 #[test]
-fn replay_uses_stored_version_and_original_result() {
+fn version_one_replay_preserves_result_and_checks_fingerprint() {
     let request = request();
     let result = result();
     let key = OperationKey {
@@ -266,10 +266,22 @@ fn replay_uses_stored_version_and_original_result() {
         ),
         ReplayDecision::Reject(OperationError::OperationIdReused)
     );
-    assert!(encode_request(&request, 2).is_err()); // Unknown stored version never becomes Unseen.
+    // Version two is unsupported; production adapter dispatch is outside this prototype.
+    assert!(encode_request(&request, 2).is_err());
 }
 #[test]
 fn identifier_proposal_preserves_bytes_and_counts_utf8() {
+    for id in [
+        " project",
+        "project ",
+        " project ",
+        " ",
+        "\tproject\n",
+        "\t \n",
+        "\u{a0}project\u{a0}",
+    ] {
+        assert!(proposed_id(id));
+    }
     assert!(proposed_id(&"a".repeat(128)));
     assert!(!proposed_id(&"a".repeat(129)));
     assert!(proposed_id(&"é".repeat(64)));

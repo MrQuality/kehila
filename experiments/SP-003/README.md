@@ -47,6 +47,12 @@ Tests use `podman exec psql`, a 10-second statement timeout and a 20-second
 client timeout. Startup is bounded to approximately 30 seconds plus an active
 readiness probe. Build/command/cleanup operations also have finite deadlines.
 
+Identifier fidelity cases persist leading/trailing spaces, whitespace-only
+strings, tabs/newlines and non-breaking spaces in the proposed text domain.
+They compare JSON-encoded retrieved strings byte for byte and also check raw
+single-cell output. The raw SQL reader removes only psql's final record newline;
+trimming arbitrary whitespace would change valid identifier content.
+
 The runner removes only its labelled container and associated anonymous volumes,
 including on failed startup. It preserves ignored result summaries and Rust
 test output. It does not stop a shared Podman machine or other containers;
@@ -81,7 +87,9 @@ populate normally empty collections and some structurally valid, domain-invalid
 values to ensure that fields are not dropped. Production integrity validation is
 separate. JSONB and the host oracle's JSON parser discard duplicate object keys;
 this prototype does not certify duplicate-key rejection at a raw transport
-boundary. A supported transport must define that policy before exposing a route.
+boundary. Before production promotion, reject duplicate keys during the first
+parse of original request JSON, before converting to Value/JSONB. The application
+parser can own this check without requiring an API gateway.
 
 `fixtures/request-v1.json` freezes independent Python bytes/digests for both
 units. `fixtures/result-v1.json` freezes the actual trusted Rust revision-one
@@ -139,7 +147,10 @@ The proposed identifier rule is nonempty UTF8, at most 128 bytes, no U+0000,
 with C-collated database identity and no normalization/truncation. Operation
 tokens keep their existing ASCII-graphic rule. This is a proposed narrowing of
 several current pure String IDs; changing them needs maintainer acceptance,
-contract updates, regressions and import inspection. Binary codecs can preserve
+coordinated domain/storage/interface validation, regressions and import
+inspection, with identity types coordinated with B-007. Whitespace remains
+accepted by this proposal; do not trim it to accommodate the test reader.
+Binary codecs can preserve
 NUL, but that alone cannot make relational text/JSONB accept it.
 
 Unknown stored codec versions fail closed. Version-one fixtures exercise the
@@ -147,3 +158,10 @@ first historical decoder obligation; there is no implemented version two and
 no future compatibility claim. Original digest versions must remain computable
 for permanent tombstone comparisons. This prototype tests pure replay rules;
 database adapter dispatch and production compaction remain #26 delivery work.
+
+The version-one replay test explicitly constructs version-one fingerprints and
+checks saved-result replay, changed-intent conflicts, digest inconsistency and
+expired tombstones. It does not select an encoder from a stored database record.
+Production dispatch must read that stored version and propagate unsupported-
+version errors without fallback or treating the operation as unseen. Preserve
+this obligation in #26; no artificial version two is needed for this spike.

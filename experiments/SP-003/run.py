@@ -21,6 +21,7 @@ from manage import available_memory, create_artifact_directory, IMAGE
 
 HEADER = b"kehila\0project_create\0\x00\x00\x00\x01"
 REQUEST = dict(operation_id="op", project_id="project", name="Project", prefix="QA", estimate_unit="hours")
+WHITESPACE_IDENTIFIERS = (" project", "project ", " project ", " ", "\tproject\n", "\t \n", "\u00a0project\u00a0")
 
 
 def require(condition, message):
@@ -112,8 +113,10 @@ def pure_cases(cases):
     cases.run("J03-J05-wire-rejections", malformed_results)
 
     def identifiers():
-        for identifier, proposed, pure in (("", False, False), ("a"*128, True, True), ("a"*129, False, True),
-                                           ("é"*64, True, True), ("é"*65, False, True), ("a\0b", False, True)):
+        values = [("", False, False), ("a"*128, True, True), ("a"*129, False, True),
+                  ("é"*64, True, True), ("é"*65, False, True), ("a\0b", False, True)]
+        values.extend((identifier, True, True) for identifier in WHITESPACE_IDENTIFIERS)
+        for identifier, proposed, pure in values:
             require(cases.oracle("id", identifier) == dict(proposed=proposed, pure_create=pure), "ID acceptance differs")
     cases.run("I01-pure-proposal-mismatch", identifiers)
 
@@ -123,7 +126,9 @@ def sql(container, statement, *, valid=True):
                             input=("SET statement_timeout='10s';\n" + statement).encode(), capture_output=True, timeout=20)
     if valid:
         require(result.returncode == 0, "PostgreSQL statement failed: " + result.stderr.decode(errors="replace"))
-        return result.stdout.decode().strip()
+        # psql runs inside the Linux container and appends one LF per record.
+        # Removing broader whitespace would alter a single cell's actual data.
+        return result.stdout.decode("utf-8").removesuffix("\n")
     require(result.returncode != 0, "Invalid database value unexpectedly accepted")
     return result.stderr.decode()
 
@@ -193,6 +198,21 @@ def database_cases(cases, container):
                 require(result == identifier, "Text domain changed accepted identifier")
         require(sql(container, "SELECT 'é'::codec_id = 'é'::codec_id;") == "f", "C-collated identity normalized")
     cases.run("I02-PostgreSQL-ID-domain", identifier_domain)
+
+    def whitespace_identifiers():
+        sql(container, 'CREATE TABLE codec_identifiers (id bigserial PRIMARY KEY, value codec_id NOT NULL);')
+        for identifier in WHITESPACE_IDENTIFIERS:
+            row = int(sql(container, "INSERT INTO codec_identifiers(value) VALUES (" +
+                          literal(identifier) + ") RETURNING id;"))
+            # A raw single-cell result must preserve data and remove only its
+            # record delimiter. JSON independently protects string whitespace
+            # and embedded newlines from line-oriented output framing.
+            raw = sql(container, f"SELECT value FROM codec_identifiers WHERE id={row};")
+            require(raw == identifier, "Raw SQL reader changed identifier whitespace")
+            restored = json.loads(sql(container, f"SELECT to_json(value) FROM codec_identifiers WHERE id={row};"))
+            require(restored.encode("utf-8") == identifier.encode("utf-8"),
+                    "Persisted identifier UTF8 bytes changed")
+    cases.run("I03-PostgreSQL-ID-whitespace", whitespace_identifiers)
 
 
 def main():
