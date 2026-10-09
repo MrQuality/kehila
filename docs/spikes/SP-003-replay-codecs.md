@@ -340,3 +340,18 @@ identifier policy before promoting them into production code.
 5. **Spikes & Open Questions:** No new design spike or invented version two. Actual stored-version dispatch belongs to the production adapter. Codec/identifier product acceptance remains separate.
 6. **High-Level Architecture / File Changes:** Extend experiments/SP-003/run.py and tests.rs with whitespace cases, correct the SQL output reader, add shared Python output-format regression tests, clarify this record and the reproduction guide, and publish a new native observation summary. No production schema, dependency graph or domain-validation change.
 7. **Verification & Testing Plan:** Retain a failing real-database run against the new cases before repairing the reader. Run the complete native matrix and pure checks after repair, verify source fingerprints and prior-summary stability, then complete staged verification and final-head CI. Update #26/#39 and add a final summary comment to PR #43 without changing its status or merging.
+
+## Encoder readability and evidence scope plan (2026-10-09)
+
+1. **Goal & Context:** Make the configuration encoder easier to audit without changing version-one tokens, output, dependencies or domain acceptance. Clarify test counts and retain production prerequisites in #26.
+2. **Definition of Done:**
+   - [ ] Configuration JSON fields and nested collections use readable multiline formatting; Rust tokens remain unchanged.
+   - [ ] Existing frozen result/snapshot fixtures, Rust tests and required verification pass.
+   - [ ] Verification distinguishes 88 Python tests run (86 passed, two skipped on Windows), eight Rust prototype tests and eleven historical R10 grouped checks.
+   - [ ] Historical R08/R09/R10 evidence remains unchanged and bound to its original source fingerprints.
+   - [ ] Update #26/#39 and summarize final changes in PR #43 without merging or changing its status.
+3. **Dependencies & Prerequisites:** Existing locked dependencies and verification tools. Podman development services are needed by the required full staged checks. No new dependency, migration or product policy is introduced.
+4. **Risks & Mitigations:** Preserve all non-whitespace Rust tokens, including exact string literals, and compare existing golden fixtures. Do not attribute historical database observations to subsequently formatted sources. First-parse duplicate-key rejection, coordinated identifier acceptance and direct hashing ownership remain production prerequisites.
+5. **Spikes & Open Questions:** No further research or new database experiment is needed for a formatting-only change. Production stored-version dispatch and decoder hardening remain #26 work.
+6. **High-Level Architecture / File Changes:** Format encode_configuration in experiments/SP-003/codec.rs; clarify evidence scope in its reproduction guide and this report. Keep the decoder and all public contracts unchanged.
+7. **Verification & Testing Plan:** Check token equality against the previous source, run rustfmt --check and existing codec goldens/Rust tests, complete staged verification and exact-head CI. Preserve native evidence files unchanged; report hosted checks separately from native PostgreSQL execution.
