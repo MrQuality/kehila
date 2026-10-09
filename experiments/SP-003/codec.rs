@@ -200,13 +200,61 @@ fn direction(value: &Value) -> Outcome<Direction> {
 }
 
 fn encode_configuration(c: &Configuration) -> Value {
-    json!({"project_id":c.project_id.0,"revision":c.revision.to_string(),"project_archived":c.project_archived,
-        "statuses":c.statuses.iter().map(|s| json!({"id":s.id.0,"name":s.name,"group_id":s.group_id.as_ref().map(|id| &id.0),"phase":phase_label(s.phase),"archived":s.archived})).collect::<Vec<_>>(),
-        "status_groups":c.status_groups.iter().map(|g| json!({"id":g.id.0,"name":g.name,"archived":g.archived})).collect::<Vec<_>>(),
-        "workflows":c.workflows.iter().map(|w| json!({"id":w.id.0,"status_ids":w.status_ids.iter().map(|id| &id.0).collect::<Vec<_>>(),"initial_status_id":w.initial_status_id.0,"permitted_phase_changes":w.permitted_phase_changes.iter().map(|p| json!([phase_label(p.from),phase_label(p.to)])).collect::<Vec<_>>(),"archived":w.archived})).collect::<Vec<_>>(),
-        "types":c.types.iter().map(|t| json!({"id":t.id.0,"permitted_workflows":t.permitted_workflows.iter().map(|id| &id.0).collect::<Vec<_>>(),"default_workflow_id":t.default_workflow_id.0,"title_field_id":t.title_field_id.as_ref().map(|id| &id.0),"archived":t.archived})).collect::<Vec<_>>(),
-        "fields":c.fields.iter().map(|f| json!({"id":f.id.0,"owner_type":f.owner_type.0,"name":f.name,"kind":kind_label(f.kind),"origin":origin_label(f.origin),"usage":usage_label(f.usage),"archived":f.archived,"options":f.options.iter().map(|o| json!({"id":o.id.0,"name":o.name,"archived":o.archived})).collect::<Vec<_>>()})).collect::<Vec<_>>(),
-        "relationship_types":c.relationship_types.iter().map(|r| json!({"owner_project_id":r.owner_project_id.0,"id":r.id.0,"name":r.name,"direction":direction_label(r.direction),"archived":r.archived})).collect::<Vec<_>>()})
+    json!({
+        "project_id": c.project_id.0,
+        "revision": c.revision.to_string(),
+        "project_archived": c.project_archived,
+        "statuses": c.statuses.iter().map(|s| json!({
+            "id": s.id.0,
+            "name": s.name,
+            "group_id": s.group_id.as_ref().map(|id| &id.0),
+            "phase": phase_label(s.phase),
+            "archived": s.archived
+        })).collect::<Vec<_>>(),
+        "status_groups": c.status_groups.iter().map(|g| json!({
+            "id": g.id.0,
+            "name": g.name,
+            "archived": g.archived
+        })).collect::<Vec<_>>(),
+        "workflows": c.workflows.iter().map(|w| json!({
+            "id": w.id.0,
+            "status_ids": w.status_ids.iter().map(|id| &id.0).collect::<Vec<_>>(),
+            "initial_status_id": w.initial_status_id.0,
+            "permitted_phase_changes": w.permitted_phase_changes.iter().map(|p| json!([
+                phase_label(p.from),
+                phase_label(p.to)
+            ])).collect::<Vec<_>>(),
+            "archived": w.archived
+        })).collect::<Vec<_>>(),
+        "types": c.types.iter().map(|t| json!({
+            "id": t.id.0,
+            "permitted_workflows": t.permitted_workflows.iter().map(|id| &id.0).collect::<Vec<_>>(),
+            "default_workflow_id": t.default_workflow_id.0,
+            "title_field_id": t.title_field_id.as_ref().map(|id| &id.0),
+            "archived": t.archived
+        })).collect::<Vec<_>>(),
+        "fields": c.fields.iter().map(|f| json!({
+            "id": f.id.0,
+            "owner_type": f.owner_type.0,
+            "name": f.name,
+            "kind": kind_label(f.kind),
+            "origin": origin_label(f.origin),
+            "usage": usage_label(f.usage),
+            "archived": f.archived,
+            "options": f.options.iter().map(|o| json!({
+                "id": o.id.0,
+                "name": o.name,
+                "archived": o.archived
+            })).collect::<Vec<_>>()
+        })).collect::<Vec<_>>(),
+        "relationship_types": c.relationship_types.iter().map(|r| json!({
+            "owner_project_id": r.owner_project_id.0,
+            "id": r.id.0,
+            "name": r.name,
+            "direction": direction_label(r.direction),
+            "archived": r.archived
+        })).collect::<Vec<_>>()
+    })
 }
 
 fn decode_configuration(v: &Value) -> Outcome<Configuration> {

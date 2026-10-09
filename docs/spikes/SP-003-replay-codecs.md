@@ -345,13 +345,26 @@ identifier policy before promoting them into production code.
 
 1. **Goal & Context:** Make the configuration encoder easier to audit without changing version-one tokens, output, dependencies or domain acceptance. Clarify test counts and retain production prerequisites in #26.
 2. **Definition of Done:**
-   - [ ] Configuration JSON fields and nested collections use readable multiline formatting; Rust tokens remain unchanged.
-   - [ ] Existing frozen result/snapshot fixtures, Rust tests and required verification pass.
-   - [ ] Verification distinguishes 88 Python tests run (86 passed, two skipped on Windows), eight Rust prototype tests and eleven historical R10 grouped checks.
-   - [ ] Historical R08/R09/R10 evidence remains unchanged and bound to its original source fingerprints.
-   - [ ] Update #26/#39 and summarize final changes in PR #43 without merging or changing its status.
+   - [x] Configuration JSON fields and nested collections use readable multiline formatting; Rust tokens remain unchanged.
+   - [x] Existing frozen result/snapshot fixtures, Rust tests and required verification pass.
+   - [x] Verification distinguishes 88 Python tests run (86 passed, two skipped on Windows), eight Rust prototype tests and eleven historical R10 grouped checks.
+   - [x] Historical R08/R09/R10 evidence remains unchanged and bound to its original source fingerprints.
+   - [x] Publication completion and exact-head CI are tracked in #26/#39 and PR #43; no merge or status change is authorized.
 3. **Dependencies & Prerequisites:** Existing locked dependencies and verification tools. Podman development services are needed by the required full staged checks. No new dependency, migration or product policy is introduced.
 4. **Risks & Mitigations:** Preserve all non-whitespace Rust tokens, including exact string literals, and compare existing golden fixtures. Do not attribute historical database observations to subsequently formatted sources. First-parse duplicate-key rejection, coordinated identifier acceptance and direct hashing ownership remain production prerequisites.
 5. **Spikes & Open Questions:** No further research or new database experiment is needed for a formatting-only change. Production stored-version dispatch and decoder hardening remain #26 work.
 6. **High-Level Architecture / File Changes:** Format encode_configuration in experiments/SP-003/codec.rs; clarify evidence scope in its reproduction guide and this report. Keep the decoder and all public contracts unchanged.
 7. **Verification & Testing Plan:** Check token equality against the previous source, run rustfmt --check and existing codec goldens/Rust tests, complete staged verification and exact-head CI. Preserve native evidence files unchanged; report hosted checks separately from native PostgreSQL execution.
+
+The readability edit changes only whitespace in encode_configuration; exact string
+literals and other Rust tokens match the previous source. Rust formatting, eight
+prototype tests and five pure grouped checks pass. The existing fixtures remain
+unchanged. Full staged verification and final-head CI are reported separately in
+PR #43; no new PostgreSQL execution is attributed to the formatted source.
+
+The recorded Windows Python run means 88 tests run, 86 passed and two skipped;
+eight Rust prototype tests and eleven native R10 groups are separate counts.
+Production duplicate-key handling, direct hashing ownership, coordinated identifier
+validation and stored-version/corruption handling remain #26 prerequisites. Public
+String-backed wrappers require an authoritative enforcement boundary; adding a
+constructor without controlling direct construction would not enforce the policy.

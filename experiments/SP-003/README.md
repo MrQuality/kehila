@@ -169,3 +169,28 @@ expired tombstones. It does not select an encoder from a stored database record.
 Production dispatch must read that stored version and propagate unsupported-
 version errors without fallback or treating the operation as unseen. Preserve
 this obligation in #26; no artificial version two is needed for this spike.
+
+## Encoder readability follow-up
+
+The configuration encoder now lays out fields and nested collections on separate
+lines. Its non-whitespace tokens and string literals are unchanged. Existing
+version-one fixtures and Rust checks remain the compatibility oracle; this
+formatting change does not introduce a new codec version or identifier policy.
+
+R10 records the earlier native execution and its exact source fingerprints.
+R08/R09/R10 observations are retained unchanged; they are not executions of the
+subsequently formatted source. Verification of the readability change is reported
+separately in PR #43. No new native database run is claimed for this change.
+
+Test counts describe distinct scopes: the recorded Windows Python suite ran 88
+tests, with 86 passed and two platform-specific skips. The eight Rust prototype
+tests and eleven grouped native R10 checks are separate evidence. The replay test
+checks supplied version-one fingerprints, not production database version dispatch
+or end-to-end corruption detection. The oracle's 2 MiB input cap is a spike bound,
+not production decoder hardening.
+
+Before production delivery in #26, reject duplicate keys at the first JSON parse,
+declare sha2 in the crate that owns fingerprinting, and coordinate identifier
+validation across authoritative domain, storage, interface and import boundaries
+after policy acceptance. Constructors alone cannot enforce an invariant while
+public String-backed wrappers can still be constructed directly.
