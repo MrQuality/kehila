@@ -55,11 +55,14 @@ pub fn decode_request(bytes: &[u8]) -> Outcome<ProjectCreateCommand> {
         [1] => EstimateUnit::Points,
         _ => return Err("invalid unit or trailing bytes".into()),
     };
+    let [operation_id, project_id, name, prefix]: [String; 4] = strings
+        .try_into()
+        .map_err(|_| "invalid request field count")?;
     Ok(ProjectCreateCommand {
-        operation_id: strings[0].clone(),
-        project_id: ProjectId(strings[1].clone()),
-        name: strings[2].clone(),
-        prefix: strings[3].clone(),
+        operation_id,
+        project_id: ProjectId(project_id),
+        name,
+        prefix,
         estimate_unit,
     })
 }
