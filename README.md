@@ -40,6 +40,11 @@ project and WorkItem rules and their pure checks. The
 [M1 slices](docs/product/backlog.md#m1-configurable-model) track storage, access,
 API, and interface implementation of that model.
 
+The [WorkItem action stacks proposal](docs/product/action-stacks-proposal.md)
+describes planned dependency-graph execution, workflow gates, and persistent
+artifacts. It records future feature direction; technical contracts and delivery
+remain pending, with no change to the existing M1 scope.
+
 ## Development setup
 
 Backend host platforms target Windows and Linux; macOS and other host operating

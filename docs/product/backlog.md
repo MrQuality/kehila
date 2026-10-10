@@ -15,6 +15,21 @@ Statuses used here:
 
 Backlog IDs are stable references, not strict execution order. The technical path must account for the compiler, schema, API, storage, event, and recovery work in [implementation status](../IMPLEMENTATION.md).
 
+## Future feature proposals
+
+The [WorkItem action stacks proposal](action-stacks-proposal.md), tracked in
+[#44](https://github.com/MrQuality/kehila/issues/44), records the maintainer's
+selected direction for executable WorkItem dependency graphs, workflow gates,
+and persistent artifacts. Its technical contracts and implementation remain
+pending. The parent issue tracks the proposed delivery slices; child issues will
+follow once their contracts and prerequisites are clear.
+
+This feature has no assigned product milestone or repository requirement,
+decision, or backlog IDs yet. Its 50 decision numbers are proposal-local.
+An explicit scoped amendment or successor to [D-012](decisions.md#d-012) and
+linked product records are required before implementation changes that scope.
+The existing M1 scope and M0–M4 delivery plan remain unchanged.
+
 ## Proposed milestones and order
 
 These M0–M4 labels are **product delivery milestones**, not the independent
