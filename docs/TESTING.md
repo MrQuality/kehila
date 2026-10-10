@@ -277,3 +277,19 @@ Windows has a 450-second deadline: observed workspace runs exceeded 300 seconds
 while individual tests passed. Linux retains the 300-second Cargo deadline. The
 staged hook still has its 600-second overall deadline; a timeout fails verification.
 These are tooling execution limits, not product performance requirements.
+
+## SP-003 replay codec checks
+
+Shared full/pure verification runs experiments/SP-003/check.py: eight Rust tests
+and five grouped Python checks against the actual domain types and frozen
+version-one fixtures. This builds exact artifacts using the existing locked
+workspace dependencies, including the task_worker library, without running its
+I/O. A pure build therefore requires Rust 1.88+ and may need the existing adapter
+dependencies cached. The prototype currently receives sha2 transitively through
+mongodb; production hashing must declare its own direct dependency.
+
+Native PostgreSQL BYTEA/JSONB persistence and ID-domain checks are a separate
+Podman-only experiment, not part of those pure CI checks. See the
+[SP-003 reproduction guide](../experiments/SP-003/README.md) for resources,
+explicit connection selection and cleanup, and the
+[spike report](spikes/SP-003-replay-codecs.md) for observations and limitations.
