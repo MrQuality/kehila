@@ -17,7 +17,7 @@ Backlog IDs are stable references, not strict execution order. The technical pat
 
 ## Future feature proposals
 
-The [WorkItem action stacks proposal](action-stacks-proposal.md), tracked in
+The [WorkItem action stacks proposal](../design-proposals/action-stacks-proposal.md), tracked in
 [#44](https://github.com/MrQuality/kehila/issues/44), records the maintainer's
 selected direction for executable WorkItem dependency graphs, workflow gates,
 and persistent artifacts. Its technical contracts and implementation remain
