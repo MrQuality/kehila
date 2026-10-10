@@ -39,6 +39,7 @@ SOPs, their approval status, and enforcement coverage.
 | [Open questions](open-questions.md) | Unresolved choices and affected work. |
 | [Backlog](backlog.md) | Proposed delivery order, dependencies, and requirement coverage. |
 | [B-003 project and WorkItem contract](B-003-contract.md) | Accepted typed rules, pure-check evidence, acceptance scenarios, and implementation handoffs. |
+| [WorkItem action stacks proposal](../design-proposals/action-stacks-proposal.md) | Maintainer-selected execution direction, 50 proposal-local decisions, open technical contracts, and future acceptance criteria; tracked in [#44](https://github.com/MrQuality/kehila/issues/44), with no M1 scope change. |
 | [Spike register and approved procedure](../spikes/README.md) | Bounded investigations, reproducible evidence, and reusable findings. |
 
 **Confirmed** identifies requirements included in this planning baseline.
