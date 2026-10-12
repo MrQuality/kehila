@@ -207,9 +207,10 @@ Concurrent clients reach independent worker processes; the test does not rely on
 a single serial HTTP handler to establish storage exclusion. Finite race tests
 are regression evidence, not exhaustive linearizability proof.
 
-The pure command includes both `kehila_query` and `task_contract`; maintain this
+The pure command includes `kehila_query`, `task_contract` and
+`project_create_codec`; maintain this
 explicit list when adding a pure crate. Its selection test verifies that a
-failure in `task_contract` propagates. The full suite tests all Rust workspace
+failures in `task_contract` and `project_create_codec` propagate. The full suite tests all Rust workspace
 crates, including adapter policy tests.
 
 The older `live_task_worker.py` and `live_go_rust.py` remain manual probes for
@@ -317,3 +318,24 @@ Podman-only experiment, not part of those pure CI checks. See the
 [SP-003 reproduction guide](../experiments/SP-003/README.md) for resources,
 explicit connection selection and cleanup, and the
 [spike report](spikes/SP-003-replay-codecs.md) for observations and limitations.
+
+## Production project-creation codec checks
+
+The pure/full Rust workspace checks run project_create_codec's request, raw
+JSON, configuration-snapshot and saved-result tests. Run them independently:
+
+```text
+cargo test --locked -p project_create_codec
+```
+
+Coverage includes frozen version-one byte/digest/JSON fixtures, every request
+truncation, malformed UTF8/framing/versions/kinds, decimal and enum corruption,
+ordered rich typed round trips, duplicate decoded keys, exact resource admission
+boundaries, typed encoding preflight and escaped-output overflow. Historical
+reconstruction is separate from new native request admission. Shared verification
+also checks that a codec test failure propagates through the pure command.
+
+The [crate guide](../src/pure/project_create_codec/README.md) documents the
+proposed codec resource ceilings and remaining adapter obligations. This pure
+suite makes no database, authentication, native Linux-host PostgreSQL, throughput
+or supported-route claim. SP-003's frozen sources/evidence remain separate.

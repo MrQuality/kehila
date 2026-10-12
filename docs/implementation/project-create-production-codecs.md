@@ -1,6 +1,8 @@
 # Production project-creation codecs and native validation
 
-Status: Planned, 2026-10-12. Follows PR #46; related #26/B-005, #39.
+Status: Implemented for PR review, 2026-10-12. Follows PR #46; related #47,
+#26/B-005, #39. ADR-104 and the concrete resource ceilings remain Proposed;
+publication as a proposal is authorized, acceptance is pending.
 
 ## Pre-Execution Plan
 
@@ -53,3 +55,48 @@ startup checks, transaction ownership, replay clocks/retries, compaction,
 authority (#40), stable target allocation (#41), legacy import and recovery/load
 qualification remain subsequent work. Issue #26's closed state does not establish
 completion of those obligations. Action stacks remains outside this work.
+
+## Implementation and verification result
+
+The pure project_create_codec crate owns request framing/fingerprints,
+duplicate-aware raw JSON parsing, configuration snapshots and complete saved
+success envelopes. It owns already locked serde/serde_json/sha2 dependencies
+directly. NativeRequest reuses the domain creation-input validator and adds
+native identifier storage bounds; the domain validator extraction preserves
+existing decision/replay ordering and acceptance. No legacy route adopts it.
+
+Twenty focused Rust tests passed, covering frozen bytes/digests/JSON shapes,
+request truncation, malformed framing/UTF8/version/kind/decimal/enum cases,
+rich typed reconstruction, ordered collections, u64 precision/extremes,
+new-write admission and all codec resource boundaries. Tests failed before the
+corresponding implementation. Deliberate mutations were detected for fingerprint
+comparison, duplicate-key rejection, aggregate node counting, escaped-output
+limiting and a one-byte identifier-limit relaxation. Files were restored and
+staged tests passed afterward. Formatting and codec Clippy checks passed.
+
+The full staged shared suite passed for the request/native-admission and
+saved-result commits: 106 Python tooling tests run (104 passed, two POSIX-only
+fixtures skipped on Windows), naming/engineering checks, Go formatting/vet,
+service readiness/NATS, Rust/Go workspace tests, frozen SP-002/SP-003 pure oracles
+and live task-path contention/deadline/recovery/search-unavailable tests.
+Parser/configuration and final boundary-test commits also passed their selected
+staged checks. These shared live checks exercise the existing task path; they do
+not establish a native project-creation adapter or database adoption of codecs.
+
+The first full staged attempt failed during SP-003 executable cleanup with a
+Windows access-denied error. The standalone diagnostic passed, followed by a
+passing full staged retry; the cleanup failure's cause was not established.
+A targeted working-tree build also reported missing exports from an earlier
+staged snapshot in the shared Cargo cache; isolated-target validation passed.
+Targeted checks used a separate target thereafter. No test or hook was bypassed.
+Historical experiment sources, fixtures and observations remain unchanged.
+
+## Next slice
+
+Review the proposed codec ceilings and ADR-104 explicitly. Then implement the
+internal PostgreSQL adapter: startup schema checks, caller/transaction ownership,
+coherent persistence from a single trusted result, and request/core/result
+attribution. Define the project-only snapshot envelope needed by
+configuration_revisions.project_snapshot; the frozen evidence defines saved
+results and configuration snapshots, not that separate envelope. Integrate
+#40/#41 and trusted replay clocks/retries before exposing a native route.
