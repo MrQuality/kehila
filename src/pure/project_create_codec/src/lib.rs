@@ -39,6 +39,7 @@ pub const MAX_NODES: usize = 16384;
 
 mod limits;
 mod v1;
+use task_contract::project_create::ProjectCreateResult;
 use task_contract::work_item::Configuration;
 
 fn stored_json(version: u32, bytes: &[u8]) -> Result<serde_json::Value, Error> {
@@ -48,6 +49,17 @@ fn stored_json(version: u32, bytes: &[u8]) -> Result<serde_json::Value, Error> {
     }
 }
 
+/// Reconstruct an entire saved success using its stored version. The embedded
+/// version/kind must agree; schema errors are corruption, not new domain rejects.
+pub fn decode_result(version: u32, bytes: &[u8]) -> Result<ProjectCreateResult, Error> {
+    v1::decode_result(&stored_json(version, bytes)?).map_err(Error::Malformed)
+}
+/// Encode a complete trusted result. This validates resources, not business
+/// acceptance; the caller must obtain the result from authoritative domain rules.
+pub fn encode_result(result: &ProjectCreateResult) -> Result<Vec<u8>, Error> {
+    limits::result(result)?;
+    limits::serialize(&v1::encode_result(result))
+}
 /// Reconstruct historical configuration without consulting current definitions.
 pub fn decode_snapshot(version: u32, bytes: &[u8]) -> Result<Configuration, Error> {
     v1::decode_snapshot(&stored_json(version, bytes)?).map_err(Error::Malformed)

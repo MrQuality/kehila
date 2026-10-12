@@ -20,6 +20,23 @@ normalizes input. The caller must bound transport reads before collecting a
 record and treat an over-limit record as failure. A fingerprint is an integrity
 comparison, not authentication or a replacement for exact typed comparison.
 
+`parse_json` is the raw first-parse boundary for both future ingress and stored
+records. It rejects duplicate decoded keys, trailing input, depth over 16
+(root at zero), more than 1,024 entries per array/object and more than 16,384
+JSON values, including containers. Keys are bounded strings, not value nodes.
+These guarantees cannot recover duplicate keys already collapsed by JSONB or
+another parser; future ingress must use this boundary on original bytes.
+
+`encode_result`/`decode_result` and `encode_snapshot`/`decode_snapshot` preserve
+complete saved successes and configuration snapshots, using stored-version
+and embedded-kind/version checks. Typed preflight bounds aggregate collection
+entries/string bytes before allocating a tree; exact node/depth checks and a
+bounded memory writer also limit escaped JSON output. They do not authenticate
+valid-shaped stored data or prove cross-record semantic agreement. The adapter
+must check core/request/result attribution and persist one trusted domain result.
+A project-only snapshot envelope remains adapter work; this crate does not
+invent a format absent from the frozen version-one fixtures.
+
 ## Dependencies
 
 | Direct package | Locked version | Purpose and provenance |

@@ -1,6 +1,8 @@
 //! Private version-one JSON shape. Historical decoding does not call domain validation.
 use serde_json::{json, Value};
 use task_contract::field::*;
+use task_contract::project::{EstimateUnit, Project};
+use task_contract::project_create::*;
 use task_contract::relationship::{Direction, RelationshipType, RelationshipTypeId};
 use task_contract::work_item::*;
 type Outcome<T> = Result<T, &'static str>;
@@ -57,6 +59,19 @@ fn phase(value: &Value) -> Outcome<Phase> {
         Some("active") => Ok(Phase::Active),
         Some("done") => Ok(Phase::Done),
         _ => Err("invalid phase"),
+    }
+}
+fn unit_label(unit: EstimateUnit) -> &'static str {
+    match unit {
+        EstimateUnit::Hours => "hours",
+        EstimateUnit::Points => "points",
+    }
+}
+fn unit(value: &Value) -> Outcome<EstimateUnit> {
+    match value.as_str() {
+        Some("hours") => Ok(EstimateUnit::Hours),
+        Some("points") => Ok(EstimateUnit::Points),
+        _ => Err("invalid estimate unit"),
     }
 }
 fn kind_label(kind: FieldKind) -> &'static str {
@@ -309,12 +324,73 @@ fn decode_configuration(v: &Value) -> Outcome<Configuration> {
     })
 }
 
+fn encode_project(p: &Project) -> Value {
+    json!({
+        "id": p.id.0,
+        "name": p.name,
+        "prefix": p.prefix,
+        "configuration_revision": p.configuration_revision.to_string(),
+        "next_sequence": p.next_sequence.to_string(),
+        "archived": p.archived,
+        "estimate_unit": unit_label(p.estimate_unit),
+        "ever_estimated": p.ever_estimated,
+    })
+}
+
+pub(crate) fn encode_result(result: &ProjectCreateResult) -> Value {
+    json!({
+        "codec_version": 1,
+        "kind": "project_create_result",
+        "value": {
+            "seed_profile": match result.seed_profile { SeedProfile::M1V1 => "m1_v1" },
+            "project": encode_project(&result.project),
+            "configuration": encode_configuration(&result.configuration),
+        },
+    })
+}
+
 fn envelope(v: &Value, expected_kind: &str) -> Outcome<()> {
     object(v, &["codec_version", "kind", "value"])?;
     if v["codec_version"].as_u64() != Some(1) || v["kind"].as_str() != Some(expected_kind) {
         return Err("unsupported codec version/kind");
     }
     Ok(())
+}
+pub(crate) fn decode_result(v: &Value) -> Outcome<ProjectCreateResult> {
+    envelope(v, "project_create_result")?;
+    let v = &v["value"];
+    object(v, &["seed_profile", "project", "configuration"])?;
+    if v["seed_profile"].as_str() != Some("m1_v1") {
+        return Err("unknown seed profile");
+    }
+    let p = &v["project"];
+    object(
+        p,
+        &[
+            "id",
+            "name",
+            "prefix",
+            "configuration_revision",
+            "next_sequence",
+            "archived",
+            "estimate_unit",
+            "ever_estimated",
+        ],
+    )?;
+    Ok(ProjectCreateResult {
+        project: Project {
+            id: ProjectId(string(&p["id"])?),
+            name: string(&p["name"])?,
+            prefix: string(&p["prefix"])?,
+            configuration_revision: unsigned(&p["configuration_revision"])?,
+            next_sequence: unsigned(&p["next_sequence"])?,
+            archived: boolean(&p["archived"])?,
+            estimate_unit: unit(&p["estimate_unit"])?,
+            ever_estimated: boolean(&p["ever_estimated"])?,
+        },
+        configuration: decode_configuration(&v["configuration"])?,
+        seed_profile: SeedProfile::M1V1,
+    })
 }
 pub(crate) fn encode_snapshot(configuration: &Configuration) -> Value {
     json!({"codec_version":1,"kind":"configuration_snapshot","value":encode_configuration(configuration)})

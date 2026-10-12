@@ -2,6 +2,7 @@ use crate::{
     Error, MAX_COLLECTION_ENTRIES, MAX_DEPTH, MAX_NODES, MAX_RECORD_BYTES, MAX_STRING_BYTES,
 };
 use serde_json::Value;
+use task_contract::project_create::ProjectCreateResult;
 use task_contract::work_item::Configuration;
 
 #[derive(Default)]
@@ -88,6 +89,13 @@ impl Budget {
     }
 }
 
+pub(crate) fn result(result: &ProjectCreateResult) -> Result<(), Error> {
+    let mut budget = Budget::default();
+    budget.text(&result.project.id.0)?;
+    budget.text(&result.project.name)?;
+    budget.text(&result.project.prefix)?;
+    budget.configuration(&result.configuration)
+}
 pub(crate) fn configuration(c: &Configuration) -> Result<(), Error> {
     Budget::default().configuration(c)
 }
