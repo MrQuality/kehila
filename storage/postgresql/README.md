@@ -27,7 +27,7 @@ Kehila databases in the same cluster without a later role-provisioning design.
 
 `kehila_owner` is NOLOGIN and owns the schema, tables and functions.
 `kehila_creator` is a separate NOLOGIN capability role with creation INSERT/SELECT,
-sequence USAGE, actor SELECT and two restricted locking functions. An administrator
+sequence USAGE, actor/schema-version SELECT and two restricted locking functions. An administrator
 must provision a backend login separately and grant only this capability.
 The installer creates no login, credentials or actor records. The creator cannot
 administer actors, update/delete grants or replay storage, retire operations,
@@ -35,6 +35,10 @@ change history or create objects in kehila. PUBLIC has no schema usage or functi
 execution in kehila. Database-level CONNECT/TEMP privileges and other schemas
 remain deployment configuration. SECURITY DEFINER functions use a fixed trusted
 search path.
+
+The capability can read `schema_migrations` for future startup compatibility
+checks. It cannot INSERT, UPDATE, DELETE or TRUNCATE migration records. No
+application startup check or migration runner is introduced by this grant.
 
 The backend capability is trusted to persist accepted results. It is not an
 end-user permission boundary: actor authentication, permission evaluation and

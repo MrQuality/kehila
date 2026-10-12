@@ -120,6 +120,10 @@ class DatabaseCheck:
         self.sql((tests / 'postgresql_foundation.sql').read_text(encoding='utf-8') + '\n' +
                  (tests / 'postgresql_creation.sql').read_text(encoding='utf-8'))
         # Use a genuinely separate serving connection, with no administrator session state.
+        self.sql("DO $$ BEGIN IF (SELECT array_agg(version ORDER BY version) FROM "
+                 "kehila.schema_migrations) IS DISTINCT FROM ARRAY[1] THEN "
+                 "RAISE EXCEPTION 'unexpected installed schema version'; END IF; END $$;",
+                 user='foundation_serving')
         self.sql("BEGIN; SELECT * FROM kehila.lock_actor('actor'); "
                  "SELECT * FROM kehila.lock_operation((SELECT operation_row_id FROM "
                  "kehila.operations WHERE target_project_id='created')); ROLLBACK;",

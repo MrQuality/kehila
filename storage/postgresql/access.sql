@@ -30,7 +30,7 @@ REVOKE ALL ON ALL FUNCTIONS IN SCHEMA kehila FROM PUBLIC;
 GRANT USAGE ON SCHEMA kehila TO kehila_creator;
 GRANT USAGE ON TYPE kehila.ident, kehila.u64, kehila.operation_token,
   kehila.project_prefix, kehila.phase TO kehila_creator;
-GRANT SELECT ON kehila.actors TO kehila_creator;
+GRANT SELECT ON kehila.actors, kehila.schema_migrations TO kehila_creator;
 GRANT SELECT, INSERT ON kehila.operations, kehila.operation_payloads,
   kehila.projects, kehila.configuration_revisions, kehila.project_grants,
   kehila.project_grant_events, kehila.statuses, kehila.workflows,

@@ -25,6 +25,8 @@ transaction. Record schema version one only after all fragments succeed.
 Separate NOLOGIN schema ownership from NOLOGIN creation capability. The trusted
 backend receives INSERT/SELECT and restricted actor/core locking functions, with
 no actor administration, replay UPDATE/DELETE, history mutation or DDL in kehila.
+Read-only schema-migration metadata is available to the creation capability;
+migration writes remain restricted to the deployment/ownership boundary.
 Revoke PUBLIC access to the kehila schema/functions and pin SECURITY DEFINER search paths.
 
 Use exact C-collated UTF8 identifiers bounded to 128 bytes and checked integral

@@ -2,6 +2,13 @@
 -- Deliberately small structural fixture, not evidence of the complete M1 seed.
 CREATE ROLE foundation_serving LOGIN IN ROLE kehila_creator;
 SET SESSION AUTHORIZATION foundation_serving;
+SELECT pg_temp.require((SELECT count(*) = 1 FROM kehila.schema_migrations WHERE version = 1),
+                       'serving can discover the installed schema version');
+SELECT pg_temp.reject($q$INSERT INTO kehila.schema_migrations(version,description)
+  VALUES (2,'forbidden')$q$, '42501');
+SELECT pg_temp.reject($q$UPDATE kehila.schema_migrations SET description = 'forbidden'$q$, '42501');
+SELECT pg_temp.reject($q$DELETE FROM kehila.schema_migrations$q$, '42501');
+SELECT pg_temp.reject($q$TRUNCATE kehila.schema_migrations$q$, '42501');
 SELECT pg_temp.require((SELECT actor_id = 'actor' FROM kehila.lock_actor('actor')),
                        'serving actor lock');
 BEGIN;
@@ -80,6 +87,7 @@ SELECT pg_temp.require((SELECT bool_and(proconfig @> ARRAY[
   WHERE pronamespace = 'kehila'::regnamespace AND prosecdef), 'definer search path');
 CREATE ROLE foundation_untrusted LOGIN;
 SET SESSION AUTHORIZATION foundation_untrusted;
+SELECT pg_temp.reject($q$SELECT * FROM kehila.schema_migrations$q$, '42501');
 SELECT pg_temp.reject($q$SELECT * FROM kehila.lock_actor('actor')$q$, '42501');
 RESET SESSION AUTHORIZATION;
 SELECT 'PASS: creation structure, history and serving permissions' AS result;
