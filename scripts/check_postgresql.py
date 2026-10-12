@@ -125,16 +125,24 @@ class DatabaseCheck:
                  "kehila.operations WHERE target_project_id='created')); ROLLBACK;",
                  user='foundation_serving')
         self.sql("SET ROLE kehila_owner;", expected_state='42501', user='foundation_serving')
+        mutation = (tests / 'postgresql_payload_mutation.sql').read_text(encoding='utf-8')
+        self.sql('BEGIN;\n' + mutation + '\nROLLBACK;')
+        for trigger, label in (('operation_payload_immutable', 'request bytes'),
+                               ('operation_payload_retirement_required', 'payload replacement')):
+            self.sql('BEGIN; ALTER TABLE kehila.operation_payloads DISABLE TRIGGER ' +
+                     trigger + ';\n' + mutation + '\nROLLBACK;',
+                     expected_state='P0001', expected_message='payload mutation accepted: ' + label)
+        self.sql('BEGIN;\n' + mutation + '\nROLLBACK;')
         regression = (tests / 'postgresql_payload_identity.sql').read_text(encoding='utf-8')
         self.sql('BEGIN;\n' + regression + '\nROLLBACK;')
         self.sql('BEGIN; ALTER TABLE kehila.operation_payloads DISABLE TRIGGER '
-                 'operation_payload_identity_immutable;\n' + regression + '\nROLLBACK;',
+                 'operation_payload_immutable;\n' + regression + '\nROLLBACK;',
                  expected_state='P0001',
                  expected_message='identity regression did not reject reassignment')
         # Session termination rolls back the disabled trigger. Prove restoration explicitly.
         self.sql('BEGIN;\n' + regression + '\nROLLBACK;')
         print('PASS: atomic installation/rollback, reinstall rejection, scalar/core/creation '
-              'integrity, role separation and identity mutation detection (PostgreSQL 16)')
+              'integrity, role separation and payload mutation detection (PostgreSQL 16)')
 
 
 def main():

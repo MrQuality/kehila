@@ -33,6 +33,11 @@ alignment required before route exposure. Preserve permanent scoped operation
 identity, immediate payload-identity protection, deferred atomic payload shape
 and irreversible retirement. This foundation grants no compactor capability.
 
+All payload updates are rejected. Deletion requires setting the irreversible
+core retirement flag first within the same transaction; deferred shape checks
+reject payload reinsertion after retirement. This also prevents privileged
+DELETE/INSERT replacement without disabling a guard.
+
 Relational rows own current configuration; version-tagged JSONB snapshots own
 history. SQL enforces attribution/membership, while the future typed adapter
 must prove exact trusted-result equality and encode/reconstruct saved content.

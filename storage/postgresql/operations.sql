@@ -117,7 +117,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION kehila.protect_payload_identity()
+CREATE FUNCTION kehila.protect_payload_update()
 RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
 BEGIN
   IF NEW.operation_row_id IS DISTINCT FROM OLD.operation_row_id THEN
@@ -125,13 +125,34 @@ BEGIN
       USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_identity_immutable',
             SCHEMA = 'kehila', TABLE = 'operation_payloads';
   END IF;
-  RETURN NEW;
+  RAISE EXCEPTION 'operation payloads cannot be updated'
+    USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_immutable',
+          SCHEMA = 'kehila', TABLE = 'operation_payloads';
 END;
 $$;
 
-CREATE TRIGGER operation_payload_identity_immutable
+CREATE TRIGGER operation_payload_immutable
   BEFORE UPDATE ON kehila.operation_payloads FOR EACH ROW
-  EXECUTE FUNCTION kehila.protect_payload_identity();
+  EXECUTE FUNCTION kehila.protect_payload_update();
+
+-- The irreversible core flag must change first in the same transaction.
+-- Otherwise DELETE + INSERT could replace content while satisfying final shape.
+CREATE FUNCTION kehila.require_payload_retirement()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM kehila.operations
+                 WHERE operation_row_id = OLD.operation_row_id AND payload_retired) THEN
+    RAISE EXCEPTION 'retire the operation before deleting its payload'
+      USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_retirement_required',
+            SCHEMA = 'kehila', TABLE = 'operation_payloads';
+  END IF;
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER operation_payload_retirement_required
+  BEFORE DELETE ON kehila.operation_payloads FOR EACH ROW
+  EXECUTE FUNCTION kehila.require_payload_retirement();
 
 CREATE CONSTRAINT TRIGGER operation_payload_shape
   AFTER INSERT OR UPDATE OR DELETE ON kehila.operations

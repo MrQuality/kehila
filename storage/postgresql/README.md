@@ -46,9 +46,12 @@ authorization, trusted clock behavior and bounded compaction remain adapter work
 
 `operations.sql` owns scalar domains, typed targets, scoped uniqueness and the
 permanent-core/payload guards. A new operation must have one payload at commit;
-retirement atomically changes the core flag and removes that payload. Identity
-and retirement are irreversible through normal DML. Payload reassignment is
-rejected immediately, including privileged updates. TRUNCATE is rejected.
+retirement atomically changes the core flag and removes that payload, in that
+order. Identity and retirement are irreversible through normal DML. Every
+payload UPDATE is rejected, including content changes and no-op updates. DELETE
+requires a retired core; reinsertion after retirement fails the deferred shape
+check. These guards prevent privileged DML from replacing accepted payloads
+without disabling a guard. TRUNCATE is rejected.
 
 `project_create.sql` owns current relational configuration, checked operation
 attribution and deferred membership/current-revision foreign keys.
@@ -95,8 +98,9 @@ The verifier checks isolation/resource limits before writing, rejects existing
 schemas/roles, injects a pre-COMMIT installation failure and checks full rollback,
 installs the baseline, rejects reinstallation, then runs scalar/core/creation and
 serving-permission cases. A separate backend connection checks role separation.
-It temporarily disables the identity guard inside a transaction: the dedicated
-regression must fail, then pass after rollback restores the guard. SQL failures
+It temporarily disables the update and retirement-deletion guards in separate
+transactions: content-update, payload-replacement and identity regressions must
+detect their corresponding missing guard, then pass after rollback restores it. SQL failures
 are fatal; expected failures check SQLSTATE and named constraints where applicable.
 Expected verifier-level rejections require psql's script-error exit status 3 and
 the actual verbose ERROR SQLSTATE. Optional message checks use the primary error
@@ -117,6 +121,7 @@ SP-002/SP-003 experiments remain separately reproducible and unchanged.
 | Exact scalar/key bounds | ident, u64 and operation_token domains | Empty/oversized/multibyte IDs, NUL, fractional/overflow u64, maximum creation key |
 | Permanent scoped request identity | operations unique key and core guards | Duplicate key, UPDATE/DELETE/TRUNCATE, fresh retired core rejection |
 | One full payload or none when retired | Deferred shape triggers and identity guard | Missing/moved/deleted payload, atomic retirement, guard-removal mutation |
+| Accepted payload content cannot be replaced | UPDATE rejection and retirement-only DELETE | Owner content/version/no-op updates, DELETE/INSERT replacement, retirement rollback, reinsertion after retirement, guard-removal mutations |
 | Exact 90-day stored interval | operations_replay_window | Accept valid interval; reject altered interval; clock enforcement remains adapter work |
 | Attributed configuration and ownership | Composite FKs and deferred membership/revision FKs | Wrong operation attribution, missing membership/revision, wrong title owner |
 | Append-only creation history | History DML/TRUNCATE triggers and creator ACLs | Owner mutation rejection and serving denial |

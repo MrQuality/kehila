@@ -80,7 +80,7 @@ SELECT pg_temp.reject($q$
   SET CONSTRAINTS ALL IMMEDIATE
 $q$, '23514', 'operation_payload_shape');
 SELECT pg_temp.reject($q$DELETE FROM kehila.operation_payloads;
-  SET CONSTRAINTS ALL IMMEDIATE$q$, '23514', 'operation_payload_shape');
+  SET CONSTRAINTS ALL IMMEDIATE$q$, '23514', 'operation_payload_retirement_required');
 SELECT pg_temp.reject($q$UPDATE kehila.operations SET token = 'changed'$q$,
                        '23514', 'operation_core_immutable');
 SELECT pg_temp.reject($q$DELETE FROM kehila.operations$q$,
@@ -158,10 +158,26 @@ INSERT INTO kehila.operation_payloads VALUES (:operation_row_id,'\x00',1,'{}');
 SET CONSTRAINTS ALL IMMEDIATE;
 ROLLBACK;
 
+-- Aborted retirement must retain the original full operation and payload.
+BEGIN;
+UPDATE kehila.operations SET payload_retired = true;
+DELETE FROM kehila.operation_payloads;
+SET CONSTRAINTS ALL IMMEDIATE;
+ROLLBACK;
+SELECT pg_temp.require((SELECT NOT payload_retired FROM kehila.operations),
+                       'retirement rollback preserves full core');
+SELECT pg_temp.require((SELECT count(*) = 1 FROM kehila.operation_payloads),
+                       'retirement rollback preserves payload');
+
 BEGIN;
 UPDATE kehila.operations SET payload_retired = true;
 DELETE FROM kehila.operation_payloads;
 COMMIT;
+SELECT pg_temp.reject($q$
+  INSERT INTO kehila.operation_payloads
+    SELECT operation_row_id,'\xff',2,'{"changed":true}' FROM kehila.operations;
+  SET CONSTRAINTS ALL IMMEDIATE
+$q$, '23514', 'operation_payload_shape');
 SELECT pg_temp.reject($q$UPDATE kehila.operations SET payload_retired = false$q$,
                        '23514', 'operation_core_immutable');
 SELECT pg_temp.reject($q$TRUNCATE kehila.operation_payloads$q$,

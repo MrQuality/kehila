@@ -218,7 +218,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION kehila.protect_payload_identity()
+CREATE FUNCTION kehila.protect_payload_update()
 RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
 BEGIN
   IF NEW.operation_row_id IS DISTINCT FROM OLD.operation_row_id THEN
@@ -226,13 +226,34 @@ BEGIN
       USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_identity_immutable',
             SCHEMA = 'kehila', TABLE = 'operation_payloads';
   END IF;
-  RETURN NEW;
+  RAISE EXCEPTION 'operation payloads cannot be updated'
+    USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_immutable',
+          SCHEMA = 'kehila', TABLE = 'operation_payloads';
 END;
 $$;
 
-CREATE TRIGGER operation_payload_identity_immutable
+CREATE TRIGGER operation_payload_immutable
   BEFORE UPDATE ON kehila.operation_payloads FOR EACH ROW
-  EXECUTE FUNCTION kehila.protect_payload_identity();
+  EXECUTE FUNCTION kehila.protect_payload_update();
+
+-- The irreversible core flag must change first in the same transaction.
+-- Otherwise DELETE + INSERT could replace content while satisfying final shape.
+CREATE FUNCTION kehila.require_payload_retirement()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM kehila.operations
+                 WHERE operation_row_id = OLD.operation_row_id AND payload_retired) THEN
+    RAISE EXCEPTION 'retire the operation before deleting its payload'
+      USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_retirement_required',
+            SCHEMA = 'kehila', TABLE = 'operation_payloads';
+  END IF;
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER operation_payload_retirement_required
+  BEFORE DELETE ON kehila.operation_payloads FOR EACH ROW
+  EXECUTE FUNCTION kehila.require_payload_retirement();
 
 CREATE CONSTRAINT TRIGGER operation_payload_shape
   AFTER INSERT OR UPDATE OR DELETE ON kehila.operations
@@ -301,10 +322,13 @@ The fresh-insert guard applies to normal serving. Restoration of tombstones
 needs a reviewed owner-controlled load procedure and final validation; do not
 weaken normal INSERT to accommodate it. TRUNCATE guards protect against mistakes,
 not an owner able to disable them. The serving role has no TRUNCATE privilege.
-The identity guard rejects payload reassignment before UPDATE; same-identity
-updates still undergo the deferred shape check. Serving payload UPDATE remains
-forbidden. SP-002 retains its frozen pre-correction schema to reproduce the old
-gap and tests this guard separately. The native baseline installs the guard;
+The update guard rejects payload reassignment and all content/no-op updates.
+Deletion requires the core's irreversible retirement flag to be set first in
+the same transaction. This prevents DELETE/INSERT replacement while full; a
+replacement after retirement fails the deferred shape check. Serving payload
+UPDATE/DELETE remain forbidden. SP-002 retains its frozen pre-correction schema to reproduce the old
+gap and tests its original identity-only guard separately. The native baseline
+installs the stronger update/deletion guards above;
 it does not yet supply a serving application adapter.
 
 Retirement changes a partial-index column and prevents HOT updates. Measure
@@ -332,3 +356,28 @@ Owner-controlled repair/import migrations must preserve operation identity and
 audit corrections. Define backup, validation, rollback and retention/erasure
 rules before real data. Immutability restricts serving writes, not reviewed schema
 evolution. Never edit an old successful result to hide a faulty current-state write.
+
+## Historical SP-002 identity guard
+
+The frozen experiment verifies the following identity-only correction. It is
+retained here for evidence traceability; it does not include the native
+foundation's content-update or retirement-only deletion protections. Install
+the executable native baseline rather than this historical fragment.
+
+```sql
+CREATE FUNCTION kehila.protect_payload_identity()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
+BEGIN
+  IF NEW.operation_row_id IS DISTINCT FROM OLD.operation_row_id THEN
+    RAISE EXCEPTION 'operation payload identity is immutable'
+      USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_identity_immutable',
+            SCHEMA = 'kehila', TABLE = 'operation_payloads';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER operation_payload_identity_immutable
+  BEFORE UPDATE ON kehila.operation_payloads FOR EACH ROW
+  EXECUTE FUNCTION kehila.protect_payload_identity();
+```
