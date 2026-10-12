@@ -278,7 +278,11 @@ The executable fresh baseline has a separate opt-in
 labelled container with the documented image and resource limits. It checks
 atomic installation failure/rollback, reinstallation rejection, actual scalar
 and structural constraints, permanent operation/payload shape, creation history,
-serving-role privileges and a payload-identity mutation regression. It never
+serving-role privileges and a payload-identity mutation regression. Additional
+checks reject accepted-payload updates and DELETE/INSERT replacement: separate guard
+mutations must be detected, and rollback must restore the guards. Serving
+connections can read the installed schema version but cannot modify migration
+records. These checks do not implement startup compatibility or compaction. It never
 resets an existing schema or manages container lifecycle. Clean up the disposable
 container after success or failure.
 

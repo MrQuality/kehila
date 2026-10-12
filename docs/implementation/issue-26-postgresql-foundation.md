@@ -133,3 +133,33 @@ oracles, and the live two-worker task-path contention/deadline/recovery cases.
 Two POSIX-only Python fixtures were skipped on Windows. This shared result is
 separate from the native PostgreSQL suite above; neither establishes a supported
 native application route or production qualification.
+
+## Payload and schema-version review follow-ups (2026-10-12)
+
+All payload updates are rejected, and deletion requires setting the irreversible
+core retirement flag first. Deferred final-state checks continue to reject
+payload reinsertion after retirement. Owner-level regressions cover content,
+codec-version and no-op updates, DELETE/INSERT replacement, retirement rollback
+and reinsertion. The creation capability has read-only schema-version access;
+migration INSERT/UPDATE/DELETE/TRUNCATE remain denied. No startup compatibility
+check or compactor is introduced.
+
+The PostgreSQL 16 native suite passed against the documented pinned image in an
+isolated, resource-bounded disposable container on Windows through Podman. The
+new regressions first failed against the earlier baseline: a payload content
+update was accepted, and schema-version reads were denied. With the changes,
+separate update/deletion guard-removal mutations were detected, and the suite
+passed again after rollback restored each guard. Installation rollback,
+reinstallation rejection, scalar/core/creation integrity and serving-role
+separation also passed. The historical SP-002 guard and experiment remain intact.
+
+Full shared verification passed independently for both staged code commits:
+105 Python tests run (103 passed, two POSIX-only fixtures skipped on Windows),
+naming/engineering checks, Go formatting/vet, service readiness/NATS, workspace
+Rust/Go tests, SP-002/SP-003 pure oracles and live task-path integration. The live
+checks included 48 competing request pairs, deadline and stalled-database
+recovery, plus save/replay/read with search unavailable.
+
+These results do not establish a supported native application route, native
+Linux-host PostgreSQL execution or production qualification. Adapter,
+trusted-clock, compaction and #40/#41 prerequisites remain as described above.
