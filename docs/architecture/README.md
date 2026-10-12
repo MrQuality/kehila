@@ -16,7 +16,8 @@ and retain history. Code evidence cannot silently resolve a product question.
 | Record | Status and boundary |
 | --- | --- |
 | [ADR-101: Task authority, replay and projection](ADR-101-task-authority.md) | Accepted behavior restated from D-016/D-017; implementation evidence remains bounded. |
-| [ADR-102: Native PostgreSQL and bounded transactions](ADR-102-postgresql-transactions.md) | Accepted direction for new M1 storage; schema and adapter implementation pending. |
+| [ADR-102: Native PostgreSQL and bounded transactions](ADR-102-postgresql-transactions.md) | Accepted direction for new M1 storage; [local schema foundation](../../storage/postgresql/README.md) implemented, application adapter pending. |
+| [ADR-103: Native creation storage foundation](ADR-103-native-creation-foundation.md) | Proposed for production adoption; implemented and tested locally for review. |
 
 Future cross-record coordination, compaction/rebuild, CDC schema, event envelope
 and storage upgrade decisions require further evidence and ADRs. In particular,

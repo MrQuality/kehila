@@ -1,14 +1,16 @@
 # M1 project creation: storage specification
 
-Status: Proposed, 2026-10-08. Scope: #26/B-005 with #27 and #11/#32.
-This is illustrative PostgreSQL 16 SQL for review, not an installed migration.
+Status: Storage foundation implemented locally, 2026-10-10. Scope: #26/B-005 with #27 and #11/#32.
+The executable fresh baseline is in [storage/postgresql](../../storage/postgresql/README.md).
+The SQL below explains the design; installation uses the executable files.
 The unchanged SQL at baseline 9f433f9 was executed in
 [SP-002](../spikes/SP-002-postgresql-project-create.md). The bounded tests found
-a privileged payload-identity move gap; the SQL remains proposed and uncorrected.
+a privileged payload-identity move gap; the executable baseline includes the
+identity guard shown below. The frozen experiment remains unchanged.
 [ADR-102](ADR-102-postgresql-transactions.md)
 accepts the storage direction; it does not approve the physical choices below.
 The typed-target layout below replaces the project-only key sketch. Its physical
-columns are a proposed realization of the agreed target-scope correction.
+columns implement the agreed target-scope correction for the creation foundation.
 
 ## Outcome and boundary
 
@@ -17,7 +19,7 @@ revision-one history, initial access, and successful request result in one
 transaction. The existing experimental worker remains unchanged.
 
 The [seed/history tables](M1-project-create-seed.md) continue this SQL. Read both
-documents as one proposed schema; neither fragment is a complete migration.
+documents as one schema explanation; neither Markdown fragment is an installer.
 The [command and verification proposal](M1-project-create-protocol.md) defines
 the locking, retry, privilege, and evidence requirements for this slice.
 
@@ -26,7 +28,11 @@ Deleting payload must never remove the request's unique identity. Product histor
 references that permanent core, not the replay payload. Full replay retains exact
 typed request comparison; a digest is not a substitute for it.
 
-## Choices requiring review
+## Choices and remaining application gates
+
+The [local implementation plan](../implementation/issue-26-postgresql-foundation.md)
+records the selected native representation boundary. Foundation installation
+does not complete the application acceptance obligations in the table below.
 
 | ID | Proposal | Acceptance boundary |
 | --- | --- | --- |
@@ -44,8 +50,9 @@ The [B-003 contract](../product/B-003-contract.md) remains the behavioral author
 
 ## Scalars and permanent operations
 
-Deployment prerequisites are PostgreSQL 16 and database encoding UTF8. Roles and
-schema ownership must be provisioned separately. The integer domain deliberately
+Deployment prerequisites are PostgreSQL 16 and database encoding UTF8. The
+executable installer provisions separate owner and serving-capability roles.
+The integer domain deliberately
 uses unconstrained numeric plus an integral-value check: numeric(20,0) can round
 fractional input before a CHECK sees it. The adapter must still decode to u64
 exactly and reject overflow. Internal generated row IDs may have gaps; they are
@@ -154,7 +161,8 @@ is accepted; keep transactions bounded. Prefer the database clock for sampling
 and expiry/compaction decisions; verify its mapping and rollback behavior in the
 adapter. The permanent original grant is creation permission on actor_id
 for this family, checked on every retry. Other grant scopes are not encoded here.
-Request and result codecs must be specified and versioned before implementation.
+Production request/result codecs and stored-version dispatch must be implemented
+before a native command is exposed.
 
 Target fields mirror OperationTarget in the pure contract: a Relationship's
 project component is its owner_project_id. NULLS NOT DISTINCT prevents absent
@@ -210,7 +218,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION kehila.protect_payload_identity()
+CREATE FUNCTION kehila.protect_payload_update()
 RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
 BEGIN
   IF NEW.operation_row_id IS DISTINCT FROM OLD.operation_row_id THEN
@@ -218,13 +226,34 @@ BEGIN
       USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_identity_immutable',
             SCHEMA = 'kehila', TABLE = 'operation_payloads';
   END IF;
-  RETURN NEW;
+  RAISE EXCEPTION 'operation payloads cannot be updated'
+    USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_immutable',
+          SCHEMA = 'kehila', TABLE = 'operation_payloads';
 END;
 $$;
 
-CREATE TRIGGER operation_payload_identity_immutable
+CREATE TRIGGER operation_payload_immutable
   BEFORE UPDATE ON kehila.operation_payloads FOR EACH ROW
-  EXECUTE FUNCTION kehila.protect_payload_identity();
+  EXECUTE FUNCTION kehila.protect_payload_update();
+
+-- The irreversible core flag must change first in the same transaction.
+-- Otherwise DELETE + INSERT could replace content while satisfying final shape.
+CREATE FUNCTION kehila.require_payload_retirement()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM kehila.operations
+                 WHERE operation_row_id = OLD.operation_row_id AND payload_retired) THEN
+    RAISE EXCEPTION 'retire the operation before deleting its payload'
+      USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_retirement_required',
+            SCHEMA = 'kehila', TABLE = 'operation_payloads';
+  END IF;
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER operation_payload_retirement_required
+  BEFORE DELETE ON kehila.operation_payloads FOR EACH ROW
+  EXECUTE FUNCTION kehila.require_payload_retirement();
 
 CREATE CONSTRAINT TRIGGER operation_payload_shape
   AFTER INSERT OR UPDATE OR DELETE ON kehila.operations
@@ -293,11 +322,14 @@ The fresh-insert guard applies to normal serving. Restoration of tombstones
 needs a reviewed owner-controlled load procedure and final validation; do not
 weaken normal INSERT to accommodate it. TRUNCATE guards protect against mistakes,
 not an owner able to disable them. The serving role has no TRUNCATE privilege.
-The identity guard rejects payload reassignment before UPDATE; same-identity
-updates still undergo the deferred shape check. Serving payload UPDATE remains
-forbidden. SP-002 retains its frozen pre-correction schema to reproduce the old
-gap and tests this guard separately; the corrected proposal is not an installed
-application migration.
+The update guard rejects payload reassignment and all content/no-op updates.
+Deletion requires the core's irreversible retirement flag to be set first in
+the same transaction. This prevents DELETE/INSERT replacement while full; a
+replacement after retirement fails the deferred shape check. Serving payload
+UPDATE/DELETE remain forbidden. SP-002 retains its frozen pre-correction schema to reproduce the old
+gap and tests its original identity-only guard separately. The native baseline
+installs the stronger update/deletion guards above;
+it does not yet supply a serving application adapter.
 
 Retirement changes a partial-index column and prevents HOT updates. Measure
 compaction batch size, lock waits, WAL and vacuum behavior. The attribution index
@@ -306,8 +338,10 @@ key. No performance bottleneck is established.
 
 ## Review and implementation gates
 
-Approve the proposed scalar/access/codec choices before installing this SQL.
-Review SQL together with the seed, attribution, role, and command specifications.
+The native foundation follows the selected storage choices in the implementation
+plan. Complete domain/interface alignment and production codecs before exposing
+a native route. Review upgrades with the seed, attribution, role and command
+specifications.
 Test direct constraint violations, multi-process retries, premature compaction,
 missing payload, clock rollback, restore, and core mutation attempts. Preserve the
 explicit trusted function search_path in executable migrations; serving roles
@@ -322,3 +356,28 @@ Owner-controlled repair/import migrations must preserve operation identity and
 audit corrections. Define backup, validation, rollback and retention/erasure
 rules before real data. Immutability restricts serving writes, not reviewed schema
 evolution. Never edit an old successful result to hide a faulty current-state write.
+
+## Historical SP-002 identity guard
+
+The frozen experiment verifies the following identity-only correction. It is
+retained here for evidence traceability; it does not include the native
+foundation's content-update or retirement-only deletion protections. Install
+the executable native baseline rather than this historical fragment.
+
+```sql
+CREATE FUNCTION kehila.protect_payload_identity()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
+BEGIN
+  IF NEW.operation_row_id IS DISTINCT FROM OLD.operation_row_id THEN
+    RAISE EXCEPTION 'operation payload identity is immutable'
+      USING ERRCODE = '23514', CONSTRAINT = 'operation_payload_identity_immutable',
+            SCHEMA = 'kehila', TABLE = 'operation_payloads';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER operation_payload_identity_immutable
+  BEFORE UPDATE ON kehila.operation_payloads FOR EACH ROW
+  EXECUTE FUNCTION kehila.protect_payload_identity();
+```

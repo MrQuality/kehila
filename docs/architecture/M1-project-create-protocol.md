@@ -3,7 +3,9 @@
 Status: Proposed, 2026-10-08. Scope: #26/B-005 and its project-creation slice.
 Read with the [operation storage](M1-project-create-storage.md) and
 [seed/history tables](M1-project-create-seed.md). These are design documents,
-not executable migrations or evidence of PostgreSQL behavior.
+not executable migrations. The [native foundation](../../storage/postgresql/README.md)
+implements and tests structural storage and capability separation. The complete
+application transaction protocol below remains to be implemented.
 
 The maintainer agreed these corrections on 2026-10-08: restricted locking
 functions, exclusive actor coordination for creation, no Project lock on creation

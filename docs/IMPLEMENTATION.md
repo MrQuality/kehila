@@ -10,8 +10,11 @@ Kehila is in early development. The current components are:
 
 [ADR-102](architecture/ADR-102-postgresql-transactions.md) records the accepted
 native PostgreSQL/JSONB and bounded-transaction direction for new M1 storage.
-The running task worker and development stack still use FerretDB. No native
-adapter, storage migration, or configurable-model persistence is implemented.
+The running task worker and development stack still use FerretDB. The
+[native storage foundation](../storage/postgresql/README.md) provides a fresh
+version-one installer, structural integrity guards and restricted creation roles.
+No native application adapter, legacy-data migration, or supported
+configurable-model persistence path is implemented.
 
 | Component | Implemented behavior | Verification |
 | --- | --- | --- |
