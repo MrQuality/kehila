@@ -100,7 +100,12 @@ fn native_admission_preserves_identifier_bytes_and_rejects_unpersistable_request
             &request
         );
     }
-    for id in ["".to_owned(), "\u{e9}".repeat(65), "a\0b".into()] {
+    for id in [
+        "".to_owned(),
+        "x".repeat(129),
+        "\u{e9}".repeat(65),
+        "a\0b".into(),
+    ] {
         request.project_id = ProjectId(id);
         assert_eq!(
             NativeRequest::new(request.clone()),

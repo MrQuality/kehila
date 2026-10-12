@@ -33,8 +33,11 @@ impl std::fmt::Display for Error {
 }
 impl std::error::Error for Error {}
 
+/// Maximum value nesting depth; the root is depth zero.
 pub const MAX_DEPTH: usize = 16;
+/// Maximum entries per JSON array or object.
 pub const MAX_COLLECTION_ENTRIES: usize = 1024;
+/// Maximum JSON values, counting containers but excluding object keys.
 pub const MAX_NODES: usize = 16384;
 
 mod limits;
