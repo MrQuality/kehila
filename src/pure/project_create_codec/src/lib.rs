@@ -36,3 +36,24 @@ impl std::error::Error for Error {}
 pub const MAX_DEPTH: usize = 16;
 pub const MAX_COLLECTION_ENTRIES: usize = 1024;
 pub const MAX_NODES: usize = 16384;
+
+mod limits;
+mod v1;
+use task_contract::work_item::Configuration;
+
+fn stored_json(version: u32, bytes: &[u8]) -> Result<serde_json::Value, Error> {
+    match version {
+        1 => parse_json(bytes),
+        other => Err(Error::UnsupportedVersion(other)),
+    }
+}
+
+/// Reconstruct historical configuration without consulting current definitions.
+pub fn decode_snapshot(version: u32, bytes: &[u8]) -> Result<Configuration, Error> {
+    v1::decode_snapshot(&stored_json(version, bytes)?).map_err(Error::Malformed)
+}
+/// Preserve complete ordered configuration, including empty collections.
+pub fn encode_snapshot(configuration: &Configuration) -> Result<Vec<u8>, Error> {
+    limits::configuration(configuration)?;
+    limits::serialize(&v1::encode_snapshot(configuration))
+}
