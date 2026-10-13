@@ -335,6 +335,10 @@ boundaries, typed encoding preflight and escaped-output overflow. Historical
 reconstruction is separate from new native request admission. Shared verification
 also checks that a codec test failure propagates through the pure command.
 
+Object-key regressions cover 64 KiB decoded UTF8 keys and one-byte overflow,
+including escaped spellings and multibyte characters. Oversized keys are rejected
+before their values are parsed; maximum-length escaped duplicates remain rejected.
+
 The [crate guide](../src/pure/project_create_codec/README.md) documents the
 proposed codec resource ceilings and remaining adapter obligations. This pure
 suite makes no database, authentication, native Linux-host PostgreSQL, throughput

@@ -5,6 +5,10 @@ Acceptance: Pending explicit maintainer assessment. Publication as Proposed is
 authorized; implementation authorization does not accept this ADR. Related: ADR-102, ADR-103, #47, #39,
 #26/B-005, [implementation plan](../implementation/project-create-production-codecs.md).
 
+Explicit maintainer approval of ADR-104 is required before PR #48 is merged.
+Passing tests or implementation/publication authorization does not grant that
+approval. The record remains Proposed pending the approval decision.
+
 ## Context
 
 The native schema stores versioned request bytes/fingerprints and JSONB saved
@@ -26,6 +30,11 @@ Parse original JSON bytes through a bounded duplicate-aware visitor before
 creating a Value. Duplicate decoded keys, including escaped spellings, are
 rejected before their next values are read. Reject trailing input. Version-one
 shape mapping is private and never invokes mutable domain validation.
+
+Key visitors check decoded length before creating an owned map key. Escaped keys
+and values can still use serde_json scratch storage before visitor validation;
+the encoded record ceiling bounds that temporary work. This is not an
+allocation-free parsing guarantee.
 
 New native requests instead enter through NativeRequest, combining the shared
 creation validator with native identifier byte/NUL bounds. Existing public

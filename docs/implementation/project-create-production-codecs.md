@@ -100,3 +100,33 @@ attribution. Define the project-only snapshot envelope needed by
 configuration_revisions.project_snapshot; the frozen evidence defines saved
 results and configuration snapshots, not that separate envelope. Integrate
 #40/#41 and trusted replay clocks/retries before exposing a native route.
+
+## Object-key review follow-ups (2026-10-13)
+
+Object keys now pass through a string visitor that validates decoded UTF8 byte
+length before creating the owned key retained by the map. The previous guard
+already rejected oversized keys; this change avoids its unnecessary owned copy.
+Escaped input can still require serde_json scratch allocation before visitor
+validation, bounded by the outer record limit. No zero-allocation or measured
+throughput claim is made, and the proposed resource ceilings are unchanged.
+
+Three new regressions cover exact 64 KiB key acceptance/one-byte overflow, literal
+and escaped spellings, multibyte decoded lengths, rejection before parsing a
+malformed value, and maximum-length escaped duplicate detection. The boundary
+regression passed with the previous guard and failed with that guard removed.
+A one-byte relaxation of the new visitor limit was also detected; source was
+restored before staged verification. All 23 codec tests and codec Clippy passed.
+
+The key-handling commit passed full staged shared verification: 106 Python tests
+run (104 passed, two POSIX-only skips on Windows), naming/engineering checks,
+Go formatting/vet, service readiness/NATS, workspace Rust/Go tests, frozen codec
+oracles and live contention/deadline/recovery/search-unavailable checks. These
+live checks remain evidence for the existing task path, not a native adapter.
+The snapshot envelope was expanded for readability and the testing-guide grammar
+corrected, preserving the stored version-one representation.
+
+ADR-104 remains Proposed and requires explicit maintainer approval before PR #48
+is merged. The [PR approval prerequisite](https://github.com/MrQuality/kehila/pull/48#issuecomment-6137865036)
+records that requirement; neither passing checks nor implementation/publication
+authorization grants acceptance. Project-only snapshots and the adapter/route
+obligations above remain subsequent work.
