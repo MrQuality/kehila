@@ -145,6 +145,8 @@ class DatabaseCheck:
                  expected_message='identity regression did not reject reassignment')
         # Session termination rolls back the disabled trigger. Prove restoration explicitly.
         self.sql('BEGIN;\n' + regression + '\nROLLBACK;')
+        from postgresql_snapshots import run as check_snapshots
+        check_snapshots(self)
         print('PASS: atomic installation/rollback, reinstall rejection, scalar/core/creation '
               'integrity, role separation and payload mutation detection (PostgreSQL 16)')
 
