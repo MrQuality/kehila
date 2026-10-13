@@ -1,7 +1,7 @@
 # M1-01 remaining delivery: successor plan
 
 Status: W1 implementation approved by explicit maintainer instruction on
-2026-10-13 and in progress, as recorded in [#49](https://github.com/MrQuality/kehila/issues/49#issuecomment-6154165059).
+2026-10-13 and prepared for review, as recorded in [#49](https://github.com/MrQuality/kehila/issues/49#issuecomment-6154165059).
 Later work packages and ADR-103 production adoption retain separate review gates.
 
 ## Tracking decision and baseline

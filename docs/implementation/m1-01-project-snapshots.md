@@ -39,13 +39,16 @@ qualification is claimed.
 descendant termination, explicitly framed hexadecimal JSONB output, fixed/checked
 SQL inputs and a temporary build directory through final oracle use and cleanup.
 It retains the existing disposable-container and fresh-database safety checks.
+Successful native fixtures feed the checked admission type's actual returned
+bytes into PostgreSQL. Only NUL/overflow negative fixtures use historical encoding
+past that boundary, and they must produce the exact expected admission error.
 
 ## Verification result
 
 Native verification passed on 2026-10-14 using Windows, WSL2/Podman and the pinned
 PostgreSQL 16.15 image, through the documented command with an explicit disposable
 container and connection. The final run used code commit
-fc8effdf780982d3aec78409ac03b23963e3e12c. The container was removed afterward;
+f2c6f7069d864cbb83c6c07c8e428405e2299f22. The container was removed afterward;
 test services and the VM started for this task were stopped. The native suite verified:
 
 - Production Rust encoding to actual JSONB and back through production decoders
@@ -81,11 +84,13 @@ the record ceiling; it was corrected to exercise the intended record boundary.
 Staged attempts stopped at readiness when services were off, including the
 README batch after early cleanup. The snapshot and host-helper commits then passed full staged verification;
 the revision-pair commit passed its pure gate. The final native-bridge commit
-passed full staged verification: 115 tooling tests (113 passed, two skipped),
+and the checked-byte oracle follow-up both passed full staged verification:
+115 tooling tests (113 passed, two skipped),
 naming/engineering checks, Go formatting/vet, workspace tests, frozen codec
 oracles and live contention/deadline/recovery/search-unavailable checks. Those
 live checks exercise the existing task path, independently of the native suite.
-Final hosted results belong in the PR. No hook was bypassed. The shared
+The README/evidence batch also passed its full staged gate. Final hosted results
+belong in the PR. No hook was bypassed. The shared
 matrix runs the bridge safety/orchestration tests, not live native PostgreSQL.
 
 ## Remaining obligations
