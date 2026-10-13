@@ -4,8 +4,12 @@
 //! acceptance. New native writes must enter through [`NativeRequest`].
 mod json;
 mod request;
+mod revision;
 pub use json::parse_json;
 pub use request::{decode_request, encode_request, fingerprint, verify_request, NativeRequest};
+pub use revision::{
+    encode_native_revision_snapshots, verify_revision_snapshots, NativeRevisionSnapshots,
+};
 
 /// Admission ceilings for codec resources, not product configuration policy.
 pub const MAX_STRING_BYTES: usize = 64 * 1024;
