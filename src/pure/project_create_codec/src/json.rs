@@ -18,6 +18,34 @@ impl Budget {
     }
 }
 
+struct Key<'a>(&'a mut Budget);
+
+impl<'de> DeserializeSeed<'de> for Key<'_> {
+    type Value = String;
+
+    fn deserialize<D: de::Deserializer<'de>>(self, deserializer: D) -> Result<String, D::Error> {
+        deserializer.deserialize_str(self)
+    }
+}
+
+impl<'de> Visitor<'de> for Key<'_> {
+    type Value = String;
+
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("bounded JSON object key")
+    }
+
+    fn visit_str<E: de::Error>(self, value: &str) -> Result<String, E> {
+        // serde_json lends either input or decoded scratch storage here.
+        // Escaped input can allocate scratch space before this callback; check
+        // decoded length before making the owned key retained by the map.
+        if value.len() > MAX_STRING_BYTES {
+            return Err(self.0.fail(Error::LimitExceeded));
+        }
+        Ok(value.to_owned())
+    }
+}
+
 struct Seed<'a> {
     budget: &'a mut Budget,
     depth: usize,
@@ -86,8 +114,8 @@ impl<'de> Visitor<'de> for Seed<'_> {
     }
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Value, A::Error> {
         let mut values = Map::new();
-        while let Some(key) = map.next_key::<String>()? {
-            if key.len() > MAX_STRING_BYTES || values.len() == MAX_COLLECTION_ENTRIES {
+        while let Some(key) = map.next_key_seed(Key(self.budget))? {
+            if values.len() == MAX_COLLECTION_ENTRIES {
                 return Err(self.budget.fail(Error::LimitExceeded));
             }
             // Compare decoded keys, including escaped spellings, before the

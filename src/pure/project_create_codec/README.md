@@ -27,6 +27,12 @@ JSON values, including containers. Keys are bounded strings, not value nodes.
 These guarantees cannot recover duplicate keys already collapsed by JSONB or
 another parser; future ingress must use this boundary on original bytes.
 
+Object keys are checked by a string visitor before creating their owned map key.
+Literal and escaped keys use the same decoded UTF8 byte limit. Escaped keys and
+values can still require serde_json scratch allocation before the visitor runs;
+the record-byte ceiling bounds that work. This avoids an unnecessary owned copy
+of an oversized key, not all temporary parsing allocations.
+
 `encode_result`/`decode_result` and `encode_snapshot`/`decode_snapshot` preserve
 complete saved successes and configuration snapshots, using stored-version
 and embedded-kind/version checks. Typed preflight bounds aggregate collection

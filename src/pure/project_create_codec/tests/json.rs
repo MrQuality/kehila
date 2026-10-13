@@ -65,3 +65,46 @@ fn aggregate_node_and_object_entry_bounds_are_exact() {
     );
     assert!(parse_json(&[b'"', 255, b'"']).is_err());
 }
+
+#[test]
+fn object_key_limits_count_decoded_utf8_bytes() {
+    for (encoded, decoded) in [
+        ("a".repeat(MAX_STRING_BYTES), "a".repeat(MAX_STRING_BYTES)),
+        (
+            "\\u0061".repeat(MAX_STRING_BYTES),
+            "a".repeat(MAX_STRING_BYTES),
+        ),
+        (
+            "\\u00e9".repeat(MAX_STRING_BYTES / 2),
+            "\u{e9}".repeat(MAX_STRING_BYTES / 2),
+        ),
+    ] {
+        let bytes = format!("{{\"{encoded}\":null}}");
+        let value = parse_json(bytes.as_bytes()).unwrap();
+        assert_eq!(value.as_object().unwrap().keys().next().unwrap(), &decoded);
+        let over_limit = format!("{{\"{encoded}x\":null}}");
+        assert_eq!(parse_json(over_limit.as_bytes()), Err(Error::LimitExceeded));
+    }
+}
+
+#[test]
+fn oversized_keys_are_rejected_before_parsing_their_values() {
+    for encoded in [
+        "a".repeat(MAX_STRING_BYTES + 1),
+        "\\u0061".repeat(MAX_STRING_BYTES + 1),
+    ] {
+        let bytes = format!("{{\"{encoded}\":INVALID}}");
+        assert_eq!(parse_json(bytes.as_bytes()), Err(Error::LimitExceeded));
+    }
+}
+
+#[test]
+fn maximum_length_keys_preserve_escaped_duplicate_detection() {
+    let literal = "a".repeat(MAX_STRING_BYTES);
+    let escaped = "\\u0061".repeat(MAX_STRING_BYTES);
+    let bytes = format!("{{\"{literal}\":null,\"{escaped}\":INVALID}}");
+    assert_eq!(
+        parse_json(bytes.as_bytes()),
+        Err(Error::Malformed("duplicate key"))
+    );
+}
