@@ -295,6 +295,14 @@ execution and hosted CI remain unverified. Structural fixtures do not establish
 trusted M1 seed equality, application codecs, authorization, compaction or a
 supported native application route.
 
+The [M1-01 snapshot verification plan](implementation/m1-01-snapshot-verification.md)
+under [#49](https://github.com/MrQuality/kehila/issues/49) proposes extending this
+native command with a production Rust codec bridge, standalone JSONB and real
+revision-row fixtures, coherence rejection and compatibility boundary checks.
+That extension is not implemented. Its native run will be separately required
+snapshot-PR evidence; current shared/hosted checks must not be reported as having
+executed it. Implementation awaits explicit maintainer approval.
+
 ## Verification time budgets
 
 Shared verification commands have a 300-second deadline. Cargo verification on

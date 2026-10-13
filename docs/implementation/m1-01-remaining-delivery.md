@@ -50,7 +50,7 @@ or supported configurable-model persistence path is implemented.
    next value or overwriting a map entry. Apply all existing resource ceilings.
    Historical decode must not consult mutable current domain acceptance.
 3. **Dependencies and prerequisites:** Reuse the pure codec's existing project
-   mapping, bounded parser and locked dependencies. Put real PostgreSQL 16 JSONB
+   mapping, shared project preflight/decoder and locked dependencies. Put real PostgreSQL 16 JSONB
    checks in the integration/fixture boundary, with no database driver in the
    pure crate. Implementation waits for maintainer review and approval of #49.
    Ask for memory readiness before memory-heavy builds or service execution.
@@ -78,7 +78,11 @@ or supported configurable-model persistence path is implemented.
    platforms, service versions and limitations in #49 and the PR summary.
 
 The [issue acceptance checklist](https://github.com/MrQuality/kehila/issues/49)
-tracks execution. No check above claims an implementation or successful test.
+tracks execution. The [snapshot verification plan](m1-01-snapshot-verification.md)
+defines the production-codec/native runner bridge, fixture classes, row/pair
+coherence, required native command and JSONB compatibility gates. Native checks
+remain separately required PR evidence; current shared/hosted checks do not run
+them. No check above claims an implementation or successful test.
 
 ## Remaining delivery after the first slice
 
