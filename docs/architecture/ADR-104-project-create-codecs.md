@@ -45,13 +45,16 @@ String wrappers, legacy routes and historical reconstruction remain unchanged.
 Future native adapters must require this checked boundary and validate their
 actor/other storage inputs; this type supplies no authentication or allocation.
 
-Proposed resource ceilings, implemented for review: 1 MiB encoded record, 64 KiB decoded string/key, depth 16
+Architectural admission ceilings specified by this proposal and implemented by
+the codec: 1 MiB encoded record, 64 KiB decoded string/key, depth 16
 (root depth zero), 1,024 entries per collection/object and 16,384 JSON values
 including containers. Keys are bounded separately and do not count as values.
 Typed encoding checks aggregate entries/string bytes before tree construction,
 then checks exact shape and writes to a bounded memory sink. Escaping cannot
 grow output beyond the record ceiling. Reject overflow without truncation.
-These are codec admission ceilings, not accepted product configuration limits.
+These ceilings are mandatory downstream admission constraints; business-domain
+acceptance MUST NOT be used to bypass them. They do not retroactively change
+the meaning of versioned historical records.
 Downstream transport, actor/routing, persistence and upgrade ADRs MUST implement
 the following contracts. They MUST NOT weaken these requirements by treating them
 as optional implementation advice or deferring them past native-route exposure.
@@ -95,6 +98,47 @@ scope mismatch or denied current authority. Cross-scope lookups and replay MUST
 fail closed; #40/#41 must supply the binding/authority/allocation contracts before
 native routes are exposed.
 
+### Contract 3: Structural project_snapshot envelope invariants
+
+`configuration_revisions.project_snapshot` MUST retain the JSONB representation.
+Its future version-one codec MUST use exactly the envelope keys `codec_version`,
+`kind` and `value`, with integer version `1`, kind `project_snapshot` and a complete
+project object as `value`. The stored snapshot version MUST agree with the
+envelope. Missing/unknown fields, wrong kinds and unsupported versions MUST fail
+explicitly; an adapter MUST NOT silently substitute a saved-result envelope.
+
+The project object MUST retain exactly the version-one project fields and their
+meanings: `id`, `name`, `prefix`, `configuration_revision`, `next_sequence`,
+`archived`, `estimate_unit` and `ever_estimated`, as mapped in the existing saved
+result. Strings MUST retain exact decoded values; booleans MUST remain booleans;
+estimate units MUST retain `hours`/`points` tags. Both u64 fields MUST use canonical
+ASCII decimal strings within u64 range, with no leading zeros except `0`, signs,
+fractional/exponent forms or conversion through floating point. The adapter MUST
+derive the snapshot from the single accepted typed result, not current mutable
+definitions or a separately maintained project projection.
+
+JSONB object-key order is not part of this representation's identity. Field names,
+meanings, complete field sets and exact values are frozen; adapters MUST NOT rely
+on JSON key byte order or raw JSON text equality. Ordered collections in the
+associated version-one configuration snapshots MUST preserve typed element order
+and empty collections, without sorting or deduplication. JSONB does not retain
+input key order or duplicates; its conversion cannot serve as admission
+validation ([PostgreSQL JSON types](https://www.postgresql.org/docs/16/datatype-json.html)).
+
+Every raw JSON snapshot boundary MUST use the codec's exact duplicate rejection
+semantics before conversion to Value/JSONB: compare decoded keys within each
+object, treat escaped equivalents as duplicates, and reject a duplicate before
+parsing its next value. The contract's byte/string/depth/collection/node bounds
+also apply. A later JSONB read MUST NOT be claimed as proof that original input
+had no duplicate keys; that proof belongs to the original admission boundary.
+
+The distinct version-one binary request codec MUST preserve its header, the field
+order `operation_id`, `project_id`, `name`, `prefix`, their 32-bit big-endian UTF8
+byte-length prefixes, and the final estimate-unit tag (`0` hours, `1` points).
+Those byte/framing invariants MUST NOT be imposed on JSONB snapshots or changed
+by their adapters. This contract authorizes no binary snapshot representation;
+a representation/version change requires a separately approved design.
+
 ### Contract 4: Legacy and upgraded state gate
 
 Unmigrated legacy records MUST remain isolated from native command/replay and
@@ -137,6 +181,13 @@ for each relevant boundary before it can claim conformance or expose a route:
   with missing/spoofed identities, wrong tenant/project scope, denied/revoked
   authority and cross-scope replay attempts; all MUST be denied independently
   of codec success, with no protected state disclosed or changed.
+- Snapshot adapters MUST add frozen version-one envelope fixtures and native
+  JSONB round-trip tests demonstrating complete project reconstruction, exact
+  decimal u64 values, retained configuration collection order and version/kind
+  agreement. Original-byte tests MUST reject duplicate/escaped-equivalent keys
+  before JSONB conversion, plus missing/unknown fields and malformed values.
+  Existing binary request golden bytes/digests MUST remain unchanged. The future
+  project-only snapshot codec is not implemented by specifying this contract.
 - Upgrade tests MUST demonstrate that legacy/unsupported records remain isolated
   without calling live domain validators, and that translation/admission is
   impossible before the migration RFC's validation and recovery gates succeed.

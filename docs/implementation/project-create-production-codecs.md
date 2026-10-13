@@ -142,6 +142,14 @@ Unmigrated legacy state MUST remain isolated until an approved migration RFC
 defines translation and admission/recovery gates; upgrades cannot substitute
 live domain evaluation for that process.
 
+Contract 3 retains JSONB and freezes the version-one project snapshot envelope,
+complete project field meanings, canonical decimal-string u64 values and
+duplicate rejection before JSONB conversion. JSON object-key order is not an
+identity guarantee; typed configuration collection order must remain exact.
+The binary request's field order and big-endian length framing remain a separate,
+unchanged contract. The future adapter must implement the project-only snapshot
+codec and demonstrate the required original-byte and native JSONB round trips.
+
 Pure codec tests do not demonstrate those integration properties. The transport,
 actor/routing, persistence and upgrade slices MUST provide the boundary evidence
 specified by ADR-104 before claiming conformance or exposing native routes.
