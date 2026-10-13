@@ -29,10 +29,12 @@ Preserve version-one JSON shapes, complete ordered collections and canonical
 decimal-string u64 values. Dispatch by the stored version and check embedded
 version/kind. Unknown versions and malformed content are explicit failures.
 
-Parse original JSON bytes through a bounded duplicate-aware visitor before
-creating a Value. Duplicate decoded keys, including escaped spellings, are
-rejected before their next values are read. Reject trailing input. Version-one
-shape mapping is private and never invokes mutable domain validation.
+Parse original JSON bytes through a bounded duplicate-aware visitor. Duplicate
+decoded keys, including escaped spellings, are rejected before their next values
+are read or a map insertion can overwrite the prior key. Constructing a Value
+during this checked parse is permitted; an unchecked conversion that discards
+duplicates is forbidden. Reject trailing input. Version-one shape mapping is
+private and never invokes mutable domain validation.
 
 Key visitors check decoded length before creating an owned map key. Escaped keys
 and values can still use serde_json scratch storage before visitor validation;
@@ -74,8 +76,10 @@ rejection; trusting Content-Length alone is insufficient. They MUST NOT buffer
 arbitrary JSON and subsequently apply the record limit. A bounded buffer within
 the record ceiling is permitted. Parsing original bytes MUST enforce decoded
 string/key, depth, collection and node bounds before admitting the request.
-Duplicate decoded keys, including escaped equivalents, MUST be rejected before
-conversion to Value, JSONB or another representation that can discard duplicates.
+Duplicate decoded keys, including escaped equivalents, MUST be rejected during
+the first parse before any map insertion or conversion can overwrite/discard
+them. A Value MUST be constructed only through this bounded, duplicate-aware
+parse, never by first applying an unchecked/lossy parser or JSONB conversion.
 No truncation, normalization or retry through a more permissive parser is allowed.
 
 Generated persistence envelopes MUST also satisfy codec ceilings before database
@@ -126,9 +130,10 @@ input key order or duplicates; its conversion cannot serve as admission
 validation ([PostgreSQL JSON types](https://www.postgresql.org/docs/16/datatype-json.html)).
 
 Every raw JSON snapshot boundary MUST use the codec's exact duplicate rejection
-semantics before conversion to Value/JSONB: compare decoded keys within each
+semantics during the original-byte parse: compare decoded keys within each
 object, treat escaped equivalents as duplicates, and reject a duplicate before
-parsing its next value. The contract's byte/string/depth/collection/node bounds
+parsing its next value or overwriting a map entry. JSONB conversion MUST follow
+this validation. The contract's byte/string/depth/collection/node bounds
 also apply. A later JSONB read MUST NOT be claimed as proof that original input
 had no duplicate keys; that proof belongs to the original admission boundary.
 
