@@ -1,16 +1,16 @@
 # ADR-104 - Project-creation storage codec boundary
 
-Status: Proposed. Owner: project maintainer. Recorded: 2026-10-12.
-Acceptance: Pending explicit maintainer assessment. Publication as Proposed is
-authorized; implementation authorization does not accept this ADR. Related: ADR-102, ADR-103, #47, #39,
-#26/B-005, [implementation plan](../implementation/project-create-production-codecs.md).
+Status: Accepted. Owner: project maintainer. Recorded: 2026-10-12.
+Accepted: 2026-10-13 by explicit project-maintainer approval, after the four
+mandatory downstream contracts and JSONB representation choice were incorporated.
+The [approval record](https://github.com/MrQuality/kehila/pull/48#issuecomment-6151468708)
+identifies the approved proposal at commit 36826e76188db807cf7f074918fa8507f8e91bf0.
+Related: ADR-102, ADR-103, #47, #39, #26/B-005,
+[implementation plan](../implementation/project-create-production-codecs.md).
 
-Explicit maintainer approval of ADR-104 is required before PR #48 is merged.
-Passing tests or implementation/publication authorization does not grant that
-approval. The record remains Proposed pending the approval decision.
-
-Maintainer review accepts isolation of the pure codec from runtime I/O. Acceptance
-of this ADR as a whole remains pending the downstream contracts below.
+The ADR-specific approval prerequisite for PR #48 is satisfied. This accepts the
+architectural decision and its downstream contracts; implementation/verification
+obligations remain mandatory. Final PR assessment and merge are separate decisions.
 
 ## Context
 
@@ -47,7 +47,7 @@ String wrappers, legacy routes and historical reconstruction remain unchanged.
 Future native adapters must require this checked boundary and validate their
 actor/other storage inputs; this type supplies no authentication or allocation.
 
-Architectural admission ceilings specified by this proposal and implemented by
+Architectural admission ceilings specified by this decision and implemented by
 the codec: 1 MiB encoded record, 64 KiB decoded string/key, depth 16
 (root depth zero), 1,024 entries per collection/object and 16,384 JSON values
 including containers. Keys are bounded separately and do not count as values.

@@ -340,6 +340,6 @@ including escaped spellings and multibyte characters. Oversized keys are rejecte
 before their values are parsed; maximum-length escaped duplicates remain rejected.
 
 The [crate guide](../src/pure/project_create_codec/README.md) documents the
-proposed codec resource ceilings and remaining adapter obligations. This pure
+accepted architectural resource ceilings and remaining adapter obligations. This pure
 suite makes no database, authentication, native Linux-host PostgreSQL, throughput
 or supported-route claim. SP-003's frozen sources/evidence remain separate.

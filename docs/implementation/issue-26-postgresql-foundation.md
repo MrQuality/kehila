@@ -169,6 +169,7 @@ trusted-clock, compaction and #40/#41 prerequisites remain as described above.
 The next bounded slice now provides pure version-one request/fingerprint and
 saved-result/configuration codecs plus checked native request admission. See the
 [codec implementation handoff](project-create-production-codecs.md) for tests,
-resource ceilings and limitations. ADR-104 remains Proposed. The native database
+resource ceilings and limitations. ADR-104 was Accepted by explicit maintainer
+approval on 2026-10-13; its downstream contracts remain mandatory. The native database
 adapter, project-only snapshot envelope, authority/allocation, clock/retry and
 compaction obligations above remain open; no supported route is established.

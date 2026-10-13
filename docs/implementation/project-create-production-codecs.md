@@ -1,8 +1,9 @@
 # Production project-creation codecs and native validation
 
 Status: Implemented for PR review, 2026-10-12. Follows PR #46; related #47,
-#26/B-005, #39. ADR-104 and the concrete resource ceilings remain Proposed;
-publication as a proposal is authorized, acceptance is pending.
+#26/B-005, #39. ADR-104 was Accepted by explicit maintainer approval on 2026-10-13.
+Its architectural admission ceilings and downstream contracts are mandatory;
+adapter implementation and integration evidence remain outstanding.
 
 ## Pre-Execution Plan
 
@@ -93,8 +94,8 @@ Historical experiment sources, fixtures and observations remain unchanged.
 
 ## Next slice
 
-Review the proposed codec ceilings and ADR-104 explicitly. Then implement the
-internal PostgreSQL adapter: startup schema checks, caller/transaction ownership,
+Implement the internal PostgreSQL adapter in conformance with Accepted ADR-104:
+startup schema checks, caller/transaction ownership,
 coherent persistence from a single trusted result, and request/core/result
 attribution. Define the project-only snapshot envelope needed by
 configuration_revisions.project_snapshot; the frozen evidence defines saved
@@ -125,11 +126,11 @@ live checks remain evidence for the existing task path, not a native adapter.
 The snapshot envelope was expanded for readability and the testing-guide grammar
 corrected, preserving the stored version-one representation.
 
-ADR-104 remains Proposed and requires explicit maintainer approval before PR #48
-is merged. The [PR approval prerequisite](https://github.com/MrQuality/kehila/pull/48#issuecomment-6137865036)
-records that requirement; neither passing checks nor implementation/publication
-authorization grants acceptance. Project-only snapshots and the adapter/route
-obligations above remain subsequent work.
+At this review stage, ADR-104 was Proposed and required explicit maintainer
+approval before PR #48 merge, as recorded in the
+[PR approval prerequisite](https://github.com/MrQuality/kehila/pull/48#issuecomment-6137865036).
+The acceptance record below supersedes that pending approval state. Project-only
+snapshots and the adapter/route obligations remain subsequent work.
 
 ## Downstream architectural contracts
 
@@ -153,5 +154,20 @@ codec and demonstrate the required original-byte and native JSONB round trips.
 Pure codec tests do not demonstrate those integration properties. The transport,
 actor/routing, persistence and upgrade slices MUST provide the boundary evidence
 specified by ADR-104 before claiming conformance or exposing native routes.
-The pure crate's isolation from runtime I/O is accepted; the complete ADR remains
-Proposed and still requires explicit approval before PR #48 is merged.
+The complete ADR, including pure crate isolation and all four contracts, is now
+Accepted as recorded below. Downstream conformance evidence is still required.
+
+## ADR-104 acceptance (2026-10-13)
+
+The project maintainer explicitly approved ADR-104 after its mandatory downstream
+contracts were incorporated. The [durable approval record](https://github.com/MrQuality/kehila/pull/48#issuecomment-6151468708)
+identifies the approved proposal at commit 36826e76188db807cf7f074918fa8507f8e91bf0.
+ADR-104 is Accepted and its ADR-specific pre-merge approval prerequisite is
+satisfied. The accepted decision covers codec isolation, edge admission before
+pools/workers, independent actor/scope authorization, JSONB snapshot invariants
+with separate binary framing, and the legacy migration RFC gate.
+
+Acceptance is an architectural decision, not evidence that future adapters or
+their required verification exist. Their obligations remain in force. ADR-103's
+separate status, issue states and PR48's open/non-draft status are unchanged;
+no merge is authorized or performed by this approval record.
