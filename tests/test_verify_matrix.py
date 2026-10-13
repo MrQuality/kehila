@@ -25,3 +25,11 @@ class PureMatrixTests(unittest.TestCase):
             with self.assertRaises(subprocess.CalledProcessError):
                 VERIFY.main()
         self.assertTrue(any('task_contract' in command for command in seen))
+
+    def test_production_codec_failure_fails_the_pure_command(self):
+        def run(command, **kwargs):
+            if command[0] == 'cargo' and 'project_create_codec' in command:
+                raise subprocess.CalledProcessError(1, command)
+        with patch.object(sys, 'argv', ['verify.py', '--pure']), patch.object(VERIFY.subprocess, 'run', run):
+            with self.assertRaises(subprocess.CalledProcessError):
+                VERIFY.main()

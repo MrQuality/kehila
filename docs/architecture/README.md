@@ -18,6 +18,7 @@ and retain history. Code evidence cannot silently resolve a product question.
 | [ADR-101: Task authority, replay and projection](ADR-101-task-authority.md) | Accepted behavior restated from D-016/D-017; implementation evidence remains bounded. |
 | [ADR-102: Native PostgreSQL and bounded transactions](ADR-102-postgresql-transactions.md) | Accepted direction for new M1 storage; [local schema foundation](../../storage/postgresql/README.md) implemented, application adapter pending. |
 | [ADR-103: Native creation storage foundation](ADR-103-native-creation-foundation.md) | Proposed for production adoption; implemented and tested locally for review. |
+| [ADR-104: Project-creation storage codecs](ADR-104-project-create-codecs.md) | Accepted by explicit maintainer approval on 2026-10-13; pure codec plus mandatory ingress, actor/scope, JSONB snapshot and legacy migration contracts. Downstream adapters/evidence remain required under #47/#26. |
 
 Future cross-record coordination, compaction/rebuild, CDC schema, event envelope
 and storage upgrade decisions require further evidence and ADRs. In particular,

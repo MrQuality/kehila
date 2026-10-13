@@ -80,20 +80,8 @@ pub fn decide_project_create(
             Reject(E::OperationIdReused)
         };
     }
-    if command.project_id.0.is_empty() {
-        return Reject(E::InvalidReference);
-    }
-    if !crate::operation::valid_operation_id(&command.operation_id) {
-        return Reject(E::InvalidOperation);
-    }
-    if command.name.trim().is_empty()
-        || command.name.len() > 256
-        || command.name.chars().any(char::is_control)
-    {
-        return Reject(E::InvalidName);
-    }
-    if !valid_prefix(&command.prefix) {
-        return Reject(E::InvalidPrefix);
+    if let Err(error) = validate_project_create_input(command) {
+        return Reject(error);
     }
     if project_exists {
         return Reject(E::ProjectAlreadyExists);
@@ -184,4 +172,28 @@ fn m1_seed(project_id: ProjectId) -> Configuration {
         fields,
         relationship_types: vec![],
     }
+}
+
+/// Validate a new creation request; historical replay does not call this.
+/// Native persistence must additionally check its representation-specific bounds.
+pub fn validate_project_create_input(
+    command: &ProjectCreateCommand,
+) -> Result<(), ProjectCreateError> {
+    use ProjectCreateError as E;
+    if command.project_id.0.is_empty() {
+        return Err(E::InvalidReference);
+    }
+    if !crate::operation::valid_operation_id(&command.operation_id) {
+        return Err(E::InvalidOperation);
+    }
+    if command.name.trim().is_empty()
+        || command.name.len() > 256
+        || command.name.chars().any(char::is_control)
+    {
+        return Err(E::InvalidName);
+    }
+    if !valid_prefix(&command.prefix) {
+        return Err(E::InvalidPrefix);
+    }
+    Ok(())
 }
