@@ -100,16 +100,32 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let r = fixture(&args[1])?;
     match args[0].as_str() {
         "fixture" => {
-            let p = encode_project_snapshot(&r.project)?;
-            let c = encode_snapshot(&r.configuration)?;
             let native = encode_native_revision_snapshots(&r);
-            if args[1] == "nul" || args[1] == "overflow" {
-                if native.is_ok() {
-                    return Err("incompatible fixture admitted".into());
+            let (p, c) = match args[1].as_str() {
+                "nul" | "overflow" => {
+                    let expected = if args[1] == "nul" {
+                        Error::Malformed("JSONB cannot store NUL")
+                    } else {
+                        Error::LimitExceeded
+                    };
+                    if native.err() != Some(expected) {
+                        return Err("expected native admission rejection absent".into());
+                    }
+                    // Only negative fixtures deliberately send historical bytes
+                    // past native admission to demonstrate PostgreSQL/read limits.
+                    (
+                        encode_project_snapshot(&r.project)?,
+                        encode_snapshot(&r.configuration)?,
+                    )
                 }
-            } else {
-                native?;
-            }
+                _ => {
+                    let admitted = native?;
+                    (
+                        admitted.project().to_vec(),
+                        admitted.configuration().to_vec(),
+                    )
+                }
+            };
             let frame = serde_json::to_vec(&json!({
                 "project": hex(&p), "configuration": hex(&c),
                 "revision": r.configuration.revision.to_string(),
