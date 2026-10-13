@@ -209,9 +209,9 @@ are regression evidence, not exhaustive linearizability proof.
 
 The pure command includes `kehila_query`, `task_contract` and
 `project_create_codec`; maintain this
-explicit list when adding a pure crate. Its selection test verifies that a
-failures in `task_contract` and `project_create_codec` propagate. The full suite tests all Rust workspace
-crates, including adapter policy tests.
+explicit list when adding a pure crate. Its selection tests verify that failures
+in `task_contract` and `project_create_codec` propagate. The full suite tests all
+Rust workspace crates, including adapter policy tests.
 
 The older `live_task_worker.py` and `live_go_rust.py` remain manual probes for
 already-running processes. `live_task_api.py` specifically targets the original

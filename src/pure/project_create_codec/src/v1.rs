@@ -393,7 +393,11 @@ pub(crate) fn decode_result(v: &Value) -> Outcome<ProjectCreateResult> {
     })
 }
 pub(crate) fn encode_snapshot(configuration: &Configuration) -> Value {
-    json!({"codec_version":1,"kind":"configuration_snapshot","value":encode_configuration(configuration)})
+    json!({
+        "codec_version": 1,
+        "kind": "configuration_snapshot",
+        "value": encode_configuration(configuration),
+    })
 }
 pub(crate) fn decode_snapshot(v: &Value) -> Outcome<Configuration> {
     envelope(v, "configuration_snapshot")?;
