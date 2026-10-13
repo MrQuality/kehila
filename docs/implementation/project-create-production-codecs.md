@@ -130,3 +130,20 @@ is merged. The [PR approval prerequisite](https://github.com/MrQuality/kehila/pu
 records that requirement; neither passing checks nor implementation/publication
 authorization grants acceptance. Project-only snapshots and the adapter/route
 obligations above remain subsequent work.
+
+## Downstream architectural contracts
+
+ADR-104's Decision and Consequences sections define mandatory contracts for future
+adapters; these are implementation/verification requirements, not optional scope
+disclaimers. Edge admission MUST complete before per-request database-pool access
+or application-worker scheduling. Authentication, actor binding and tenant/project
+authorization MUST be established independently of decode/fingerprint success.
+Unmigrated legacy state MUST remain isolated until an approved migration RFC
+defines translation and admission/recovery gates; upgrades cannot substitute
+live domain evaluation for that process.
+
+Pure codec tests do not demonstrate those integration properties. The transport,
+actor/routing, persistence and upgrade slices MUST provide the boundary evidence
+specified by ADR-104 before claiming conformance or exposing native routes.
+The pure crate's isolation from runtime I/O is accepted; the complete ADR remains
+Proposed and still requires explicit approval before PR #48 is merged.
