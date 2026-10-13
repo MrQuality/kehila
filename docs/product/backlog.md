@@ -95,6 +95,12 @@ of #49 and the [successor plan](../implementation/m1-01-remaining-delivery.md).
 trusted clocks/retries, compaction/tombstone restore, historical reference
 integrity, configuration/item contention, archive/selection consistency and
 B-005 durability/recovery evidence. The snapshot PR alone cannot complete it.
+The successor plan now sequences W1-W7 work packages with explicit dependencies
+and exit evidence, including early #40/#41 contract review, separately reviewable
+compactor delivery and a distinct ADR-103 production-adoption gate. Its
+[snapshot verification plan](../implementation/m1-01-snapshot-verification.md)
+defines the production-codec/native bridge, fixture classes, coherence checks and
+JSONB compatibility gates; these are planned checks, not delivered capabilities.
 All ADR-104 ingress, actor/scope, structural snapshot and legacy isolation
 contracts remain mandatory.
 

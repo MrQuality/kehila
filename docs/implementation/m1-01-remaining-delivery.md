@@ -86,14 +86,55 @@ them. No check above claims an implementation or successful test.
 
 ## Remaining delivery after the first slice
 
-#49 retains M1-01's full remaining scope: native startup/schema compatibility,
-transaction ownership and coherent persistence/attribution from one trusted
-result; stored-version dispatch and corruption handling; trusted replay clocks,
-retries, 90-day replay and gap-free permanent-tombstone compaction/restore;
-configuration history/reference protection and configuration/item contention;
-archive/current-selection crash and recovery consistency; supported integration
-and B-005 durability/restore evidence. Subsequent slices need bounded plans and
-review. Completing the snapshot codec alone does not complete M1-01.
+These work packages preserve the existing acceptance scope. They establish
+ordering and review gates, not a commitment to one PR per package. Each stateful
+package needs its own bounded plan, negative/failure evidence and maintainer
+review before execution; implementation of even the first package is pending.
+
+| Package | Prerequisites and boundary | Required exit evidence |
+| --- | --- | --- |
+| W1: Project snapshot codec and native verification | Explicit approval of the first-slice plan; Accepted ADR-104. No stateful application adapter. | Shared project mapping/preflight, production Rust-to-JSONB-to-Rust checks, relational versus representation fixtures, coherence rejection and resolved JSONB compatibility gates in the linked verification plan. |
+| W2: Actor/scope and stable allocation contracts | Review #40 under B-007/#11 and #41 under M1-02/#27, related #32. Can be planned alongside W1; no route exposure. | Trusted actor/scope, revocation, operation/replay lookup and stable retry target ownership are defined. Use these contracts before finalizing runtime adapter interfaces; do not infer them from payload shape or fingerprints. |
+| W3: Internal creation persistence adapter | W1 and W2 contracts before runtime interface finalization; separate dependency review and bounded transaction plan. ADR-103 disposition before production adoption. | Schema/startup compatibility, capability/connection/transaction ownership, coherent persistence and reload from one trusted result, request/core/result/snapshot attribution, stored-version corruption rejection, rollback and uncertain-response/contention evidence. |
+| W4: Replay clocks and payload retirement/compaction | W3 operation persistence; trusted replay clock/retry contract and reviewed compactor capability. Keep compactor delivery separately reviewable from initial adapter persistence. | Actor/family/target-scoped lookup, 90-day replay, bounded retries, gap-free irreversible retirement to permanent tombstones and tombstone backup/restore. Serving privileges must not silently expand to compactor privileges. |
+| W5: Multi-command configuration and history | W3/W2 ownership contracts, applicable W4 replay semantics, and command-specific B-003 rules. Explicit versioned schema/codec evolution beyond creation-only guards. | Historical status, status-group assignment/grant, workflow, type, field and relationship-type references remain protected after item migration; configuration/item contention and replay after configuration changes. Coordinate work-item persistence with M1-02/#27. |
+| W6: Archive and current-selection coordination | W5 applicable state/history representation, M1-02 identity/selection persistence, authority and ADR-102 bounded transaction design. | Explicit archive/restore/selection-clear protocol with crash barriers, competing selections, retry and restore checks before archival routes. Readers observe neither accepted archives with stale selections nor selection clears from uncommitted archives. |
+| W7: Supported integration and recovery qualification | Applicable W1-W6 evidence, ADR-103 production-adoption disposition and all ADR-104 ingress/authority/legacy gates. | Native command/read integration, zero pool/worker admission for rejected edge input, independent authorization, supported-platform evidence and applicable B-005 restart/clean-restore/durability/operating-limit checks. Keep authoritative state separate from rebuildable projections. |
+
+W2 contracts and edge admission design must inform earlier work; placing final
+integration in W7 does not defer those architectural constraints. Native
+Linux-host evidence must be explicit, not inferred from Linux-hosted pure CI or
+a Linux container on Windows. Legacy translation is excluded until a dedicated
+approved migration RFC exists; isolation is required throughout these packages.
+Completion of W1 alone must not close #49 or claim completion of M1-01.
+
+### ADR-103 disposition gate
+
+Request separate maintainer review of ADR-103 before W3's production adoption,
+using the foundation, role/integrity evidence, known platform/upgrade limitations
+and proposed application use. The outcome may be acceptance, amendment or
+rejection; approval of #49 does not supply it. ADR-103 already authorizes local
+implementation/testing for review, so its Proposed status is not a blanket ban
+on isolated verification. W1 implements Accepted ADR-104 and does not depend on
+accepting ADR-103. Any driver dependency is reviewed in the stateful adapter
+plan under the [dependency policy](../engineering/DEPENDENCIES.md).
+
+### Planning and verification dispositions
+
+Severity describes potential impact in the affected future capability; priority
+sets the applicable gate. These are requirements to verify, not observed native
+adapter defects. All remain pending implementation/evidence.
+
+| Item | Severity / priority | Gate and disposition |
+| --- | --- | --- |
+| Production codec/native execution bridge | Medium / P1 | W1 plan defines the runner/IPC path and separately required native PR evidence; shared CI is not a substitute. |
+| Representation versus relational fixtures | Medium / P1 | W1 separates u64 representation extremes from valid attributed revision rows and negative relational cases. |
+| Row/pair coherence | Medium / P1 | W1 tests explicit relationships; W3 must enforce them on real transactional persistence/read verification. Keep historical envelope decoding separate. |
+| Shared mapping and project preflight | Medium / P1 | W1 shares project encoding/decoding and validates strings before tree construction. |
+| Dependency ordering | Medium / P2 | W1-W7 expose prerequisites and exit evidence; later plans must split work into focused, reviewable PRs. |
+| ADR-103 production-adoption disposition | Low / P2 | Separate maintainer gate before W3 production adoption; status remains Proposed. |
+| JSONB text size expansion | Medium / P1 | W1 must measure near-limit associated configuration round trips and resolve bounded admission/read compatibility. Risk is unmeasured; no ceiling change is authorized. |
+| Codec-valid versus SQL-storable strings | Medium / P2 | W1 records codec preservation versus JSONB NUL rejection; W3 admission checks generated content before database admission without narrowing historical decode. |
 
 All four ADR-104 contracts remain mandatory. Future ingress must prove bounded
 admission before pools/workers; authentication and tenant/project authorization
