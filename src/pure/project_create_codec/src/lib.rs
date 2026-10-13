@@ -42,6 +42,7 @@ pub const MAX_NODES: usize = 16384;
 
 mod limits;
 mod v1;
+use task_contract::project::Project;
 use task_contract::project_create::ProjectCreateResult;
 use task_contract::work_item::Configuration;
 
@@ -71,4 +72,16 @@ pub fn decode_snapshot(version: u32, bytes: &[u8]) -> Result<Configuration, Erro
 pub fn encode_snapshot(configuration: &Configuration) -> Result<Vec<u8>, Error> {
     limits::configuration(configuration)?;
     limits::serialize(&v1::encode_snapshot(configuration))
+}
+
+/// Reconstruct a recorded Project under its stored codec version without current
+/// domain validation. Row/configuration coherence is a separate boundary.
+pub fn decode_project_snapshot(version: u32, bytes: &[u8]) -> Result<Project, Error> {
+    v1::decode_project_snapshot(&stored_json(version, bytes)?).map_err(Error::Malformed)
+}
+/// Preserve a complete recorded Project. This checks codec resources, not native
+/// storage admission, authority or current domain acceptance.
+pub fn encode_project_snapshot(project: &Project) -> Result<Vec<u8>, Error> {
+    limits::project(project)?;
+    limits::serialize(&v1::encode_project_snapshot(project))
 }

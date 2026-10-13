@@ -1,7 +1,7 @@
 # Project-creation storage codecs
 
 Pure versioned representations for the future native PostgreSQL adapter.
-This crate performs no I/O and exposes no route. Related: #47, #39, #26/B-005.
+This crate performs no I/O and exposes no route. Related: #49, #47, #39, historical #26/B-005.
 
 `NativeRequest::new` owns checked new-write admission: shared creation validation
 plus the native ProjectId byte/NUL bounds. It preserves exact identifier bytes.
@@ -40,8 +40,11 @@ entries/string bytes before allocating a tree; exact node/depth checks and a
 bounded memory writer also limit escaped JSON output. They do not authenticate
 valid-shaped stored data or prove cross-record semantic agreement. The adapter
 must check core/request/result attribution and persist one trusted domain result.
-A project-only snapshot envelope remains adapter work; this crate does not
-invent a format absent from the frozen version-one fixtures.
+`encode_project_snapshot`/`decode_project_snapshot` preserve the complete
+version-one Project envelope specified by Accepted ADR-104. They share project
+mapping and preflight with saved results, preserve historical values independently
+of current rules and apply the same resource ceilings. Revision-row/configuration
+coherence and native storage compatibility are separate admission requirements.
 
 ## Dependencies
 

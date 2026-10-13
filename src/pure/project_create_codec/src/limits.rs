@@ -2,6 +2,7 @@ use crate::{
     Error, MAX_COLLECTION_ENTRIES, MAX_DEPTH, MAX_NODES, MAX_RECORD_BYTES, MAX_STRING_BYTES,
 };
 use serde_json::Value;
+use task_contract::project::Project;
 use task_contract::project_create::ProjectCreateResult;
 use task_contract::work_item::Configuration;
 
@@ -30,6 +31,11 @@ impl Budget {
             return Err(Error::LimitExceeded);
         }
         Ok(())
+    }
+    fn project(&mut self, p: &Project) -> Result<(), Error> {
+        self.text(&p.id.0)?;
+        self.text(&p.name)?;
+        self.text(&p.prefix)
     }
     fn configuration(&mut self, c: &Configuration) -> Result<(), Error> {
         self.text(&c.project_id.0)?;
@@ -91,10 +97,11 @@ impl Budget {
 
 pub(crate) fn result(result: &ProjectCreateResult) -> Result<(), Error> {
     let mut budget = Budget::default();
-    budget.text(&result.project.id.0)?;
-    budget.text(&result.project.name)?;
-    budget.text(&result.project.prefix)?;
+    budget.project(&result.project)?;
     budget.configuration(&result.configuration)
+}
+pub(crate) fn project(p: &Project) -> Result<(), Error> {
+    Budget::default().project(p)
 }
 pub(crate) fn configuration(c: &Configuration) -> Result<(), Error> {
     Budget::default().configuration(c)
