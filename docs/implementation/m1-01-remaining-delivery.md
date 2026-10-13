@@ -1,8 +1,8 @@
 # M1-01 remaining delivery: successor plan
 
-Status: Planning for maintainer review, 2026-10-13. Execution issue:
-[#49](https://github.com/MrQuality/kehila/issues/49). Implementation has not begun
-and requires explicit maintainer approval of the first slice.
+Status: W1 implementation approved by explicit maintainer instruction on
+2026-10-13 and in progress, as recorded in [#49](https://github.com/MrQuality/kehila/issues/49#issuecomment-6154165059).
+Later work packages and ADR-103 production adoption retain separate review gates.
 
 ## Tracking decision and baseline
 
@@ -34,6 +34,12 @@ for production adoption. This plan accepts no additional architecture or product
 decision. The running worker remains on FerretDB; no native application adapter
 or supported configurable-model persistence path is implemented.
 
+The [W1 implementation report](m1-01-project-snapshots.md) records the delivered
+project snapshot codec, pair verification and bounded native JSONB admission,
+with Windows/Podman PostgreSQL 16.15 evidence from 2026-10-14. The plan below
+retains the acceptance requirements; fixture success does not complete the
+application adapter or later work packages.
+
 ## First-slice pre-execution plan
 
 1. **Goal and context:** Implement the separate version-one
@@ -52,8 +58,9 @@ or supported configurable-model persistence path is implemented.
 3. **Dependencies and prerequisites:** Reuse the pure codec's existing project
    mapping, shared project preflight/decoder and locked dependencies. Put real PostgreSQL 16 JSONB
    checks in the integration/fixture boundary, with no database driver in the
-   pure crate. Implementation waits for maintainer review and approval of #49.
-   Ask for memory readiness before memory-heavy builds or service execution.
+   pure crate. W1 execution is now approved; later packages remain pending review.
+   Check available memory before heavy builds/service execution and ask the
+   maintainer to free more when insufficient; use one compiler job.
 4. **Risks and mitigations:** A second project mapping could drift from saved
    results; reuse the canonical mapping. JSONB loses object-key order and
    duplicates; verify typed equality after storage and original-byte duplicate
@@ -89,7 +96,7 @@ them. No check above claims an implementation or successful test.
 These work packages preserve the existing acceptance scope. They establish
 ordering and review gates, not a commitment to one PR per package. Each stateful
 package needs its own bounded plan, negative/failure evidence and maintainer
-review before execution; implementation of even the first package is pending.
+review before execution. W1 is approved and in progress; other packages are pending.
 
 | Package | Prerequisites and boundary | Required exit evidence |
 | --- | --- | --- |
@@ -123,7 +130,8 @@ plan under the [dependency policy](../engineering/DEPENDENCIES.md).
 
 Severity describes potential impact in the affected future capability; priority
 sets the applicable gate. These are requirements to verify, not observed native
-adapter defects. All remain pending implementation/evidence.
+adapter defects. W1 implementation/fixture evidence is recorded in the report above; adapter
+adoption and the later gates remain pending.
 
 | Item | Severity / priority | Gate and disposition |
 | --- | --- | --- |

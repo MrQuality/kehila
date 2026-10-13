@@ -46,6 +46,28 @@ mapping and preflight with saved results, preserve historical values independent
 of current rules and apply the same resource ceilings. Revision-row/configuration
 coherence and native storage compatibility are separate admission requirements.
 
+## Revision pairs and native JSONB admission
+
+`verify_revision_snapshots` decodes both envelopes under one stored version and
+checks project identity, recorded revision and archival-state agreement against
+the revision row. It does not compare recorded sequences/estimate flags with a
+live projection or apply current domain/SQL acceptance to historical records.
+
+`encode_native_revision_snapshots` derives both envelopes from one caller-supplied
+trusted result and checks pair coherence, codec ceilings and PostgreSQL 16 JSONB
+compatibility. It rejects NUL anywhere in generated content and reserves one
+output byte per structural comma/colon, keeping PostgreSQL JSONB text readback
+within the same 1 MiB cap as compact encoding. The returned bytes are private and
+read-only. This narrows new native persistence admission without changing the
+version-one representation, historical codecs or resource ceilings. SQL scalar
+constraints, authenticity, attribution and transaction ownership remain caller
+obligations; this is not a complete checked database command.
+
+The native helper lives in `src/io/project_snapshot_check`. The separate native
+verification command exercises production encoding, actual JSONB text and
+production reconstruction. Shared pure tests alone do not establish that I/O
+contract; see the [verification plan](../../../docs/implementation/m1-01-snapshot-verification.md).
+
 ## Dependencies
 
 | Direct package | Locked version | Purpose and provenance |

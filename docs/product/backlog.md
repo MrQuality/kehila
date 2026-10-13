@@ -75,7 +75,7 @@ must not be claimed by M1 checks.
 <a id="m1-01-remaining-delivery"></a>
 ### M1-01 remaining delivery: successor execution record
 
-**Status: Documented plan; implementation awaiting maintainer approval.**
+**Status: W1 execution approved; snapshot implementation prepared for review.**
 [#49](https://github.com/MrQuality/kehila/issues/49) tracks the unfinished M1-01
 scope under B-005/#9. By maintainer direction, historical
 [#26](https://github.com/MrQuality/kehila/issues/26) remains closed. This successor
@@ -86,10 +86,12 @@ no product milestone and makes no completion claim.
 foundation; [PR #48](https://github.com/MrQuality/kehila/pull/48) delivered the pure
 production codecs tracked by #47. [ADR-104](../architecture/ADR-104-project-create-codecs.md)
 is Accepted; ADR-103 remains Proposed for production adoption. Native application
-persistence and supported routes remain absent. The proposed first slice is the
+persistence and supported routes remain absent. W1 supplies the
 separate project snapshot codec required by ADR-104, with actual JSONB round-trip
-verification. Implementation requires explicit maintainer approval after review
-of #49 and the [successor plan](../implementation/m1-01-remaining-delivery.md).
+verification. W1 was explicitly approved on 2026-10-13; its
+[implementation report](../implementation/m1-01-project-snapshots.md) records the
+codec/native evidence. Later packages retain their own review gates under #49
+and the [successor plan](../implementation/m1-01-remaining-delivery.md).
 
 #49 retains adapter/transaction ownership, attribution, stored-version replay,
 trusted clocks/retries, compaction/tombstone restore, historical reference
@@ -100,7 +102,8 @@ and exit evidence, including early #40/#41 contract review, separately reviewabl
 compactor delivery and a distinct ADR-103 production-adoption gate. Its
 [snapshot verification plan](../implementation/m1-01-snapshot-verification.md)
 defines the production-codec/native bridge, fixture classes, coherence checks and
-JSONB compatibility gates; these are planned checks, not delivered capabilities.
+JSONB compatibility gates; the W1 report distinguishes completed fixture checks
+from remaining application obligations.
 All ADR-104 ingress, actor/scope, structural snapshot and legacy isolation
 contracts remain mandatory.
 
@@ -111,8 +114,8 @@ records; frozen failures and missing production checks must stay visible.
 [SP-005/#41](../spikes/SP-005-project-target-allocation.md), under #27, remain
 native-route dependencies. #39/#47 receive successor references; their issue
 states are unchanged by this planning record. See #49 for the execution checklist
-and linked evidence. Approval of this tracking arrangement is not approval to
-begin implementation.
+and linked evidence. W1 approval does not approve later packages or ADR-103
+production adoption.
 
 <a id="b-001"></a>
 ## B-001 — Establish the product planning baseline

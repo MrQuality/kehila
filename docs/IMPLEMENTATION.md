@@ -18,9 +18,11 @@ configurable-model persistence path is implemented.
 
 Remaining M1-01 delivery is tracked by [#49](https://github.com/MrQuality/kehila/issues/49)
 and the [successor plan](implementation/m1-01-remaining-delivery.md). Historical
-#26 remains closed by maintainer direction. The proposed first slice is the
-project-only snapshot codec and native JSONB verification; implementation awaits
-explicit maintainer approval. PR #48 delivered the existing pure codec scope,
+#26 remains closed by maintainer direction. W1 was explicitly approved on
+2026-10-13. The
+[project snapshot implementation](implementation/m1-01-project-snapshots.md) adds
+the envelope, pair coherence and native JSONB admission/verification for review.
+PR #48 delivered the existing pure codec scope,
 not the native adapter or the remaining M1-01 delivery obligations.
 
 | Component | Implemented behavior | Verification |
@@ -36,7 +38,7 @@ not the native adapter or the remaining M1-01 delivery obligations.
 | Rust project rules | Pure project archival/access, project-local readable ID allocation, exact estimate and unit-lock rules, and populated-field kind-change decisions; not yet used by the worker | Focused pure tests; storage coordination and lookup unverified |
 | Rust project metadata administration | Pure replayable name/prefix/unit replacement under one Project/Configuration revision; not yet used by the worker | Focused pure tests; atomic cross-record persistence unverified |
 | Rust project creation | Pure replayable trusted Task/Milestone seed with optional application fields, shared workflow, and revision-one project/configuration; not yet used by the worker | Focused pure tests; concurrent identity uniqueness, initial access, and coherent persistence unverified |
-| Rust native creation storage codecs | Version-one request fingerprints and saved-result/configuration reconstruction; bounded duplicate-aware JSON parsing and checked native request admission; not adopted by an application adapter | Pure golden, corruption, resource-boundary and historical round-trip tests; database/route integration remains pending |
+| Rust native creation storage codecs | Version-one requests, saved results, configuration/project snapshots, fixed row/pair coherence and bounded JSONB snapshot admission; not adopted by an application adapter | 31 codec tests and Windows/Podman PostgreSQL 16.15 snapshot round trips, exact text-size/NUL boundaries and attributed revision fixtures; application/route and native Linux-host integration remain pending |
 | Rust scoped operation replay | Pure actor/family/target keys, bounded tokens, exact request comparison, current original-grant checks, 90-day expiry and permanent tombstones; not yet used by the worker | Focused pure tests; fingerprint codec, atomic compaction, backup/restore, and access integration unverified |
 | Rust field rules | Pure typed value, application/project origin, usage, owner, hidden/required, and choice-option validation; not yet used by the worker | Focused pure tests; trusted application-field installation and configuration/item contention unverified |
 | Rust relationship and current-work rules | Pure owner-project-qualified relationship key, versioned cross-project creation command, distinct stable record ID and endpoint-relative view, duplicate/self-link eligibility, explicit type-use and two-endpoint Link inputs, and replayable user-scoped selection decisions; not yet used by the worker | Focused pure tests; durable selection replay, atomic cross-project checks, ID allocation, storage uniqueness, and access enforcement unverified |

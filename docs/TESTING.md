@@ -295,13 +295,23 @@ execution and hosted CI remain unverified. Structural fixtures do not establish
 trusted M1 seed equality, application codecs, authorization, compaction or a
 supported native application route.
 
-The [M1-01 snapshot verification plan](implementation/m1-01-snapshot-verification.md)
-under [#49](https://github.com/MrQuality/kehila/issues/49) proposes extending this
-native command with a production Rust codec bridge, standalone JSONB and real
-revision-row fixtures, coherence rejection and compatibility boundary checks.
-That extension is not implemented. Its native run will be separately required
-snapshot-PR evidence; current shared/hosted checks must not be reported as having
-executed it. Implementation awaits explicit maintainer approval.
+The native command also builds the host-side `project_snapshot_check` helper
+from the production codec crate, in an owned temporary target directory, then
+runs actual Rust-to-JSONB-to-Rust checks. The pure crate retains no I/O driver or
+process dependencies. The bridge bounds process output/time, terminates owned
+process trees on timeout/overflow, validates hexadecimal SQL inputs, and verifies
+exact row framing and typed equality. A shared orchestration regression detects
+omission of this native phase without pretending to execute the database suite.
+
+Snapshot cases cover standalone JSONB u64 extremes, ordered/empty collections,
+valid attributed revision rows, negative relational/coherence cases, NUL and
+exact 1 MiB text output/one-byte overflow. Raw duplicate-key rejection remains
+original-byte codec evidence, independent of JSONB conversion. The
+[W1 implementation report](implementation/m1-01-project-snapshots.md) records
+Windows/Podman PostgreSQL 16.15 results, including measured formatting expansion.
+The [verification plan](implementation/m1-01-snapshot-verification.md) defines
+acceptance. These native checks remain separate required PR evidence; hosted
+shared verification does not execute them or qualify native Linux-host behavior.
 
 ## Verification time budgets
 
