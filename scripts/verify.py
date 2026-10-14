@@ -6,7 +6,44 @@ import os
 import subprocess
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from temp_work import owned_directory
+from test_services import managed_runtime, service_group
+
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def execute(command, environment):
+    print('VERIFY:', ' '.join(command), flush=True)
+    timeout = 450 if os.name == 'nt' and command[0] == 'cargo' else 300
+    subprocess.run(command, cwd=ROOT, env=environment, check=True, timeout=timeout)
+
+
+def live_checks(folder, environment, args):
+    def run(command):
+        execute(command, environment)
+
+    def health(*names):
+        run([sys.executable, 'scripts/healthcheck.py', '--wait', '180', '--services', *names])
+
+    workspace = ['cargo', 'test', '--locked', '--workspace']
+    task_path = [sys.executable, 'tests/integration/task_path.py', '--run-only', str(folder)]
+    if args.external_services:
+        health('PostgreSQL', 'FerretDB', 'NATS', 'OpenSearch')
+        run([sys.executable, 'tests/integration/nats_probe.py'])
+        run(workspace)
+        run(task_path)
+        return
+    with managed_runtime(args.engine, args.podman_machine) as compose:
+        with service_group(compose, ['nats']):
+            health('NATS')
+            run([sys.executable, 'tests/integration/nats_probe.py'])
+            run(workspace)
+        with service_group(compose, ['opensearch']):
+            health('OpenSearch')
+        with service_group(compose, ['postgres', 'ferretdb']):
+            health('PostgreSQL', 'FerretDB')
+            run(task_path)
 
 
 def main():
@@ -14,33 +51,39 @@ def main():
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--pure", action="store_true", help="Run unit tests without external services")
     modes.add_argument("--docs", action="store_true", help="Run Python, naming and engineering metadata checks")
+    parser.add_argument('--external-services', action='store_true',
+                        help='Use already-running disposable services without owning their lifecycle')
+    parser.add_argument('--engine', choices=('auto', 'podman', 'docker'),
+                        default=os.environ.get('KEHILA_TEST_ENGINE', 'auto'))
+    parser.add_argument('--podman-machine', default=os.environ.get('KEHILA_TEST_PODMAN_MACHINE'),
+                        help='Start this explicit machine after builds; stop it only if owned and idle')
     args = parser.parse_args()
+    if args.external_services and (args.pure or args.docs):
+        parser.error('--external-services applies only to full verification')
+    environment = dict(os.environ, CARGO_BUILD_JOBS='1')
+    environment['GOFLAGS'] = (environment.get('GOFLAGS', '') + ' -p=1').strip()
     commands = [[sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
                 [sys.executable, "scripts/check_branding.py"],
                 [sys.executable, "scripts/check_engineering.py"]]
     if not args.docs:
         commands.append([sys.executable, "scripts/go_static.py"])
-    if not args.pure and not args.docs:
-        commands += [[sys.executable, "scripts/healthcheck.py"], [sys.executable, "tests/integration/nats_probe.py"]]
-    if not args.docs:
         commands += [["cargo", "test", "--locked", "-p", "kehila_query", "-p", "task_contract", "-p", "project_create_codec"] if args.pure
-                     else ["cargo", "test", "--locked", "--workspace"],
+                     else ["cargo", "test", "--locked", "--workspace", "--no-run"],
                      [sys.executable, "experiments/SP-002/check_seed_oracle.py"],
                      [sys.executable, "experiments/SP-003/check.py"],
                      [sys.executable, "scripts/go_test.py"]]
-    if not args.pure and not args.docs:
-        commands.append([sys.executable, "tests/integration/task_path.py"])
     for command in commands:
-        print("VERIFY:", " ".join(command), flush=True)
-        # Observed Windows workspace runs exceed 300s despite passing tests.
-        # Keep a finite command budget inside the staged hook's 600s deadline.
-        timeout = 450 if os.name == "nt" and command[0] == "cargo" else 300
-        subprocess.run(command, cwd=ROOT, check=True, timeout=timeout)
+        execute(command, environment)
+    if not args.pure and not args.docs:
+        with owned_directory('kehila-verify-') as folder:
+            execute([sys.executable, 'tests/integration/task_path.py', '--build-only', str(folder)],
+                    environment)
+            live_checks(folder, environment, args)
 
 
 if __name__ == "__main__":
     try:
         main()
-    except (OSError, subprocess.SubprocessError) as error:
+    except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
         print(f"ERR_TEST_EXECUTION_FAILED: {error}", file=sys.stderr)
         sys.exit(3)

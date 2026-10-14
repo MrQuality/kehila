@@ -205,7 +205,7 @@ class RegisterTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('verify_engineering', ROOT / 'scripts/verify.py')
         verify = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(verify)
-        for args in ([], ['--pure']):
+        for args in (['--external-services'], ['--pure']):
             with patch.object(sys, 'argv', ['verify.py', *args]), patch.object(verify.subprocess, 'run') as run:
                 verify.main()
                 commands = [call.args[0] for call in run.call_args_list]

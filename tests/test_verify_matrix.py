@@ -1,5 +1,7 @@
 """The documented pure command must execute every pure Rust crate."""
 import importlib.util
+from contextlib import contextmanager
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -33,3 +35,94 @@ class PureMatrixTests(unittest.TestCase):
         with patch.object(sys, 'argv', ['verify.py', '--pure']), patch.object(VERIFY.subprocess, 'run', run):
             with self.assertRaises(subprocess.CalledProcessError):
                 VERIFY.main()
+
+
+class FullLifecycleTests(unittest.TestCase):
+    def test_all_builds_precede_owned_phases_and_all_live_checks_remain(self):
+        events = []
+        environments = []
+
+        @contextmanager
+        def runtime(*args):
+            events.append('VM start')
+            yield ['podman', 'compose']
+            events.append('VM stop')
+
+        @contextmanager
+        def group(compose, selected):
+            events.append(('start', tuple(selected)))
+            yield
+            events.append(('stop', tuple(selected)))
+
+        def run(command, **kwargs):
+            events.append(command)
+            environments.append(kwargs['env'])
+
+        with patch.object(sys, 'argv', ['verify.py']), \
+                patch.dict(os.environ, CARGO_BUILD_JOBS='8', GOFLAGS='-tags=fixture'), \
+                patch.object(VERIFY, 'managed_runtime', runtime), \
+                patch.object(VERIFY, 'service_group', group), \
+                patch.object(VERIFY.subprocess, 'run', run):
+            VERIFY.main()
+        start = events.index('VM start')
+        self.assertIn(['cargo', 'test', '--locked', '--workspace', '--no-run'], events[:start])
+        self.assertTrue(any(isinstance(event, list) and '--build-only' in event for event in events[:start]))
+        self.assertFalse(any(isinstance(event, list) and '--build-only' in event for event in events[start:]))
+        lifecycle = [event for event in events if isinstance(event, tuple)]
+        self.assertEqual(lifecycle, [
+            ('start', ('nats',)), ('stop', ('nats',)),
+            ('start', ('opensearch',)), ('stop', ('opensearch',)),
+            ('start', ('postgres', 'ferretdb')), ('stop', ('postgres', 'ferretdb'))])
+        commands = [event for event in events if isinstance(event, list)]
+        readiness = [command[command.index('--services') + 1:] for command in commands if '--services' in command]
+        self.assertEqual(readiness, [['NATS'], ['OpenSearch'], ['PostgreSQL', 'FerretDB']])
+        self.assertIn([sys.executable, 'tests/integration/nats_probe.py'], commands)
+        test = ['cargo', 'test', '--locked', '--workspace']
+        self.assertLess(events.index(('start', ('nats',))), events.index(test))
+        self.assertLess(events.index(test), events.index(('stop', ('nats',))))
+        self.assertTrue(any('--run-only' in command for command in commands))
+        self.assertEqual(events[-1], 'VM stop')
+        self.assertTrue(all(env['CARGO_BUILD_JOBS'] == '1' and env['GOFLAGS'] == '-tags=fixture -p=1'
+                            for env in environments))
+
+    def test_build_failure_never_starts_vm_or_services(self):
+        def run(command, **kwargs):
+            if '--no-run' in command:
+                raise subprocess.CalledProcessError(1, command)
+
+        with patch.object(sys, 'argv', ['verify.py']), \
+                patch.object(VERIFY.subprocess, 'run', run), \
+                patch.object(VERIFY, 'managed_runtime') as runtime:
+            with self.assertRaises(subprocess.CalledProcessError):
+                VERIFY.main()
+            runtime.assert_not_called()
+
+    def test_failed_live_check_releases_group_and_runtime_before_propagating(self):
+        events = []
+
+        @contextmanager
+        def runtime(*args):
+            try:
+                yield ['docker', 'compose']
+            finally:
+                events.append('VM released')
+
+        @contextmanager
+        def group(compose, selected):
+            events.append(tuple(selected))
+            try:
+                yield
+            finally:
+                events.append('group released')
+
+        def run(command, **kwargs):
+            if 'tests/integration/nats_probe.py' in command:
+                raise subprocess.TimeoutExpired(command, 300)
+
+        with patch.object(sys, 'argv', ['verify.py']), \
+                patch.object(VERIFY, 'managed_runtime', runtime), \
+                patch.object(VERIFY, 'service_group', group), \
+                patch.object(VERIFY.subprocess, 'run', run):
+            with self.assertRaises(subprocess.TimeoutExpired):
+                VERIFY.main()
+        self.assertEqual(events, [('nats',), 'group released', 'VM released'])

@@ -5,11 +5,13 @@ Requires a running single-host FerretDB at KEHILA_TEST_MONGO_URL (default localh
 """
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
+import argparse
 import json
 import os
 from pathlib import Path
 import re
 import select
+import shutil
 import socket
 import socketserver
 import subprocess
@@ -211,20 +213,32 @@ def database_outage(bases, proxy, processes):
     print('PASS: stalled database requests terminate and worker recovers', flush=True)
 
 
-def main():
+def prepare(folder):
+    """Build both tested executables before any external service is required."""
+    subprocess.run(['cargo', 'build', '--locked', '--jobs', '1', '-p', 'task_worker'],
+                   cwd=ROOT, check=True, timeout=240)
+    metadata = json.loads(subprocess.check_output(
+        ['cargo', 'metadata', '--no-deps', '--format-version', '1'], cwd=ROOT, timeout=30))
+    extension = '.exe' if os.name == 'nt' else ''
+    shutil.copy2(Path(metadata['target_directory']) / 'debug' / ('task_worker' + extension),
+                 folder / ('task_worker' + extension))
+    subprocess.run(['go', 'build', '-p', '1', '-o', str(folder / ('task-api' + extension)),
+                    './go/io/task_api/cmd/task-api'], cwd=ROOT, check=True, timeout=90)
+
+
+def exercise(folder):
     uri = os.environ.get('KEHILA_TEST_MONGO_URL', 'mongodb://127.0.0.1:27017')
     parsed = urllib.parse.urlsplit(uri)
     if parsed.scheme != 'mongodb' or not parsed.hostname or ',' in parsed.netloc:
         raise ValueError('The fault test requires a single-host mongodb URI')
-    subprocess.run(['cargo', 'build', '--locked', '-p', 'task_worker'], cwd=ROOT, check=True, timeout=240)
-    metadata = json.loads(subprocess.check_output(['cargo', 'metadata', '--no-deps', '--format-version', '1'], cwd=ROOT))
     extension = '.exe' if os.name == 'nt' else ''
-    worker = str(Path(metadata['target_directory']) / 'debug' / ('task_worker' + extension))
+    worker = str(folder / ('task_worker' + extension))
+    api = str(folder / ('task-api' + extension))
+    if not all(Path(binary).is_file() for binary in (worker, api)):
+        raise ValueError('Both task-path executables must be prepared before live verification')
     environment = dict(os.environ, KEHILA_MONGO_URL=uri, KEHILA_TASK_DB='yaja',
                        KEHILA_TASK_COLLECTION='kehila_test_' + uuid.uuid4().hex)
-    with owned_directory('kehila-task-path-') as folder, ExitStack() as owned:
-        api = str(Path(folder) / ('task-api' + extension))
-        subprocess.run(['go', 'build', '-o', api, './go/io/task_api/cmd/task-api'], cwd=ROOT, check=True, timeout=90)
+    with ExitStack() as owned:
         # Register cleanup before installation, including partially created indexes.
         owned.callback(lambda: subprocess.run([worker, 'drop-test-collection'], env=environment, check=True, timeout=15))
         subprocess.run([worker, 'install-indexes'], env=environment, check=True, timeout=15)
@@ -271,6 +285,22 @@ def main():
         assert call(api_base, '/search/go-rust?min_version=1') == (503, {'error': 'search_unavailable'})
         assert call(api_base, '/tasks/go-rust')[1]['version'] == 1
         print('PASS: Go-to-Rust save/replay/read with search unavailable', flush=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--build-only', type=Path, metavar='DIRECTORY')
+    modes.add_argument('--run-only', type=Path, metavar='DIRECTORY')
+    args = parser.parse_args()
+    if args.build_only is not None:
+        prepare(args.build_only.resolve(strict=True))
+    elif args.run_only is not None:
+        exercise(args.run_only.resolve(strict=True))
+    else:
+        with owned_directory('kehila-task-path-') as folder:
+            prepare(folder)
+            exercise(folder)
 
 
 if __name__ == '__main__':
