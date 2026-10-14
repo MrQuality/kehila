@@ -13,7 +13,7 @@ fn fixture(label: &str) -> Result<ProjectCreateResult, &'static str> {
     let command = ProjectCreateCommand {
         operation_id: "snapshot-bridge".into(),
         project_id: ProjectId("snapshot-bridge".into()),
-        name: "Bridge ÃƒÆ’Ã…Â½Ãƒâ€šÃ‚Â© ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© e\u{301}".into(),
+        name: "Bridge Ω é e\u{301}".into(),
         prefix: "SB".into(),
         estimate_unit: EstimateUnit::Hours,
     };

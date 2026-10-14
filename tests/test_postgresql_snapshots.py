@@ -75,8 +75,11 @@ class ProcessTests(unittest.TestCase):
             child = kernel.OpenProcess(0x100000, False, int(result.stdout))
             if child:
                 try:
-                    self.assertEqual(kernel.WaitForSingleObject(child, 0), 0,
-                                     'descendant remains alive after supervisor exit')
+                    # Job termination is asynchronous. Observe actual exit within
+                    # the original execution deadline, without an extra sleep/budget.
+                    remaining_ms = max(0, int((started + 1 - time.monotonic()) * 1000))
+                    self.assertEqual(kernel.WaitForSingleObject(child, remaining_ms), 0,
+                                     'descendant outlived the original execution deadline')
                 finally:
                     kernel.CloseHandle(child)
             else:
