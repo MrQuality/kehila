@@ -19,9 +19,12 @@ configurable-model persistence path is implemented.
 Remaining M1-01 delivery is tracked by [#49](https://github.com/MrQuality/kehila/issues/49)
 and the [successor plan](implementation/m1-01-remaining-delivery.md). Historical
 #26 remains closed by maintainer direction. W1 was explicitly approved on
-2026-10-13. The
-[project snapshot implementation](implementation/m1-01-project-snapshots.md) adds
-the envelope, pair coherence and native JSONB admission/verification for review.
+2026-10-13 and merged in [PR #51](https://github.com/MrQuality/kehila/pull/51)
+on 2026-10-14 at 2efd444e38a4d60eaeb195a00359813174aa3d23. The
+[project snapshot implementation](implementation/m1-01-project-snapshots.md) delivers
+the envelope, pair coherence and native JSONB admission/verification. W2 actor/scope
+and stable allocation contracts (#40/#41) are the next prerequisites; runtime
+adapter interfaces and route exposure remain gated.
 PR #48 delivered the existing pure codec scope,
 not the native adapter or the remaining M1-01 delivery obligations.
 
