@@ -41,7 +41,8 @@ class PureMatrixTests(unittest.TestCase):
 class FullLifecycleTests(unittest.TestCase):
     def test_owned_mode_rejects_foreign_test_endpoints_before_any_build(self):
         for key, value in (('KEHILA_TEST_MONGO_URL', 'mongodb://other-host:27017'),
-                           ('KEHILA_NATS_ADDRESS', '127.0.0.1:4223')):
+                           ('KEHILA_NATS_ADDRESS', '127.0.0.1:4223'),
+                           ('KEHILA_NATS_HOST', 'other-host'), ('KEHILA_NATS_PORT', '4223')):
             with self.subTest(key=key), \
                     patch.dict(os.environ, {key: value, 'KEHILA_TEST_ENGINE': 'auto',
                                            'KEHILA_TEST_PODMAN_MACHINE': '',
@@ -55,14 +56,29 @@ class FullLifecycleTests(unittest.TestCase):
                 run.assert_not_called()
                 checks.assert_not_called()
 
-    def test_external_mode_retains_explicit_test_endpoint_settings(self):
-        with patch.dict(os.environ, KEHILA_TEST_ENGINE='auto', KEHILA_TEST_PODMAN_MACHINE='',
-                        KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE='0', KEHILA_NATS_ADDRESS='127.0.0.1:4223',
-                        KEHILA_TEST_MONGO_URL='mongodb://127.0.0.1:27018'), \
-                patch.object(sys, 'argv', ['verify.py', '--external-services']), \
-                patch.object(VERIFY, 'run_checks') as checks:
-            VERIFY.main()
-            checks.assert_called_once()
+    def test_owned_daemon_overrides_are_rejected_before_builds(self):
+        for variable in ('DOCKER_HOST','DOCKER_CONTEXT','CONTAINER_HOST','CONTAINER_CONNECTION'):
+            with self.subTest(variable=variable), \
+                    patch.dict(os.environ,{variable:'foreign','KEHILA_TEST_ENGINE':'docker',
+                        'KEHILA_TEST_PODMAN_MACHINE':'','KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE':'0'}), \
+                    patch.object(sys,'argv',['verify.py']), \
+                    patch.object(VERIFY,'run_checks') as checks, \
+                    patch('sys.stderr',new_callable=io.StringIO):
+                with self.assertRaises(SystemExit): VERIFY.main()
+                checks.assert_not_called()
+
+    def test_external_mode_rejects_endpoints_that_disagree_with_local_readiness(self):
+        for key,value in (('KEHILA_TEST_MONGO_URL','mongodb://127.0.0.1:27018'),
+                          ('KEHILA_NATS_ADDRESS','127.0.0.1:4223'),
+                          ('KEHILA_NATS_HOST','other-host'),('KEHILA_NATS_PORT','4223')):
+            with self.subTest(key=key), \
+                    patch.dict(os.environ, {key:value,'KEHILA_TEST_ENGINE':'auto',
+                        'KEHILA_TEST_PODMAN_MACHINE':'','KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE':'0'}), \
+                    patch.object(sys,'argv',['verify.py','--external-services']), \
+                    patch.object(VERIFY,'run_checks') as checks, \
+                    patch('sys.stderr',new_callable=io.StringIO):
+                with self.assertRaises(SystemExit): VERIFY.main()
+                checks.assert_not_called()
 
     def test_external_mode_executes_every_live_check_without_resource_ownership(self):
         folder = Path('unused-fixture')

@@ -209,6 +209,30 @@ class MachineOwnershipTests(unittest.TestCase):
                 self.assertEqual(runtime.environment['CONTAINER_CONNECTION'], 'fixture-root')
                 compose.assert_called_once_with('podman', environment=runtime.environment)
 
+    def test_rootful_machine_default_is_carried_to_compose_and_inspection(self):
+        with patch.object(services, '_machine_info', return_value={'State': 'running', 'Rootful': True}), \
+                patch.object(services, '_machine_connections', return_value=['fixture', 'fixture-root']), \
+                patch.object(services, 'compose_command', return_value=['podman', 'compose']):
+            with services.managed_runtime('podman', 'fixture', environment={}) as runtime:
+                self.assertEqual(runtime.environment['CONTAINER_CONNECTION'], 'fixture-root')
+                self.assertEqual(runtime.engine, ['podman', '--connection', 'fixture-root'])
+
+    def test_container_host_override_is_rejected_before_machine_start(self):
+        with patch.object(services, 'run') as run:
+            with self.assertRaises(ValueError):
+                with services.managed_runtime('podman', 'fixture', environment={'CONTAINER_HOST': 'ssh://foreign'}):
+                    self.fail('foreign host admitted')
+            run.assert_not_called()
+
+    def test_connection_uris_reject_queries_fragments_and_passwords(self):
+        info = {'SSHConfig': {'Port': 12345, 'RemoteUsername': 'user'}}
+        rootless = 'ssh://user@127.0.0.1:12345/run/user/1000/podman/podman.sock'
+        rootful = 'ssh://root@127.0.0.1:12345/run/podman/podman.sock'
+        for uri in (rootless+'?foo=1', rootless+'#frag', rootless.replace('user@','user:secret@')):
+            connections = [{'Name':'fixture','URI':uri},{'Name':'fixture-root','URI':rootful}]
+            with self.subTest(uri=uri), patch.object(services,'run',return_value=Mock(stdout=json.dumps(connections))):
+                with self.assertRaises(ValueError): services._machine_connections('fixture',info)
+
     def test_connection_inventory_must_match_both_machine_endpoints(self):
         info = {'SSHConfig': {'Port': 12345, 'RemoteUsername': 'user'}}
         connections = [{'Name': 'fixture', 'URI': 'ssh://user@127.0.0.1:12345/run/user/1000/podman/podman.sock'},

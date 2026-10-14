@@ -30,6 +30,8 @@ class ComposeRuntime:
         command = [self.compose[0]]
         if command[0] == 'podman' and self.environment.get('CONTAINER_CONNECTION'):
             command += ['--connection', self.environment['CONTAINER_CONNECTION']]
+        elif command[0] == 'podman' and '--remote=false' in self.compose:
+            command.append('--remote=false')
         return command
 
 
@@ -47,6 +49,36 @@ def _containers(runtime, project, service=None, include_stopped=False):
         command.append('--all')
     return run([*command, '--format', '{{.ID}}'], capture_output=True,
                text=True, timeout=15, env=runtime.environment).stdout.split()
+
+
+def validate_daemon_environment(environment, machine):
+    forbidden = ['DOCKER_HOST', 'DOCKER_CONTEXT', 'CONTAINER_HOST']
+    if machine is None:
+        forbidden.append('CONTAINER_CONNECTION')
+    if any(environment.get(name) for name in forbidden):
+        raise ValueError('Owned services require local daemon routing; unset daemon overrides or use --external-services')
+
+
+def local_runtime(compose, environment):
+    """Validate effective saved routing, then pin it for creation and inspection."""
+    engine = compose[0]
+    if engine == 'podman':
+        info = json.loads(run(['podman', 'info', '--format', 'json'], capture_output=True,
+                              text=True, timeout=15, env=environment).stdout)
+        if not isinstance(info, dict) or not isinstance(info.get('host'), dict) or info['host'].get('serviceIsRemote') is not False:
+            raise ValueError('Remote Podman requires an explicit local --podman-machine')
+        return ComposeRuntime(['podman', '--remote=false', *compose[1:]], environment)
+    contexts = json.loads(run(['docker', 'context', 'inspect'], capture_output=True,
+                              text=True, timeout=15, env=environment).stdout)
+    if (not isinstance(contexts, list) or len(contexts) != 1 or not isinstance(contexts[0], dict)
+            or not isinstance(contexts[0].get('Name'), str) or not contexts[0]['Name']):
+        raise ValueError('Expected one current Docker context')
+    endpoints = contexts[0].get('Endpoints')
+    docker = endpoints.get('docker') if isinstance(endpoints, dict) else None
+    host = docker.get('Host') if isinstance(docker, dict) else None
+    if not isinstance(host, str) or not (host.startswith('unix:///') or host.startswith('npipe:////./pipe/')):
+        raise ValueError('Owned services require a local Docker socket context')
+    return ComposeRuntime(compose, dict(environment, DOCKER_CONTEXT=contexts[0]['Name']))
 
 
 def _machine_info(name, environment=None, allow_starting=False):
@@ -158,13 +190,14 @@ def _runtime(preferred, machine, environment, exclusive):
     owned_machine = False
     failure = None
     environment = dict(os.environ if environment is None else environment)
+    validate_daemon_environment(environment, machine)
     try:
         if machine:
             preferred = 'podman'
             info = _machine_info(machine, environment=environment)
             connections = _machine_connections(machine, info, environment=environment)
             selected = environment.get('CONTAINER_CONNECTION') or connections[bool(info.get('Rootful'))]
-            if selected not in connections or environment.get('CONTAINER_HOST'):
+            if selected not in connections:
                 raise ValueError('Select a verified connection belonging to the requested Podman machine')
             environment['CONTAINER_CONNECTION'] = selected
             if exclusive and info['State'] != 'stopped':
@@ -172,7 +205,8 @@ def _runtime(preferred, machine, environment, exclusive):
             owned_machine = exclusive and info['State'] == 'stopped'
             if info['State'] == 'stopped':
                 run(['podman', 'machine', 'start', machine], timeout=120, env=environment)
-        yield ComposeRuntime(compose_command(preferred, environment=environment), environment)
+        compose = compose_command(preferred, environment=environment)
+        yield ComposeRuntime(compose, environment) if machine else local_runtime(compose, environment)
     except BaseException as error:
         failure = error
         raise

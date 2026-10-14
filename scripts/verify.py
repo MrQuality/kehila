@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cleanup_errors import print_failure
 from temp_work import owned_directory
-from test_services import managed_runtime, service_group, validate_runtime
+from test_services import managed_runtime, service_group, validate_runtime, validate_daemon_environment
 from verification_budget import command_timeout, owner_environment, validate_seconds, work_budget
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,7 +41,7 @@ def live_checks(folder, environment, args):
         run(broker_tests)
         run(task_path)
         return
-    with managed_runtime(args.engine, args.podman_machine, exclusive=args.exclusive_podman_machine) as compose:
+    with managed_runtime(args.engine, args.podman_machine, environment=environment, exclusive=args.exclusive_podman_machine) as compose:
         with service_group(compose, ['nats']):
             health('NATS')
             run([sys.executable, 'tests/integration/nats_probe.py'])
@@ -81,11 +81,17 @@ def main():
         validate_seconds(args.timeout)
     except ValueError as error:
         parser.error(str(error))
-    if not (args.pure or args.docs or args.external_services):
+    if not (args.pure or args.docs):
         for name, address in (('KEHILA_TEST_MONGO_URL', 'mongodb://127.0.0.1:27017'),
-                              ('KEHILA_NATS_ADDRESS', '127.0.0.1:4222')):
+                              ('KEHILA_NATS_ADDRESS', '127.0.0.1:4222'),
+                              ('KEHILA_NATS_HOST', '127.0.0.1'), ('KEHILA_NATS_PORT', '4222')):
             if os.environ.get(name, address) != address:
-                parser.error(name + ' must target the owned service; use --external-services for custom endpoints')
+                parser.error(name + ' must use default local endpoints; use standalone probes for custom endpoints')
+    if not (args.pure or args.docs or args.external_services):
+        try:
+            validate_daemon_environment(os.environ, args.podman_machine)
+        except ValueError as error:
+            parser.error(str(error))
     with work_budget(args.timeout):
         run_checks(args)
 
