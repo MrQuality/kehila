@@ -19,6 +19,16 @@ def run(command, timeout=120, **kwargs):
     return subprocess.run(command, cwd=ROOT, check=True, timeout=timeout, **kwargs)
 
 
+def _containers(compose, project, service=None, include_stopped=False):
+    command = [compose[0], 'ps', '--filter', 'label=com.docker.compose.project=' + project]
+    if service:
+        command += ['--filter', 'label=com.docker.compose.service=' + service]
+    if include_stopped:
+        command.append('--all')
+    return run([*command, '--format', '{{.ID}}'], capture_output=True,
+               text=True, timeout=15).stdout.split()
+
+
 def _machine_info(name):
     info = json.loads(run(['podman', 'machine', 'inspect', name],
                           capture_output=True, text=True, timeout=15).stdout)
@@ -108,6 +118,9 @@ def service_group(compose, selected):
     failure = None
     try:
         run([*command, 'up', '-d', *selected], timeout=300)
+        for service in selected:
+            if len(_containers(compose, project, service)) != 1:
+                raise RuntimeError('Expected one running owned container for ' + service)
         yield
     except BaseException as error:
         failure = error
@@ -119,7 +132,9 @@ def service_group(compose, selected):
     finally:
         try:
             run([*command, 'down', '--volumes'], timeout=120)
-        except (OSError, subprocess.SubprocessError) as cleanup_error:
+            if _containers(compose, project, include_stopped=True):
+                raise RuntimeError('Owned test containers remain after Compose cleanup')
+        except (OSError, RuntimeError, subprocess.SubprocessError) as cleanup_error:
             if failure is not None:
                 raise failure from cleanup_error
             raise

@@ -12,7 +12,8 @@ import test_services as services
 
 class ServiceOwnershipTests(unittest.TestCase):
     def test_only_requested_services_start_and_owned_project_is_removed(self):
-        with patch.object(services, 'run') as run:
+        with patch.object(services, 'run') as run, \
+                patch.object(services, '_containers', side_effect=[['container'], []]):
             with services.service_group(['docker', 'compose'], ['nats']):
                 self.assertEqual(run.call_count, 1)
         start, cleanup = [call.args[0] for call in run.call_args_list]
@@ -23,7 +24,8 @@ class ServiceOwnershipTests(unittest.TestCase):
 
     def test_partial_startup_is_cleaned(self):
         failure = subprocess.CalledProcessError(1, ['compose', 'up'])
-        with patch.object(services, 'run', side_effect=[failure, None, None]) as run:
+        with patch.object(services, 'run', side_effect=[failure, None, None]) as run, \
+                patch.object(services, '_containers', return_value=[]):
             with self.assertRaises(subprocess.CalledProcessError):
                 with services.service_group(['docker', 'compose'], ['postgres', 'ferretdb']):
                     self.fail('startup failure admitted')
@@ -31,7 +33,8 @@ class ServiceOwnershipTests(unittest.TestCase):
 
     def test_test_failure_and_cleanup_failure_are_both_visible(self):
         primary, cleanup = RuntimeError('test failed'), OSError('cleanup failed')
-        with patch.object(services, 'run', side_effect=[None, None, cleanup]):
+        with patch.object(services, 'run', side_effect=[None, None, cleanup]), \
+                patch.object(services, '_containers', return_value=['container']):
             with self.assertRaises(RuntimeError) as caught:
                 with services.service_group(['docker', 'compose'], ['nats']):
                     raise primary
@@ -39,7 +42,8 @@ class ServiceOwnershipTests(unittest.TestCase):
         self.assertIs(caught.exception.__cause__, cleanup)
 
     def test_cleanup_failure_cannot_produce_success(self):
-        with patch.object(services, 'run', side_effect=[None, OSError('cleanup failed')]):
+        with patch.object(services, 'run', side_effect=[None, OSError('cleanup failed')]), \
+                patch.object(services, '_containers', return_value=['container']):
             with self.assertRaisesRegex(OSError, 'cleanup failed'):
                 with services.service_group(['docker', 'compose'], ['nats']):
                     pass
@@ -51,6 +55,28 @@ class ServiceOwnershipTests(unittest.TestCase):
                     with services.service_group(['docker', 'compose'], selected):
                         pass
             run.assert_not_called()
+
+    def test_successful_start_without_owned_running_container_is_rejected(self):
+        with patch.object(services, 'run'), patch.object(services, '_containers', return_value=[]):
+            with self.assertRaisesRegex(RuntimeError, 'one running owned container'):
+                with services.service_group(['docker', 'compose'], ['nats']):
+                    self.fail('unowned service admitted')
+
+    def test_successful_down_with_remaining_containers_still_fails(self):
+        with patch.object(services, 'run'), \
+                patch.object(services, '_containers', side_effect=[['container'], ['leftover']]):
+            with self.assertRaisesRegex(RuntimeError, 'remain after Compose cleanup'):
+                with services.service_group(['docker', 'compose'], ['nats']):
+                    pass
+
+    def test_container_queries_are_scoped_to_project_and_service(self):
+        with patch.object(services, 'run', return_value=Mock(stdout='abc123\n')) as run:
+            self.assertEqual(services._containers(['podman', 'compose'], 'owned', 'nats'), ['abc123'])
+            self.assertEqual(run.call_args.args[0], ['podman', 'ps', '--filter',
+                'label=com.docker.compose.project=owned', '--filter',
+                'label=com.docker.compose.service=nats', '--format', '{{.ID}}'])
+            services._containers(['podman', 'compose'], 'owned', include_stopped=True)
+            self.assertIn('--all', run.call_args.args[0])
 
 
 class MachineOwnershipTests(unittest.TestCase):
