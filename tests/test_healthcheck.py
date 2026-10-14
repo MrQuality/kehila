@@ -1,6 +1,7 @@
 """Selective readiness retains every requested TCP/HTTP requirement."""
 import importlib.util
 import io
+import json
 from pathlib import Path
 import sys
 import unittest
@@ -13,6 +14,30 @@ spec.loader.exec_module(health)
 
 
 class ReadinessTests(unittest.TestCase):
+    def test_retry_success_reports_search_http_health(self):
+        with patch.object(sys, 'argv', ['healthcheck.py', '--wait', '5']), \
+                patch.object(health, 'probe', side_effect=[['starting'], []]) as probe, \
+                patch.object(health.time, 'monotonic', side_effect=[0, 0.1]), \
+                patch.object(health.time, 'sleep') as sleep, \
+                patch('sys.stdout', new_callable=io.StringIO) as stdout:
+            self.assertEqual(health.main(), 0)
+        self.assertEqual(probe.call_count, 2)
+        sleep.assert_called_once_with(2)
+        result = json.loads(stdout.getvalue())
+        self.assertEqual(result['opensearch_http'], 'ready')
+        self.assertEqual(result['tcp_ports'], health.PORTS)
+
+    def test_retries_stop_at_the_deadline_with_a_nonzero_result(self):
+        with patch.object(sys, 'argv', ['healthcheck.py', '--wait', '1', '--services', 'NATS']), \
+                patch.object(health, 'probe', return_value=['not ready']) as probe, \
+                patch.object(health.time, 'monotonic', side_effect=[0, 0.5, 1.01]), \
+                patch.object(health.time, 'sleep') as sleep, \
+                patch('sys.stderr', new_callable=io.StringIO) as stderr:
+            self.assertEqual(health.main(), 1)
+        self.assertEqual(probe.call_count, 2)
+        sleep.assert_called_once_with(2)
+        self.assertEqual(json.loads(stderr.getvalue()), {'ok': False, 'errors': ['not ready']})
+
     def test_nats_only_never_contacts_other_services(self):
         with patch.object(health.socket, 'create_connection') as connect, \
                 patch.object(health.urllib.request, 'build_opener') as http:
