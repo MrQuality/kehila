@@ -1,5 +1,7 @@
 """The live phase consumes prepared binaries without invoking a compiler."""
 import importlib.util
+import os
+import time
 from contextlib import nullcontext
 from pathlib import Path
 import subprocess
@@ -62,3 +64,30 @@ class PreparationTests(unittest.TestCase):
             task_path.main()
             prepare.assert_called_once_with(Path(folder).resolve())
             exercise.assert_not_called()
+
+    def test_expired_child_budget_stops_launched_worker_and_runs_collection_cleanup(self):
+        import verification_budget as budget
+        processes=[]
+        native_launch=subprocess.Popen
+        native_bound=task_path.bound_base
+        def launch(command,**kwargs):
+            process=native_launch([sys.executable,'-c','import time; time.sleep(30)'],**kwargs)
+            processes.append(process)
+            self.addCleanup(task_path.stop,process)
+            return process
+        def expire(log,process):
+            os.environ['KEHILA_VERIFICATION_DEADLINE']=str(time.monotonic()-1)
+            return native_bound(log,process)
+        with tempfile.TemporaryDirectory() as directory:
+            folder=Path(directory)
+            extension='.exe' if os.name=='nt' else ''
+            for binary in ('task_worker','task-api'): (folder/(binary+extension)).touch()
+            with patch.dict(os.environ,KEHILA_VERIFICATION_DEADLINE=str(time.monotonic()+10)), \
+                    patch.object(task_path.subprocess,'Popen',side_effect=launch), \
+                    patch.object(task_path.subprocess,'run') as run, \
+                    patch.object(task_path,'bound_base',side_effect=expire):
+                with self.assertRaises(budget.DeadlineExceeded): task_path.exercise(folder)
+            self.assertEqual(len(processes),1)
+            self.assertIsNotNone(processes[0].poll())
+            self.assertEqual(run.call_args.args[0][-1],'drop-test-collection')
+            self.assertEqual(run.call_args.kwargs['timeout'],15)

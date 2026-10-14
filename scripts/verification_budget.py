@@ -2,9 +2,11 @@
 from contextlib import contextmanager
 from contextvars import ContextVar
 import math
+import os
 import time
 
-_deadline = ContextVar('verification_deadline', default=None)
+_inherited = object()
+_deadline = ContextVar('verification_deadline', default=_inherited)
 
 
 class DeadlineExceeded(TimeoutError):
@@ -28,6 +30,11 @@ def work_budget(seconds):
 
 def command_timeout(limit):
     deadline = _deadline.get()
+    if deadline is _inherited:
+        value = os.environ.get('KEHILA_VERIFICATION_DEADLINE')
+        deadline = float(value) if value is not None else None
+        if deadline is not None and not math.isfinite(deadline):
+            raise ValueError('Invalid inherited verification deadline')
     if deadline is None:
         return limit
     remaining = deadline - time.monotonic()
@@ -43,3 +50,8 @@ def cleanup_time():
         yield
     finally:
         _deadline.reset(token)
+
+
+def owner_environment(environment, limit):
+    """Pass a monotonic deadline to a cooperative child on this same host."""
+    return dict(environment, KEHILA_VERIFICATION_DEADLINE=str(time.monotonic() + command_timeout(limit)))

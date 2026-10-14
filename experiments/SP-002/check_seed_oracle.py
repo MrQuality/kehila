@@ -11,10 +11,11 @@ SOURCE = Path(__file__).resolve().parent
 REPO = SOURCE.parents[1]
 sys.path.insert(0, str(REPO / 'scripts'))
 from temp_work import owned_directory
+from verification_budget import command_timeout
 
 
 def run(args):
-    return subprocess.run(args, cwd=REPO, capture_output=True, timeout=120, check=True).stdout
+    return subprocess.run(args, cwd=REPO, capture_output=True, timeout=command_timeout(120), check=True).stdout
 
 
 def main():
@@ -37,7 +38,7 @@ def main():
                 raise RuntimeError("Oracle fixture differs from supplied valid command")
         for invalid in [[], args, [*args, "minutes"], [*args, "Hours"], [*args, "hours", "extra"]]:
             result = subprocess.run(
-                invalid or [str(binary)], capture_output=True, timeout=15,
+                invalid or [str(binary)], capture_output=True, timeout=command_timeout(15),
             )
             if result.returncode != 2 or result.stdout or not result.stderr:
                 raise RuntimeError("Invalid oracle input must fail explicitly without a fixture")

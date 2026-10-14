@@ -5,6 +5,7 @@ import subprocess
 import sys
 from go_inventory import GO_PACKAGES, ROOT, go_files
 from temp_work import owned_directory
+from verification_budget import command_timeout
 
 
 def main():
@@ -13,7 +14,7 @@ def main():
         environment = dict(os.environ, GOTMPDIR=str(work))
         # -work delegates deletion to us; it does not skip compilation or tests.
         command = ["go", "test", "-count=1", "-work", *(sys.argv[1:] or GO_PACKAGES)]
-        result = subprocess.run(command, cwd=ROOT, env=environment, timeout=300, check=False)
+        result = subprocess.run(command, cwd=ROOT, env=environment, timeout=command_timeout(300), check=False)
         return result.returncode
 
 

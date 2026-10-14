@@ -28,6 +28,7 @@ from live_task_worker import uuid7
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from temp_work import owned_directory
+from verification_budget import command_timeout, cleanup_time, DeadlineExceeded
 
 
 def call(base, path, payload=None, headers=None):
@@ -35,7 +36,7 @@ def call(base, path, payload=None, headers=None):
     request = urllib.request.Request(base + path, data=body,
                                     headers=headers or {'Content-Type': 'application/json'})
     try:
-        with urllib.request.urlopen(request, timeout=8) as response:
+        with urllib.request.urlopen(request, timeout=command_timeout(8)) as response:
             return response.status, json.load(response)
     except urllib.error.HTTPError as error:
         return error.code, json.load(error)
@@ -44,11 +45,14 @@ def call(base, path, payload=None, headers=None):
 def wait_ready(base, processes, timeout=25):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
+        command_timeout(timeout)
         if any(process.poll() is not None for process in processes):
             raise AssertionError('A task-path process exited before readiness')
         try:
             if call(base, '/health') == (200, {'ready': True}):
                 return
+        except DeadlineExceeded:
+            raise
         except OSError:
             pass
         time.sleep(0.1)
@@ -59,6 +63,7 @@ def bound_base(log_path, process, timeout=25):
     """Discover the address already owned by this child; never probe/release a port."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
+        command_timeout(timeout)
         with log_path.open('rb') as log:
             output = log.read(8193)
         if len(output) > 8192:
@@ -182,13 +187,14 @@ def boundary(base):
         assert call(base, '/tasks/forbidden', first, headers)[0] == status
     assert call(base, '/tasks/forbidden')[0] == 404
     address = urllib.parse.urlsplit(base)
-    with socket.create_connection((address.hostname, address.port), timeout=6) as slow:
+    with socket.create_connection((address.hostname, address.port), timeout=command_timeout(6)) as slow:
         slow.sendall(('POST /tasks/slow HTTP/1.1\r\nHost: ' + address.netloc +
                       '\r\nContent-Type: application/json\r\nContent-Length: 4096\r\n\r\n{').encode())
         started = time.monotonic()
         assert call(base, '/health')[0] == 200
         assert call(base, '/tasks/forbidden')[0] == 404
         assert time.monotonic() - started < 2
+        slow.settimeout(command_timeout(6))
         assert b'408' in slow.recv(4096).split(b'\r\n', 1)[0]
         assert time.monotonic() - started < 5
     assert call(base, '/health')[0] == 200
@@ -216,14 +222,14 @@ def database_outage(bases, proxy, processes):
 def prepare(folder):
     """Build both tested executables before any external service is required."""
     subprocess.run(['cargo', 'build', '--locked', '--jobs', '1', '-p', 'task_worker'],
-                   cwd=ROOT, check=True, timeout=240)
+                   cwd=ROOT, check=True, timeout=command_timeout(240))
     metadata = json.loads(subprocess.check_output(
-        ['cargo', 'metadata', '--no-deps', '--format-version', '1'], cwd=ROOT, timeout=30))
+        ['cargo', 'metadata', '--no-deps', '--format-version', '1'], cwd=ROOT, timeout=command_timeout(30)))
     extension = '.exe' if os.name == 'nt' else ''
     shutil.copy2(Path(metadata['target_directory']) / 'debug' / ('task_worker' + extension),
                  folder / ('task_worker' + extension))
     subprocess.run(['go', 'build', '-p', '1', '-o', str(folder / ('task-api' + extension)),
-                    './go/io/task_api/cmd/task-api'], cwd=ROOT, check=True, timeout=90)
+                    './go/io/task_api/cmd/task-api'], cwd=ROOT, check=True, timeout=command_timeout(90))
 
 
 def exercise(folder):
@@ -240,13 +246,17 @@ def exercise(folder):
                        KEHILA_TASK_COLLECTION='kehila_test_' + uuid.uuid4().hex)
     with ExitStack() as owned:
         # Register cleanup before installation, including partially created indexes.
-        owned.callback(lambda: subprocess.run([worker, 'drop-test-collection'], env=environment, check=True, timeout=15))
-        subprocess.run([worker, 'install-indexes'], env=environment, check=True, timeout=15)
+        def drop_collection():
+            with cleanup_time():
+                subprocess.run([worker, 'drop-test-collection'], env=environment, check=True, timeout=15)
+        owned.callback(drop_collection)
+        subprocess.run([worker, 'install-indexes'], env=environment, check=True, timeout=command_timeout(15))
         proxy = FaultProxy((parsed.hostname, parsed.port or 27017))
         owned.callback(proxy.close)
         processes = []
 
         def launch(command, env):
+            command_timeout(1)
             log = owned.enter_context(open(Path(folder) / ('process-' + str(len(processes)) + '.log'), 'w+'))
             process = subprocess.Popen(command, env=env, cwd=ROOT, stdout=log, stderr=log,
                                        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)

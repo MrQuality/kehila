@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cleanup_errors import print_failure
 from temp_work import owned_directory
 from test_services import managed_runtime, service_group, validate_runtime
-from verification_budget import command_timeout, validate_seconds, work_budget
+from verification_budget import command_timeout, owner_environment, validate_seconds, work_budget
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -18,6 +18,11 @@ ROOT = Path(__file__).resolve().parents[1]
 def execute(command, environment):
     print('VERIFY:', ' '.join(command), flush=True)
     timeout = command_timeout(450 if os.name == 'nt' and command[0] == 'cargo' else 300)
+    owners = {'scripts/go_test.py', 'experiments/SP-002/check_seed_oracle.py',
+              'experiments/SP-003/check.py', 'tests/integration/task_path.py'}
+    if len(command) > 1 and command[0] == sys.executable and command[1] in owners:
+        environment = owner_environment(environment, timeout)
+        timeout = None  # Cooperative child bounds work and unwinds its own resources.
     subprocess.run(command, cwd=ROOT, env=environment, check=True, timeout=timeout)
 
 

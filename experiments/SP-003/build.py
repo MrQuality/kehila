@@ -10,10 +10,12 @@ import time
 
 SOURCE = Path(__file__).resolve().parent
 REPO = SOURCE.parents[1]
+sys.path.insert(0, str(REPO / "scripts"))
+from verification_budget import command_timeout
 
 
 def command(args, *, input=None, timeout=120):
-    result = subprocess.run(args, cwd=REPO, input=input, capture_output=True, timeout=timeout)
+    result = subprocess.run(args, cwd=REPO, input=input, capture_output=True, timeout=command_timeout(timeout))
     if result.returncode:
         raise RuntimeError((result.stderr or result.stdout).decode(errors="replace"))
     return result.stdout

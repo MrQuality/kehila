@@ -191,3 +191,17 @@ class FullLifecycleTests(unittest.TestCase):
             with self.assertRaises(subprocess.TimeoutExpired):
                 VERIFY.main()
         self.assertEqual(events, [('nats',), 'group released', 'VM released'])
+
+
+class OwnerDeadlineTests(unittest.TestCase):
+    def test_each_resource_owner_receives_deadline_without_a_parent_kill_timer(self):
+        import verification_budget as budget
+        with budget.work_budget(10), patch.object(VERIFY.subprocess,'run') as run:
+            for script in ('scripts/go_test.py','experiments/SP-002/check_seed_oracle.py',
+                           'experiments/SP-003/check.py','tests/integration/task_path.py'):
+                VERIFY.execute([sys.executable,script],{'KEHILA_FIXTURE':'retained'})
+        self.assertEqual(run.call_count,4)
+        for call in run.call_args_list:
+            self.assertIsNone(call.kwargs['timeout'])
+            self.assertIn('KEHILA_VERIFICATION_DEADLINE',call.kwargs['env'])
+            self.assertEqual(call.kwargs['env']['KEHILA_FIXTURE'],'retained')
