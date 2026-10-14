@@ -53,7 +53,8 @@ class ServiceOwnershipTests(unittest.TestCase):
                 with services.service_group(services.ComposeRuntime(['docker', 'compose'], {}), ['nats']):
                     raise primary
         self.assertIs(caught.exception, primary)
-        self.assertIs(caught.exception.__cause__, cleanup)
+        self.assertIs(caught.exception._cleanup_failures[0][1], cleanup)
+        self.assertIsNone(caught.exception.__cause__)
 
     def test_cleanup_failure_cannot_produce_success(self):
         with patch.object(services, 'run', side_effect=[None, OSError('cleanup failed')]), \
@@ -169,7 +170,8 @@ class MachineOwnershipTests(unittest.TestCase):
                 with services.managed_runtime('podman', 'fixture', environment={}, exclusive=True):
                     raise primary
             self.assertIs(caught.exception, primary)
-            self.assertIs(caught.exception.__cause__, cleanup)
+            self.assertIs(caught.exception._cleanup_failures[0][1], cleanup)
+            self.assertIsNone(caught.exception.__cause__)
 
     def test_socket_paths_must_identify_distinct_rootless_and_rootful_stores(self):
         info = {'SSHConfig': {'Port': 12345, 'RemoteUsername': 'user'}}

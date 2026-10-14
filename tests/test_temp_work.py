@@ -64,7 +64,7 @@ class OwnedDirectoryTests(unittest.TestCase):
                     self.addCleanup(self.remove, work)
             sleep.assert_not_called()
 
-    def test_body_failure_is_preserved_with_cleanup_failure_as_cause(self):
+    def test_body_failure_is_preserved_with_labelled_cleanup_failure(self):
         primary = RuntimeError('integration failed')
         cleanup = OSError('cleanup failed')
         with patch.object(temp_work.shutil, 'rmtree', side_effect=cleanup):
@@ -73,7 +73,8 @@ class OwnedDirectoryTests(unittest.TestCase):
                     self.addCleanup(self.remove, work)
                     raise primary
         self.assertIs(caught.exception, primary)
-        self.assertIs(caught.exception.__cause__, cleanup)
+        self.assertIs(caught.exception._cleanup_failures[0][1], cleanup)
+        self.assertIsNone(caught.exception.__cause__)
 
     def test_assertion_failure_in_a_cleanup_fixture_does_not_leak_its_directory(self):
         allocated = []

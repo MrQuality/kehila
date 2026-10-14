@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from cleanup_errors import print_failure
 from temp_work import owned_directory
 from test_services import managed_runtime, service_group, validate_runtime
 from verification_budget import command_timeout, validate_seconds, work_budget
@@ -114,5 +115,5 @@ if __name__ == "__main__":
     try:
         main()
     except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
-        print(f"ERR_TEST_EXECUTION_FAILED: {error}", file=sys.stderr)
+        print_failure('ERR_TEST_EXECUTION_FAILED', error)
         sys.exit(3)

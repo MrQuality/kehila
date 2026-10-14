@@ -4,6 +4,7 @@
 The caller creates and removes the container. This command never resets an
 existing schema or drops cluster roles. It requires a fresh isolated database.
 """
+from cleanup_errors import print_failure
 import argparse
 import ctypes
 import json
@@ -170,5 +171,5 @@ if __name__ == '__main__':
     try:
         main()
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
-        print('ERR_POSTGRESQL_CHECK: ' + str(error), file=sys.stderr)
+        print_failure('ERR_POSTGRESQL_CHECK', error)
         sys.exit(3)

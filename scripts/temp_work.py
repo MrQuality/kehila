@@ -1,4 +1,5 @@
 """Owned temporary build directories with bounded Windows lock cleanup."""
+from cleanup_errors import retain_cleanup_failure
 from contextlib import contextmanager
 from pathlib import Path
 import re
@@ -40,5 +41,6 @@ def owned_directory(prefix):
             _remove_owned(work, root, prefix)
         except OSError as cleanup_error:
             if failure is not None:
-                raise failure from cleanup_error
+                retain_cleanup_failure(failure, cleanup_error, 'temporary directory')
+                raise failure
             raise

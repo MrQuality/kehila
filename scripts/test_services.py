@@ -1,4 +1,5 @@
 """Own short-lived Compose groups; never tear down the development project."""
+from cleanup_errors import retain_cleanup_failure
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 import hashlib
@@ -182,7 +183,8 @@ def _runtime(preferred, machine, environment, exclusive):
                     _stop_owned_machine(machine, environment=environment)
             except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as cleanup_error:
                 if failure is not None:
-                    raise failure from cleanup_error
+                    retain_cleanup_failure(failure, cleanup_error, 'Podman machine')
+                    raise failure
                 raise
 
 
@@ -217,5 +219,6 @@ def service_group(runtime, selected):
                     raise RuntimeError('Owned test containers remain after Compose cleanup')
         except (OSError, RuntimeError, subprocess.SubprocessError) as cleanup_error:
             if failure is not None:
-                raise failure from cleanup_error
+                retain_cleanup_failure(failure, cleanup_error, 'Compose project')
+                raise failure
             raise
