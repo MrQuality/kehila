@@ -4,6 +4,13 @@ Status: W1 implementation approved by explicit maintainer instruction on
 2026-10-13 and prepared for review, as recorded in [#49](https://github.com/MrQuality/kehila/issues/49#issuecomment-6154165059).
 Later work packages and ADR-103 production adoption retain separate review gates.
 
+Planning [PR #50](https://github.com/MrQuality/kehila/pull/50) merged into main on
+2026-10-14 at 0c89bfbfd0c20b8556894e4c91c7814d6eacc96c. Implementation
+[PR #51](https://github.com/MrQuality/kehila/pull/51) now targets main and remains
+open for review. The working branch incorporates the merged planning baseline
+without rewriting its published implementation commits. W1 and W2-W7 completion
+remain separate from the planning merge; #49 stays open and #26 stays closed.
+
 ## Tracking decision and baseline
 
 The maintainer directed that closed [#26](https://github.com/MrQuality/kehila/issues/26)

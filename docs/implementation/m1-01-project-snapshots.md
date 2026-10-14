@@ -7,6 +7,12 @@ explicit maintainer instruction on 2026-10-13. This slice implements Accepted
 [ADR-104](../architecture/ADR-104-project-create-codecs.md), with no acceptance
 of Proposed ADR-103 or authorization of later work packages.
 
+Planning [PR #50](https://github.com/MrQuality/kehila/pull/50) merged on 2026-10-14
+at 0c89bfbfd0c20b8556894e4c91c7814d6eacc96c. W1
+[PR #51](https://github.com/MrQuality/kehila/pull/51) now targets main and remains
+unmerged for maintainer review. Integrating that baseline and updating tracking
+does not change the implementation tree or replace the native evidence below.
+
 ## Implementation boundary
 
 The pure `project_create_codec` crate provides the version-one project snapshot

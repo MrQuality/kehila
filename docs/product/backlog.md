@@ -75,6 +75,13 @@ must not be claimed by M1 checks.
 <a id="m1-01-remaining-delivery"></a>
 ### M1-01 remaining delivery: successor execution record
 
+Planning [PR #50](https://github.com/MrQuality/kehila/pull/50) merged on 2026-10-14
+at 0c89bfbfd0c20b8556894e4c91c7814d6eacc96c. The successor issue and plan are now
+on main. W1 implementation remains under review in
+[PR #51](https://github.com/MrQuality/kehila/pull/51), targeting main; this tracking
+update belongs to its working branch. Planning merge does not complete W1 or
+the remaining M1-01 obligations.
+
 **Status: W1 execution approved; snapshot implementation prepared for review.**
 [#49](https://github.com/MrQuality/kehila/issues/49) tracks the unfinished M1-01
 scope under B-005/#9. By maintainer direction, historical
