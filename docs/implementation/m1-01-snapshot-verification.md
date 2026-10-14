@@ -108,3 +108,32 @@ formatting space and rejects NUL before database access. The exact 1 MiB text
 case passes. Historical codecs and all accepted ceilings remain unchanged.
 Original-byte duplicate checks and fixture reconstruction do not establish the
 future adapter's transactional attribution, authority or route admission.
+
+## Review follow-up acceptance checks
+
+Subprocess execution must retain descendant ownership after an early parent exit.
+Windows uses a supervisor that establishes a kill-on-close Job Object before
+launching the command; POSIX uses an owned process group. Parent completion and
+pipe drainage share the execution deadline. Cleanup must preserve the original
+failure and must not depend on a separate `taskkill` command. Regressions must
+check bounded return and descendant termination, not merely the direct exit code.
+
+Negative native cases must identify the expected production codec error;
+framing errors, process failures and subsequent fixture-equality failures cannot
+satisfy them. Relational negatives must vary revision and sequence independently
+and match the intended constraint or primary diagnostic as well as SQLSTATE.
+Include stored-row revision/version mismatches while both snapshots agree.
+Shared tests must detect omitted required native scenarios and exercise frame,
+parameter, build/artifact and target-confinement failure propagation. These
+orchestration tests do not replace execution against actual PostgreSQL.
+
+The helper's IPC frame has a separate bounded hexadecimal transport budget.
+Reject duplicate/unknown/missing fields and noncanonical decimal revisions there;
+contained storage records still enter the production bounded decoders. Native
+NUL rejection belongs to typed new-write preflight, with a distinct admission
+error; historical storage acceptance remains unchanged. Representation-stress
+fixtures use deterministic ASCII padding with independently verified JSONB text
+sizes and remain separate from domain-valid relational fixtures.
+
+Whole-creation compatibility, including the saved result, remains the explicit
+[W3 admission gate](m1-01-remaining-delivery.md#w3-creation-envelope-admission-obligation).

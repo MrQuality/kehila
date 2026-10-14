@@ -109,3 +109,90 @@ transactional derivation, attribution and reload against the one trusted result.
 Pure/native fixture success does not establish those application properties.
 Native Linux-host execution remains unverified. Frozen SP-002/SP-003 sources and
 evidence are unchanged. Completion of W1 must not close the #49 umbrella.
+
+## PR #51 review follow-up
+
+The [maintainer reminder](https://github.com/MrQuality/kehila/pull/51#issuecomment-6161326535)
+tracks the agreed changes. The execution deadline now includes parent exit and
+pipe drainage. Windows launches the command through a supervisor that joins a
+kill-on-close Job Object before command execution; POSIX retains a process group
+through cleanup even after parent exit. The Windows path no longer uses
+`taskkill`. Original failures survive cleanup, and pipe-reader failures propagate.
+The early-parent regression checks elapsed time and actual Windows descendant
+termination; existing timeout and pipe-overflow cases remain required.
+
+Native rejection modes now succeed only for the specified production codec error.
+Malformed IPC or later fixture-equality failure cannot satisfy those modes.
+The helper uses a typed duplicate/unknown/missing-field-rejecting IPC frame and
+canonical row revision strings; its three focused tests cover frame bounds,
+error/equality separation and deterministic representation-stress boundaries.
+It directly owns already locked serde 1.0.229 with derive support. Cargo.lock
+changes only that local helper dependency edge; no external version is upgraded.
+
+Native preflight rejects NUL before constructing JSON trees and returns
+`InvalidNativeSnapshot`, separately from malformed historical records. JSONB
+space accounting shares the existing exact-shape traversal and bounds the sink
+before serialization. Historical codecs, version-one mappings and ceilings are
+unchanged. Boundary fixtures use deterministic padding for a frozen 16-status
+representation-stress shape, independently checked against actual JSONB output;
+they are deliberately outside live scalar/domain acceptance and are not claimed
+as relational seed fixtures.
+
+The native scenario contract is now covered in shared tests, including required
+round trips, specific rejection categories, invalid parameters/oversized frames,
+build/artifact failure propagation and temporary-target confinement/lifetime.
+Revision and next-sequence negatives are independent, with primary constraint
+or error diagnostics matched alongside SQLSTATE. Native stored-row revision and
+codec-version mismatches test coherent envelopes against disagreeing row metadata.
+The [verification plan](m1-01-snapshot-verification.md#review-follow-up-acceptance-checks)
+records the resulting acceptance requirements.
+
+The [W3 creation-envelope obligation](m1-01-remaining-delivery.md#w3-creation-envelope-admission-obligation)
+remains open under #49: admit the actual saved result and both snapshots before
+database access and test all three through native storage/readback. W1's checked
+snapshot pair does not admit a complete transaction. Its exact-limit configuration
+has 1,048,576 JSONB text bytes; the corresponding saved result would have
+1,048,824 bytes and must not be admitted through that read path. The relational
+W1 fixtures still use a placeholder operation result and prove only the stated
+snapshot/row relationships. A whole-creation admission API and application
+adapter require the separate W3 plan; neither is introduced here.
+
+Follow-up verification and the final source revision are recorded below and in
+the PR conversation. The earlier native run remains historical evidence for its
+recorded source; hosted checks alone do not qualify the updated native path.
+
+### Follow-up verification (2026-10-14)
+
+- All four focused source commits passed their full staged gates: `c6b6bf4`
+  (owned process lifetime), `a2641c7` (native preflight/serialization), `bb51c60`
+  (typed IPC and specific rejection oracles), and
+  `1aba3566eb4f2342da270af18b7be43d5540dfc1` (native scenarios/constraint evidence).
+  The final gate ran 124 Python tests: 122 passed and two POSIX-only skips on
+  Windows, plus workspace tests, frozen oracles, engineering/Go checks and live
+  task-path contention/deadline/recovery/search-unavailable checks.
+- The 31 codec tests and three host-helper tests passed. Final codec/helper
+  Clippy with all targets and warnings denied, and workspace formatting, passed.
+- The documented native command, with an explicitly selected disposable
+  container and resource-capable test connection, passed at source
+  `1aba3566eb4f2342da270af18b7be43d5540dfc1` on Windows/WSL2/Podman with the same
+  pinned PostgreSQL 16.15 image. Both the extended snapshot phase and the
+  foundation integrity/role/mutation suite passed. The source tree was unchanged
+  during that run; documentation changes were separate.
+- Two container-creation attempts on the rootless connection failed before
+  verification because that connection exposed no cgroup controllers and could
+  not enforce `memory.max`. The final run used the existing explicit root
+  connection, retaining the memory/CPU/PID/network/mount restrictions; no default
+  connection, machine mode or admission check was weakened. All task-owned
+  disposable containers were removed, the four test services stopped and the VM
+  stopped after verification.
+- New regressions first exposed the early-parent pipe lifetime and reader/close
+  error masking. In-memory mutations omitting the positive fixture loop and
+  ignoring the primary SQL diagnostic were detected. Removing production
+  row/pair coherence made the specific-rejection helper test fail; the source was
+  restored byte-for-byte before final Clippy/format checks. These strengthen the
+  evidence without claiming that shared CI executes native PostgreSQL.
+
+Hosted results for the final documentation head belong in the PR conversation.
+Native Linux-host qualification, whole-creation admission and the remaining W2-W7
+application obligations remain open under #49. No ADR status changes or PR merge
+are part of this follow-up.

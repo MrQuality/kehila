@@ -28,22 +28,22 @@ This feature has no assigned product milestone or repository requirement,
 decision, or backlog IDs yet. Its 50 decision numbers are proposal-local.
 An explicit scoped amendment or successor to [D-012](decisions.md#d-012) and
 linked product records are required before implementation changes that scope.
-The existing M1 scope and M0–M4 delivery plan remain unchanged.
+The existing M1 scope and M0â€“M4 delivery plan remain unchanged.
 
 ## Proposed milestones and order
 
-These M0–M4 labels are **product delivery milestones**, not the independent
-[engineering maturity gates E0–E5](../engineering/ENGINEERING-STANDARD.md). Existing
-M1-01–M1-08 child IDs retain their product meaning. Engineering Preview/Alpha/Beta
+These M0â€“M4 labels are **product delivery milestones**, not the independent
+[engineering maturity gates E0â€“E5](../engineering/ENGINEERING-STANDARD.md). Existing
+M1-01â€“M1-08 child IDs retain their product meaning. Engineering Preview/Alpha/Beta
 qualification requires its own cumulative evidence and does not reduce product scope.
 
 | Milestone | Items / order | Observable outcome |
 | --- | --- | --- |
-| M0 — Document and establish the path | B-001, B-002; resolve the blocking subset of B-003/B-007 | A traceable baseline and an evidence-backed implementation plan. |
-| M1 — Use Kehila to record its own work | B-003 and B-007; B-005 and B-004; B-006, divided into M1-01–M1-08 | Create projects and work items with the full configurable model, including fields, types, workflows, conversion, migration, relationships, administration, estimates, and knowledge; retrieve saved records locally. |
-| M2 — Track shared resources and execution | B-008, B-009, B-010; integrate B-011 and B-012 | Reserve shared resources, report actuals, compare plans, complete/reopen safely, and inspect costs. |
-| M3 — Plan across dates and sprints | B-013 and B-014; B-015, B-016, B-017 | Both sprint and Gantt planning with manual/automatic scheduling, multiple drivers, authorized overrides, and cost/time summaries. |
-| M4 — Validate the full first release | B-018 | Demonstrated end-to-end behavior, local recovery, and an explicit record of remaining limitations. |
+| M0 â€” Document and establish the path | B-001, B-002; resolve the blocking subset of B-003/B-007 | A traceable baseline and an evidence-backed implementation plan. |
+| M1 â€” Use Kehila to record its own work | B-003 and B-007; B-005 and B-004; B-006, divided into M1-01â€“M1-08 | Create projects and work items with the full configurable model, including fields, types, workflows, conversion, migration, relationships, administration, estimates, and knowledge; retrieve saved records locally. |
+| M2 â€” Track shared resources and execution | B-008, B-009, B-010; integrate B-011 and B-012 | Reserve shared resources, report actuals, compare plans, complete/reopen safely, and inspect costs. |
+| M3 â€” Plan across dates and sprints | B-013 and B-014; B-015, B-016, B-017 | Both sprint and Gantt planning with manual/automatic scheduling, multiple drivers, authorized overrides, and cost/time summaries. |
+| M4 â€” Validate the full first release | B-018 | Demonstrated end-to-end behavior, local recovery, and an explicit record of remaining limitations. |
 
 Within a milestone, independent work may proceed once its own blockers are resolved. Milestones divide the work while preserving the full release scope. Resource-backed lifecycle automation arrives after M1. M2's completion/cost behavior is accepted together once both B-011 and B-012 integrate. [D-019](decisions.md#d-019) retains the full configurable model in M1; the [implementation slices](#m1-configurable-model) divide that work without reducing scope.
 
@@ -64,7 +64,7 @@ applicable API, storage, access, and interface integration through its parents.
 | [M1-05](https://github.com/MrQuality/kehila/issues/30) | B-004/B-006; M1-04 | Explicit type conversion and workflow migration. Verify complete destination validation, both-workflow phase restrictions, current original migration grants on replay, retained archived references, source-snapshot validation, preserved source values/history, and no partial conversion. |
 | [M1-06](https://github.com/MrQuality/kehila/issues/31) | B-004/B-006; M1-02, B-003 | Relationship types and links, knowledge, and follow-up provenance under the resolved Q-016 contract. Verify cross-project authorization, canonical duplicate prevention, self-link rejection, inverse display, archival preservation, and history surviving conversion. Final integration includes M1-05. |
 | [M1-07](https://github.com/MrQuality/kehila/issues/32) | B-007/B-006; B-003, Q-014 | Configuration permissions and delegated administration, including status-group administration. Implement the accepted group-scoped status grants and project administration boundary; provision initial project access, define revocation, and verify authoritative allow/deny behavior across all slices. Initial access enforcement is required before dependent routes are exposed. |
-| [M1-08](https://github.com/MrQuality/kehila/issues/33) | B-006 with B-004/B-005/B-007; M1-01–M1-07 | Integrate the full configurable model into the local interface. Demonstrate administration, edits, conversion, migration, knowledge, relationships, reload, conflict recovery, and archival. Retain B-005 durability and authenticated-access gates before real data. |
+| [M1-08](https://github.com/MrQuality/kehila/issues/33) | B-006 with B-004/B-005/B-007; M1-01â€“M1-07 | Integrate the full configurable model into the local interface. Demonstrate administration, edits, conversion, migration, knowledge, relationships, reload, conflict recovery, and archival. Retain B-005 durability and authenticated-access gates before real data. |
 
 M1-07's initial access boundary accompanies the early slices; its delegated
 administration surface expands with them. Q-016 is resolved for M1; Q-014 grant
@@ -111,6 +111,14 @@ compactor delivery and a distinct ADR-103 production-adoption gate. Its
 defines the production-codec/native bridge, fixture classes, coherence checks and
 JSONB compatibility gates; the W1 report distinguishes completed fixture checks
 from remaining application obligations.
+PR #51 review follow-up covers descendant lifetime/deadline enforcement, precise
+native rejection oracles, protected scenario execution, strict IPC metadata and
+native preflight diagnostics. See the [W1 report](../implementation/m1-01-project-snapshots.md)
+for verification and disposition. W3 must admit the saved-result envelope and
+both snapshot envelopes before database access; snapshot-pair admission alone
+cannot establish whole-creation compatibility. The [successor plan](../implementation/m1-01-remaining-delivery.md#w3-creation-envelope-admission-obligation)
+defines that retained acceptance gate. No W2-W7 completion is implied.
+
 All ADR-104 ingress, actor/scope, structural snapshot and legacy isolation
 contracts remain mandatory.
 
@@ -125,7 +133,7 @@ and linked evidence. W1 approval does not approve later packages or ADR-103
 production adoption.
 
 <a id="b-001"></a>
-## B-001 — Establish the product planning baseline
+## B-001 â€” Establish the product planning baseline
 
 **Status:** Documented. **Dependencies:** None.
 
@@ -136,7 +144,7 @@ production adoption.
 **Acceptance:** Product scope, terminology, requirements, and unresolved choices are documented. Every requirement maps to backlog items, examples are marked illustrative, and links resolve. Implementation status is recorded separately.
 
 <a id="b-002"></a>
-## B-002 — Investigate and record the first-increment technical path
+## B-002 â€” Investigate and record the first-increment technical path
 
 **Status:** Bounded investigation accepted for the first local task path; implementation remains in B-005 and related items. **Dependencies:** B-001.
 
@@ -173,7 +181,7 @@ settings.
 **Acceptance:** Record a passing preflight before each environment's experiment run; record blockers and defer affected experiments until they are resolved. Identify the roles of browser, API, business logic, storage, event delivery, and search/update delivery. Resolve the contradictory stalled-pipeline response before implementing the affected route. Record observed integration evidence and limitations. Document proposed architecture changes and their impact. Identify prerequisites for consistent future resource releases and cost adjustments. Kubernetes is outside the current release requirements.
 
 <a id="b-003"></a>
-## B-003 — Specify project/task contracts and workflow rules
+## B-003 â€” Specify project/task contracts and workflow rules
 
 **Status:** Accepted typed policies and pure checks are implemented on the B-003
 branch; ready for final maintainer review.
@@ -205,18 +213,18 @@ Durable records and the configurable worker are not implemented here.
 **Acceptance:** Multiple statuses can map to one system phase; a task cannot independently contradict its status's phase. The Kehila project can use hours and another project can select points without converting points to hours. Record what selects the current task. Invalid references and in-use status edits follow a decided policy. Ordinary status changes record no usage. Add pure rule checks for S-01's phase behavior.
 
 <a id="b-004"></a>
-## B-004 — Implement project/task operations and manual knowledge
+## B-004 â€” Implement project/task operations and manual knowledge
 
 **Status:** Knowledge and workflow contracts are specified; implementation waits on B-005 storage and B-007 access work. **Dependencies:** B-003, B-005; access checks from B-007.
 
-**Traceability:** [R-001](requirements.md#r-001), [R-002](requirements.md#r-002), [R-005](requirements.md#r-005)–[R-007](requirements.md#r-007). **Questions:** [Q-008](open-questions.md#q-008), [Q-016](open-questions.md#q-016).
+**Traceability:** [R-001](requirements.md#r-001), [R-002](requirements.md#r-002), [R-005](requirements.md#r-005)â€“[R-007](requirements.md#r-007). **Questions:** [Q-008](open-questions.md#q-008), [Q-016](open-questions.md#q-016).
 
 **Deliverable:** Create/retrieve/update projects and tasks, configure statuses, record estimates and all required knowledge categories, and link originating/follow-up tasks.
 
 **Acceptance:** Save and retrieve a created-file reference, decision, lesson, insight, and follow-up origin link. Preserve them through completion/reopening. Do not create a dependency merely by linking a follow-up. Reject invalid status references. Resource effects are integrated later and not claimed by these operations alone. Validate real persistence for the routes provided.
 
 <a id="b-005"></a>
-## B-005 — Build durable local storage and the required delivery path
+## B-005 â€” Build durable local storage and the required delivery path
 
 **Status:** First task-path direction accepted; implementation and recovery decisions remain. **Dependencies:** B-002, B-003; coordinate access boundaries with B-007.
 
@@ -235,18 +243,18 @@ and restore from a backup. The chosen protocol must respect the reference
 design's accepted [bounded-transaction direction](../architecture/ADR-102-postgresql-transactions.md).
 
 <a id="b-006"></a>
-## B-006 — Deliver the first local project/task interface
+## B-006 â€” Deliver the first local project/task interface
 
 **Status:** Waiting on dependencies. **Dependencies:** B-004, B-005, B-007.
 
-**Traceability:** [R-001](requirements.md#r-001), [R-002](requirements.md#r-002), [R-005](requirements.md#r-005)–[R-007](requirements.md#r-007). **Scenario:** [S-10](requirements.md#s-10), first-increment portion only.
+**Traceability:** [R-001](requirements.md#r-001), [R-002](requirements.md#r-002), [R-005](requirements.md#r-005)â€“[R-007](requirements.md#r-007). **Scenario:** [S-10](requirements.md#s-10), first-increment portion only.
 
 **Deliverable:** A local browser interface to create projects, configure statuses, identify current work, create/update tasks, and record knowledge and follow-ups.
 
 **Acceptance:** Create and update records against real storage, then reload and retrieve them. Distinguish pending, saved, and failed changes. Derive phase from status. Identify resource and scheduling capabilities that remain unavailable, and record usability findings.
 
 <a id="b-007"></a>
-## B-007 — Establish identity and permission boundaries
+## B-007 â€” Establish identity and permission boundaries
 
 **Status:** One authenticated local owner accepted; onboarding, session expiry/recovery, browser CSRF, CLI access, and enforcement remain to design and implement. **Dependencies:** B-002, B-003.
 
@@ -257,7 +265,7 @@ design's accepted [bounded-transaction direction](../architecture/ADR-102-postgr
 **Acceptance:** Project configuration changes and scheduling overrides enforce permissions on the authoritative side. Verify allowed and denied cases. Resource and rate visibility follow the access policy, including in local deployments.
 
 <a id="b-008"></a>
-## B-008 — Add shared named resources and calendars
+## B-008 â€” Add shared named resources and calendars
 
 **Status:** Needs decisions. **Dependencies:** B-005, B-007.
 
@@ -268,51 +276,51 @@ design's accepted [bounded-transaction direction](../architecture/ADR-102-postgr
 **Acceptance:** Two projects reference the same named person or server and see the same relevant availability. Human, machine, and room capacity remain distinct. Availability exceptions and time boundaries follow the chosen calendar policy. Historical windows are not carried forward as new capacity. Calendar edits preserve necessary history.
 
 <a id="b-009"></a>
-## B-009 — Add requirements, reservations, and capacity checks
+## B-009 â€” Add requirements, reservations, and capacity checks
 
 **Status:** Needs decisions and dependencies. **Dependencies:** B-004, B-008; consistency approach from B-002.
 
-**Traceability:** [R-009](requirements.md#r-009)–[R-012](requirements.md#r-012), [R-015](requirements.md#r-015), [R-016](requirements.md#r-016). **Questions:** [Q-004](open-questions.md#q-004), [Q-009](open-questions.md#q-009), [Q-010](open-questions.md#q-010), [Q-012](open-questions.md#q-012).
+**Traceability:** [R-009](requirements.md#r-009)â€“[R-012](requirements.md#r-012), [R-015](requirements.md#r-015), [R-016](requirements.md#r-016). **Questions:** [Q-004](open-questions.md#q-004), [Q-009](open-questions.md#q-009), [Q-010](open-questions.md#q-010), [Q-012](open-questions.md#q-012).
 
 **Deliverable:** Named resource requirements, dated reservations, preserved planning baseline, and project capacity checks; extend sprint checks with B-014.
 
 **Acceptance:** Preserve original requirements while showing current reservations. Respect resource identity and dates on release. Reject or resolve incompatible simultaneous bookings according to the decided policy. Scheduling preserves required demand and distinguishes resource-hours from elapsed duration. Verify contention against actual storage/services, not only isolated calculations.
 
 <a id="b-010"></a>
-## B-010 — Report consumption and revise remaining work
+## B-010 â€” Report consumption and revise remaining work
 
 **Status:** Needs decisions and dependencies. **Dependencies:** B-009.
 
-**Traceability:** [R-003](requirements.md#r-003), [R-012](requirements.md#r-012)–[R-014](requirements.md#r-014), [R-019](requirements.md#r-019). **Questions:** [Q-005](open-questions.md#q-005), [Q-017](open-questions.md#q-017), [Q-018](open-questions.md#q-018).
+**Traceability:** [R-003](requirements.md#r-003), [R-012](requirements.md#r-012)â€“[R-014](requirements.md#r-014), [R-019](requirements.md#r-019). **Questions:** [Q-005](open-questions.md#q-005), [Q-017](open-questions.md#q-017), [Q-018](open-questions.md#q-018).
 
 **Deliverable:** Manual usage entries, timer workflow, resource-specific consumption, remaining-demand revision, and time displays.
 
 **Acceptance:** Demonstrate both entry methods. Execute S-02 and S-03's independent accounting. Preserve original plans and actuals when remaining demand changes. No automatic completion on estimate exhaustion. Handle timer interruption, duplicate submissions, and corrections according to agreed rules. Decide automatic-reporting release scope explicitly; keep that decision separate from manual knowledge scope. Add an integration-specific child item if an automatic source is approved.
 
 <a id="b-011"></a>
-## B-011 — Integrate completion and reopening with resource release
+## B-011 â€” Integrate completion and reopening with resource release
 
 **Status:** Waiting on dependencies and edge-case decisions. **Dependencies:** B-009, B-010; integrate release accounting with B-012 before accepting the complete feature.
 
-**Traceability:** [R-007](requirements.md#r-007), [R-012](requirements.md#r-012), [R-015](requirements.md#r-015)–[R-018](requirements.md#r-018). **Questions:** [Q-008](open-questions.md#q-008), [Q-010](open-questions.md#q-010), [Q-012](open-questions.md#q-012), [Q-017](open-questions.md#q-017), [Q-019](open-questions.md#q-019).
+**Traceability:** [R-007](requirements.md#r-007), [R-012](requirements.md#r-012), [R-015](requirements.md#r-015)â€“[R-018](requirements.md#r-018). **Questions:** [Q-008](open-questions.md#q-008), [Q-010](open-questions.md#q-010), [Q-012](open-questions.md#q-012), [Q-017](open-questions.md#q-017), [Q-019](open-questions.md#q-019).
 
-**Deliverable:** Done transition release, historical retention, and Done → Active resource-plan review.
+**Deliverable:** Done transition release, historical retention, and Done â†’ Active resource-plan review.
 
 **Acceptance:** Execute S-03, S-04, and S-05. Reopening allows Active state but creates no new reservation before review. Another project's booking remains intact. Preserve charges/refunds and invoke the configured release policy. Proposed engineering checks must cover retry/failure recovery without duplicate release or refund. Until automatic scheduling exists, expose a manual reallocation workflow without claiming automatic capability.
 
 <a id="b-012"></a>
-## B-012 — Implement resource rates and cost accounting
+## B-012 â€” Implement resource rates and cost accounting
 
 **Status:** Needs accounting decisions; can develop alongside B-011 after shared contracts. **Dependencies:** B-009, B-010; shared transition contract with B-011, no requirement to finish B-011 first.
 
-**Traceability:** [R-018](requirements.md#r-018), [R-025](requirements.md#r-025)–[R-028](requirements.md#r-028). **Questions:** [Q-014](open-questions.md#q-014), [Q-015](open-questions.md#q-015), [Q-019](open-questions.md#q-019). Q-021 is outside defined simple-policy scope unless expanded.
+**Traceability:** [R-018](requirements.md#r-018), [R-025](requirements.md#r-025)â€“[R-028](requirements.md#r-028). **Questions:** [Q-014](open-questions.md#q-014), [Q-015](open-questions.md#q-015), [Q-019](open-questions.md#q-019). Q-021 is outside defined simple-policy scope unless expanded.
 
 **Deliverable:** Effective-dated rates, cost-basis and release-policy configuration, immutable historical meaning, and task/project totals.
 
 **Acceptance:** Execute S-08 and S-09 under the agreed recognition/currency rules. Compare planned, actual, remaining forecast, and variance. Reserved-time charges must not also be counted as consumed-time charges for the same commitment. Future release can free availability with or without reducing cost. Reopening records new costs separately and preserves old adjustments. Retry checks prevent duplicate financial adjustments.
 
 <a id="b-013"></a>
-## B-013 — Add dependencies and fixed milestones
+## B-013 â€” Add dependencies and fixed milestones
 
 **Status:** Needs dependency decisions. **Dependencies:** B-004, B-007.
 
@@ -323,7 +331,7 @@ design's accepted [bounded-transaction direction](../architecture/ADR-102-postgr
 **Acceptance:** Keep origin links distinct from dependencies. Validate dependency structure according to decided rules. Demonstrate authorized/unauthorized date overrides and S-07's conflict explanation. Preserve fixed dates when forecasts slip.
 
 <a id="b-014"></a>
-## B-014 — Implement sprint planning and capacity limits
+## B-014 â€” Implement sprint planning and capacity limits
 
 **Status:** Needs sprint/capacity decisions. **Dependencies:** B-009, B-010; coordinate dependency behavior with B-013.
 
@@ -334,44 +342,44 @@ design's accepted [bounded-transaction direction](../architecture/ADR-102-postgr
 **Acceptance:** Sprint totals use the configured units and preserve estimation units. Remaining sprint planning capacity does not imply available resources. Show usable slack only within valid dates. Cross-boundary tasks and unfinished work follow the decided policy. Support hour-estimated Kehila and a separately point-estimated example project.
 
 <a id="b-015"></a>
-## B-015 — Implement resource-constrained scheduling
+## B-015 â€” Implement resource-constrained scheduling
 
-**Status:** Needs scheduling rules and dependencies. **Dependencies:** B-009–B-011, B-013, B-014.
+**Status:** Needs scheduling rules and dependencies. **Dependencies:** B-009â€“B-011, B-013, B-014.
 
-**Traceability:** [R-008](requirements.md#r-008), [R-010](requirements.md#r-010), [R-011](requirements.md#r-011), [R-013](requirements.md#r-013), [R-015](requirements.md#r-015), [R-016](requirements.md#r-016), [R-020](requirements.md#r-020)–[R-024](requirements.md#r-024). **Questions:** [Q-003](open-questions.md#q-003)–[Q-007](open-questions.md#q-007) where applicable, [Q-009](open-questions.md#q-009), [Q-011](open-questions.md#q-011)–[Q-013](open-questions.md#q-013).
+**Traceability:** [R-008](requirements.md#r-008), [R-010](requirements.md#r-010), [R-011](requirements.md#r-011), [R-013](requirements.md#r-013), [R-015](requirements.md#r-015), [R-016](requirements.md#r-016), [R-020](requirements.md#r-020)â€“[R-024](requirements.md#r-024). **Questions:** [Q-003](open-questions.md#q-003)â€“[Q-007](open-questions.md#q-007) where applicable, [Q-009](open-questions.md#q-009), [Q-011](open-questions.md#q-011)â€“[Q-013](open-questions.md#q-013).
 
 **Deliverable:** Manual conflict evaluation and automatic date calculation using multiple project-selected driving types, default Human, with named resource demands and all required availability constraints.
 
 **Acceptance:** Demonstrate multiple drivers, non-driver blockage, revised remaining demand, fixed-date infeasibility, and shared resource contention. Dates follow explicit window/calendar rules. Respect review before reopened-task reservations. Preserve resource identity and time on release. Existing reservations and capacity limits constrain recalculation. Verify deterministic outcomes for the selected priority rules and actual concurrent reservation safety separately.
 
 <a id="b-016"></a>
-## B-016 — Deliver Gantt interaction and scheduling controls
+## B-016 â€” Deliver Gantt interaction and scheduling controls
 
-**Status:** Waiting on dependencies. **Dependencies:** B-007, B-013–B-015.
+**Status:** Waiting on dependencies. **Dependencies:** B-007, B-013â€“B-015.
 
-**Traceability:** [R-004](requirements.md#r-004), [R-008](requirements.md#r-008), [R-020](requirements.md#r-020)–[R-024](requirements.md#r-024). **Questions:** [Q-007](open-questions.md#q-007), [Q-013](open-questions.md#q-013), [Q-014](open-questions.md#q-014).
+**Traceability:** [R-004](requirements.md#r-004), [R-008](requirements.md#r-008), [R-020](requirements.md#r-020)â€“[R-024](requirements.md#r-024). **Questions:** [Q-007](open-questions.md#q-007), [Q-013](open-questions.md#q-013), [Q-014](open-questions.md#q-014).
 
 **Deliverable:** Gantt dates/dependencies, project mode controls, item overrides, and clear conflict presentation linked with sprint planning.
 
 **Acceptance:** Demonstrate both modes in the Kehila project and mixed automatic/fixed items. Changes appear consistently across the agreed shared task model. Show the cause of infeasibility and permitted corrective actions. Switching modes follows explicit rules. Permission denial is enforced beyond hiding controls in the interface.
 
 <a id="b-017"></a>
-## B-017 — Provide effort, capacity, and cost summaries
+## B-017 â€” Provide effort, capacity, and cost summaries
 
 **Status:** Waiting on dependencies. **Dependencies:** B-010, B-012, B-014, B-015.
 
-**Traceability:** [R-002](requirements.md#r-002), [R-003](requirements.md#r-003), [R-010](requirements.md#r-010), [R-012](requirements.md#r-012), [R-015](requirements.md#r-015), [R-025](requirements.md#r-025)–[R-028](requirements.md#r-028). **Questions:** [Q-005](open-questions.md#q-005), [Q-006](open-questions.md#q-006), [Q-015](open-questions.md#q-015).
+**Traceability:** [R-002](requirements.md#r-002), [R-003](requirements.md#r-003), [R-010](requirements.md#r-010), [R-012](requirements.md#r-012), [R-015](requirements.md#r-015), [R-025](requirements.md#r-025)â€“[R-028](requirements.md#r-028). **Questions:** [Q-005](open-questions.md#q-005), [Q-006](open-questions.md#q-006), [Q-015](open-questions.md#q-015).
 
 **Deliverable:** Task/project/sprint views of estimates and actual time, remaining demand, usable future slack, historical unused time, and resource cost forecasts.
 
 **Acceptance:** Label effort versus elapsed time; distinguish physical availability from planning limits; show cost according to basis and policy. Reconcile aggregates with source records. Preserve baselines and do not double-count resources shared across projects. Never present past unused hours as spendable future slack.
 
 <a id="b-018"></a>
-## B-018 — Verify, document, and use the complete local release
+## B-018 â€” Verify, document, and use the complete local release
 
-**Status:** Waiting on release scope and implementation. **Dependencies:** B-006 and B-008–B-017; resolved applicable release questions.
+**Status:** Waiting on release scope and implementation. **Dependencies:** B-006 and B-008â€“B-017; resolved applicable release questions.
 
-**Traceability:** R-001–R-028; [S-01](requirements.md#s-01)–[S-10](requirements.md#s-10). **Questions:** [Q-018](open-questions.md#q-018), [Q-020](open-questions.md#q-020), [Q-022](open-questions.md#q-022), plus any unresolved blocker inherited from earlier items.
+**Traceability:** R-001â€“R-028; [S-01](requirements.md#s-01)â€“[S-10](requirements.md#s-10). **Questions:** [Q-018](open-questions.md#q-018), [Q-020](open-questions.md#q-020), [Q-022](open-questions.md#q-022), plus any unresolved blocker inherited from earlier items.
 
 **Deliverable:** A usable local release, setup and recovery documentation, and observed behavior and limitations.
 
@@ -383,7 +391,7 @@ Every confirmed requirement has an implementation destination. Multiple destinat
 
 | Requirement | Primary backlog items | Acceptance references |
 | --- | --- | --- |
-| [R-001](requirements.md#r-001) Local first use | B-002, B-004–B-006, B-018 | S-10 |
+| [R-001](requirements.md#r-001) Local first use | B-002, B-004â€“B-006, B-018 | S-10 |
 | [R-002](requirements.md#r-002) Project estimates | B-003, B-004, B-014, B-017 | S-02, S-10 |
 | [R-003](requirements.md#r-003) Actual time | B-010, B-017 | S-02, S-10 |
 | [R-004](requirements.md#r-004) Sprint and Gantt | B-014, B-016, B-018 | S-10 |
@@ -394,7 +402,7 @@ Every confirmed requirement has an implementation destination. Multiple destinat
 | [R-009](requirements.md#r-009) Shared resources | B-008, B-009, B-011 | S-05 |
 | [R-010](requirements.md#r-010) Capacity constraints | B-008, B-009, B-014, B-015, B-017 | S-04, S-06 |
 | [R-011](requirements.md#r-011) Planning requirements | B-009, B-015 | S-06 |
-| [R-012](requirements.md#r-012) Separate records | B-009–B-011, B-017 | S-02, S-09 |
+| [R-012](requirements.md#r-012) Separate records | B-009â€“B-011, B-017 | S-02, S-09 |
 | [R-013](requirements.md#r-013) Remaining demand | B-010, B-015 | S-02 |
 | [R-014](requirements.md#r-014) Independent consumption | B-010, B-015 | S-03, S-06 |
 | [R-015](requirements.md#r-015) Temporal limits | B-008, B-009, B-011, B-015, B-017 | S-04 |
@@ -426,7 +434,7 @@ are maintained in the [engineering register](../engineering/ENGINEERING-STANDARD
 All are owned by the project maintainer until delegated. No release or security
 compliance is implied by a documented planning artifact.
 
-B-019–B-029 are grouped planning references, not eleven scheduled delivery
+B-019â€“B-029 are grouped planning references, not eleven scheduled delivery
 commitments. Work in this PR is linked through [PR #35](https://github.com/MrQuality/kehila/pull/35);
 remaining initiative work is unscheduled unless an execution issue is linked.
 When selecting work, link an issue with bounded acceptance criteria, dependencies
@@ -436,7 +444,7 @@ issue only for independently actionable work. A standards reference alone does
 not activate an initiative or move it ahead of product delivery.
 
 <a id="b-019"></a>
-### B-019 — Engineering governance and verification baseline
+### B-019 â€” Engineering governance and verification baseline
 
 **Status:** Documented framework and implemented structural checks; qualification pending.
 **Dependencies:** B-001/B-002 and contribution policy.
@@ -453,10 +461,10 @@ evidence is linked; remote protection/required checks and bypass restrictions ar
 inspected; maintainer records final PR assessment. Preserve sole-contributor policy.
 
 <a id="b-020"></a>
-### B-020 — Security baseline and incident qualification
+### B-020 â€” Security baseline and incident qualification
 
 **Status:** Needs decisions and implementation. **Dependencies:** B-007, B-021/B-022.
-**Traceability:** SEC-001–SEC-005, INC-001; Q-014.
+**Traceability:** SEC-001â€“SEC-005, INC-001; Q-014.
 **Deliverable:** Reviewed threat model, integrated identity/session/project grants,
 SAST/secret scans and exact versioned ASVS L1/OSPS L1 Alpha matrices; L2 Production
 assessment and supported-release incident workflow later.
@@ -467,7 +475,7 @@ private reporting and exercised patch/advisory/disclosure/postmortem workflow.
 source, hosted availability and maintainable fixtures before adding CI jobs.
 
 <a id="b-021"></a>
-### B-021 — Dependency and repository supply-chain controls
+### B-021 â€” Dependency and repository supply-chain controls
 
 **Status:** Ready to investigate. **Dependencies:** B-019, B-020 for triage.
 **Traceability:** DEP-001, SEC-004/SEC-005, SUPPLY-001/SUPPLY-004.
@@ -481,10 +489,10 @@ and avoid redundant scanners. Assess immutable release action/image/toolchain pi
 with deliberate update procedure. No silent permanent vulnerability ignores.
 
 <a id="b-022"></a>
-### B-022 — API and event contract baseline
+### B-022 â€” API and event contract baseline
 
 **Status:** Waiting on dependencies. **Dependencies:** B-003/B-004/B-005/B-007.
-**Traceability:** API-001/API-002, EVENT-001, COMPAT-001, LIMIT-001; D-016/D-032–D-034.
+**Traceability:** API-001/API-002, EVENT-001, COMPAT-001, LIMIT-001; D-016/D-032â€“D-034.
 **Deliverable:** OpenAPI specification and cross-language conformance; stable
 errors, auth/grants, pagination/filter/sort, replay/conflict, limits/versioning;
 event schema/metadata, future-schema/poison/gap handling and compatibility policy.
@@ -494,11 +502,11 @@ quarantine/replay evidence. Preserve experimental error semantics without claimi
 they are already a supported API. Actual route integration remains B-004/B-005.
 
 <a id="b-023"></a>
-### B-023 — Integrity, concurrency, properties and fault qualification
+### B-023 â€” Integrity, concurrency, properties and fault qualification
 
 **Status:** Waiting on dependencies; bounded current regressions retained.
 **Dependencies:** B-005/B-022; Q-019 for cross-record protocols.
-**Traceability:** DATA-001, EVENT-001, TEST-002–TEST-004, REL-002.
+**Traceability:** DATA-001, EVENT-001, TEST-002â€“TEST-004, REL-002.
 **Deliverable:** Seeded properties/parser fuzz corpus, deterministic/model and
 sustained concurrency campaigns, critical-path E2E and hypothesis-driven fault
 matrix from QUALIFICATION.md.
@@ -509,10 +517,10 @@ Use real boundaries, bounded tests and no retry-until-pass. Finite tests remain
 evidence, not linearizability proof. Pure B-003 rules must gain storage evidence.
 
 <a id="b-024"></a>
-### B-024 — Durable installation, backup, restore and migrations
+### B-024 â€” Durable installation, backup, restore and migrations
 
 **Status:** Needs decisions. **Dependencies:** B-005, Q-019/Q-020, B-023.
-**Traceability:** PERSIST-001, REC-001–REC-003, MIG-001, OPS-002; D-017/D-034.
+**Traceability:** PERSIST-001, REC-001â€“REC-003, MIG-001, OPS-002; D-017/D-034.
 **Deliverable:** Supported restart survival, automated visible daily backup and
 off-failure-domain copy, clean-instance restore including configuration/replay/
 tombstones, search rebuild and supported upgrade/migration qualification.
@@ -522,7 +530,7 @@ migrations and timed approved RPO/RTO/DR exercises. Index setup alone is not a
 migration framework; backup existence alone is not recovery evidence.
 
 <a id="b-025"></a>
-### B-025 — Performance envelope and resource qualification
+### B-025 â€” Performance envelope and resource qualification
 
 **Status:** Needs decisions and measurement. **Dependencies:** B-005/B-022, Q-022.
 **Traceability:** PERF-001/PERF-002, LIMIT-001.
@@ -533,7 +541,7 @@ measurements with fixtures/runtime/hardware; maximum/over-limit tests. Values ar
 measured, not inferred from prototype ceilings or enterprise-scale aspirations.
 
 <a id="b-026"></a>
-### B-026 — Telemetry, SLIs/SLOs and reliability assessment
+### B-026 â€” Telemetry, SLIs/SLOs and reliability assessment
 
 **Status:** Needs decisions and implementation. **Dependencies:** B-022/B-025, Q-020/Q-022.
 **Traceability:** OBS-001, REL-001/REL-002.
@@ -544,7 +552,7 @@ windows/populations and achieved-window Production evidence. No final targets
 are invented here. Link recovery targets to B-024.
 
 <a id="b-027"></a>
-### B-027 — Operability, configuration and UI qualification
+### B-027 â€” Operability, configuration and UI qualification
 
 **Status:** Waiting on dependencies. **Dependencies:** B-005/B-006/B-007/B-024/B-026.
 **Traceability:** OPS-001/OPS-002, MIG-001, ACCESS-001.
@@ -556,10 +564,10 @@ automated accessibility checks once real UI exists. A config-validation CLI is
 a design candidate, not an obligation to implement a speculative command now.
 
 <a id="b-028"></a>
-### B-028 — Supported release and artifact pipeline
+### B-028 â€” Supported release and artifact pipeline
 
 **Status:** Waiting on dependencies. **Dependencies:** B-018/B-020/B-021/B-024/B-026.
-**Traceability:** COMPAT-001/COMPAT-002, SUPPLY-001–SUPPLY-003, INC-001.
+**Traceability:** COMPAT-001/COMPAT-002, SUPPLY-001â€“SUPPLY-003, INC-001.
 **Deliverable:** Immutable controlled hosted build, supported matrix, changelog/
 deprecation, artifact tests/checksums/SBOM/provenance/signing/packaging and consumer
 verification; SLSA 1.2 Build L2 assessment by Beta.
@@ -569,7 +577,7 @@ event compatibility tests and final commit-specific cumulative gate assessment.
 No publication is required by this planning task; Build L3 remains later hardening.
 
 <a id="b-029"></a>
-### B-029 — Enterprise scope and qualification candidates
+### B-029 â€” Enterprise scope and qualification candidates
 
 **Status:** Needs decisions; later target outside current implementation scope.
 **Dependencies:** Production qualification and explicit customer/product decisions.

@@ -109,7 +109,7 @@ review before execution. W1 is approved and in progress; other packages are pend
 | --- | --- | --- |
 | W1: Project snapshot codec and native verification | Explicit approval of the first-slice plan; Accepted ADR-104. No stateful application adapter. | Shared project mapping/preflight, production Rust-to-JSONB-to-Rust checks, relational versus representation fixtures, coherence rejection and resolved JSONB compatibility gates in the linked verification plan. |
 | W2: Actor/scope and stable allocation contracts | Review #40 under B-007/#11 and #41 under M1-02/#27, related #32. Can be planned alongside W1; no route exposure. | Trusted actor/scope, revocation, operation/replay lookup and stable retry target ownership are defined. Use these contracts before finalizing runtime adapter interfaces; do not infer them from payload shape or fingerprints. |
-| W3: Internal creation persistence adapter | W1 and W2 contracts before runtime interface finalization; separate dependency review and bounded transaction plan. ADR-103 disposition before production adoption. | Schema/startup compatibility, capability/connection/transaction ownership, coherent persistence and reload from one trusted result, request/core/result/snapshot attribution, stored-version corruption rejection, rollback and uncertain-response/contention evidence. |
+| W3: Internal creation persistence adapter | W1 and W2 contracts before runtime interface finalization; separate dependency review and bounded transaction plan. ADR-103 disposition before production adoption. | Schema/startup compatibility, capability/connection/transaction ownership, coherent persistence and reload from one trusted result, request/core/result/snapshot attribution, checked JSONB compatibility for every generated envelope (saved result and both snapshots), stored-version corruption rejection, rollback and uncertain-response/contention evidence. |
 | W4: Replay clocks and payload retirement/compaction | W3 operation persistence; trusted replay clock/retry contract and reviewed compactor capability. Keep compactor delivery separately reviewable from initial adapter persistence. | Actor/family/target-scoped lookup, 90-day replay, bounded retries, gap-free irreversible retirement to permanent tombstones and tombstone backup/restore. Serving privileges must not silently expand to compactor privileges. |
 | W5: Multi-command configuration and history | W3/W2 ownership contracts, applicable W4 replay semantics, and command-specific B-003 rules. Explicit versioned schema/codec evolution beyond creation-only guards. | Historical status, status-group assignment/grant, workflow, type, field and relationship-type references remain protected after item migration; configuration/item contention and replay after configuration changes. Coordinate work-item persistence with M1-02/#27. |
 | W6: Archive and current-selection coordination | W5 applicable state/history representation, M1-02 identity/selection persistence, authority and ADR-102 bounded transaction design. | Explicit archive/restore/selection-clear protocol with crash barriers, competing selections, retry and restore checks before archival routes. Readers observe neither accepted archives with stale selections nor selection clears from uncommitted archives. |
@@ -121,6 +121,26 @@ Linux-host evidence must be explicit, not inferred from Linux-hosted pure CI or
 a Linux container on Windows. Legacy translation is excluded until a dedicated
 approved migration RFC exists; isolation is required throughout these packages.
 Completion of W1 alone must not close #49 or claim completion of M1-01.
+
+### W3 creation-envelope admission obligation
+
+Before database admission, W3 must check every generated persistence envelope
+from the single accepted result: `operation_payloads.result`,
+`configuration_revisions.project_snapshot` and
+`configuration_revisions.configuration_snapshot`. Each must reject NUL and
+remain within the existing codec ceilings after PostgreSQL 16 JSONB text output.
+A successful `NativeRevisionSnapshots` admits only the snapshot pair; it is not
+whole-transaction admission. The adapter must require a checked aggregate or an
+explicit composition of checked boundaries and must not start persistence if
+any envelope fails. Its native tests must persist and reload the actual saved
+result alongside both snapshots, without placeholder result objects.
+
+The W1 representation-stress fixture demonstrates the distinction: its
+configuration text is exactly 1,048,576 bytes, while the corresponding saved
+result would be 1,048,824 bytes. The latter cannot be admitted for that read path.
+This is a W3 acceptance obligation under ADR-104's existing generated-envelope
+ceilings, not authorization to add an application adapter or raise a ceiling.
+A whole-creation admission API remains part of the separately reviewed W3 plan.
 
 ### ADR-103 disposition gate
 
@@ -148,7 +168,7 @@ adoption and the later gates remain pending.
 | Shared mapping and project preflight | Medium / P1 | W1 shares project encoding/decoding and validates strings before tree construction. |
 | Dependency ordering | Medium / P2 | W1-W7 expose prerequisites and exit evidence; later plans must split work into focused, reviewable PRs. |
 | ADR-103 production-adoption disposition | Low / P2 | Separate maintainer gate before W3 production adoption; status remains Proposed. |
-| JSONB text size expansion | Medium / P1 | W1 must measure near-limit associated configuration round trips and resolve bounded admission/read compatibility. Risk is unmeasured; no ceiling change is authorized. |
+| JSONB text size expansion | Medium / P1 | W1 must measure near-limit associated configuration round trips and resolve bounded admission/read compatibility. W1 measured the snapshot boundary; whole-creation saved-result compatibility remains an explicit W3 gate. No ceiling change is authorized. |
 | Codec-valid versus SQL-storable strings | Medium / P2 | W1 records codec preservation versus JSONB NUL rejection; W3 admission checks generated content before database admission without narrowing historical decode. |
 
 All four ADR-104 contracts remain mandatory. Future ingress must prove bounded
