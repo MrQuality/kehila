@@ -35,7 +35,10 @@ The existing M1 scope and M0–M4 delivery plan remain unchanged.
 [#55](https://github.com/MrQuality/kehila/issues/55) tracks sequential verification
 and automatic ownership/cleanup of short-lived test services, building on PR #54.
 The implementation builds before service startup, uses one compiler job, and
-runs NATS, OpenSearch and PostgreSQL/FerretDB in separate required phases.
+runs offline tests before the VM and NATS, OpenSearch and PostgreSQL/FerretDB
+in separate required phases. Review follow-up binds machine/store routing,
+requires explicit exclusive ownership for VM shutdown, keeps the work deadline
+inside the cleanup owner, and bounds generated oracle-output retention.
 It is submitted for review with service-backed evidence in the
 [testing guide](../TESTING.md#owned-test-services). This changes development
 resource overlap; it completes no product milestone or #49 delivery obligation.

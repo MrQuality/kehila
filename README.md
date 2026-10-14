@@ -70,7 +70,9 @@ Full verification builds with one compiler job before starting short-lived,
 owned service groups. It removes each group after its checks. Keep the listed
 ports free; existing development containers are not borrowed or stopped.
 On Windows, `python scripts/verify.py --engine podman --podman-machine NAME`
-can start an explicit stopped VM after builds and stop it when owned and idle.
+starts an explicit stopped VM after builds and retains it as shared. Add
+`--exclusive-podman-machine` only for an initially stopped VM reserved exclusively
+for the run, allowing automatic cleanup and shutdown.
 See [test lifecycle and hook settings](docs/TESTING.md#owned-test-services).
 OpenSearch requires `vm.max_map_count` of at least 262144 on the Linux host or
 VM. CI configures this in its disposable runner.

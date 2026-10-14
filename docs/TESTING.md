@@ -45,8 +45,9 @@ python scripts/verify.py
 ### Owned test services
 
 Full verification first runs tooling/static checks, precompiles the complete
-Rust workspace test executables, runs frozen oracles and Go tests, and prepares
-both live task-path binaries. Child commands use `CARGO_BUILD_JOBS=1` and append
+Rust workspace test executables, executes the offline workspace tests with
+`--workspace --exclude event_dispatcher`, runs frozen oracles and Go tests, and
+prepares both live task-path binaries. Child commands use `CARGO_BUILD_JOBS=1` and append
 `-p=1` to existing `GOFLAGS`; compiler parallelism is bounded without reducing
 test counts or changing application concurrency.
 
@@ -54,7 +55,7 @@ Only then does it start unique, disposable Compose projects, one phase at a time
 
 | Phase | Running services | Required checks |
 | --- | --- | --- |
-| Workspace execution | NATS | TCP readiness, account API probe and all Rust workspace tests, including the live broker round trip |
+| Broker execution | NATS | TCP readiness, account API probe and all `event_dispatcher` tests, including the live broker round trip |
 | Search readiness | OpenSearch | TCP readiness and yellow/green HTTP cluster health |
 | Task path | PostgreSQL, FerretDB | Both TCP probes and complete two-worker contention, request/dependency deadline, recovery and Go-to-Rust/search-unavailable checks |
 
@@ -64,30 +65,56 @@ with its volumes before the next phase starts. The
 runner registers cleanup before startup, so partial starts, failed checks and
 child-command timeouts still clean up. Failure diagnostics are printed before
 teardown; cleanup failures remain errors and retain an earlier test error.
-Normal interruption unwinds these contexts. Forced process termination or host
+The verifier owns a 600-second work budget (`--timeout`, positive and at most
+600). Every work command receives the smaller of its own timeout and the
+remaining budget. Diagnostics and teardown use their separate bounded command
+limits after work expires. The staged hook passes this budget and waits for the
+owner to finish cleanup; it does not kill the owner at 600 seconds. Cleanup can
+extend total elapsed time beyond the work budget. Normal interruption unwinds
+these contexts. Forced process termination or host
 failure can prevent cleanup; inspect resources carrying the printed unique
 `kehila-test-...` project label before removing any leftover test project.
 
 Default engine selection tries a ready Podman runtime, then Docker. Use
 `--engine docker` or `--engine podman` to select explicitly. On Windows an
-explicit stopped Podman machine can be owned for the run:
+explicit stopped Podman machine can be started for the run:
 
 ```text
 python scripts/verify.py --engine podman --podman-machine NAME
 ```
 
-Use the name reported by `podman machine list`. The VM starts after builds.
-An already-running VM remains running. A VM started by this run stops only after
-both rootless and rootful stores contain no active containers; unrelated work
-keeps it running. No VM is created or deleted, and no default connection changes.
-VM cleanup requires the machine-created `NAME` and `NAME-root` connections;
-the runner verifies their endpoints against the inspected machine before querying
-either store. The standard `CONTAINER_CONNECTION` variable selects an existing Podman connection
-when needed; select the connection belonging to the requested machine.
+Use the name reported by `podman machine list`. The VM starts after builds;
+shared VMs remain running, including those started by this command. Automatic
+shutdown requires an explicit exclusive-use declaration:
+
+```text
+python scripts/verify.py --engine podman --podman-machine NAME --exclusive-podman-machine
+```
+
+This declares that no other program or user will use the VM during the run.
+The machine must initially be stopped. A nonblocking OS file lease serializes
+verifiers using the same explicit machine name; it cannot prevent unrelated
+Podman clients from using that VM. Do not select exclusive mode for a shared VM.
+An unexpected active container in either store fails exclusive cleanup and leaves
+the VM running. Without the exclusive declaration, idle snapshots never authorize
+shutdown. An exclusively owned partial start receives a bounded stop attempt;
+cleanup failures remain visible alongside the original failure.
+
+Before startup, the runner requires the machine-created `NAME` and `NAME-root`
+connections and checks their loopback SSH host/port/user and distinct service
+socket paths. Rootful access must use `/run/podman/podman.sock`; rootless access
+must use `/run/user/<uid>/podman/podman.sock`. The chosen verified connection is
+carried explicitly to Compose and container inspection without changing global
+connection defaults. `CONTAINER_CONNECTION` can select either verified store;
+a foreign connection or `CONTAINER_HOST` combined with an explicit machine is
+rejected. Engine/machine/mode conflicts are rejected before any builds.
 
 For commit hooks, set `KEHILA_TEST_ENGINE` and optionally
 `KEHILA_TEST_PODMAN_MACHINE` in the shell that invokes Git; the verifier uses them
-as defaults for the equivalent CLI arguments. CI selects Docker and uses this
+as defaults for the equivalent CLI arguments. Set
+`KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE=1` only for an initially stopped VM reserved
+exclusively for that verification run (default `0`). External-services mode
+rejects machine-ownership settings instead of silently ignoring them. CI selects Docker and uses this
 same lifecycle for both shared and staged verification. The staged source
 export, pure/full classification and failure checks remain required.
 
@@ -102,8 +129,16 @@ python scripts/verify.py --external-services
 
 That explicit mode performs all full checks against existing services and leaves
 their lifecycle to the caller. It does not provide the overlap reduction of the
-owned mode. Native PostgreSQL investigations retain their separate documented
+owned mode. Owned mode rejects custom `KEHILA_TEST_MONGO_URL` and
+`KEHILA_NATS_ADDRESS` settings before builds: checks must use its local
+`mongodb://127.0.0.1:27017` and `127.0.0.1:4222` services. Use
+`--external-services` for caller-managed endpoints. Native PostgreSQL investigations retain their separate documented
 container/resource preflight and qualification scope.
+
+Generated SP-002 check executables now use the shared owned temporary-directory
+cleanup policy on success and failure. The frozen oracle source/fixtures and
+historical evidence remain unchanged; current check-driver behavior is separate
+from those recorded native runs.
 
 ### Lifecycle verification record
 
@@ -124,6 +159,26 @@ connections, and cleanup errors that would conceal test failures. Pure/docs and
 staged-selection regression checks remain in the shared suite. These results
 verify test lifecycle behavior, not a controlled memory benchmark or a new
 native application adapter. Tracking: [#55](https://github.com/MrQuality/kehila/issues/55).
+
+Review follow-up at `5ce6875` passed the full staged gate on
+2026-10-14: 198 tooling tests (196 passed, two POSIX-only skips), the complete
+Rust workspace split between offline and broker phases, Go/static/frozen-oracle
+checks, OpenSearch TCP/HTTP readiness and all live task-path checks. Every owned
+group was removed and the exclusively reserved VM stopped. Nine targeted fault
+mutations were each detected by the regression suite.
+
+An additional native Podman/NATS check rejected a foreign registered connection
+before VM startup. Injecting an elapsed time beyond the work deadline after real
+NATS startup preserved the deadline error, removed the owned project and stopped
+the exclusive VM. This checks cleanup after controlled deadline exhaustion; it
+is not a 600-second wall-clock experiment or a forced-termination guarantee.
+
+One intermediate full gate passed its Go tests but failed temporary executable
+cleanup with Windows sharing violation 32 after the existing 30-second retry
+bound. The unchanged retry passed; no timeout, cleanup policy or test was
+weakened. The final source gate passed. Obsolete generated SP-002 executables
+were removed; future check runs clean their own temporary outputs on success or
+failure. No controlled memory benchmark is claimed.
 
 Run unit tests without external services:
 
