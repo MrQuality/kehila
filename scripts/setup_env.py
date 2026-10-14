@@ -15,15 +15,15 @@ def run(command, **kwargs):
     return subprocess.run(command, cwd=ROOT, check=True, timeout=600, **kwargs)
 
 
-def compose_command(preferred="auto"):
+def compose_command(preferred="auto", environment=None):
     for engine, compose in (("podman", ["podman", "compose"]), ("docker", ["docker", "compose"])):
         if preferred != "auto" and engine != preferred:
             continue
         if not shutil.which(engine):
             continue
         try:
-            subprocess.run([engine, "info"], check=True, capture_output=True, timeout=15)
-            subprocess.run(compose + ["version"], check=True, capture_output=True, timeout=15)
+            subprocess.run([engine, "info"], env=environment, check=True, capture_output=True, timeout=15)
+            subprocess.run(compose + ["version"], env=environment, check=True, capture_output=True, timeout=15)
             return compose
         except (subprocess.SubprocessError, OSError):
             continue
