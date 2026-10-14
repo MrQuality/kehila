@@ -2,6 +2,7 @@
 from cleanup_errors import retain_cleanup_failure
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
+import getpass
 import hashlib
 import json
 import os
@@ -147,12 +148,17 @@ def validate_runtime(preferred, machine, exclusive=False):
         raise ValueError('Exclusive VM use requires an explicit Podman machine')
 
 
+def _machine_lease_path(name):
+    user = str(os.getuid()) if hasattr(os, 'getuid') else getpass.getuser()
+    key = hashlib.sha256((user + '\0' + name).encode('utf-8')).hexdigest()
+    return Path(tempfile.gettempdir()) / ('kehila-machine-' + key + '.lock')
+
+
 @contextmanager
 def _machine_lease(name):
     # Keep the inode after unlocking: unlinking it could admit a second owner
     # holding a new inode while another verifier still owns the old one.
-    key = hashlib.sha256(name.encode('utf-8')).hexdigest()
-    path = Path(tempfile.gettempdir()) / ('kehila-machine-' + key + '.lock')
+    path = _machine_lease_path(name)
     with path.open('a+b') as lease:
         lease.seek(0)
         if os.name == 'nt':
@@ -241,7 +247,7 @@ def service_group(runtime, selected):
         failure = error
         try:
             with cleanup_time():
-                run([*command, 'logs', '--no-color'], timeout=30, env=runtime.environment)
+                run([*command, 'logs', '--no-color', '--tail', '200'], timeout=30, env=runtime.environment)
         except (OSError, subprocess.SubprocessError) as diagnostic_error:
             print('TEST RESOURCE: diagnostics failed: ' + str(diagnostic_error), file=sys.stderr)
         raise

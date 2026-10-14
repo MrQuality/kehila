@@ -25,6 +25,17 @@ class ServiceOwnershipTests(unittest.TestCase):
             self.assertIs(caught.exception, primary)
             self.assertIn('logs failed', stderr.getvalue())
 
+    def test_failure_logs_have_a_line_and_time_bound(self):
+        with patch.object(services,'run') as run, \
+                patch.object(services,'_containers',side_effect=[['container'],[]]):
+            with self.assertRaisesRegex(RuntimeError,'failed'):
+                with services.service_group(services.ComposeRuntime(['docker','compose'],{}),['nats']):
+                    raise RuntimeError('failed')
+        logs=[call for call in run.call_args_list if 'logs' in call.args[0]]
+        self.assertEqual(len(logs),1)
+        self.assertEqual(logs[0].args[0][-4:],['logs','--no-color','--tail','200'])
+        self.assertEqual(logs[0].kwargs['timeout'],30)
+
     def test_only_requested_services_start_and_owned_project_is_removed(self):
         with patch.object(services, 'run') as run, \
                 patch.object(services, '_containers', side_effect=[['container'], []]):
@@ -308,6 +319,13 @@ class MachineOwnershipTests(unittest.TestCase):
 
 
 class MachineLeaseTests(unittest.TestCase):
+    def test_same_machine_name_has_distinct_leases_for_distinct_os_users(self):
+        with patch.object(services.os,'getuid',return_value=1001,create=True):
+            first=services._machine_lease_path('fixture')
+            self.assertEqual(first,services._machine_lease_path('fixture'))
+        with patch.object(services.os,'getuid',return_value=1002,create=True):
+            self.assertNotEqual(first,services._machine_lease_path('fixture'))
+
     def test_lease_excludes_a_second_verifier_and_releases_after_failure(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(services.tempfile, 'gettempdir', return_value=folder):
             with self.assertRaisesRegex(RuntimeError, 'body failed'):

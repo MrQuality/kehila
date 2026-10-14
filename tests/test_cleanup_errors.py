@@ -55,3 +55,32 @@ runpy.run_path('scripts/verify.py',run_name='__main__')
                         'CLEANUP FAILED (Compose project): compose failure',
                         'CLEANUP FAILED (Podman machine): VM failure'):
             self.assertIn(message,result.stderr)
+
+    def test_nested_service_machine_and_directory_failures_are_all_retained(self):
+        from contextlib import nullcontext
+        import shutil
+        import temp_work
+        import test_services as services
+        primary=RuntimeError('test failed')
+        compose=OSError('compose failed')
+        vm=OSError('VM failed')
+        directory=OSError('directory failed')
+        remove=shutil.rmtree
+        def run(command,**kwargs):
+            if 'down' in command: raise compose
+        with patch.object(services,'_machine_lease',return_value=nullcontext()), \
+                patch.object(services,'_machine_info',return_value={'State':'stopped'}), \
+                patch.object(services,'_machine_connections',return_value=['fixture','fixture-root']), \
+                patch.object(services,'compose_command',return_value=['podman','compose']), \
+                patch.object(services,'run',side_effect=run), \
+                patch.object(services,'_containers',return_value=['container']), \
+                patch.object(services,'_stop_owned_machine',side_effect=vm), \
+                patch.object(temp_work.shutil,'rmtree',side_effect=directory):
+            with self.assertRaises(RuntimeError) as caught:
+                with temp_work.owned_directory('kehila-error-test-') as folder:
+                    self.addCleanup(remove,folder)
+                    with services.managed_runtime('podman','fixture',environment={},exclusive=True) as runtime:
+                        with services.service_group(runtime,['nats']): raise primary
+        self.assertIs(caught.exception,primary)
+        self.assertEqual(primary._cleanup_failures,(
+            ('Compose project',compose),('Podman machine',vm),('temporary directory',directory)))
