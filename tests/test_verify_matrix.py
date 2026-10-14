@@ -39,6 +39,31 @@ class PureMatrixTests(unittest.TestCase):
 
 
 class FullLifecycleTests(unittest.TestCase):
+    def test_owned_mode_rejects_foreign_test_endpoints_before_any_build(self):
+        for key, value in (('KEHILA_TEST_MONGO_URL', 'mongodb://other-host:27017'),
+                           ('KEHILA_NATS_ADDRESS', '127.0.0.1:4223')):
+            with self.subTest(key=key), \
+                    patch.dict(os.environ, {key: value, 'KEHILA_TEST_ENGINE': 'auto',
+                                           'KEHILA_TEST_PODMAN_MACHINE': '',
+                                           'KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE': '0'}), \
+                    patch.object(sys, 'argv', ['verify.py']), \
+                    patch.object(VERIFY, 'run_checks') as checks, \
+                    patch.object(VERIFY.subprocess, 'run') as run, \
+                    patch('sys.stderr', new_callable=io.StringIO):
+                with self.assertRaises(SystemExit):
+                    VERIFY.main()
+                run.assert_not_called()
+                checks.assert_not_called()
+
+    def test_external_mode_retains_explicit_test_endpoint_settings(self):
+        with patch.dict(os.environ, KEHILA_TEST_ENGINE='auto', KEHILA_TEST_PODMAN_MACHINE='',
+                        KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE='0', KEHILA_NATS_ADDRESS='127.0.0.1:4223',
+                        KEHILA_TEST_MONGO_URL='mongodb://127.0.0.1:27018'), \
+                patch.object(sys, 'argv', ['verify.py', '--external-services']), \
+                patch.object(VERIFY, 'run_checks') as checks:
+            VERIFY.main()
+            checks.assert_called_once()
+
     def test_external_mode_executes_every_live_check_without_resource_ownership(self):
         folder = Path('unused-fixture')
         with patch.dict(os.environ, KEHILA_TEST_ENGINE='auto', KEHILA_TEST_PODMAN_MACHINE='',
@@ -63,7 +88,8 @@ class FullLifecycleTests(unittest.TestCase):
                    ['--podman-machine', '../invalid'], ['--podman-machine', ''],
                    ['--external-services', '--podman-machine', 'fixture'],
                    ['--external-services', '--pure'], ['--external-services', '--docs'],
-                   ['--exclusive-podman-machine']]
+                   ['--exclusive-podman-machine'], ['--timeout', '0'],
+                   ['--timeout', 'nan'], ['--timeout', '601']]
         for arguments in invalid:
             with self.subTest(arguments=arguments), \
                     patch.dict(os.environ, KEHILA_TEST_ENGINE='auto', KEHILA_TEST_PODMAN_MACHINE='',

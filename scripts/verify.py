@@ -75,6 +75,11 @@ def main():
         validate_seconds(args.timeout)
     except ValueError as error:
         parser.error(str(error))
+    if not (args.pure or args.docs or args.external_services):
+        for name, address in (('KEHILA_TEST_MONGO_URL', 'mongodb://127.0.0.1:27017'),
+                              ('KEHILA_NATS_ADDRESS', '127.0.0.1:4222')):
+            if os.environ.get(name, address) != address:
+                parser.error(name + ' must target the owned service; use --external-services for custom endpoints')
     with work_budget(args.timeout):
         run_checks(args)
 
