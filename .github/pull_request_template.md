@@ -2,6 +2,11 @@
 
 What problem does this solve, and what behavior changes?
 
+For a partial delivery, use reference-only links to continuing umbrella issues.
+State that the issue remains open; do not put a closing keyword directly before
+its issue reference, including inside a negated sentence. Confirm GitHub's closing
+references match the scope actually completed by this PR.
+
 ## Testing
 
 List the checks run and their results. Include service versions for relevant

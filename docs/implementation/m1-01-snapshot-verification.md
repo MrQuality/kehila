@@ -2,9 +2,10 @@
 
 Status: W1 execution approved by explicit maintainer instruction on 2026-10-13
 in [#49](https://github.com/MrQuality/kehila/issues/49#issuecomment-6154165059).
-Implementation is prepared for review; native PostgreSQL 16.15 evidence passed
-on 2026-10-14. See the [W1 report](m1-01-project-snapshots.md) for results and
-remaining application obligations. Final staged/hosted checks are tracked in the PR.
+W1 merged in [PR #51](https://github.com/MrQuality/kehila/pull/51) on 2026-10-14
+at 2efd444e38a4d60eaeb195a00359813174aa3d23; native PostgreSQL 16.15 evidence passed
+at the recorded pre-merge source revision. See the [W1 report](m1-01-project-snapshots.md) for results and
+remaining application obligations. Final staged/hosted checks passed and are linked in the PR conversation.
 This supplements the [successor plan](m1-01-remaining-delivery.md); its acceptance
 requirements remain normative. Execution results below do not accept a new ADR.
 
