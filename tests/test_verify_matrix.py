@@ -1,6 +1,6 @@
 """The documented pure command must execute every pure Rust crate."""
 import importlib.util
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import os
 import io
 from pathlib import Path
@@ -39,6 +39,25 @@ class PureMatrixTests(unittest.TestCase):
 
 
 class FullLifecycleTests(unittest.TestCase):
+    def test_external_mode_executes_every_live_check_without_resource_ownership(self):
+        folder = Path('unused-fixture')
+        with patch.dict(os.environ, KEHILA_TEST_ENGINE='auto', KEHILA_TEST_PODMAN_MACHINE='',
+                        KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE='0'), \
+                patch.object(sys, 'argv', ['verify.py', '--external-services']), \
+                patch.object(VERIFY, 'owned_directory', return_value=nullcontext(folder)), \
+                patch.object(VERIFY.subprocess, 'run') as run, \
+                patch.object(VERIFY, 'managed_runtime') as runtime:
+            VERIFY.main()
+        runtime.assert_not_called()
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual(commands[-4:], [
+            [sys.executable, 'scripts/healthcheck.py', '--wait', '180', '--services',
+             'PostgreSQL', 'FerretDB', 'NATS', 'OpenSearch'],
+            [sys.executable, 'tests/integration/nats_probe.py'],
+            ['cargo', 'test', '--locked', '-p', 'event_dispatcher'],
+            [sys.executable, 'tests/integration/task_path.py', '--run-only', str(folder)]])
+        self.assertIn(['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher'], commands)
+
     def test_invalid_runtime_settings_fail_before_any_build_or_service(self):
         invalid = [['--engine', 'docker', '--podman-machine', 'fixture'],
                    ['--podman-machine', '../invalid'], ['--podman-machine', ''],
@@ -85,6 +104,7 @@ class FullLifecycleTests(unittest.TestCase):
             VERIFY.main()
         start = events.index('VM start')
         self.assertIn(['cargo', 'test', '--locked', '--workspace', '--no-run'], events[:start])
+        self.assertIn(['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher'], events[:start])
         self.assertTrue(any(isinstance(event, list) and '--build-only' in event for event in events[:start]))
         self.assertFalse(any(isinstance(event, list) and '--build-only' in event for event in events[start:]))
         lifecycle = [event for event in events if isinstance(event, tuple)]
@@ -96,7 +116,7 @@ class FullLifecycleTests(unittest.TestCase):
         readiness = [command[command.index('--services') + 1:] for command in commands if '--services' in command]
         self.assertEqual(readiness, [['NATS'], ['OpenSearch'], ['PostgreSQL', 'FerretDB']])
         self.assertIn([sys.executable, 'tests/integration/nats_probe.py'], commands)
-        test = ['cargo', 'test', '--locked', '--workspace']
+        test = ['cargo', 'test', '--locked', '-p', 'event_dispatcher']
         self.assertLess(events.index(('start', ('nats',))), events.index(test))
         self.assertLess(events.index(test), events.index(('stop', ('nats',))))
         self.assertTrue(any('--run-only' in command for command in commands))

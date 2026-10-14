@@ -3,6 +3,7 @@ from pathlib import Path
 from contextlib import nullcontext
 import json
 import tempfile
+import io
 import subprocess
 import sys
 import unittest
@@ -13,6 +14,17 @@ import test_services as services
 
 
 class ServiceOwnershipTests(unittest.TestCase):
+    def test_failed_diagnostics_do_not_replace_the_test_failure(self):
+        primary = RuntimeError('test failed')
+        with patch.object(services, 'run', side_effect=[None, OSError('logs failed'), None]), \
+                patch.object(services, '_containers', side_effect=[['container'], []]), \
+                patch('sys.stderr', new_callable=io.StringIO) as stderr:
+            with self.assertRaises(RuntimeError) as caught:
+                with services.service_group(services.ComposeRuntime(['docker', 'compose'], {}), ['nats']):
+                    raise primary
+            self.assertIs(caught.exception, primary)
+            self.assertIn('logs failed', stderr.getvalue())
+
     def test_only_requested_services_start_and_owned_project_is_removed(self):
         with patch.object(services, 'run') as run, \
                 patch.object(services, '_containers', side_effect=[['container'], []]):
@@ -86,6 +98,32 @@ class MachineOwnershipTests(unittest.TestCase):
         lease = patch.object(services, '_machine_lease', return_value=nullcontext())
         lease.start()
         self.addCleanup(lease.stop)
+
+    def test_machine_info_rejects_malformed_wrong_multiple_and_unstable_records(self):
+        invalid = ['not json', 'null', '[]', '[null]', '[{},{}]',
+                   json.dumps([{'Name': 'other', 'State': 'running'}]),
+                   json.dumps([{'Name': 'fixture', 'State': 'starting'}]),
+                   json.dumps([{'Name': 'fixture', 'State': 'invalid'}])]
+        for raw in invalid:
+            with self.subTest(raw=raw), patch.object(services, 'run', return_value=Mock(stdout=raw)):
+                with self.assertRaises(ValueError):
+                    services._machine_info('fixture')
+        for state in ('stopped', 'running'):
+            record = {'Name': 'fixture', 'State': state}
+            with patch.object(services, 'run', return_value=Mock(stdout=json.dumps([record]))):
+                self.assertEqual(services._machine_info('fixture'), record)
+
+    def test_invalid_ssh_config_is_rejected_including_zero_and_boolean_ports(self):
+        for config in (None, {}, {'Port': 0, 'RemoteUsername': 'user'},
+                       {'Port': True, 'RemoteUsername': 'user'}, {'Port': 65536, 'RemoteUsername': 'user'},
+                       {'Port': 12345.0, 'RemoteUsername': 'user'}, {'Port': 12345, 'RemoteUsername': ''},
+                       {'Port': 12345, 'RemoteUsername': None}, {'Port': 12345, 'RemoteUsername': 'root'}):
+            port = int(config.get('Port', 12345)) if config else 12345
+            connections = [{'Name': 'fixture', 'URI': f'ssh://user@127.0.0.1:{port}/run/user/1000/podman/podman.sock'},
+                           {'Name': 'fixture-root', 'URI': f'ssh://root@127.0.0.1:{port}/run/podman/podman.sock'}]
+            with self.subTest(config=config), patch.object(services, 'run', return_value=Mock(stdout=json.dumps(connections))):
+                with self.assertRaises(ValueError):
+                    services._machine_connections('fixture', {'SSHConfig': config})
 
     def test_shared_stopped_machine_is_started_but_never_automatically_stopped(self):
         with patch.object(services, '_machine_info', return_value={'State': 'stopped'}), \

@@ -27,19 +27,19 @@ def live_checks(folder, environment, args):
     def health(*names):
         run([sys.executable, 'scripts/healthcheck.py', '--wait', '180', '--services', *names])
 
-    workspace = ['cargo', 'test', '--locked', '--workspace']
+    broker_tests = ['cargo', 'test', '--locked', '-p', 'event_dispatcher']
     task_path = [sys.executable, 'tests/integration/task_path.py', '--run-only', str(folder)]
     if args.external_services:
         health('PostgreSQL', 'FerretDB', 'NATS', 'OpenSearch')
         run([sys.executable, 'tests/integration/nats_probe.py'])
-        run(workspace)
+        run(broker_tests)
         run(task_path)
         return
     with managed_runtime(args.engine, args.podman_machine, exclusive=args.exclusive_podman_machine) as compose:
         with service_group(compose, ['nats']):
             health('NATS')
             run([sys.executable, 'tests/integration/nats_probe.py'])
-            run(workspace)
+            run(broker_tests)
         with service_group(compose, ['opensearch']):
             health('OpenSearch')
         with service_group(compose, ['postgres', 'ferretdb']):
@@ -87,9 +87,13 @@ def run_checks(args):
                 [sys.executable, "scripts/check_engineering.py"]]
     if not args.docs:
         commands.append([sys.executable, "scripts/go_static.py"])
-        commands += [["cargo", "test", "--locked", "-p", "kehila_query", "-p", "task_contract", "-p", "project_create_codec"] if args.pure
-                     else ["cargo", "test", "--locked", "--workspace", "--no-run"],
-                     [sys.executable, "experiments/SP-002/check_seed_oracle.py"],
+        if args.pure:
+            commands.append(['cargo', 'test', '--locked', '-p', 'kehila_query', '-p', 'task_contract',
+                             '-p', 'project_create_codec'])
+        else:
+            commands += [['cargo', 'test', '--locked', '--workspace', '--no-run'],
+                         ['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher']]
+        commands += [[sys.executable, "experiments/SP-002/check_seed_oracle.py"],
                      [sys.executable, "experiments/SP-003/check.py"],
                      [sys.executable, "scripts/go_test.py"]]
     for command in commands:

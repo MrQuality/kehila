@@ -1,5 +1,6 @@
 """The live phase consumes prepared binaries without invoking a compiler."""
 import importlib.util
+from contextlib import nullcontext
 from pathlib import Path
 import subprocess
 import sys
@@ -15,6 +16,17 @@ spec.loader.exec_module(task_path)
 
 
 class PreparationTests(unittest.TestCase):
+    def test_default_mode_prepares_then_executes_inside_the_owned_directory(self):
+        folder = Path('unused-fixture')
+        order = []
+        with patch.object(sys, 'argv', ['task_path.py']), \
+                patch.object(task_path, 'owned_directory', return_value=nullcontext(folder)) as owned, \
+                patch.object(task_path, 'prepare', side_effect=lambda path: order.append(('prepare', path))), \
+                patch.object(task_path, 'exercise', side_effect=lambda path: order.append(('exercise', path))):
+            task_path.main()
+        owned.assert_called_once_with('kehila-task-path-')
+        self.assertEqual(order, [('prepare', folder), ('exercise', folder)])
+
     def test_build_failure_prevents_copy_or_go_build(self):
         with patch.object(task_path.subprocess, 'run',
                           side_effect=subprocess.CalledProcessError(1, ['cargo'])) as run, \
