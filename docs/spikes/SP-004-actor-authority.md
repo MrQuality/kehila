@@ -81,16 +81,52 @@ actor and accepted result as the operation, project and revision. Bootstrap must
 establish exactly one stable owner and its creation permission; retry, failed
 bootstrap or recovery must not silently create a second owner.
 
+### Stored permission policy and current authority
+
+For the creation slice, require `grant_policy_version = 1` and the exact stored
+scope `project_create`. Version one interprets that scope as current active-actor
+creation permission; it does not substitute project ownership. The stored policy
+version identifies how to interpret the original required permission scope, not
+a historical permission verdict. Always evaluate that meaning against current
+authoritative grants, including on full-record and tombstone replay.
+
+The proposed `initial_owner` mapping above is the version-one profile meaning
+for project-scoped commands. Persisted profile tags and permission meanings must
+not be silently redefined during upgrades. Later policy evolution must explicitly
+preserve interpretation of retained original scopes and define any profile
+migration; revocation must still deny the affected permission on replay.
+Unsupported stored versions, profiles or malformed scopes fail closed as internal
+compatibility/integrity failures, not ordinary caller denial or permissive fallback.
+Keep diagnostics distinct from a known valid scope whose current grant is absent.
+
+Before multi-command schema evolution, #49 W5/#32 must specify a lossless,
+versioned representation for group sets, conversion/Migration and cross-project
+scopes. The current scalar creation scope is sufficient only for this slice.
+Preserve original scope through payload retirement; neither changed retry content
+nor a newer policy may replace it with an easier authorization requirement.
+
 ### Authority, history and revocation ownership
 
-Proposed native protocol: begin a bounded transaction, lock the verified actor
-with `lock_actor`, re-read active/current creation authority, then perform scoped
-operation lookup. For project-scoped commands, load current grant rows and their
-matching latest events under the same authority fence. Require matching profile,
-active state and version; missing/mismatched history is an integrity failure and
-must never grant access. Use the stored original scope for replay. Do not return
-replay, changed-content, expiry or mutable business details before the applicable
-current authority succeeds.
+Proposed mutation/replay protocol:
+
+1. Begin a bounded transaction, lock the verified actor with `lock_actor`, and
+   recheck actor liveness and the selected credential/session revocation state.
+2. Perform trusted scoped operation lookup to obtain the stored original scope
+   and its policy version for a full record or tombstone. For an unseen operation,
+   derive the new required scope from the checked command. Reading this internal
+   metadata is not disclosure of operation existence or its result to the caller.
+3. Interpret that effective scope and evaluate current authority under the same
+   fence. For project-scoped commands, verify matching current/latest-event
+   profile, active state and version. A mismatch is an internal integrity failure
+   and cannot grant access; an ordinary absent/inactive grant denies permission.
+4. Only after applicable authority succeeds, evaluate/disclose replay, changed
+   content, expiry and mutable domain outcomes. Protect authority through
+   transaction completion, and reload it after rollback/retry.
+
+Creation may check its constant current creation permission before lookup. This
+optimization must not become a creation-permission gate for other commands or
+evaluate a retry's new scope in place of a recorded original scope. Existing
+creation ownership never substitutes for current `can_create_project`.
 
 Every management operation changing an actor's authority or project grants must
 acquire the same actor fence before writing. Append the next grant event and
@@ -147,7 +183,7 @@ spike leaves #11/#32 responsible for production access delivery.
 | A03: owner scope | Exercise active/inactive owner, creation disabled, absent/inactive project grant and another project. | Evaluate the proposed mapping independently in each scope; reject role escalation and cross-project access. No ownership inferred from an existing creation result. |
 | A04: read/CLI/session | Try authoritative and projected reads without identity; CLI without Origin; cross-origin browser command; expired/logout/recovered session. | Authenticated CLI and reads use the declared policy; browser checks are additional. Recovery preserves actor ID and invalidates replaced credentials under the approved ordering. Unselected policy remains blocked. |
 | A05: grant history | Remove/mismatch current grant versus latest event; attempt serving-role grant UPDATE and history mutation; commit/roll back management changes. | Mismatch fails without allowing access. Restricted serving writes fail; successful management writes atomically append one matching event and advance the current version. Rollback leaves both unchanged. |
-| A06: replay precedence | Retry an original success, changed request and expired/tombstoned record after original authority is revoked. | Current original-grant denial precedes replay/conflict/expiry disclosure; the original committed operation remains unchanged. Creation replay checks current creation authority, not a newly invented ownership substitute. |
+| A06: replay precedence and policy | Retry full and tombstoned records with changed requested scope after revoking an original grant: conversion requiring Migration and a status move requiring both original groups. Include unknown stored policy/profile and creation's constant scope. | Original-scope denial precedes replay/conflict/expiry disclosure even if the retry's easier scope would pass. Original committed state is unchanged. Unknown policy/profile fails internally without fallback. Creation replay checks current creation authority; unrelated commands do not inherit that gate. |
 | A07: revocation schedules | Run command-first and revocation-first for both creation and replay, with actor lock barriers; roll back each side and retry. | Reach and record all four orderings, proposed ten trials each. Command-first can finish before revocation; revocation-first denies. Rollback releases the fence and retry reloads authority; no partial grant/event state. |
 | A08: session and multiple actors | Revoke a credential while work is queued; exercise two actors and management affecting both in opposite requested orders. | The declared session fence prevents stale authorization under its policy. Deterministic actor lock ordering is enforced; bounded failure rolls back before retry. Stable actor identity remains usable for #41 retry binding after reauthentication. |
 
