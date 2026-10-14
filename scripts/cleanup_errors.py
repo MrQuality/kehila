@@ -19,6 +19,8 @@ def print_failure(prefix, error):
             emit('CAUSE', failure.__cause__)
         for resource, cleanup in getattr(failure, '_cleanup_failures', ()):
             emit('CLEANUP FAILED (' + resource + ')', cleanup)
+        if failure.__cause__ is None and not failure.__suppress_context__ and failure.__context__ is not None:
+            emit('CONTEXT', failure.__context__)
 
     emit(prefix, error)
 

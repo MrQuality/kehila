@@ -70,6 +70,9 @@ primary failure and every labelled Compose/VM/directory cleanup failure are
 retained and printed without rewriting the original exception cause. The shared
 reporter is used at both verifier and child-check CLI boundaries, including
 normal interruption (exit 130); argument-parser exit codes remain unchanged.
+Implicit exception contexts from child `ExitStack` callbacks are also printed,
+with cycle/duplicate protection, so a later callback error cannot conceal the
+body failure or another cleanup error.
 The verifier owns a 600-second work budget (`--timeout`, positive and at most
 600). Every work command receives the smaller of its own timeout and the
 remaining budget. Resource-owning Python checks (Go tests, SP-002/SP-003 check
@@ -221,7 +224,9 @@ is controlled deadline-exhaustion evidence, not a 600-second wait or a
 forced-termination test. Nested-failure regressions separately confirm that
 Compose, VM and directory cleanup failures all remain visible with the primary
 failure, including at child CLI boundaries. The earlier Windows sharing-lock
-failure has not been attributed to orphaned processes.
+failure has not been attributed to orphaned processes. A subsequent implicit-
+context regression raised the tooling count to 224 (222 passed, two Windows
+POSIX-only skips); the complete full staged gate passed with that follow-up.
 
 Run unit tests without external services:
 

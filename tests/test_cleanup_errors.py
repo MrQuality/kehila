@@ -102,3 +102,17 @@ runpy.run_path('scripts/verify.py',run_name='__main__')
         def invalid(): raise SystemExit(2)
         with self.assertRaises(SystemExit) as caught: cleanup_errors.run_main(invalid,'ERR_CHILD_CHECK')
         self.assertEqual(caught.exception.code,2)
+
+    def test_exit_stack_failure_context_preserves_body_and_all_callback_errors(self):
+        from contextlib import ExitStack
+        def fail(message): raise OSError(message)
+        try:
+            with ExitStack() as stack:
+                stack.callback(fail,'last cleanup')
+                stack.callback(fail,'first cleanup')
+                raise RuntimeError('body failure')
+        except OSError as error:
+            with patch('sys.stderr',new_callable=io.StringIO) as output:
+                print_failure('ERR_CHILD_CHECK',error)
+        for message in ('last cleanup','first cleanup','body failure'):
+            self.assertIn(message,output.getvalue())
