@@ -138,6 +138,17 @@ optimization must not become a creation-permission gate for other commands or
 evaluate a retry's new scope in place of a recorded original scope. Existing
 creation ownership never substitutes for current `can_create_project`.
 
+Serving verification must be bounded per required grant: use indexed current
+and latest-event lookup for the requested scope, not COUNT/MAX over the actor's
+entire retained grant history on every read or command. Management must advance
+one version from the checked predecessor and append its matching event atomically,
+with checked overflow and immutable history. Full gap/attribution verification
+belongs to experimental setup, upgrade/restore qualification and explicit
+integrity audits, where a complete history scan is declared and budgeted.
+Detected corruption fails closed and requires an explicit repair decision.
+Bounded serving checks do not claim to discover every earlier history gap;
+permission decisions themselves are never cached to avoid these checks.
+
 Every management operation changing an actor's authority or project grants must
 acquire the same actor fence before writing. Append the next grant event and
 update the current row atomically; preserve earlier history. Creation/replay
@@ -196,6 +207,40 @@ freshness and rebuild/recovery remain #49 integration obligations.
 These are owned by #40 under #11/#32. #49 owns runtime integration; #41 consumes
 the reviewed stable actor identity. No extra historical-assessment issue is needed.
 
+### Experimental schema boundary
+
+Proposed choice: an explicit post-install overlay in a fresh disposable native
+database. Keep all `storage/postgresql/*.sql` source files unchanged. First verify
+the unmodified installer and its creation-only denials; only then apply the
+versioned experimental overlay in that database. It is not a production upgrade.
+
+The overlay plan must account for all affected constraints and permissions:
+
+- Add isolated experimental credential/session objects after their mechanism
+  is reviewed, and separate management capability/login roles. Serving creator
+  privileges must not expand to UPDATE/DELETE or management operations/events.
+- Permit a clearly experimental `sp004_grant_admin` project-target family and
+  required scope, accounting for `operations_family_target`,
+  `slice1_operation_family` and `slice1_operation_grant`. Do not masquerade grant
+  management as an accepted configuration command or a production codec.
+- Replace `slice1_grant_event` only in the disposable database with explicit
+  creation versus management shapes. Preserve the original revision-one creation
+  shape; management requires checked successor versions and matching current
+  state. Retain actor/project references, composite operation attribution,
+  append-only history and permanent-core/payload shape guards.
+- For each grant change, lock manager and subject actors in deterministic order,
+  verify management authority, insert the attributed experimental operation and
+  its request/result payload, and advance current grant plus event atomically.
+  Rollback must remove the complete attempted change. Test restricted serving
+  attempts to manufacture management operations/events as well as grant UPDATE.
+
+Before execution, review the exact DDL/privilege diff and fixture representation,
+including how the changed guard set prevents serving-role management inserts.
+All tested grants, credential state and command/replay fixtures must share the
+same actor fence. Record overlay source alongside baseline source in every run.
+Passing this experiment establishes only that declared overlay's mechanics;
+#49/#32 still require a separate production migration and integration review.
+
 ## Revised pre-execution plan
 
 1. **Goal & Context:** Review the proposed contract above against Q-002/Q-014, then investigate actor binding and authority/revocation ownership for #49 W2. The inventory establishes the missing boundary; this is not another database feasibility investigation.
@@ -208,7 +253,7 @@ the reviewed stable actor identity. No extra historical-assessment issue is need
 3. **Dependencies & Prerequisites:** Resolve the decisions above before execution. Use #11/#32 requirements, B-003, ADR-104 and SP-002's source-bound locking observations. #41 receives stable actor identity; its allocation protocol is not implemented here. Check available memory before compiler/service work; request headroom if the selected workload cannot fit.
 4. **Risks & Mitigations:** Supplied identity, cached roles and database capability possession cannot establish caller authority. Actor-wide serialization is deliberately conservative and may limit concurrency; measure selected schedules rather than claiming throughput. Freeze affected-actor lock ordering and protect both the management caller and grant subject. Detect current/event mismatches and never repair them implicitly during serving.
 5. **Spikes & Open Questions:** Proposed 90-minute investigation, excluding setup and required checks, after contract/decision review. Stop on failed prerequisites, a bounded conclusion or the time limit; unresolved real authentication remains an explicit blocked case. A synthetic identity fixture must not turn that case into a pass.
-6. **High-Level Architecture / File Changes:** Keep this record canonical. A later approved experiment may add isolated `experiments/SP-004/` code, fixtures and a bounded runner. Session/grant-management schema must be isolated experimental objects, with separate serving/management logins. Do not edit the production installer, remove its creation-only guards, or give creator UPDATE rights. Such fixture results cannot qualify a production migration; #49 needs a separate reviewed schema evolution plan.
+6. **High-Level Architecture / File Changes:** Keep this record canonical. A later approved experiment may add isolated `experiments/SP-004/` code, fixtures and a bounded runner using the explicit disposable overlay above. Production SQL files stay unchanged; the changed experimental guard set and role limits require their own review before execution. Such results cannot qualify a production migration; #49 retains that separate gate.
 7. **Verification & Testing Plan:** Use the cases below with independent restricted connections and explicit barriers. Record actual source, image, platform, role, state before/after, observed waits, commit/rollback and primary diagnostics. A timeout is not evidence that the intended race was reached. No experiment or service execution has occurred for this proposal.
 
 Status: contract proposed for review; experiment not executed. Completing this
@@ -216,13 +261,18 @@ spike leaves #11/#32 responsible for production access delivery.
 
 ### Required experimental cases (not executed)
 
+Use typed pure replay fixtures and the experimental permission evaluator for
+A06's composite-scope cases. Native creation replay uses the actual stored
+creation scope; this overlay does not implement conversion/status command
+persistence. Their production scope serialization remains the W5/#32 gate.
+
 | Case | Controlled action | Required evidence |
 | --- | --- | --- |
 | A01: trusted binding | Verify owner identity, then supply a conflicting payload/header actor, role or grant assertion; repeat with missing/expired credentials. | Context derives only from the verifier; unauthenticated requests reach no command execution. A deterministic verifier fixture proves plumbing only; actual provider qualification is a separate result. |
 | A02: internal peer and framing | Attempt direct worker submission and altered actor/context/request from an untrusted process. For a selected MAC/signature envelope, test distinct variable-field combinations that would collide under raw concatenation, domain/peer confusion and the specified replay behavior. | The selected channel rejects spoofing/tampering; distinct typed envelopes have distinct authenticated encodings. If no mechanism is selected, record blocked, not passed on the basis of Host/loopback checks. |
 | A03: owner scope | Exercise active/inactive owner, creation disabled, absent/inactive project grant and another project. | Evaluate the proposed mapping independently in each scope; reject role escalation and cross-project access. No ownership inferred from an existing creation result. |
 | A04: read/CLI/session | Test reads without identity, CLI without Origin, cross-origin commands and expired/logout/recovered sessions. Reach revocation-before-snapshot and snapshot-before-revocation for authoritative and delayed projected reads; mix allowed/denied project hits and cross the response deadline. | Earlier committed revocation denies. An already-authorized read may finish within its deadline, with consistent authoritative data and no out-of-scope hits/aggregates. Later reads reauthorize; timed-out results are discarded. Reads hold no exclusive actor fence across search. Recovery preserves actor identity; unselected policy remains blocked. |
-| A05: grant history | Remove/mismatch current grant versus latest event; attempt serving-role grant UPDATE and history mutation; commit/roll back management changes. | Mismatch fails without allowing access. Restricted serving writes fail; successful management writes atomically append one matching event and advance the current version. Rollback leaves both unchanged. |
+| A05: grant history and overlay | Test the baseline denials, then overlay current/latest mismatch, an earlier event gap, serving management-operation/event inserts, grant UPDATE/history mutation, and management commit/rollback. Repeat bounded serving checks with growing history. | Current/latest mismatch fails internally without granting access. A declared full audit detects earlier gaps; serving checks do not scan all history. Restricted serving management writes fail. Authorized management advances exactly one matching attributed operation/payload/event/current version; rollback leaves all unchanged. |
 | A06: replay precedence and policy | Retry full and tombstoned records with changed requested scope after revoking an original grant: conversion requiring Migration and a status move requiring both original groups. Include unknown stored policy/profile and creation's constant scope. | Original-scope denial precedes replay/conflict/expiry disclosure even if the retry's easier scope would pass. Original committed state is unchanged. Unknown policy/profile fails internally without fallback. Creation replay checks current creation authority; unrelated commands do not inherit that gate. |
 | A07: revocation schedules | Run command-first and revocation-first for both creation and replay, with actor lock barriers; roll back each side and retry. | Reach and record all four orderings, proposed ten trials each. Command-first can finish before revocation; revocation-first denies. Rollback releases the fence and retry reloads authority; no partial grant/event state. |
 | A08: session and multiple actors | Revoke a credential while work is queued; exercise two actors and management affecting both in opposite requested orders. | The declared session fence prevents stale authorization under its policy. Deterministic actor lock ordering is enforced; bounded failure rolls back before retry. Stable actor identity remains usable for #41 retry binding after reauthentication. |

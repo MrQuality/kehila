@@ -263,6 +263,9 @@ design's accepted [bounded-transaction direction](../architecture/ADR-102-postgr
 proposed trusted actor/initial-owner mapping and revocation contract for review,
 with explicit decision inputs and A01-A08 acceptance cases. No authentication
 mechanism or new permission policy is accepted and no experiment has run.
+The proposal now defines original-scope replay/policy interpretation, read
+snapshot/revocation ordering, authenticated framing requirements and a proposed
+disposable-overlay boundary requiring review, with bounded serving/history-audit checks.
 This is the W2 prerequisite for #49; #41 owns subsequent stable target allocation.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
