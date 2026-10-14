@@ -5,9 +5,11 @@ import os
 import subprocess
 import sys
 import time
+import tempfile
+from collections import Counter
 from pathlib import Path
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 spec = importlib.util.spec_from_file_location(
     'postgresql_snapshots', Path(__file__).resolve().parents[1] / 'scripts/postgresql_snapshots.py')
@@ -27,6 +29,22 @@ class ProcessTests(unittest.TestCase):
             with self.subTest(stream=stream), self.assertRaisesRegex(ValueError, 'overflow'):
                 bridge.bounded([sys.executable, '-c',
                     f'import sys;sys.{stream}.buffer.write(b"x"*{cap + 1})'], limit=32)
+
+    def test_pipe_close_failure_cannot_replace_the_original_reader_failure(self):
+        popen = bridge.subprocess.Popen
+        class BrokenPipe:
+            def __init__(self, stream): self.stream = stream
+            def read(self, count): raise OSError('read failed')
+            def close(self):
+                self.stream.close()
+                raise OSError('close failed')
+        def spawn(*args, **kwargs):
+            process = popen(*args, **kwargs)
+            process.stdout = BrokenPipe(process.stdout)
+            return process
+        with patch.object(bridge.subprocess, 'Popen', side_effect=spawn):
+            with self.assertRaisesRegex(ValueError, 'pipe read failed'):
+                bridge.bounded([sys.executable, '-c', 'import time;time.sleep(3)'], timeout=1)
 
     def test_timeout_terminates_the_owned_process(self):
         with self.assertRaises(subprocess.TimeoutExpired):
@@ -61,6 +79,8 @@ class ProcessTests(unittest.TestCase):
                                      'descendant remains alive after supervisor exit')
                 finally:
                     kernel.CloseHandle(child)
+            else:
+                self.assertEqual(ctypes.get_last_error(), 87, 'cannot inspect owned descendant')
         else:
             with self.assertRaises(subprocess.TimeoutExpired):
                 bridge.bounded(command, timeout=0.2)
@@ -125,6 +145,106 @@ class RejectionProtocolTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         checker.oracle('verify', 'seed', {}, reject='revision')
 
+
+class NativeScenarioTests(unittest.TestCase):
+    def test_required_roundtrips_and_specific_negative_cases_execute(self):
+        checker = SqlBridgeTests().checker()
+        events = []
+        def oracle(mode, label, frame=None, *, reject=None):
+            events.append((mode, label, reject))
+            return json.dumps({'project': '00', 'configuration': '00', 'revision': '1'}).encode()
+        def standalone(fixture, **kwargs):
+            label = events[-1][1]
+            size = bridge.RECORD_LIMIT + int(label == 'overflow') if label in {'limit', 'overflow'} else 1
+            return {'configuration': '00' * size}
+        with patch.object(checker, 'oracle', side_effect=oracle), \
+                patch.object(checker, 'standalone', side_effect=standalone), \
+                patch.object(checker, 'relational', return_value={}) as relational, \
+                patch.object(checker, 'sql'), patch('sys.stdout'):
+            checker.run()
+        self.assertEqual({label for mode, label, reject in events if mode == 'verify' and reject is None},
+                         {'seed', 'ordered', 'escaped', 'zero', 'wide', 'maximum', 'limit'})
+        for label in ['seed', 'wide', 'maximum']:
+            self.assertEqual(events.count(('verify', label, None)), 2)
+        self.assertEqual(Counter(reject for _, _, reject in events if reject),
+                         {'identity': 2, 'revision': 3, 'archival': 2,
+                          'envelope': 2, 'version': 1, 'limit': 1})
+        calls = [call.kwargs for call in relational.call_args_list]
+        self.assertTrue(any(call.get('revision') == '0' and call.get('message') == 'projects_configuration_revision_check' for call in calls))
+        self.assertTrue(any(call.get('next_sequence') == '0' and call.get('message') == 'projects_next_sequence_check' for call in calls))
+        self.assertTrue(any(call.get('revision') == '2' for call in calls))
+        self.assertTrue(any(call.get('stored_version') == 2 for call in calls))
+
+    def test_invalid_relational_parameters_and_oversized_frame_fail_before_execution(self):
+        checker = SqlBridgeTests().checker()
+        fixture = {'revision': '1', 'project': '00', 'configuration': '00'}
+        with patch.object(checker, 'sql') as sql:
+            for kwargs in [{'revision': "1;DELETE"}, {'row_revision': '-1'},
+                    {'next_sequence': '1e0'}, {'stored_version': 0}, {'actor': "actor'"}]:
+                with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                    checker.relational(fixture, **kwargs)
+            sql.assert_not_called()
+        with patch.object(bridge, 'FRAME_LIMIT', 32), patch.object(bridge, 'bounded') as run:
+            with self.assertRaisesRegex(ValueError, 'input frame overflow'):
+                checker.oracle('verify', 'seed', {'large': 'x' * 32})
+            run.assert_not_called()
+
+    def test_build_failures_and_missing_artifacts_propagate_and_temporary_target_is_owned(self):
+        for outcome in ['build-failure', 'missing-artifact', 'phase-failure', 'success']:
+            with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as root:
+                targets = []
+                def build(command, **kwargs):
+                    target = Path(command[command.index('--target-dir') + 1])
+                    self.assertTrue(target.is_relative_to(Path(root) / 'target'))
+                    self.assertEqual(command[-2:], ['-j', '1'])
+                    targets.append(target)
+                    if outcome in {'phase-failure', 'success'}:
+                        (target / 'debug').mkdir()
+                        (target / 'debug' / ('project_snapshot_check.exe' if os.name == 'nt' else 'project_snapshot_check')).touch()
+                    return subprocess.CompletedProcess([], int(outcome == 'build-failure'), b'', b'')
+                def phase():
+                    self.assertTrue(targets[0].is_dir())
+                    if outcome == 'phase-failure': raise ValueError('native phase failed')
+                with patch.object(bridge, 'ROOT', Path(root)), patch.object(bridge, 'bounded', side_effect=build), \
+                        patch.object(bridge.SnapshotCheck, 'run', side_effect=phase) as check:
+                    if outcome == 'success': bridge.run(object())
+                    else:
+                        with self.assertRaises(ValueError): bridge.run(object())
+                    self.assertEqual(check.call_count, int(outcome in {'phase-failure', 'success'}))
+                self.assertFalse(targets[0].exists())
+
+    def test_target_resolving_outside_checkout_rejects_before_build_or_temporary_directory(self):
+        root = Mock()
+        target = root.__truediv__ = Mock(return_value=Mock())
+        root.resolve.return_value = Path.cwd()
+        target.return_value.resolve.return_value = Path.cwd().parent
+        with patch.object(bridge, 'ROOT', root), patch.object(bridge, 'bounded') as build, \
+                patch.object(bridge.tempfile, 'TemporaryDirectory') as temporary:
+            with self.assertRaisesRegex(ValueError, 'inside the checkout'): bridge.run(object())
+            build.assert_not_called()
+            temporary.assert_not_called()
+
+
+class ConstraintOracleTests(unittest.TestCase):
+    def test_same_sqlstate_from_a_different_constraint_or_context_does_not_pass(self):
+        checker = SqlBridgeTests().checker()
+        for stderr in [b'ERROR:  23514: projects_next_sequence_check',
+                b'ERROR:  23514: unrelated\nCONTEXT: projects_configuration_revision_check']:
+            with self.subTest(stderr=stderr), patch.object(bridge, 'bounded',
+                    return_value=subprocess.CompletedProcess([], 3, b'', stderr)), self.assertRaises(ValueError):
+                checker.sql('negative', state='23514', message='projects_configuration_revision_check')
+        with patch.object(bridge, 'bounded', return_value=subprocess.CompletedProcess([], 3,
+                b'', b'ERROR:  23514: violates projects_configuration_revision_check')):
+            checker.sql('negative', state='23514', message='projects_configuration_revision_check')
+
+    def test_zero_revision_does_not_also_zero_sequence(self):
+        checker = SqlBridgeTests().checker()
+        fixture = {'revision': '1', 'project': '00', 'configuration': '00'}
+        with patch.object(checker, 'sql') as sql:
+            checker.relational(fixture, revision='0')
+            self.assertIn("estimate_unit',0,1,'actor'", sql.call_args.args[0])
+            checker.relational(fixture, next_sequence='0')
+            self.assertIn("estimate_unit',1,0,'actor'", sql.call_args.args[0])
 
 
 if __name__ == '__main__':

@@ -85,18 +85,18 @@ def bounded(command, data=b'', *, limit=FRAME_LIMIT, timeout=60):
                     if len(chunks[index]) > cap:
                         overflow.set()
                         break
-            except OSError as error:
+            except Exception as error:
                 failures.append(error)
             finally:
                 changed.set()
 
         readers = [threading.Thread(target=drain, args=(process.stdout, 0, limit), daemon=True),
                    threading.Thread(target=drain, args=(process.stderr, 1, 65536), daemon=True)]
-        for reader in readers:
-            reader.start()
         failure = None
         deadline = time.monotonic() + timeout
         try:
+            for reader in readers:
+                reader.start()
             while process.poll() is None or any(reader.is_alive() for reader in readers):
                 if overflow.is_set():
                     raise ValueError('snapshot subprocess output overflow')
@@ -129,11 +129,15 @@ def bounded(command, data=b'', *, limit=FRAME_LIMIT, timeout=60):
                 cleanup_error = error
             cleanup_deadline = time.monotonic() + 2
             for reader in readers:
-                reader.join(timeout=max(0, cleanup_deadline - time.monotonic()))
+                if reader.ident is not None:
+                    reader.join(timeout=max(0, cleanup_deadline - time.monotonic()))
             if any(reader.is_alive() for reader in readers):
                 cleanup_error = ValueError('snapshot subprocess pipe did not close')
-            process.stdout.close()
-            process.stderr.close()
+            for stream in (process.stdout, process.stderr):
+                try:
+                    stream.close()
+                except OSError as error:
+                    cleanup_error = error
             if failure is not None:
                 raise failure from cleanup_error
             if cleanup_error is not None:
@@ -185,15 +189,17 @@ class SnapshotCheck:
             require(result.returncode == 0, 'snapshot oracle failed')
         return result.stdout
 
-    def sql(self, statement, *, state=None):
+    def sql(self, statement, *, state=None, message=None):
+        require(message is None or state is not None, 'expected message requires SQLSTATE')
         db = self.database
         result = bounded(db.podman + ['exec', '-i', db.container, 'env', 'LC_ALL=C',
             'psql', '-X', '-qAt', '-U', 'foundation_serving', '-d', 'postgres',
             '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose'],
             ("SET statement_timeout='10s';\n" + statement).encode('utf-8'))
         if state:
-            error = re.search(rb'^ERROR:[ \t]+([0-9A-Z]{5}):', result.stderr, re.MULTILINE)
-            require(result.returncode == 3 and error and error.group(1).decode() == state,
+            error = re.search(rb'^ERROR:[ \t]+([0-9A-Z]{5}):[^\S\r\n]*(.*)$', result.stderr, re.MULTILINE)
+            require(result.returncode == 3 and error and error.group(1).decode() == state
+                    and (message is None or message.encode() in error.group(2)),
                     'expected snapshot SQL rejection absent')
             return None
         require(result.returncode == 0, 'snapshot SQL execution failed')
@@ -208,11 +214,16 @@ class SnapshotCheck:
             '::jsonb AS p,' + sql_text(fixture['configuration']) + '::jsonb AS c)\n' +
             projection(project, configuration))
 
-    def relational(self, fixture, *, revision=None, row_revision=None, actor='actor', state=None):
+    def relational(self, fixture, *, revision=None, row_revision=None, next_sequence=None,
+                   stored_version=1, actor='actor', state=None, message=None):
         revision = fixture['revision'] if revision is None else revision
         row_revision = revision if row_revision is None else row_revision
+        next_sequence = fixture['revision'] if next_sequence is None else next_sequence
         require(re.fullmatch(r'[0-9]{1,20}', revision) is not None, 'invalid fixture revision')
         require(re.fullmatch(r'[0-9]{1,20}', row_revision) is not None, 'invalid row revision')
+        require(isinstance(next_sequence, str) and re.fullmatch(r'[0-9]{1,20}', next_sequence) is not None,
+                'invalid fixture sequence')
+        require(type(stored_version) is int and stored_version in {1, 2}, 'invalid stored version')
         require(actor in {'actor', 'absent'}, 'invalid fixture actor')
         # Structural parent/attribution fixtures, not a complete application adapter.
         statement = f"""BEGIN;
@@ -226,15 +237,15 @@ class SnapshotCheck:
         INSERT INTO kehila.projects(project_id,name,current_prefix,estimate_unit,
           configuration_revision,next_sequence,created_by,creation_operation_row_id,seed_profile)
         SELECT p->'value'->>'id',p->'value'->>'name',p->'value'->>'prefix',
-          p->'value'->>'estimate_unit',{revision},{revision},'actor',:operation_row_id,'m1_v1'
+          p->'value'->>'estimate_unit',{revision},{next_sequence},'actor',:operation_row_id,'m1_v1'
         FROM (SELECT {sql_text(fixture['project'])}::jsonb AS p) AS encoded_project;
-        INSERT INTO kehila.configuration_revisions VALUES ('snapshot-bridge',{row_revision},1,
+        INSERT INTO kehila.configuration_revisions VALUES ('snapshot-bridge',{row_revision},{stored_version},
           {sql_text(fixture['configuration'])}::jsonb,{sql_text(fixture['project'])}::jsonb,
           '{actor}',:operation_row_id,'project_create','project');
         SET CONSTRAINTS ALL IMMEDIATE;
         {projection('project_snapshot', 'configuration_snapshot', row="kehila.configuration_revisions WHERE project_id='snapshot-bridge'")}
         ROLLBACK;"""
-        return self.sql(statement, state=state)
+        return self.sql(statement, state=state, message=message)
 
     def run(self):
         for label in ('seed', 'ordered', 'escaped', 'zero', 'wide', 'maximum', 'limit'):
@@ -247,9 +258,13 @@ class SnapshotCheck:
                 require(len(frame['configuration']) // 2 == RECORD_LIMIT,
                         'native fixture did not reach exact JSONB read ceiling')
         seed = json.loads(self.oracle('fixture', 'seed'))
-        self.relational(seed, revision='0', state='23514')
-        self.relational(seed, row_revision='0', state='23514')
-        self.relational(seed, actor='absent', state='23503')
+        self.relational(seed, revision='0', state='23514', message='projects_configuration_revision_check')
+        self.relational(seed, next_sequence='0', state='23514', message='projects_next_sequence_check')
+        self.relational(seed, row_revision='0', state='23514', message='configuration_revisions_revision_check')
+        self.relational(seed, actor='absent', state='23503',
+                        message='on table "configuration_revisions" violates foreign key constraint')
+        self.oracle('verify', 'seed', self.relational(seed, revision='2'), reject='revision')
+        self.oracle('verify', 'seed', self.relational(seed, stored_version=2), reject='version')
         for expression, rejection in (
             ("jsonb_set(p,'{value,id}','\"wrong\"')", 'identity'),
             ("jsonb_set(p,'{value,configuration_revision}','\"2\"')", 'revision'),
@@ -272,7 +287,8 @@ class SnapshotCheck:
                 'compact overflow fixture already exceeds codec ceiling')
         self.oracle('verify', 'overflow', frame, reject='limit')
         nul = json.loads(self.oracle('fixture', 'nul'))
-        self.sql('SELECT ' + sql_text(nul['configuration']) + '::jsonb;', state='22P05')
+        self.sql('SELECT ' + sql_text(nul['configuration']) + '::jsonb;', state='22P05',
+                 message='unsupported Unicode escape sequence')
         print('PASS: production snapshot codecs, JSONB exact-limit/overflow/NUL, '
               'ordered reconstruction, attributed revision rows and incoherence rejection')
 
