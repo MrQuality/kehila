@@ -62,6 +62,16 @@ authority from codec admission or fingerprints. Existing APIs are not changed.
    per-request storage access follows bounded edge admission too. This ordering
    does not make malformed-input errors equivalent to authorization decisions.
 
+If the selected credential or internal channel uses a MAC/signature, its
+authenticated representation must be versioned, domain-separated and injective:
+different typed field combinations cannot produce the same authenticated bytes.
+Specify fixed-width or length-delimited fields, exact text encoding and request
+target/body binding. Raw concatenation of variable actor/session/path fields is
+insufficient. Algorithm, key provisioning/rotation, peer/audience binding and
+replay behavior require security review with the chosen mechanism. These are
+acceptance requirements, not selection of a custom MAC protocol. Authentication
+of an envelope never replaces current permission/session-revocation checks.
+
 ### Proposed initial-owner permission mapping
 
 The existing SQL profile is a storage label, not an implemented permission set.
@@ -142,9 +152,39 @@ demonstrated serialization protocol. A session check made before a queued
 command is insufficient to promise immediate revocation. No session schema or
 production management role is authorized by this proposal.
 
+### Read authorization and concurrent revocation
+
+Proposed read semantics: authorize at a fresh PostgreSQL snapshot established for
+that request. Any logout, credential revocation or permission change committed
+before that snapshot must be observed. An authorized read may finish if revocation
+commits after its snapshot; it does not promise revocation of bytes already being
+returned. This ordering requires maintainer review alongside session semantics.
+
+Authoritative reads must check actor/session state, applicable grants and
+current/latest-event agreement in the same snapshot as the returned authoritative
+data: one read-only statement, or an explicitly bounded read-only transaction
+using one consistent snapshot. Do not accidentally reuse a snapshot established
+before the request. Reads need no exclusive actor fence under this proposed
+contract; independent grant/event queries under READ COMMITTED alone cannot
+establish a consistent authorization/data view. Mutation/replay fencing above
+remains separate. PostgreSQL's [isolation rules](https://www.postgresql.org/docs/16/transaction-iso.html)
+define the snapshot behavior; no concurrent run is claimed here.
+
+Projected reads must obtain fresh authoritative read authorization for every
+required project before querying OpenSearch. That authorization snapshot is the
+read's permission ordering point, not an atomic PostgreSQL/OpenSearch snapshot.
+Keep queries, hits and aggregates within the authorized scopes and require an
+authoritative project binding for returned identities; client/search labels do
+not establish permission. Do not carry an actor lock or database transaction
+across the external search call. Bound query/result lifetime and discard results
+after the request deadline. A later revocation may overlap an already-authorized
+bounded read; a subsequent request must acquire fresh authority. Projection
+freshness and rebuild/recovery remain #49 integration obligations.
+
 ### Decisions needed before experimental execution
 
-- Approve or amend the owner mapping above and the actor-fence protocol.
+- Approve or amend the owner mapping, actor-fence protocol and proposed read
+  snapshot/revocation semantics above.
 - Choose the local enrollment/credential mechanism, browser session transport
   and authenticated CLI mechanism; define expiry, logout and recovery behavior,
   including how durable actor identity survives credential replacement.
@@ -179,9 +219,9 @@ spike leaves #11/#32 responsible for production access delivery.
 | Case | Controlled action | Required evidence |
 | --- | --- | --- |
 | A01: trusted binding | Verify owner identity, then supply a conflicting payload/header actor, role or grant assertion; repeat with missing/expired credentials. | Context derives only from the verifier; unauthenticated requests reach no command execution. A deterministic verifier fixture proves plumbing only; actual provider qualification is a separate result. |
-| A02: internal peer | Attempt direct worker submission and altered actor/context from an untrusted process. | The selected internal channel rejects it. If no mechanism is selected, record blocked, not passed on the basis of Host/loopback checks. |
+| A02: internal peer and framing | Attempt direct worker submission and altered actor/context/request from an untrusted process. For a selected MAC/signature envelope, test distinct variable-field combinations that would collide under raw concatenation, domain/peer confusion and the specified replay behavior. | The selected channel rejects spoofing/tampering; distinct typed envelopes have distinct authenticated encodings. If no mechanism is selected, record blocked, not passed on the basis of Host/loopback checks. |
 | A03: owner scope | Exercise active/inactive owner, creation disabled, absent/inactive project grant and another project. | Evaluate the proposed mapping independently in each scope; reject role escalation and cross-project access. No ownership inferred from an existing creation result. |
-| A04: read/CLI/session | Try authoritative and projected reads without identity; CLI without Origin; cross-origin browser command; expired/logout/recovered session. | Authenticated CLI and reads use the declared policy; browser checks are additional. Recovery preserves actor ID and invalidates replaced credentials under the approved ordering. Unselected policy remains blocked. |
+| A04: read/CLI/session | Test reads without identity, CLI without Origin, cross-origin commands and expired/logout/recovered sessions. Reach revocation-before-snapshot and snapshot-before-revocation for authoritative and delayed projected reads; mix allowed/denied project hits and cross the response deadline. | Earlier committed revocation denies. An already-authorized read may finish within its deadline, with consistent authoritative data and no out-of-scope hits/aggregates. Later reads reauthorize; timed-out results are discarded. Reads hold no exclusive actor fence across search. Recovery preserves actor identity; unselected policy remains blocked. |
 | A05: grant history | Remove/mismatch current grant versus latest event; attempt serving-role grant UPDATE and history mutation; commit/roll back management changes. | Mismatch fails without allowing access. Restricted serving writes fail; successful management writes atomically append one matching event and advance the current version. Rollback leaves both unchanged. |
 | A06: replay precedence and policy | Retry full and tombstoned records with changed requested scope after revoking an original grant: conversion requiring Migration and a status move requiring both original groups. Include unknown stored policy/profile and creation's constant scope. | Original-scope denial precedes replay/conflict/expiry disclosure even if the retry's easier scope would pass. Original committed state is unchanged. Unknown policy/profile fails internally without fallback. Creation replay checks current creation authority; unrelated commands do not inherit that gate. |
 | A07: revocation schedules | Run command-first and revocation-first for both creation and replay, with actor lock barriers; roll back each side and retry. | Reach and record all four orderings, proposed ten trials each. Command-first can finish before revocation; revocation-first denies. Rollback releases the fence and retry reloads authority; no partial grant/event state. |
