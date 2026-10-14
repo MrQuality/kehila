@@ -2,6 +2,7 @@
 import importlib.util
 from contextlib import contextmanager
 import os
+import io
 from pathlib import Path
 import subprocess
 import sys
@@ -38,12 +39,30 @@ class PureMatrixTests(unittest.TestCase):
 
 
 class FullLifecycleTests(unittest.TestCase):
+    def test_invalid_runtime_settings_fail_before_any_build_or_service(self):
+        invalid = [['--engine', 'docker', '--podman-machine', 'fixture'],
+                   ['--podman-machine', '../invalid'], ['--podman-machine', ''],
+                   ['--external-services', '--podman-machine', 'fixture'],
+                   ['--external-services', '--pure'], ['--external-services', '--docs'],
+                   ['--exclusive-podman-machine']]
+        for arguments in invalid:
+            with self.subTest(arguments=arguments), \
+                    patch.dict(os.environ, KEHILA_TEST_ENGINE='auto', KEHILA_TEST_PODMAN_MACHINE='',
+                               KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE='0'), \
+                    patch.object(sys, 'argv', ['verify.py', *arguments]), \
+                    patch.object(VERIFY.subprocess, 'run') as run, \
+                    patch('sys.stderr', new_callable=io.StringIO):
+                with self.assertRaises(SystemExit) as caught:
+                    VERIFY.main()
+                self.assertEqual(caught.exception.code, 2)
+                run.assert_not_called()
+
     def test_all_builds_precede_owned_phases_and_all_live_checks_remain(self):
         events = []
         environments = []
 
         @contextmanager
-        def runtime(*args):
+        def runtime(*args, **kwargs):
             events.append('VM start')
             yield ['podman', 'compose']
             events.append('VM stop')
@@ -101,7 +120,7 @@ class FullLifecycleTests(unittest.TestCase):
         events = []
 
         @contextmanager
-        def runtime(*args):
+        def runtime(*args, **kwargs):
             try:
                 yield ['docker', 'compose']
             finally:

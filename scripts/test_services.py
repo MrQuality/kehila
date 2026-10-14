@@ -1,12 +1,14 @@
 """Own short-lived Compose groups; never tear down the development project."""
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
+import hashlib
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 from urllib.parse import urlsplit
 import uuid
 
@@ -44,12 +46,13 @@ def _containers(runtime, project, service=None, include_stopped=False):
                text=True, timeout=15, env=runtime.environment).stdout.split()
 
 
-def _machine_info(name, environment=None):
+def _machine_info(name, environment=None, allow_starting=False):
     info = json.loads(run(['podman', 'machine', 'inspect', name],
                           capture_output=True, text=True, timeout=15, env=environment).stdout)
+    states = {'stopped', 'running', 'starting'} if allow_starting else {'stopped', 'running'}
     if (not isinstance(info, list) or len(info) != 1 or not isinstance(info[0], dict)
             or info[0].get('Name') != name
-            or info[0].get('State') not in {'stopped', 'running'}):
+            or info[0].get('State') not in states):
         raise ValueError('Expected one named Podman machine in a stable state')
     return info[0]
 
@@ -82,8 +85,11 @@ def _machine_connections(name, info, environment=None):
 
 
 def _stop_owned_machine(name, environment=None):
-    info = _machine_info(name, environment=environment)
+    info = _machine_info(name, environment=environment, allow_starting=True)
     if info['State'] == 'stopped':
+        return
+    if info['State'] == 'starting':
+        run(['podman', 'machine', 'stop', name], timeout=120, env=environment)
         return
     # Both stores share this VM; a concurrent user may have started other work.
     # Query the registered endpoints: `machine ssh` can create a literal NUL
@@ -92,18 +98,60 @@ def _stop_owned_machine(name, environment=None):
         active = run(['podman', '--connection', connection, 'ps', '-q'],
                      capture_output=True, text=True, timeout=30, env=environment).stdout.strip()
         if active:
-            print('TEST RESOURCE: keeping VM running because other containers are active', flush=True)
-            return
+            raise RuntimeError('VM exclusive-use contract violated; active containers remain, VM retained')
     run(['podman', 'machine', 'stop', name], timeout=120, env=environment)
 
 
-@contextmanager
-def managed_runtime(preferred='auto', machine=None, environment=None):
+def validate_runtime(preferred, machine, exclusive=False):
     if preferred not in {'auto', 'podman', 'docker'}:
         raise ValueError('Unknown container engine')
-    if machine and (preferred == 'docker' or
+    if machine is not None and (preferred == 'docker' or
                     re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', machine) is None):
         raise ValueError('An explicit Podman machine requires a simple name and the Podman engine')
+    if exclusive and machine is None:
+        raise ValueError('Exclusive VM use requires an explicit Podman machine')
+
+
+@contextmanager
+def _machine_lease(name):
+    # Keep the inode after unlocking: unlinking it could admit a second owner
+    # holding a new inode while another verifier still owns the old one.
+    key = hashlib.sha256(name.encode('utf-8')).hexdigest()
+    path = Path(tempfile.gettempdir()) / ('kehila-machine-' + key + '.lock')
+    with path.open('a+b') as lease:
+        lease.seek(0)
+        if os.name == 'nt':
+            import msvcrt
+            lock = lambda: msvcrt.locking(lease.fileno(), msvcrt.LK_NBLCK, 1)
+            unlock = lambda: msvcrt.locking(lease.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            lock = lambda: fcntl.flock(lease.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            unlock = lambda: fcntl.flock(lease.fileno(), fcntl.LOCK_UN)
+        try:
+            lock()
+        except OSError as error:
+            raise RuntimeError('Another verifier owns the requested Podman machine') from error
+        try:
+            if not lease.read(1):
+                lease.write(b'0')
+                lease.flush()
+            yield
+        finally:
+            lease.seek(0)
+            unlock()
+
+
+@contextmanager
+def managed_runtime(preferred='auto', machine=None, environment=None, exclusive=False):
+    validate_runtime(preferred, machine, exclusive)
+    with _machine_lease(machine) if machine else nullcontext():
+        with _runtime(preferred, machine, environment, exclusive) as runtime:
+            yield runtime
+
+
+@contextmanager
+def _runtime(preferred, machine, environment, exclusive):
     owned_machine = False
     failure = None
     environment = dict(os.environ if environment is None else environment)
@@ -116,8 +164,10 @@ def managed_runtime(preferred='auto', machine=None, environment=None):
             if selected not in connections or environment.get('CONTAINER_HOST'):
                 raise ValueError('Select a verified connection belonging to the requested Podman machine')
             environment['CONTAINER_CONNECTION'] = selected
-            owned_machine = info['State'] == 'stopped'
-            if owned_machine:
+            if exclusive and info['State'] != 'stopped':
+                raise ValueError('Exclusive VM use requires an initially stopped machine')
+            owned_machine = exclusive and info['State'] == 'stopped'
+            if info['State'] == 'stopped':
                 run(['podman', 'machine', 'start', machine], timeout=120, env=environment)
         yield ComposeRuntime(compose_command(preferred, environment=environment), environment)
     except BaseException as error:
@@ -127,7 +177,7 @@ def managed_runtime(preferred='auto', machine=None, environment=None):
         if owned_machine:
             try:
                 _stop_owned_machine(machine, environment=environment)
-            except (OSError, ValueError, subprocess.SubprocessError) as cleanup_error:
+            except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as cleanup_error:
                 if failure is not None:
                     raise failure from cleanup_error
                 raise

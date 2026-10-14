@@ -1,6 +1,8 @@
 """Test-resource ownership must survive startup, test and cleanup failures."""
 from pathlib import Path
+from contextlib import nullcontext
 import json
+import tempfile
 import subprocess
 import sys
 import unittest
@@ -80,6 +82,57 @@ class ServiceOwnershipTests(unittest.TestCase):
 
 
 class MachineOwnershipTests(unittest.TestCase):
+    def setUp(self):
+        lease = patch.object(services, '_machine_lease', return_value=nullcontext())
+        lease.start()
+        self.addCleanup(lease.stop)
+
+    def test_shared_stopped_machine_is_started_but_never_automatically_stopped(self):
+        with patch.object(services, '_machine_info', return_value={'State': 'stopped'}), \
+                patch.object(services, '_machine_connections', return_value=['fixture', 'fixture-root']), \
+                patch.object(services, 'run'), patch.object(services, '_stop_owned_machine') as stop, \
+                patch.object(services, 'compose_command', return_value=['podman', 'compose']):
+            with services.managed_runtime('podman', 'fixture', environment={}):
+                pass
+            stop.assert_not_called()
+
+    def test_exclusive_mode_refuses_an_already_running_machine(self):
+        with patch.object(services, '_machine_info', return_value={'State': 'running'}), \
+                patch.object(services, '_machine_connections', return_value=['fixture', 'fixture-root']), \
+                patch.object(services, 'run') as run:
+            with self.assertRaisesRegex(ValueError, 'stopped'):
+                with services.managed_runtime('podman', 'fixture', environment={}, exclusive=True):
+                    pass
+            run.assert_not_called()
+
+    def test_stopped_machine_cleanup_does_not_query_connections(self):
+        with patch.object(services, '_machine_info', return_value={'State': 'stopped'}), \
+                patch.object(services, '_machine_connections') as connections, \
+                patch.object(services, 'run') as run:
+            services._stop_owned_machine('fixture')
+            connections.assert_not_called()
+            run.assert_not_called()
+
+    def test_exclusive_cleanup_can_stop_its_partially_started_machine(self):
+        with patch.object(services, '_machine_info', return_value={'State': 'starting'}), \
+                patch.object(services, 'run') as run:
+            services._stop_owned_machine('fixture')
+            self.assertEqual(run.call_args.args[0], ['podman', 'machine', 'stop', 'fixture'])
+
+    def test_runtime_cleanup_failure_preserves_the_primary_error(self):
+        primary = RuntimeError('test failed')
+        cleanup = OSError('VM stop failed')
+        with patch.object(services, '_machine_info', return_value={'State': 'stopped'}), \
+                patch.object(services, '_machine_connections', return_value=['fixture', 'fixture-root']), \
+                patch.object(services, 'run'), \
+                patch.object(services, 'compose_command', return_value=['podman', 'compose']), \
+                patch.object(services, '_stop_owned_machine', side_effect=cleanup):
+            with self.assertRaises(RuntimeError) as caught:
+                with services.managed_runtime('podman', 'fixture', environment={}, exclusive=True):
+                    raise primary
+            self.assertIs(caught.exception, primary)
+            self.assertIs(caught.exception.__cause__, cleanup)
+
     def test_socket_paths_must_identify_distinct_rootless_and_rootful_stores(self):
         info = {'SSHConfig': {'Port': 12345, 'RemoteUsername': 'user'}}
         rootless = {'Name': 'fixture', 'URI': 'ssh://user@127.0.0.1:12345/run/user/1000/podman/podman.sock'}
@@ -136,7 +189,7 @@ class MachineOwnershipTests(unittest.TestCase):
                 patch.object(services, 'run') as run, \
                 patch.object(services, '_stop_owned_machine') as stop, \
                 patch.object(services, 'compose_command', return_value=['podman', 'compose']):
-            with services.managed_runtime('podman', 'fixture-machine', environment={}) as compose:
+            with services.managed_runtime('podman', 'fixture-machine', environment={}, exclusive=True) as compose:
                 self.assertEqual(compose.compose, ['podman', 'compose'])
             run.assert_called_once_with(['podman', 'machine', 'start', 'fixture-machine'], timeout=120, env={'CONTAINER_CONNECTION': 'fixture-machine'})
             stop.assert_called_once_with('fixture-machine', environment={'CONTAINER_CONNECTION': 'fixture-machine'})
@@ -158,7 +211,7 @@ class MachineOwnershipTests(unittest.TestCase):
                 patch.object(services, 'run', side_effect=OSError('start failed')), \
                 patch.object(services, '_stop_owned_machine') as stop:
             with self.assertRaisesRegex(OSError, 'start failed'):
-                with services.managed_runtime('podman', 'fixture-machine', environment={}):
+                with services.managed_runtime('podman', 'fixture-machine', environment={}, exclusive=True):
                     pass
             stop.assert_called_once_with('fixture-machine', environment={'CONTAINER_CONNECTION': 'fixture-machine'})
 
@@ -168,7 +221,8 @@ class MachineOwnershipTests(unittest.TestCase):
                     patch.object(services, '_machine_info', return_value={'State': 'running'}), \
                     patch.object(services, '_machine_connections', return_value=['fixture-machine', 'fixture-machine-root']), \
                     patch.object(services, 'run', side_effect=[Mock(stdout=s) for s in outputs]) as run:
-                services._stop_owned_machine('fixture-machine')
+                with self.assertRaisesRegex(RuntimeError, 'exclusive'):
+                    services._stop_owned_machine('fixture-machine')
                 self.assertFalse(any(call.args[0][1:3] == ['machine', 'stop']
                                      for call in run.call_args_list))
 
@@ -187,3 +241,16 @@ class MachineOwnershipTests(unittest.TestCase):
                     with services.managed_runtime(engine, machine):
                         pass
             run.assert_not_called()
+
+
+class MachineLeaseTests(unittest.TestCase):
+    def test_lease_excludes_a_second_verifier_and_releases_after_failure(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(services.tempfile, 'gettempdir', return_value=folder):
+            with self.assertRaisesRegex(RuntimeError, 'body failed'):
+                with services._machine_lease('fixture'):
+                    with self.assertRaisesRegex(RuntimeError, 'Another verifier'):
+                        with services._machine_lease('fixture'):
+                            self.fail('overlapping verifier admitted')
+                    raise RuntimeError('body failed')
+            with services._machine_lease('fixture'):
+                pass

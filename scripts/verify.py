@@ -8,7 +8,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from temp_work import owned_directory
-from test_services import managed_runtime, service_group
+from test_services import managed_runtime, service_group, validate_runtime
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -34,7 +34,7 @@ def live_checks(folder, environment, args):
         run(workspace)
         run(task_path)
         return
-    with managed_runtime(args.engine, args.podman_machine) as compose:
+    with managed_runtime(args.engine, args.podman_machine, exclusive=args.exclusive_podman_machine) as compose:
         with service_group(compose, ['nats']):
             health('NATS')
             run([sys.executable, 'tests/integration/nats_probe.py'])
@@ -55,11 +55,22 @@ def main():
                         help='Use already-running disposable services without owning their lifecycle')
     parser.add_argument('--engine', choices=('auto', 'podman', 'docker'),
                         default=os.environ.get('KEHILA_TEST_ENGINE', 'auto'))
-    parser.add_argument('--podman-machine', default=os.environ.get('KEHILA_TEST_PODMAN_MACHINE'),
-                        help='Start this explicit machine after builds; stop it only if owned and idle')
+    parser.add_argument('--podman-machine', default=os.environ.get('KEHILA_TEST_PODMAN_MACHINE') or None,
+                        help='Start this explicit machine after builds; retain shared machines')
+    exclusive = os.environ.get('KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE', '0')
+    if exclusive not in {'0', '1'}:
+        parser.error('KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE must be 0 or 1')
+    parser.add_argument('--exclusive-podman-machine', action='store_true', default=exclusive == '1',
+                        help='Promise exclusive VM use for this run; requires an initially stopped named machine')
     args = parser.parse_args()
     if args.external_services and (args.pure or args.docs):
         parser.error('--external-services applies only to full verification')
+    if args.external_services and (args.podman_machine is not None or args.exclusive_podman_machine):
+        parser.error('--external-services cannot own a Podman machine')
+    try:
+        validate_runtime(args.engine, args.podman_machine, args.exclusive_podman_machine)
+    except ValueError as error:
+        parser.error(str(error))
     environment = dict(os.environ, CARGO_BUILD_JOBS='1')
     environment['GOFLAGS'] = (environment.get('GOFLAGS', '') + ' -p=1').strip()
     commands = [[sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
