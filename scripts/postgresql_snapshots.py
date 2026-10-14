@@ -172,13 +172,14 @@ class SnapshotCheck:
     def __init__(self, database, binary):
         self.database, self.binary = database, binary
 
-    def oracle(self, mode, label, frame=None, *, reject=False):
+    def oracle(self, mode, label, frame=None, *, reject=None):
         data = b'' if frame is None else json.dumps(frame).encode('utf-8')
         require(len(data) <= FRAME_LIMIT, 'oracle input frame overflow')
-        result = bounded([str(self.binary), mode, label], data)
+        command_mode = f"reject_{reject}" if reject else mode
+        result = bounded([str(self.binary), command_mode, label], data)
         if reject:
-            require(result.returncode == 3 and not result.stdout
-                    and result.stderr.startswith(b'ERR_SNAPSHOT_ORACLE:'),
+            require(result.returncode == 0 and not result.stderr
+                    and result.stdout == f"PASS: expected production codec rejection: {command_mode}\n".encode(),
                     'expected production codec rejection absent')
         else:
             require(result.returncode == 0, 'snapshot oracle failed')
@@ -249,27 +250,27 @@ class SnapshotCheck:
         self.relational(seed, revision='0', state='23514')
         self.relational(seed, row_revision='0', state='23514')
         self.relational(seed, actor='absent', state='23503')
-        for expression in (
-            "jsonb_set(p,'{value,id}','\"wrong\"')",
-            "jsonb_set(p,'{value,configuration_revision}','\"2\"')",
-            "jsonb_set(p,'{value,archived}','true')",
-            "jsonb_set(p,'{codec_version}','2')",
+        for expression, rejection in (
+            ("jsonb_set(p,'{value,id}','\"wrong\"')", 'identity'),
+            ("jsonb_set(p,'{value,configuration_revision}','\"2\"')", 'revision'),
+            ("jsonb_set(p,'{value,archived}','true')", 'archival'),
+            ("jsonb_set(p,'{codec_version}','2')", 'envelope'),
         ):
-            self.oracle('verify', 'seed', self.standalone(seed, project=expression), reject=True)
-        for expression in (
-            "jsonb_set(c,'{value,project_id}','\"wrong\"')",
-            "jsonb_set(c,'{value,revision}','\"2\"')",
-            "jsonb_set(c,'{value,project_archived}','true')",
-            "jsonb_set(c,'{codec_version}','2')",
+            self.oracle('verify', 'seed', self.standalone(seed, project=expression), reject=rejection)
+        for expression, rejection in (
+            ("jsonb_set(c,'{value,project_id}','\"wrong\"')", 'identity'),
+            ("jsonb_set(c,'{value,revision}','\"2\"')", 'revision'),
+            ("jsonb_set(c,'{value,project_archived}','true')", 'archival'),
+            ("jsonb_set(c,'{codec_version}','2')", 'envelope'),
         ):
-            self.oracle('verify', 'seed', self.standalone(seed, configuration=expression), reject=True)
+            self.oracle('verify', 'seed', self.standalone(seed, configuration=expression), reject=rejection)
         overflow = json.loads(self.oracle('fixture', 'overflow'))
         frame = self.standalone(overflow)
         require(len(frame['configuration']) // 2 == RECORD_LIMIT + 1,
                 'JSONB expansion overflow fixture was not exact')
         require(len(overflow['configuration']) // 2 <= RECORD_LIMIT,
                 'compact overflow fixture already exceeds codec ceiling')
-        self.oracle('verify', 'overflow', frame, reject=True)
+        self.oracle('verify', 'overflow', frame, reject='limit')
         nul = json.loads(self.oracle('fixture', 'nul'))
         self.sql('SELECT ' + sql_text(nul['configuration']) + '::jsonb;', state='22P05')
         print('PASS: production snapshot codecs, JSONB exact-limit/overflow/NUL, '

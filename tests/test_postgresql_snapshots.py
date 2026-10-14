@@ -107,7 +107,24 @@ class SqlBridgeTests(unittest.TestCase):
                 (3, b'partial', b'ERR_SNAPSHOT_ORACLE:'), (3, b'', b'unrelated')]:
             with self.subTest(code=code), patch.object(bridge, 'bounded',
                 return_value=subprocess.CompletedProcess([], code, stdout, stderr)), self.assertRaises(ValueError):
-                self.checker().oracle('verify', 'seed', {}, reject=True)
+                self.checker().oracle('verify', 'seed', {}, reject='revision')
+
+
+class RejectionProtocolTests(unittest.TestCase):
+    def test_only_exact_successful_expected_rejection_marker_is_accepted(self):
+        checker = SqlBridgeTests().checker()
+        marker = b'PASS: expected production codec rejection: reject_revision\n'
+        for code, stdout, stderr in [(0, marker, b''), (0, marker, b'error'),
+                (3, marker, b''), (0, marker.replace(b'revision', b'identity'), b'')]:
+            with self.subTest(code=code, stdout=stdout, stderr=stderr), patch.object(bridge, 'bounded',
+                    return_value=subprocess.CompletedProcess([], code, stdout, stderr)) as call:
+                if (code, stdout, stderr) == (0, marker, b''):
+                    checker.oracle('verify', 'seed', {}, reject='revision')
+                    self.assertEqual(call.call_args.args[0][-2:], ['reject_revision', 'seed'])
+                else:
+                    with self.assertRaises(ValueError):
+                        checker.oracle('verify', 'seed', {}, reject='revision')
+
 
 
 if __name__ == '__main__':
