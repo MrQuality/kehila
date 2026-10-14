@@ -363,7 +363,14 @@ pub(crate) fn decode_result(v: &Value) -> Outcome<ProjectCreateResult> {
     if v["seed_profile"].as_str() != Some("m1_v1") {
         return Err("unknown seed profile");
     }
-    let p = &v["project"];
+    Ok(ProjectCreateResult {
+        project: decode_project(&v["project"])?,
+        configuration: decode_configuration(&v["configuration"])?,
+        seed_profile: SeedProfile::M1V1,
+    })
+}
+
+fn decode_project(p: &Value) -> Outcome<Project> {
     object(
         p,
         &[
@@ -377,20 +384,24 @@ pub(crate) fn decode_result(v: &Value) -> Outcome<ProjectCreateResult> {
             "ever_estimated",
         ],
     )?;
-    Ok(ProjectCreateResult {
-        project: Project {
-            id: ProjectId(string(&p["id"])?),
-            name: string(&p["name"])?,
-            prefix: string(&p["prefix"])?,
-            configuration_revision: unsigned(&p["configuration_revision"])?,
-            next_sequence: unsigned(&p["next_sequence"])?,
-            archived: boolean(&p["archived"])?,
-            estimate_unit: unit(&p["estimate_unit"])?,
-            ever_estimated: boolean(&p["ever_estimated"])?,
-        },
-        configuration: decode_configuration(&v["configuration"])?,
-        seed_profile: SeedProfile::M1V1,
+    Ok(Project {
+        id: ProjectId(string(&p["id"])?),
+        name: string(&p["name"])?,
+        prefix: string(&p["prefix"])?,
+        configuration_revision: unsigned(&p["configuration_revision"])?,
+        next_sequence: unsigned(&p["next_sequence"])?,
+        archived: boolean(&p["archived"])?,
+        estimate_unit: unit(&p["estimate_unit"])?,
+        ever_estimated: boolean(&p["ever_estimated"])?,
     })
+}
+
+pub(crate) fn encode_project_snapshot(project: &Project) -> Value {
+    json!({"codec_version": 1, "kind": "project_snapshot", "value": encode_project(project)})
+}
+pub(crate) fn decode_project_snapshot(v: &Value) -> Outcome<Project> {
+    envelope(v, "project_snapshot")?;
+    decode_project(&v["value"])
 }
 pub(crate) fn encode_snapshot(configuration: &Configuration) -> Value {
     json!({

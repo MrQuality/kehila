@@ -79,7 +79,7 @@ No load, recovery, backup/restore or production throughput qualification is clai
 
 ## Disposable native verification
 
-The verifier uses only Podman, Python 3.10+ and the container's `psql`. It supports
+The verifier uses Podman, Python 3.10+, Cargo/Rust and the container's `psql`. It supports
 Windows and Linux hosts. Ensure at least 3 GiB available host memory after Podman
 starts and 2 GiB free disk. Pull the pinned image if it is not already available.
 Use a unique container name; the example name is explicitly disposable.
@@ -112,6 +112,18 @@ line. Container/runtime/connection failures and matching text in error context
 cannot substitute for a PostgreSQL rejection. The client diagnostic locale is C.
 The caller owns container cleanup even when verification fails. Retest with a
 fresh container; the verifier never resets an existing schema or drops roles.
+
+The same command builds an owned host-side production codec helper and verifies
+recorded project/configuration snapshots through real JSONB. Standalone fixtures
+cover zero through u64::MAX, exact ordered reconstruction, escapes and empty
+collections. Real positive revision rows exercise project/operation attribution;
+negative cases reject zero revisions, wrong attribution and pair incoherence.
+Boundary cases verify exact 1 MiB JSONB text output, one-byte formatting overflow
+and NUL incompatibility. Process I/O remains outside the pure codec crate; its
+new-write admission reserves JSONB formatting space and rejects NUL while
+historical reconstruction retains its existing representation contract. See the
+[W1 report](../../docs/implementation/m1-01-project-snapshots.md) for evidence and
+limits. The narrow relational fixtures do not implement the trusted seed adapter.
 
 This opt-in native check complements `python scripts/verify.py`; the shared
 matrix does not start this container or execute the native SQL cases. Frozen

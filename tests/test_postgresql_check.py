@@ -1,10 +1,14 @@
 """Safety gates for the opt-in native database verifier."""
 import copy
 import importlib.util
+import io
+import json
 import subprocess
+import sys
+from types import SimpleNamespace
 from pathlib import Path
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 spec = importlib.util.spec_from_file_location(
     'check_postgresql', Path(__file__).resolve().parents[1] / 'scripts/check_postgresql.py')
@@ -60,6 +64,16 @@ class ContainerBoundaryTests(unittest.TestCase):
 class DatabaseRejectionTests(unittest.TestCase):
     def result(self, code, stderr='', stdout=''):
         return subprocess.CompletedProcess([], code, stdout, stderr)
+
+    def test_native_command_cannot_omit_production_snapshot_phase(self):
+        database = check.DatabaseCheck(['podman'], 'explicit-disposable')
+        snapshot_phase = Mock()
+        info = json.dumps([ContainerBoundaryTests().valid()])
+        with patch.object(database, 'command', return_value=self.result(0, stdout=info)), \
+                patch.object(database, 'sql'), patch('sys.stdout', new_callable=io.StringIO), patch.dict(sys.modules,
+                {'postgresql_snapshots': SimpleNamespace(run=snapshot_phase)}):
+            database.run()
+        snapshot_phase.assert_called_once_with(database)
 
     def invoke(self, completed, **expectation):
         database = check.DatabaseCheck(['podman'], 'kehila-42501')

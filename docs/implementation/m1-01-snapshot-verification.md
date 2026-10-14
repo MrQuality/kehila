@@ -1,9 +1,12 @@
 # M1-01 snapshot verification plan
 
-Status: Proposed execution detail for [#49](https://github.com/MrQuality/kehila/issues/49).
-Implementation and native execution await maintainer approval of the first slice.
-This supplements the [successor plan](m1-01-remaining-delivery.md); it records
-required evidence, not completed checks or new architectural acceptance.
+Status: W1 execution approved by explicit maintainer instruction on 2026-10-13
+in [#49](https://github.com/MrQuality/kehila/issues/49#issuecomment-6154165059).
+Implementation is prepared for review; native PostgreSQL 16.15 evidence passed
+on 2026-10-14. See the [W1 report](m1-01-project-snapshots.md) for results and
+remaining application obligations. Final staged/hosted checks are tracked in the PR.
+This supplements the [successor plan](m1-01-remaining-delivery.md); its acceptance
+requirements remain normative. Execution results below do not accept a new ADR.
 
 ## Production codec and native test boundary
 
@@ -39,8 +42,8 @@ The required native command remains
 optional documented Podman connection. The new codec phase must execute under
 that command after implementation, not remain a disconnected manual example.
 The [native guide](../../storage/postgresql/README.md#disposable-native-verification)
-owns container setup/cleanup and limits. The maintainer must confirm memory
-readiness before heavy builds or service execution.
+owns container setup/cleanup and limits. Check available memory before heavy
+builds or service execution and ask the maintainer to free more if insufficient; recheck before the operation.
 
 The current shared verifier and hosted CI do not run this native suite. For the
 first slice, native execution is separately required PR evidence alongside
@@ -94,3 +97,43 @@ does not by itself establish native persistence compatibility.
 These checks retain [ADR-104](../architecture/ADR-104-project-create-codecs.md)'s
 ceilings and legacy isolation. Passing round trips for ordinary fixtures alone
 does not resolve the compatibility gates or qualify a native route.
+
+## W1 execution result (2026-10-14)
+
+The [W1 report](m1-01-project-snapshots.md) records implementation of the host
+bridge and separate native command, actual relational/JSONB fixtures and fixed
+pair verification. The text-size risk above was reproduced: 1,048,294 compact
+bytes became 1,048,577 JSONB text bytes. New native admission reserves structural
+formatting space and rejects NUL before database access. The exact 1 MiB text
+case passes. Historical codecs and all accepted ceilings remain unchanged.
+Original-byte duplicate checks and fixture reconstruction do not establish the
+future adapter's transactional attribution, authority or route admission.
+
+## Review follow-up acceptance checks
+
+Subprocess execution must retain descendant ownership after an early parent exit.
+Windows uses a supervisor that establishes a kill-on-close Job Object before
+launching the command; POSIX uses an owned process group. Parent completion and
+pipe drainage share the execution deadline. Cleanup must preserve the original
+failure and must not depend on a separate `taskkill` command. Regressions must
+check bounded return and descendant termination, not merely the direct exit code.
+
+Negative native cases must identify the expected production codec error;
+framing errors, process failures and subsequent fixture-equality failures cannot
+satisfy them. Relational negatives must vary revision and sequence independently
+and match the intended constraint or primary diagnostic as well as SQLSTATE.
+Include stored-row revision/version mismatches while both snapshots agree.
+Shared tests must detect omitted required native scenarios and exercise frame,
+parameter, build/artifact and target-confinement failure propagation. These
+orchestration tests do not replace execution against actual PostgreSQL.
+
+The helper's IPC frame has a separate bounded hexadecimal transport budget.
+Reject duplicate/unknown/missing fields and noncanonical decimal revisions there;
+contained storage records still enter the production bounded decoders. Native
+NUL rejection belongs to typed new-write preflight, with a distinct admission
+error; historical storage acceptance remains unchanged. Representation-stress
+fixtures use deterministic ASCII padding with independently verified JSONB text
+sizes and remain separate from domain-valid relational fixtures.
+
+Whole-creation compatibility, including the saved result, remains the explicit
+[W3 admission gate](m1-01-remaining-delivery.md#w3-creation-envelope-admission-obligation).

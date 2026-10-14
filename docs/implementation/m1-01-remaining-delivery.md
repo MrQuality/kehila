@@ -1,8 +1,15 @@
 # M1-01 remaining delivery: successor plan
 
-Status: Planning for maintainer review, 2026-10-13. Execution issue:
-[#49](https://github.com/MrQuality/kehila/issues/49). Implementation has not begun
-and requires explicit maintainer approval of the first slice.
+Status: W1 implementation approved by explicit maintainer instruction on
+2026-10-13 and prepared for review, as recorded in [#49](https://github.com/MrQuality/kehila/issues/49#issuecomment-6154165059).
+Later work packages and ADR-103 production adoption retain separate review gates.
+
+Planning [PR #50](https://github.com/MrQuality/kehila/pull/50) merged into main on
+2026-10-14 at 0c89bfbfd0c20b8556894e4c91c7814d6eacc96c. Implementation
+[PR #51](https://github.com/MrQuality/kehila/pull/51) now targets main and remains
+open for review. The working branch incorporates the merged planning baseline
+without rewriting its published implementation commits. W1 and W2-W7 completion
+remain separate from the planning merge; #49 stays open and #26 stays closed.
 
 ## Tracking decision and baseline
 
@@ -34,6 +41,12 @@ for production adoption. This plan accepts no additional architecture or product
 decision. The running worker remains on FerretDB; no native application adapter
 or supported configurable-model persistence path is implemented.
 
+The [W1 implementation report](m1-01-project-snapshots.md) records the delivered
+project snapshot codec, pair verification and bounded native JSONB admission,
+with Windows/Podman PostgreSQL 16.15 evidence from 2026-10-14. The plan below
+retains the acceptance requirements; fixture success does not complete the
+application adapter or later work packages.
+
 ## First-slice pre-execution plan
 
 1. **Goal and context:** Implement the separate version-one
@@ -52,8 +65,9 @@ or supported configurable-model persistence path is implemented.
 3. **Dependencies and prerequisites:** Reuse the pure codec's existing project
    mapping, shared project preflight/decoder and locked dependencies. Put real PostgreSQL 16 JSONB
    checks in the integration/fixture boundary, with no database driver in the
-   pure crate. Implementation waits for maintainer review and approval of #49.
-   Ask for memory readiness before memory-heavy builds or service execution.
+   pure crate. W1 execution is now approved; later packages remain pending review.
+   Check available memory before heavy builds/service execution and ask the
+   maintainer to free more when insufficient; use one compiler job.
 4. **Risks and mitigations:** A second project mapping could drift from saved
    results; reuse the canonical mapping. JSONB loses object-key order and
    duplicates; verify typed equality after storage and original-byte duplicate
@@ -89,13 +103,13 @@ them. No check above claims an implementation or successful test.
 These work packages preserve the existing acceptance scope. They establish
 ordering and review gates, not a commitment to one PR per package. Each stateful
 package needs its own bounded plan, negative/failure evidence and maintainer
-review before execution; implementation of even the first package is pending.
+review before execution. W1 is approved and in progress; other packages are pending.
 
 | Package | Prerequisites and boundary | Required exit evidence |
 | --- | --- | --- |
 | W1: Project snapshot codec and native verification | Explicit approval of the first-slice plan; Accepted ADR-104. No stateful application adapter. | Shared project mapping/preflight, production Rust-to-JSONB-to-Rust checks, relational versus representation fixtures, coherence rejection and resolved JSONB compatibility gates in the linked verification plan. |
 | W2: Actor/scope and stable allocation contracts | Review #40 under B-007/#11 and #41 under M1-02/#27, related #32. Can be planned alongside W1; no route exposure. | Trusted actor/scope, revocation, operation/replay lookup and stable retry target ownership are defined. Use these contracts before finalizing runtime adapter interfaces; do not infer them from payload shape or fingerprints. |
-| W3: Internal creation persistence adapter | W1 and W2 contracts before runtime interface finalization; separate dependency review and bounded transaction plan. ADR-103 disposition before production adoption. | Schema/startup compatibility, capability/connection/transaction ownership, coherent persistence and reload from one trusted result, request/core/result/snapshot attribution, stored-version corruption rejection, rollback and uncertain-response/contention evidence. |
+| W3: Internal creation persistence adapter | W1 and W2 contracts before runtime interface finalization; separate dependency review and bounded transaction plan. ADR-103 disposition before production adoption. | Schema/startup compatibility, capability/connection/transaction ownership, coherent persistence and reload from one trusted result, request/core/result/snapshot attribution, checked JSONB compatibility for every generated envelope (saved result and both snapshots), stored-version corruption rejection, rollback and uncertain-response/contention evidence. |
 | W4: Replay clocks and payload retirement/compaction | W3 operation persistence; trusted replay clock/retry contract and reviewed compactor capability. Keep compactor delivery separately reviewable from initial adapter persistence. | Actor/family/target-scoped lookup, 90-day replay, bounded retries, gap-free irreversible retirement to permanent tombstones and tombstone backup/restore. Serving privileges must not silently expand to compactor privileges. |
 | W5: Multi-command configuration and history | W3/W2 ownership contracts, applicable W4 replay semantics, and command-specific B-003 rules. Explicit versioned schema/codec evolution beyond creation-only guards. | Historical status, status-group assignment/grant, workflow, type, field and relationship-type references remain protected after item migration; configuration/item contention and replay after configuration changes. Coordinate work-item persistence with M1-02/#27. |
 | W6: Archive and current-selection coordination | W5 applicable state/history representation, M1-02 identity/selection persistence, authority and ADR-102 bounded transaction design. | Explicit archive/restore/selection-clear protocol with crash barriers, competing selections, retry and restore checks before archival routes. Readers observe neither accepted archives with stale selections nor selection clears from uncommitted archives. |
@@ -107,6 +121,26 @@ Linux-host evidence must be explicit, not inferred from Linux-hosted pure CI or
 a Linux container on Windows. Legacy translation is excluded until a dedicated
 approved migration RFC exists; isolation is required throughout these packages.
 Completion of W1 alone must not close #49 or claim completion of M1-01.
+
+### W3 creation-envelope admission obligation
+
+Before database admission, W3 must check every generated persistence envelope
+from the single accepted result: `operation_payloads.result`,
+`configuration_revisions.project_snapshot` and
+`configuration_revisions.configuration_snapshot`. Each must reject NUL and
+remain within the existing codec ceilings after PostgreSQL 16 JSONB text output.
+A successful `NativeRevisionSnapshots` admits only the snapshot pair; it is not
+whole-transaction admission. The adapter must require a checked aggregate or an
+explicit composition of checked boundaries and must not start persistence if
+any envelope fails. Its native tests must persist and reload the actual saved
+result alongside both snapshots, without placeholder result objects.
+
+The W1 representation-stress fixture demonstrates the distinction: its
+configuration text is exactly 1,048,576 bytes, while the corresponding saved
+result would be 1,048,824 bytes. The latter cannot be admitted for that read path.
+This is a W3 acceptance obligation under ADR-104's existing generated-envelope
+ceilings, not authorization to add an application adapter or raise a ceiling.
+A whole-creation admission API remains part of the separately reviewed W3 plan.
 
 ### ADR-103 disposition gate
 
@@ -123,7 +157,8 @@ plan under the [dependency policy](../engineering/DEPENDENCIES.md).
 
 Severity describes potential impact in the affected future capability; priority
 sets the applicable gate. These are requirements to verify, not observed native
-adapter defects. All remain pending implementation/evidence.
+adapter defects. W1 implementation/fixture evidence is recorded in the report above; adapter
+adoption and the later gates remain pending.
 
 | Item | Severity / priority | Gate and disposition |
 | --- | --- | --- |
@@ -133,7 +168,7 @@ adapter defects. All remain pending implementation/evidence.
 | Shared mapping and project preflight | Medium / P1 | W1 shares project encoding/decoding and validates strings before tree construction. |
 | Dependency ordering | Medium / P2 | W1-W7 expose prerequisites and exit evidence; later plans must split work into focused, reviewable PRs. |
 | ADR-103 production-adoption disposition | Low / P2 | Separate maintainer gate before W3 production adoption; status remains Proposed. |
-| JSONB text size expansion | Medium / P1 | W1 must measure near-limit associated configuration round trips and resolve bounded admission/read compatibility. Risk is unmeasured; no ceiling change is authorized. |
+| JSONB text size expansion | Medium / P1 | W1 must measure near-limit associated configuration round trips and resolve bounded admission/read compatibility. W1 measured the snapshot boundary; whole-creation saved-result compatibility remains an explicit W3 gate. No ceiling change is authorized. |
 | Codec-valid versus SQL-storable strings | Medium / P2 | W1 records codec preservation versus JSONB NUL rejection; W3 admission checks generated content before database admission without narrowing historical decode. |
 
 All four ADR-104 contracts remain mandatory. Future ingress must prove bounded

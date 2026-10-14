@@ -4,8 +4,12 @@
 //! acceptance. New native writes must enter through [`NativeRequest`].
 mod json;
 mod request;
+mod revision;
 pub use json::parse_json;
 pub use request::{decode_request, encode_request, fingerprint, verify_request, NativeRequest};
+pub use revision::{
+    encode_native_revision_snapshots, verify_revision_snapshots, NativeRevisionSnapshots,
+};
 
 /// Admission ceilings for codec resources, not product configuration policy.
 pub const MAX_STRING_BYTES: usize = 64 * 1024;
@@ -19,6 +23,7 @@ pub enum Error {
     LimitExceeded,
     DigestMismatch,
     InvalidNativeRequest,
+    InvalidNativeSnapshot(&'static str),
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -28,6 +33,9 @@ impl std::fmt::Display for Error {
             Self::LimitExceeded => f.write_str("codec resource limit exceeded"),
             Self::DigestMismatch => f.write_str("request fingerprint mismatch"),
             Self::InvalidNativeRequest => f.write_str("request cannot enter native storage"),
+            Self::InvalidNativeSnapshot(reason) => {
+                write!(f, "snapshot cannot enter native storage: {reason}")
+            }
         }
     }
 }
@@ -42,6 +50,7 @@ pub const MAX_NODES: usize = 16384;
 
 mod limits;
 mod v1;
+use task_contract::project::Project;
 use task_contract::project_create::ProjectCreateResult;
 use task_contract::work_item::Configuration;
 
@@ -71,4 +80,16 @@ pub fn decode_snapshot(version: u32, bytes: &[u8]) -> Result<Configuration, Erro
 pub fn encode_snapshot(configuration: &Configuration) -> Result<Vec<u8>, Error> {
     limits::configuration(configuration)?;
     limits::serialize(&v1::encode_snapshot(configuration))
+}
+
+/// Reconstruct a recorded Project under its stored codec version without current
+/// domain validation. Row/configuration coherence is a separate boundary.
+pub fn decode_project_snapshot(version: u32, bytes: &[u8]) -> Result<Project, Error> {
+    v1::decode_project_snapshot(&stored_json(version, bytes)?).map_err(Error::Malformed)
+}
+/// Preserve a complete recorded Project. This checks codec resources, not native
+/// storage admission, authority or current domain acceptance.
+pub fn encode_project_snapshot(project: &Project) -> Result<Vec<u8>, Error> {
+    limits::project(project)?;
+    limits::serialize(&v1::encode_project_snapshot(project))
 }

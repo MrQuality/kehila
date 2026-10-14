@@ -1,0 +1,14 @@
+{
+  "codec_version": 1,
+  "kind": "project_snapshot",
+  "value": {
+    "id": "project",
+    "name": "Project",
+    "prefix": "QA",
+    "configuration_revision": "1",
+    "next_sequence": "1",
+    "archived": false,
+    "estimate_unit": "hours",
+    "ever_estimated": false
+  }
+}

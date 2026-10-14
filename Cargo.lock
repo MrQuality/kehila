@@ -1060,6 +1060,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "project_snapshot_check"
+version = "0.1.0"
+dependencies = [
+ "project_create_codec",
+ "serde",
+ "serde_json",
+ "task_contract",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
