@@ -2,8 +2,8 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Concluded / supported recommendation; maintainer assessment pending |
-| Owner / assessor | Project maintainer; execution authorized; recommendation assessment remains separate |
+| Status / outcome | Completed; codec decision superseded by Accepted ADR-104 and production delivery in PR #48 |
+| Owner / assessor | Project maintainer; ADR-104 acceptance is recorded separately from experimental execution |
 | Created / last updated | 2026-10-08 / 2026-10-09 |
 | Tracking issue | [39](https://github.com/MrQuality/kehila/issues/39) |
 | Parent delivery issue | [#26](https://github.com/MrQuality/kehila/issues/26) |
@@ -283,31 +283,35 @@ observation comes from that documentation, not an additional executed case.
 
 ## Decision and follow-up
 
-Recommendation awaits maintainer assessment; no new D-* decision is accepted
-by executing this spike. #39 can be assessed against its scoped deliverables;
-keep it open until that assessment. #26 retains production implementation.
+Current disposition, 2026-10-14: the bounded investigation and its follow-ups
+are complete. [Accepted ADR-104](../architecture/ADR-104-project-create-codecs.md)
+provides the production codec decision; [PR #48](https://github.com/MrQuality/kehila/pull/48)
+delivered direct hashing ownership, bounded duplicate-aware decoding and checked
+new-native request admission. [PR #51](https://github.com/MrQuality/kehila/pull/51)
+delivered the separate project snapshot and native JSONB verification. #39 has no
+distinct remaining investigation and is closed as completed.
 
-Production promotion also requires direct sha2 dependency ownership in the
-fingerprinting crate and duplicate-key rejection during the first parse of
-original request JSON, before Value/JSONB loses that information. The application
-parser can enforce this without requiring a separate gateway. After identifier
-policy acceptance, align authoritative domain validation, storage constraints,
-interfaces and imports together, coordinating identity types with B-007.
+The experiment's proposed global identifier narrowing is not an accepted
+requirement. ADR-104 instead bounds new native requests while preserving public
+String wrappers and historical reconstruction. Legacy translation remains
+isolated until its dedicated approved migration RFC. This disposition does not
+authorize a broader identifier change.
 
-After acceptance, record the chosen codec and identifier policy, align pure
-ID validation and schemas without silent compatibility changes, then implement
-the native migration/roles and adapter with stored-version dispatch, exact
-reconstruction, digest coherence and corruption tests. #40/#41 remain separate
-route-integration dependencies. Preserve the proposed-v1 goldens as regression
-fixtures and add genuine older/newer fixtures when a second version is designed.
+Outstanding native adapter, stored-version integration, ingress, clock,
+compaction, platform and recovery obligations belong to [#49](https://github.com/MrQuality/kehila/issues/49).
+Actor authority and target allocation belong to #40/#41. Prototype-only build
+coupling is retained with the frozen experiment; hypothetical nullable SQL
+support is outside its non-null fixtures. Neither is unfinished production
+codec work. Preserve frozen evidence and goldens; they do not certify a runtime
+adapter, future nullable support or native Linux-host execution.
 
 ## Handoff
 
 Latest completed native run: R11, with R08/R09/R10 retained as historical evidence.
-The bounded recommendation is ready for
-maintainer assessment. No additional database-engine spike is required for
-these questions. Next decision: accept or revise the representations and
-identifier policy before promoting them into production code.
+The bounded experiment is complete; current production decisions and remaining
+delivery owners are recorded above. Historical run and follow-up sections below
+describe their original source revisions, not current issue states. No further
+SP-003 execution or separate representation decision is pending.
 
 ## Verification correction plan (2026-10-09)
 

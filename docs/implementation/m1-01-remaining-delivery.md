@@ -215,9 +215,9 @@ evidence. Action stacks #44 remains postponed.
 ## Historical issue reconciliation
 
 #26 remains closed. #47's stated codec scope landed in PR #48 and is complete;
-PR #51 adds W1. #39 retains its concluded experimental history and separate
-historical assessment/follow-up disposition. Successor links clarify where unfinished implementation
-is tracked without rewriting frozen observations or silently accepting historical
-proposals. Their issue states are reconciled separately. Historical
-pending-assessment text must be read alongside ADR-104's explicit acceptance;
-it does not override ADR-103's separately Proposed status.
+PR #51 adds W1. #39 is complete: Accepted ADR-104 supersedes its codec
+recommendation and PR #48 delivers the production codec. Historical experiment
+observations remain frozen; global identifier narrowing is not authorized.
+Remaining application delivery belongs to #49, with authority/allocation
+contracts in #40/#41. There is no separate pending historical-assessment task.
+ADR-103 retains its separately Proposed status.

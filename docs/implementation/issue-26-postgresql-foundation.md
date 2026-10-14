@@ -1,19 +1,20 @@
 # Native PostgreSQL foundation: local implementation plan
 
-Status: Foundation prepared for PR review, 2026-10-11. Related: #26/B-005, #39, #40, #41.
-Base: main at 12871228bae3a1b6a45b08f188741a18631ac5d7.
+Status: Foundation merged in PR #46; current handoff updated 2026-10-14.
+Related: historical #26/B-005, completed #39, continuing #49, dependencies #40/#41.
+Original implementation base: main at 12871228bae3a1b6a45b08f188741a18631ac5d7.
 The foundation is a bounded storage slice, not completion of M1-01. GitHub #26
 is closed despite outstanding production deliverables; its closure is not
-implementation evidence. #39 remains open. Remaining work is listed below.
+implementation evidence. #39's experiment is complete. Remaining work is listed below.
 
-## Current execution tracking (2026-10-13)
+## Current execution tracking (2026-10-14)
 
 PR #46 and PR #48 are merged. Remaining M1-01 production delivery now belongs to
 [#49](https://github.com/MrQuality/kehila/issues/49) and the
 [successor plan](m1-01-remaining-delivery.md). By maintainer direction, historical
-#26 remains closed. W1 execution was explicitly approved on 2026-10-13. Its
+#26 remains closed. W1 merged in PR #51 on 2026-10-14. Its
 [project snapshot report](m1-01-project-snapshots.md) records the implemented
-codec, pair coherence and native JSONB admission/verification prepared for review.
+codec, pair coherence and native JSONB admission/verification. W2-W7 remain outstanding.
 Later packages retain their review gates. ADR-104 is Accepted; ADR-103 remains
 Proposed. This current
 tracking record supersedes historical next-step/status references below without

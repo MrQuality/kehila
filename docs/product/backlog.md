@@ -127,8 +127,9 @@ records; frozen failures and missing production checks must stay visible.
 [SP-004/#40](../spikes/SP-004-actor-authority.md), under #11 (related #32), and
 [SP-005/#41](../spikes/SP-005-project-target-allocation.md), under #27, remain
 native-route dependencies. #47's scoped production codec delivery is complete
-through PR #48, with W1 supplied by PR #51. #39 retains concluded experimental
-evidence and its separate historical assessment/follow-up disposition. See #49 for the execution checklist
+through PR #48, with W1 supplied by PR #51. #39 is complete; Accepted ADR-104
+supersedes its codec recommendation. Remaining delivery belongs to #49, not an
+open historical assessment. See #49 for the execution checklist
 and linked evidence. W1 approval does not approve later packages or ADR-103
 production adoption.
 
