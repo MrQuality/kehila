@@ -4,6 +4,8 @@ import os
 import re
 import signal
 import subprocess
+import sys
+import time
 import tempfile
 import threading
 from pathlib import Path
@@ -14,35 +16,67 @@ READ_LIMIT = RECORD_LIMIT + 2 * 16384
 FRAME_LIMIT = READ_LIMIT * 4 + 4096
 
 
+def windows_child(command):
+    """Own the command and its descendants before executing any command code.
+
+    The supervisor's job handle is deliberately kept until process teardown.
+    Exiting or killing the supervisor closes it and kills remaining descendants.
+    No descendant can race job assignment: only this supervisor exists until then.
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    class BasicLimits(ctypes.Structure):
+        _fields_ = [('process_time', ctypes.c_int64), ('job_time', ctypes.c_int64),
+                    ('flags', wintypes.DWORD), ('minimum', ctypes.c_size_t),
+                    ('maximum', ctypes.c_size_t), ('active', wintypes.DWORD),
+                    ('affinity', ctypes.c_size_t), ('priority', wintypes.DWORD),
+                    ('scheduling', wintypes.DWORD)]
+
+    class ExtendedLimits(ctypes.Structure):
+        _fields_ = [('basic', BasicLimits), ('io', ctypes.c_uint64 * 6),
+                    ('process_memory', ctypes.c_size_t), ('job_memory', ctypes.c_size_t),
+                    ('peak_process', ctypes.c_size_t), ('peak_job', ctypes.c_size_t)]
+
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+    kernel.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel.SetInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int,
+                                               ctypes.c_void_p, wintypes.DWORD]
+    kernel.SetInformationJobObject.restype = wintypes.BOOL
+    kernel.GetCurrentProcess.restype = wintypes.HANDLE
+    kernel.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    kernel.AssignProcessToJobObject.restype = wintypes.BOOL
+    job = kernel.CreateJobObjectW(None, None)
+    limits = ExtendedLimits()
+    limits.basic.flags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE; no breakaway.
+    if not (job and kernel.SetInformationJobObject(job, 9, ctypes.byref(limits),
+                                                   ctypes.sizeof(limits))
+            and kernel.AssignProcessToJobObject(job, kernel.GetCurrentProcess())):
+        raise OSError('cannot establish snapshot process ownership')
+    return subprocess.call(command, stdin=sys.stdin.buffer, stdout=sys.stdout.buffer,
+                           stderr=sys.stderr.buffer, creationflags=subprocess.CREATE_NO_WINDOW)
+
+
 def bounded(command, data=b'', *, limit=FRAME_LIMIT, timeout=60):
-    """Bound both pipes while draining concurrently; own process through exit."""
+    """One deadline covers parent exit and both pipes; cleanup owns descendants."""
     chunks = [bytearray(), bytearray()]
+    changed = threading.Event()
+    failures = []
     overflow = threading.Event()
     with tempfile.TemporaryFile() as source:
         source.write(data)
         source.seek(0)
-        options = ({'creationflags': subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW}
+        options = ({'creationflags': subprocess.CREATE_NO_WINDOW}
                    if os.name == 'nt' else {'start_new_session': True})
-        with subprocess.Popen(command, cwd=ROOT, stdin=source,
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, **options) as process:
-            termination = threading.Lock()
+        launched = ([sys.executable, str(Path(__file__).resolve()),
+                     '--owned-windows-child', json.dumps(command)]
+                    if os.name == 'nt' else command)
+        process = subprocess.Popen(launched, cwd=ROOT, stdin=source, bufsize=0,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, **options)
 
-            def terminate():
-                with termination:
-                    if process.poll() is not None:
-                        return
-                    if os.name == 'nt':
-                        stopped = subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
-                            capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
-                        if stopped.returncode != 0 and process.poll() is None:
-                            process.kill()
-                    else:
-                        try:
-                            os.killpg(process.pid, signal.SIGKILL)
-                        except ProcessLookupError:
-                            pass
-
-            def drain(stream, index, cap):
+        def drain(stream, index, cap):
+            try:
                 while True:
                     chunk = stream.read(min(65536, cap + 1 - len(chunks[index])))
                     if not chunk:
@@ -50,26 +84,62 @@ def bounded(command, data=b'', *, limit=FRAME_LIMIT, timeout=60):
                     chunks[index].extend(chunk)
                     if len(chunks[index]) > cap:
                         overflow.set()
-                        terminate()
                         break
-            readers = [threading.Thread(target=drain, args=(process.stdout, 0, limit)),
-                       threading.Thread(target=drain, args=(process.stderr, 1, 65536))]
-            for reader in readers:
-                reader.start()
-            try:
-                process.wait(timeout=timeout)
+            except OSError as error:
+                failures.append(error)
             finally:
-                if process.poll() is None:
-                    terminate()
-                    process.wait(timeout=5)
-                for reader in readers:
-                    reader.join(timeout=5)
-                if any(reader.is_alive() for reader in readers):
-                    raise ValueError('snapshot subprocess pipe did not close')
+                changed.set()
+
+        readers = [threading.Thread(target=drain, args=(process.stdout, 0, limit), daemon=True),
+                   threading.Thread(target=drain, args=(process.stderr, 1, 65536), daemon=True)]
+        for reader in readers:
+            reader.start()
+        failure = None
+        deadline = time.monotonic() + timeout
+        try:
+            while process.poll() is None or any(reader.is_alive() for reader in readers):
+                if overflow.is_set():
+                    raise ValueError('snapshot subprocess output overflow')
+                if failures:
+                    raise ValueError('snapshot subprocess pipe read failed') from failures[0]
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise subprocess.TimeoutExpired(command, timeout)
+                changed.wait(min(remaining, 0.02))
+                changed.clear()
             if overflow.is_set():
                 raise ValueError('snapshot subprocess output overflow')
-            return subprocess.CompletedProcess(command, process.returncode,
-                                               bytes(chunks[0]), bytes(chunks[1]))
+            if failures:
+                raise ValueError('snapshot subprocess pipe read failed') from failures[0]
+        except BaseException as error:
+            failure = error
+        finally:
+            cleanup_error = None
+            try:
+                if os.name == 'nt':
+                    if process.poll() is None:
+                        process.kill()  # Closing the supervisor's job kills its tree.
+                else:
+                    try:
+                        os.killpg(process.pid, signal.SIGKILL)  # Also after parent exit.
+                    except ProcessLookupError:
+                        pass
+                process.wait(timeout=2)
+            except (OSError, subprocess.SubprocessError) as error:
+                cleanup_error = error
+            cleanup_deadline = time.monotonic() + 2
+            for reader in readers:
+                reader.join(timeout=max(0, cleanup_deadline - time.monotonic()))
+            if any(reader.is_alive() for reader in readers):
+                cleanup_error = ValueError('snapshot subprocess pipe did not close')
+            process.stdout.close()
+            process.stderr.close()
+            if failure is not None:
+                raise failure from cleanup_error
+            if cleanup_error is not None:
+                raise cleanup_error
+        return subprocess.CompletedProcess(command, process.returncode,
+                                           bytes(chunks[0]), bytes(chunks[1]))
 
 
 def require(ok, message):
@@ -219,3 +289,13 @@ def run(database):
                  if os.name == 'nt' else 'project_snapshot_check')
         require(binary.is_file(), 'production snapshot helper artifact missing')
         SnapshotCheck(database, binary).run()
+
+
+if __name__ == '__main__':
+    try:
+        if os.name != 'nt' or len(sys.argv) != 3 or sys.argv[1] != '--owned-windows-child':
+            raise ValueError('internal snapshot supervisor invocation required')
+        sys.exit(windows_child(json.loads(sys.argv[2])))
+    except (OSError, ValueError, subprocess.SubprocessError):
+        print('ERR_SNAPSHOT_PROCESS: owned command could not execute', file=sys.stderr)
+        sys.exit(3)

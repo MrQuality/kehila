@@ -1,8 +1,10 @@
 """Failure and framing contracts for the production-codec/native test bridge."""
 import importlib.util
 import json
+import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -35,6 +37,35 @@ class ProcessTests(unittest.TestCase):
             bridge.bounded([sys.executable, '-c',
                 'import subprocess,sys,time;subprocess.Popen([sys.executable,"-c",'
                 '"import time;time.sleep(30)"]);time.sleep(30)'], timeout=0.3)
+
+    def test_exited_parent_cannot_leave_descendant_pipes_past_deadline(self):
+        started = time.monotonic()
+        command = [sys.executable, '-c',
+            'import subprocess,sys;child=subprocess.Popen([sys.executable,"-c",'
+            '"import time;time.sleep(3)"]);print(child.pid,flush=True)']
+        if os.name == 'nt':
+            result = bridge.bounded(command, timeout=1)
+            self.assertEqual(result.returncode, 0)
+            # Successful early cleanup is valid only if the descendant is dead.
+            import ctypes
+            from ctypes import wintypes
+            kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+            kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+            kernel.OpenProcess.restype = wintypes.HANDLE
+            kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+            kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+            child = kernel.OpenProcess(0x100000, False, int(result.stdout))
+            if child:
+                try:
+                    self.assertEqual(kernel.WaitForSingleObject(child, 0), 0,
+                                     'descendant remains alive after supervisor exit')
+                finally:
+                    kernel.CloseHandle(child)
+        else:
+            with self.assertRaises(subprocess.TimeoutExpired):
+                bridge.bounded(command, timeout=0.2)
+        self.assertLess(time.monotonic() - started, 2)
+
 
 
 class SqlBridgeTests(unittest.TestCase):
