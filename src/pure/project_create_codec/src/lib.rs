@@ -23,6 +23,7 @@ pub enum Error {
     LimitExceeded,
     DigestMismatch,
     InvalidNativeRequest,
+    InvalidNativeSnapshot(&'static str),
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -32,6 +33,9 @@ impl std::fmt::Display for Error {
             Self::LimitExceeded => f.write_str("codec resource limit exceeded"),
             Self::DigestMismatch => f.write_str("request fingerprint mismatch"),
             Self::InvalidNativeRequest => f.write_str("request cannot enter native storage"),
+            Self::InvalidNativeSnapshot(reason) => {
+                write!(f, "snapshot cannot enter native storage: {reason}")
+            }
         }
     }
 }

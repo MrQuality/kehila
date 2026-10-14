@@ -98,7 +98,7 @@ fn native_revision_admission_rejects_nul_without_changing_historical_codecs() {
         assert!(encode_snapshot(&bad.configuration).is_ok());
         assert_eq!(
             encode_native_revision_snapshots(&bad).err(),
-            Some(Error::Malformed("JSONB cannot store NUL"))
+            Some(Error::InvalidNativeSnapshot("JSONB cannot store NUL"))
         );
     }
     let mut literal = r;
@@ -114,18 +114,13 @@ fn native_admission_reserves_postgresql_formatting_space_at_the_byte_boundary() 
     for status in &mut r.configuration.statuses {
         status.name = "x".repeat(65_500);
     }
-    let mut low = 0;
-    let mut high = MAX_STRING_BYTES;
-    while low < high {
-        let n = (low + high).div_ceil(2);
-        r.configuration.statuses[15].name = "x".repeat(n);
-        if encode_native_revision_snapshots(&r).is_ok() {
-            low = n;
-        } else {
-            high = n - 1;
-        }
-    }
-    r.configuration.statuses[15].name = "x".repeat(low);
+    // This frozen 16-status shape adds 283 structural JSONB spaces. The native
+    // bridge independently checks PostgreSQL's actual text output at the ceiling.
+    r.configuration.statuses[15].name.clear();
+    let base = encode_snapshot(&r.configuration).unwrap().len();
+    let padding = MAX_RECORD_BYTES - base - 283;
+    assert!(padding <= MAX_STRING_BYTES);
+    r.configuration.statuses[15].name = "x".repeat(padding);
     assert!(encode_native_revision_snapshots(&r).is_ok());
     r.configuration.statuses[15].name.push('x');
     assert!(encode_snapshot(&r.configuration).is_ok());

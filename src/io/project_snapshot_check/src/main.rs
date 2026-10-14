@@ -104,7 +104,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let (p, c) = match args[1].as_str() {
                 "nul" | "overflow" => {
                     let expected = if args[1] == "nul" {
-                        Error::Malformed("JSONB cannot store NUL")
+                        Error::InvalidNativeSnapshot("JSONB cannot store NUL")
                     } else {
                         Error::LimitExceeded
                     };
