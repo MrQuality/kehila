@@ -259,13 +259,12 @@ design's accepted [bounded-transaction direction](../architecture/ADR-102-postgr
 
 **Status:** One authenticated local owner accepted; onboarding, session expiry/recovery, browser CSRF, CLI access, and enforcement remain to design and implement. **Dependencies:** B-002, B-003.
 
-[SP-004/#40](../spikes/SP-004-actor-authority.md) now contains the source inventory,
-proposed trusted actor/initial-owner mapping and revocation contract for review,
-with explicit decision inputs and A01-A08 acceptance cases. No authentication
-mechanism or new permission policy is accepted and no experiment has run.
-The proposal now defines original-scope replay/policy interpretation, read
-snapshot/revocation ordering, authenticated framing requirements and a proposed
-disposable-overlay boundary requiring review, with bounded serving/history-audit checks.
+[SP-004/#40](../spikes/SP-004-actor-authority.md) records the contract approved and
+merged in PR #53 on 2026-10-14, plus a passed serial A05 grant-management subset
+on native PostgreSQL 16.15. The failed privilege attempt and correction remain
+recorded. Full A05, concurrent/read/replay cases and actual authentication,
+session and internal-channel mechanisms remain outstanding. This is experimental
+evidence with explicit fixture/overlay limits, not production access delivery.
 This is the W2 prerequisite for #49; #41 owns subsequent stable target allocation.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).

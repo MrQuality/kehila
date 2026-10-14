@@ -199,6 +199,19 @@ single-host MongoDB URI for a different disposable development instance. It uses
 the `yaja` database. Never point regression tests at a supported user installation.
 No host Python packages or production CDC/indexer are required.
 
+Each child binds port zero and reports `KEHILA_BOUND_ADDR` after binding. The
+runner discovers that owned loopback address from at most 8 KiB of startup output
+within 25 seconds, then requires HTTP health readiness. It never releases a
+probed port for another process to claim before startup. Missing, malformed,
+duplicate or incomplete address reports cannot satisfy discovery.
+
+The Go test runner and live runner own their temporary build directories. After
+child processes exit, deletion retries only Windows access/sharing/lock errors
+(5/32/33), for at most 30 seconds. Other errors and an exhausted retry deadline
+still fail verification. Cleanup never targets a path outside the allocated
+temporary directory; an earlier test failure remains visible if cleanup also
+fails.
+
 The runner tests 48 competing create/update/identical-retry/changed-content pairs
 across two processes, replay after later updates, direct-worker request guards,
 a stalled request body while other reads proceed, a stalled database connection

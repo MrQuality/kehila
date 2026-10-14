@@ -132,22 +132,20 @@ usable engineering prerequisites. The running worker still uses FerretDB. There
 is no supported native application command path, so the B-005 configurable
 project/task and restart/recovery acceptance criteria have not been met.
 
-The immediate dependency is W2. Prepare a bounded #40/SP-004 plan for maintainer
-review using the existing single-owner local access requirements in B-007/#11.
-Identify where the current API and worker obtain actor and permission context;
-specify a trusted actor/session boundary, initial-owner mapping, current grant
-and revocation ownership, and authorization precedence before replay details.
-List product decisions separately from facts established by the prototype. The
-plan should name denied spoofed, absent/expired, cross-scope and revoked actors,
-plus competing creation/replay and revocation schedules as required evidence.
-An experimental identity fixture cannot establish production authentication.
+W2's [#40/SP-004 contract](../spikes/SP-004-actor-authority.md) was approved and
+merged in PR #53 on 2026-10-14 at `988631a353b3086769e302943fa0d7b7fbebffd1`.
+The first serial A05 management subset passed against its declared native overlay,
+after correcting a deferred-trigger read privilege failure. Full A05 and other
+cases remain outstanding; actual credential/session/channel choices are not
+supplied by the verified-identity fixture. W2 is not complete. See the canonical
+SP-004 record for exact evidence, pending cases and the next bounded slice.
 
-After that contract is reviewed, plan #41/SP-005's stable target allocation and
+Plan #41/SP-005's stable target allocation and
 response-loss reconciliation against the same actor/family/target/token scope.
 Use both contracts before finalizing W3 adapter interfaces. W3 still needs a
 separate transaction/dependency plan and ADR-103 production-adoption disposition;
-W4-W7 retain their own gates. This next planning action does not execute either
-spike, expose routes, or accept a new product or architecture decision.
+W4-W7 retain their own gates. The bounded SP-004 evidence exposes no native route
+and does not qualify authentication or accept ADR-103 production adoption.
 
 ### W3 creation-envelope admission obligation
 
