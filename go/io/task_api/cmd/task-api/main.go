@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -35,6 +36,11 @@ func main() {
 	if worker == "" || search == "" {
 		log.Fatal("KEHILA_WORKER_URL and KEHILA_SEARCH_URL are required")
 	}
+	listener, err := net.Listen("tcp", listen)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("KEHILA_BOUND_ADDR=%s\n", listener.Addr())
 	server := &http.Server{
 		Addr:              listen,
 		Handler:           taskapi.NewHandler(worker, search),
@@ -43,5 +49,5 @@ func main() {
 		WriteTimeout:      10 * time.Second,
 		MaxHeaderBytes:    8192,
 	}
-	log.Fatal(server.ListenAndServe())
+	log.Fatal(server.Serve(listener))
 }

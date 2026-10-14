@@ -8,11 +8,12 @@ from contextlib import ExitStack
 import json
 import os
 from pathlib import Path
+import re
 import select
 import socket
 import socketserver
 import subprocess
-import tempfile
+import sys
 import threading
 import time
 import urllib.error
@@ -23,6 +24,8 @@ import uuid
 from live_task_worker import uuid7
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+from temp_work import owned_directory
 
 
 def call(base, path, payload=None, headers=None):
@@ -50,10 +53,28 @@ def wait_ready(base, processes, timeout=25):
     raise AssertionError('Task-path readiness deadline exceeded')
 
 
-def port():
-    with socket.socket() as connection:
-        connection.bind(('127.0.0.1', 0))
-        return connection.getsockname()[1]
+def bound_base(log_path, process, timeout=25):
+    """Discover the address already owned by this child; never probe/release a port."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        with log_path.open('rb') as log:
+            output = log.read(8193)
+        if len(output) > 8192:
+            raise AssertionError('Child startup output exceeds 8 KiB')
+        if process.poll() is not None:
+            raise AssertionError('Child exited before address discovery: ' +
+                                 output.decode('utf-8', errors='replace'))
+        lines = [line for line in output.splitlines(keepends=True)
+                 if line.startswith(b'KEHILA_BOUND_ADDR=') and line.endswith(b'\n')]
+        if len(lines) > 1:
+            raise AssertionError('Child reported multiple bound addresses')
+        if lines:
+            match = re.fullmatch(rb'KEHILA_BOUND_ADDR=127\.0\.0\.1:([0-9]{1,5})\r?\n', lines[0])
+            if match is None or not 1 <= int(match.group(1)) <= 65535:
+                raise AssertionError('Child reported an invalid bound address')
+            return 'http://127.0.0.1:' + str(int(match.group(1)))
+        time.sleep(0.05)
+    raise AssertionError('Child bound-address deadline exceeded')
 
 
 class FaultProxy(socketserver.ThreadingTCPServer):
@@ -201,7 +222,7 @@ def main():
     worker = str(Path(metadata['target_directory']) / 'debug' / ('task_worker' + extension))
     environment = dict(os.environ, KEHILA_MONGO_URL=uri, KEHILA_TASK_DB='yaja',
                        KEHILA_TASK_COLLECTION='kehila_test_' + uuid.uuid4().hex)
-    with tempfile.TemporaryDirectory(prefix='kehila-task-path-') as folder, ExitStack() as owned:
+    with owned_directory('kehila-task-path-') as folder, ExitStack() as owned:
         api = str(Path(folder) / ('task-api' + extension))
         subprocess.run(['go', 'build', '-o', api, './go/io/task_api/cmd/task-api'], cwd=ROOT, check=True, timeout=90)
         # Register cleanup before installation, including partially created indexes.
@@ -217,17 +238,17 @@ def main():
                                        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
             owned.callback(stop, process)
             processes.append(process)
+            return process, Path(log.name)
 
         bases = []
         for index in range(2):
-            address = '127.0.0.1:' + str(port())
-            worker_env = dict(environment, KEHILA_WORKER_LISTEN_ADDR=address)
+            worker_env = dict(environment, KEHILA_WORKER_LISTEN_ADDR='127.0.0.1:0')
             if index == 0:
                 credentials = parsed.netloc.rsplit('@', 1)[0] + '@' if '@' in parsed.netloc else ''
                 worker_env['KEHILA_MONGO_URL'] = urllib.parse.urlunsplit(parsed._replace(
                     netloc=credentials + '127.0.0.1:' + str(proxy.server_address[1])))
-            launch([worker], worker_env)
-            bases.append('http://' + address)
+            process, log_path = launch([worker], worker_env)
+            bases.append(bound_base(log_path, process))
             wait_ready(bases[-1], processes)
         concurrency(bases)
         boundary(bases[0])
@@ -235,10 +256,11 @@ def main():
         # Reserve an unserved socket to make search unavailability deterministic.
         unavailable = owned.enter_context(socket.socket())
         unavailable.bind(('127.0.0.1', 0))
-        address = '127.0.0.1:' + str(port())
-        launch([api], dict(environment, KEHILA_LISTEN_ADDR=address, KEHILA_WORKER_URL=bases[0],
-                           KEHILA_SEARCH_URL='http://127.0.0.1:' + str(unavailable.getsockname()[1])))
-        api_base = 'http://' + address
+        process, log_path = launch(
+            [api], dict(environment, KEHILA_LISTEN_ADDR='127.0.0.1:0',
+                        KEHILA_WORKER_URL=bases[0],
+                        KEHILA_SEARCH_URL='http://127.0.0.1:' + str(unavailable.getsockname()[1])))
+        api_base = bound_base(log_path, process)
         wait_ready(api_base, processes)
         first = mutation()
         saved = call(api_base, '/tasks/go-rust', first,

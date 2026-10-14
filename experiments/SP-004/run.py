@@ -14,8 +14,6 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 import check_postgresql as native
 
 CHANGE = "sp004.change_grant('actor','actor','created',{}, {}, '{}')"
-SIGNATURE = ('sp004.change_grant(kehila.ident,kehila.ident,kehila.ident,'
-             'kehila.u64,boolean,kehila.operation_token)')
 
 
 def bounded(statement):

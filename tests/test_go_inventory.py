@@ -70,7 +70,7 @@ class GoInventoryTests(unittest.TestCase):
             sys.path.pop(0)
         with patch.object(runner, 'go_files', side_effect=RuntimeError('module omitted')), \
                 patch.object(runner.subprocess, 'run') as run, \
-                patch.object(runner.tempfile, 'mkdtemp') as allocate:
+                patch.object(runner, 'owned_directory') as allocate:
             with self.assertRaisesRegex(RuntimeError, 'module omitted'):
                 runner.main()
             run.assert_not_called()
