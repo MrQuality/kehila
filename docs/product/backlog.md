@@ -30,6 +30,16 @@ An explicit scoped amendment or successor to [D-012](decisions.md#d-012) and
 linked product records are required before implementation changes that scope.
 The existing M1 scope and M0–M4 delivery plan remain unchanged.
 
+## Engineering maintenance
+
+[#55](https://github.com/MrQuality/kehila/issues/55) tracks sequential verification
+and automatic ownership/cleanup of short-lived test services, building on PR #54.
+The implementation builds before service startup, uses one compiler job, and
+runs NATS, OpenSearch and PostgreSQL/FerretDB in separate required phases.
+It is submitted for review with service-backed evidence in the
+[testing guide](../TESTING.md#owned-test-services). This changes development
+resource overlap; it completes no product milestone or #49 delivery obligation.
+
 ## Proposed milestones and order
 
 These M0–M4 labels are **product delivery milestones**, not the independent

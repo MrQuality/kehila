@@ -35,12 +35,95 @@ module to both the inventory and workspace before relying on shared checks.
 See [qualification](engineering/QUALIFICATION.md) for future property, fault,
 performance, recovery and release campaigns and their current evidence boundaries.
 
-Run the full suite after starting the development services:
+Run the full suite with a ready container engine:
+
+```text
+python scripts/setup_env.py --hooks-only
+python scripts/verify.py
+```
+
+### Owned test services
+
+Full verification first runs tooling/static checks, precompiles the complete
+Rust workspace test executables, runs frozen oracles and Go tests, and prepares
+both live task-path binaries. Child commands use `CARGO_BUILD_JOBS=1` and append
+`-p=1` to existing `GOFLAGS`; compiler parallelism is bounded without reducing
+test counts or changing application concurrency.
+
+Only then does it start unique, disposable Compose projects, one phase at a time:
+
+| Phase | Running services | Required checks |
+| --- | --- | --- |
+| Workspace execution | NATS | TCP readiness, account API probe and all Rust workspace tests, including the live broker round trip |
+| Search readiness | OpenSearch | TCP readiness and yellow/green HTTP cluster health |
+| Task path | PostgreSQL, FerretDB | Both TCP probes and complete two-worker contention, request/dependency deadline, recovery and Go-to-Rust/search-unavailable checks |
+
+The runner verifies one running owned container for each requested service,
+then confirms no owned containers remain after teardown. Each project is removed
+with its volumes before the next phase starts. The
+runner registers cleanup before startup, so partial starts, failed checks and
+child-command timeouts still clean up. Failure diagnostics are printed before
+teardown; cleanup failures remain errors and retain an earlier test error.
+Normal interruption unwinds these contexts. Forced process termination or host
+failure can prevent cleanup; inspect resources carrying the printed unique
+`kehila-test-...` project label before removing any leftover test project.
+
+Default engine selection tries a ready Podman runtime, then Docker. Use
+`--engine docker` or `--engine podman` to select explicitly. On Windows an
+explicit stopped Podman machine can be owned for the run:
+
+```text
+python scripts/verify.py --engine podman --podman-machine NAME
+```
+
+Use the name reported by `podman machine list`. The VM starts after builds.
+An already-running VM remains running. A VM started by this run stops only after
+both rootless and rootful stores contain no active containers; unrelated work
+keeps it running. No VM is created or deleted, and no default connection changes.
+VM cleanup requires the machine-created `NAME` and `NAME-root` connections;
+the runner verifies their endpoints against the inspected machine before querying
+either store. The standard `CONTAINER_CONNECTION` variable selects an existing Podman connection
+when needed; select the connection belonging to the requested machine.
+
+For commit hooks, set `KEHILA_TEST_ENGINE` and optionally
+`KEHILA_TEST_PODMAN_MACHINE` in the shell that invokes Git; the verifier uses them
+as defaults for the equivalent CLI arguments. CI selects Docker and uses this
+same lifecycle for both shared and staged verification. The staged source
+export, pure/full classification and failure checks remain required.
+
+The shared host ports must be free. Existing development containers are neither
+borrowed nor stopped by the owned mode. To keep a manually managed disposable
+development stack running, use these commands instead:
 
 ```text
 python scripts/setup_env.py --start
-python scripts/verify.py
+python scripts/verify.py --external-services
 ```
+
+That explicit mode performs all full checks against existing services and leaves
+their lifecycle to the caller. It does not provide the overlap reduction of the
+owned mode. Native PostgreSQL investigations retain their separate documented
+container/resource preflight and qualification scope.
+
+### Lifecycle verification record
+
+The source at `20c1664` passed the full staged gate on Windows/WSL2/Podman on
+2026-10-14: 170 tooling tests (168 passed, two POSIX-only skips), all Rust
+workspace tests with NATS, Go checks/tests, frozen oracles, OpenSearch readiness
+and the complete live task-path checks. The gate began with a stopped explicit
+VM; each owned service group was removed and the VM stopped automatically.
+An additional real NATS run deliberately raised a test failure after startup:
+the original failure survived, its project was removed, and the VM stopped.
+
+The first lifecycle attempt passed its live checks but failed snapshot cleanup
+because `podman machine ssh` created a literal Windows `NUL` known-hosts file.
+VM cleanup now uses registered Podman connections with checked machine/store
+endpoints. Regression tests additionally reject missing owned containers,
+remaining containers after successful-looking teardown, foreign/missing machine
+connections, and cleanup errors that would conceal test failures. Pure/docs and
+staged-selection regression checks remain in the shared suite. These results
+verify test lifecycle behavior, not a controlled memory benchmark or a new
+native application adapter. Tracking: [#55](https://github.com/MrQuality/kehila/issues/55).
 
 Run unit tests without external services:
 
@@ -234,7 +317,7 @@ Python experiment adapters with search running; it is not a Rust CDC test.
 
 During implementation, run the affected pure and boundary tests. After changes
 to the worker, API, storage decisions, dependencies, or verification runner, run
-`python scripts/verify.py` once against running disposable services on the final
+`python scripts/verify.py` once with its owned disposable services on the final
 revision. This includes the live task-path runner; do not substitute `--pure` or
 a previous revision's passing CI. Run `cargo fmt --all -- --check` and check
 changed Go files with `gofmt`. Required GitHub CI must pass on the final revision.
