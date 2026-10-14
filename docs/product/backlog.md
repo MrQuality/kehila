@@ -258,6 +258,12 @@ design's accepted [bounded-transaction direction](../architecture/ADR-102-postgr
 
 **Status:** One authenticated local owner accepted; onboarding, session expiry/recovery, browser CSRF, CLI access, and enforcement remain to design and implement. **Dependencies:** B-002, B-003.
 
+[SP-004/#40](../spikes/SP-004-actor-authority.md) now contains the source inventory,
+proposed trusted actor/initial-owner mapping and revocation contract for review,
+with explicit decision inputs and A01-A08 acceptance cases. No authentication
+mechanism or new permission policy is accepted and no experiment has run.
+This is the W2 prerequisite for #49; #41 owns subsequent stable target allocation.
+
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 
 **Deliverable:** The agreed local identity/access model and enforceable permissions for configured operations, extended as resource and cost features arrive.

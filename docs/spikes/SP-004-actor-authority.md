@@ -73,7 +73,7 @@ The following mapping requires maintainer review under Q-014.
 | Read project/items/history and corresponding projections | Active actor with an active `initial_owner` grant in that project. |
 | Project/configuration administration, item mutation, knowledge and archive/restore | Active project owner may satisfy the applicable M1 command grants in that project; domain restrictions and retained original replay scope still apply. |
 | Relationship/type use and cross-project Link | Evaluate the required grants separately in every owning/endpoint project. Ownership of one project gives no rights in another. |
-| Status-group administration | Project administration can satisfy the accepted administration boundary; do not invent delegated memberships or weaken D-030's both-group rule. Delegated provisioning remains #32. |
+| Status-group administration | Project administration can satisfy the accepted administration boundary; do not invent delegated memberships or weaken D-028's both-group rule. Delegated provisioning remains #32. |
 | Actor/credential/grant administration | Dedicated reviewed management capability, unavailable to the serving creator role. Enrollment/recovery cannot be achieved through a public command that asserts ownership. |
 
 Project creation must derive the initial grant and event from the same verified
@@ -120,22 +120,42 @@ production management role is authorized by this proposal.
 These are owned by #40 under #11/#32. #49 owns runtime integration; #41 consumes
 the reviewed stable actor identity. No extra historical-assessment issue is needed.
 
-### Pre-Execution Plan
+## Revised pre-execution plan
 
-1. **Goal & Context:** Establish how an authenticated local actor becomes trusted command context, and define initial-owner rights plus current grant/revocation ownership before native routes are exposed.
+1. **Goal & Context:** Review the proposed contract above against Q-002/Q-014, then investigate actor binding and authority/revocation ownership for #49 W2. The inventory establishes the missing boundary; this is not another database feasibility investigation.
 2. **Definition of Done:**
-   - [ ] Record the actor/session trust boundary and a proposed initial-owner permission mapping against B-003/B-007.
+   - [x] Document the proposed actor/session contract and initial-owner permission mapping against B-003/B-007 for review.
    - [ ] Demonstrate denied spoofed actor input, missing/expired identity and forbidden role escalation using a declared experimental integration.
    - [ ] Demonstrate current grant/event agreement and atomic revocation in a separately scoped management prototype; retained history alone must not authorize.
    - [ ] Repeat selected creation/replay versus revocation orderings; preserve observed lock barriers.
    - [ ] Publish SP-004 recommendation and gaps; actual authentication and grant-management implementation remain open.
-3. **Dependencies & Prerequisites:** #11/#32 access requirements, public B-003 rules and SP-002 actor/core locking evidence. Review local access model before choosing an identity mechanism.
-4. **Risks & Mitigations:** A supplied actor ID is not authentication. Bind context at the trusted boundary; no client-chosen authority or broad permission UPDATE grants. Keep unauthorized precedence before replay/conflict/expiry details.
-5. **Spikes & Open Questions:** Session/actor mapping, owner permissions and management lock ownership. Proposed effort limit: 90 minutes, to confirm before execution; unresolved policy is a decision dependency, not a reason to claim a pass.
-6. **High-Level Architecture / File Changes:** docs/spikes/SP-004-actor-authority.md; bounded experiments/SP-004/ when executed. The baseline creation-only grant-event guard must not be silently removed.
-7. **Verification & Testing Plan:** Independent restricted connections, explicit trusted identity fixtures, allow/deny cases, grant/history mismatch, revoked authority and reached concurrent schedules. Experimental identity providers cannot certify a production integration.
+3. **Dependencies & Prerequisites:** Resolve the decisions above before execution. Use #11/#32 requirements, B-003, ADR-104 and SP-002's source-bound locking observations. #41 receives stable actor identity; its allocation protocol is not implemented here. Check available memory before compiler/service work; request headroom if the selected workload cannot fit.
+4. **Risks & Mitigations:** Supplied identity, cached roles and database capability possession cannot establish caller authority. Actor-wide serialization is deliberately conservative and may limit concurrency; measure selected schedules rather than claiming throughput. Freeze affected-actor lock ordering and protect both the management caller and grant subject. Detect current/event mismatches and never repair them implicitly during serving.
+5. **Spikes & Open Questions:** Proposed 90-minute investigation, excluding setup and required checks, after contract/decision review. Stop on failed prerequisites, a bounded conclusion or the time limit; unresolved real authentication remains an explicit blocked case. A synthetic identity fixture must not turn that case into a pass.
+6. **High-Level Architecture / File Changes:** Keep this record canonical. A later approved experiment may add isolated `experiments/SP-004/` code, fixtures and a bounded runner. Session/grant-management schema must be isolated experimental objects, with separate serving/management logins. Do not edit the production installer, remove its creation-only guards, or give creator UPDATE rights. Such fixture results cannot qualify a production migration; #49 needs a separate reviewed schema evolution plan.
+7. **Verification & Testing Plan:** Use the cases below with independent restricted connections and explicit barriers. Record actual source, image, platform, role, state before/after, observed waits, commit/rollback and primary diagnostics. A timeout is not evidence that the intended race was reached. No experiment or service execution has occurred for this proposal.
 
-Status: planned. Completing this spike will not close #11 or #32.
+Status: contract proposed for review; experiment not executed. Completing this
+spike leaves #11/#32 responsible for production access delivery.
+
+### Required experimental cases (not executed)
+
+| Case | Controlled action | Required evidence |
+| --- | --- | --- |
+| A01: trusted binding | Verify owner identity, then supply a conflicting payload/header actor, role or grant assertion; repeat with missing/expired credentials. | Context derives only from the verifier; unauthenticated requests reach no command execution. A deterministic verifier fixture proves plumbing only; actual provider qualification is a separate result. |
+| A02: internal peer | Attempt direct worker submission and altered actor/context from an untrusted process. | The selected internal channel rejects it. If no mechanism is selected, record blocked, not passed on the basis of Host/loopback checks. |
+| A03: owner scope | Exercise active/inactive owner, creation disabled, absent/inactive project grant and another project. | Evaluate the proposed mapping independently in each scope; reject role escalation and cross-project access. No ownership inferred from an existing creation result. |
+| A04: read/CLI/session | Try authoritative and projected reads without identity; CLI without Origin; cross-origin browser command; expired/logout/recovered session. | Authenticated CLI and reads use the declared policy; browser checks are additional. Recovery preserves actor ID and invalidates replaced credentials under the approved ordering. Unselected policy remains blocked. |
+| A05: grant history | Remove/mismatch current grant versus latest event; attempt serving-role grant UPDATE and history mutation; commit/roll back management changes. | Mismatch fails without allowing access. Restricted serving writes fail; successful management writes atomically append one matching event and advance the current version. Rollback leaves both unchanged. |
+| A06: replay precedence | Retry an original success, changed request and expired/tombstoned record after original authority is revoked. | Current original-grant denial precedes replay/conflict/expiry disclosure; the original committed operation remains unchanged. Creation replay checks current creation authority, not a newly invented ownership substitute. |
+| A07: revocation schedules | Run command-first and revocation-first for both creation and replay, with actor lock barriers; roll back each side and retry. | Reach and record all four orderings, proposed ten trials each. Command-first can finish before revocation; revocation-first denies. Rollback releases the fence and retry reloads authority; no partial grant/event state. |
+| A08: session and multiple actors | Revoke a credential while work is queued; exercise two actors and management affecting both in opposite requested orders. | The declared session fence prevents stale authorization under its policy. Deterministic actor lock ordering is enforced; bounded failure rolls back before retry. Stable actor identity remains usable for #41 retry binding after reauthentication. |
+
+Before an approved run, add exact reproduction commands and pin the experimental
+identity implementation, role/schema overlay, PostgreSQL image and lock/statement/
+process deadlines. Start from fresh disposable state and retain negative-case
+diagnostics and cleanup failures. No executable command is claimed until that
+runner exists. These cases define acceptance, not successful observations.
 
 ## Environment and reproduction
 
@@ -163,5 +183,9 @@ coverage; finishing this investigation does not close it.
 
 ## Handoff
 
-Latest work: planned record and linked GitHub issue. Next action: confirm the
-bounded effort, required decision inputs and executable case plan before starting.
+Latest work: source inventory, proposed actor/owner/revocation contract and
+negative/concurrent cases. Next action: maintainer review of the proposed mapping,
+credential/session/channel decisions and bounded experimental scope. After that
+review, prepare the runner and measure memory before execution. #40 stays open
+until the scoped investigation has results and an explicit disposition; #11/#32
+retain production access delivery and #49 retains native integration.
