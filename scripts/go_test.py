@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 from go_inventory import GO_PACKAGES, ROOT, go_files
+from cleanup_errors import run_main
 from temp_work import owned_directory
 from verification_budget import command_timeout
 
@@ -18,5 +19,5 @@ def main():
         return result.returncode
 
 
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == '__main__':
+    sys.exit(run_main(main, 'ERR_GO_TEST'))

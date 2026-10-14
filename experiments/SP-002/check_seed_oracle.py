@@ -10,6 +10,7 @@ from manage import cargo_library
 SOURCE = Path(__file__).resolve().parent
 REPO = SOURCE.parents[1]
 sys.path.insert(0, str(REPO / 'scripts'))
+from cleanup_errors import run_main
 from temp_work import owned_directory
 from verification_budget import command_timeout
 
@@ -45,5 +46,5 @@ def main():
         print("PASS: supported units, JSON escaping, invalid units and argument counts")
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    sys.exit(run_main(main, 'ERR_SP002_CHECK'))

@@ -1,5 +1,7 @@
 """Pure SP-003 goldens and actual Rust domain-codec checks for shared verification."""
+import sys
 from build import build
+from cleanup_errors import run_main
 from run import Cases, pure_cases, require
 
 
@@ -11,5 +13,5 @@ def main():
         require(all(record["status"] == "PASS" for record in cases.records), "SP-003 pure codec check failed")
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    sys.exit(run_main(main, 'ERR_SP003_CHECK'))

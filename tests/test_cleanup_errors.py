@@ -84,3 +84,21 @@ runpy.run_path('scripts/verify.py',run_name='__main__')
         self.assertIs(caught.exception,primary)
         self.assertEqual(primary._cleanup_failures,(
             ('Compose project',compose),('Podman machine',vm),('temporary directory',directory)))
+
+    def test_child_entrypoint_reports_cleanup_failures_and_interruptions(self):
+        import cleanup_errors
+        for error,code in ((RuntimeError('leaf failed'),3),(KeyboardInterrupt(),130)):
+            cleanup=OSError('child directory failed')
+            retain_cleanup_failure(error,cleanup,'temporary directory')
+            def fail(): raise error
+            with self.subTest(code=code), patch('sys.stderr',new_callable=io.StringIO) as output:
+                self.assertEqual(cleanup_errors.run_main(fail,'ERR_CHILD_CHECK'),code)
+            self.assertIn('CLEANUP FAILED (temporary directory): child directory failed',output.getvalue())
+
+    def test_child_entrypoint_preserves_success_and_explicit_exit_codes(self):
+        import cleanup_errors
+        self.assertIsNone(cleanup_errors.run_main(lambda:None,'ERR_CHILD_CHECK'))
+        self.assertEqual(cleanup_errors.run_main(lambda:7,'ERR_CHILD_CHECK'),7)
+        def invalid(): raise SystemExit(2)
+        with self.assertRaises(SystemExit) as caught: cleanup_errors.run_main(invalid,'ERR_CHILD_CHECK')
+        self.assertEqual(caught.exception.code,2)

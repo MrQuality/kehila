@@ -27,6 +27,7 @@ from live_task_worker import uuid7
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
+from cleanup_errors import run_main
 from temp_work import owned_directory
 from verification_budget import command_timeout, cleanup_time, DeadlineExceeded
 
@@ -314,4 +315,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(run_main(main, 'ERR_TASK_PATH_CHECK'))
