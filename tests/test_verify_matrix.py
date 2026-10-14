@@ -8,6 +8,7 @@ import subprocess
 import sys
 import unittest
 from unittest.mock import patch
+from matrix_fixtures import DEFAULT_ENVIRONMENT
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('verify', ROOT / 'scripts/verify.py')
@@ -15,7 +16,14 @@ VERIFY = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(VERIFY)
 
 
-class PureMatrixTests(unittest.TestCase):
+class MatrixTests(unittest.TestCase):
+    def setUp(self):
+        environment = patch.dict(os.environ, DEFAULT_ENVIRONMENT)
+        environment.start()
+        self.addCleanup(environment.stop)
+
+
+class PureMatrixTests(MatrixTests):
     def test_task_contract_failure_fails_the_pure_command(self):
         seen = []
 
@@ -38,7 +46,20 @@ class PureMatrixTests(unittest.TestCase):
                 VERIFY.main()
 
 
-class FullLifecycleTests(unittest.TestCase):
+class FullLifecycleTests(MatrixTests):
+    def test_matrix_fixtures_are_independent_of_caller_routing_settings(self):
+        from test_engineering import RegisterTests
+        fixtures = (FullLifecycleTests('test_all_builds_precede_owned_phases_and_all_live_checks_remain'),
+                    RegisterTests('test_shared_matrix_includes_enforcement_in_both_modes'))
+        with patch.dict(os.environ, KEHILA_NATS_HOST='standalone-host',
+                        DOCKER_HOST='ssh://standalone-daemon'), \
+                patch('sys.stdout', new_callable=io.StringIO), \
+                patch('sys.stderr', new_callable=io.StringIO):
+            for fixture in fixtures:
+                result = unittest.TestResult()
+                fixture.run(result)
+                self.assertTrue(result.wasSuccessful(), result.errors + result.failures)
+
     def test_owned_mode_rejects_foreign_test_endpoints_before_any_build(self):
         for key, value in (('KEHILA_TEST_MONGO_URL', 'mongodb://other-host:27017'),
                            ('KEHILA_NATS_ADDRESS', '127.0.0.1:4223'),

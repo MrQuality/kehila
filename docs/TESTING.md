@@ -225,8 +225,15 @@ forced-termination test. Nested-failure regressions separately confirm that
 Compose, VM and directory cleanup failures all remain visible with the primary
 failure, including at child CLI boundaries. The earlier Windows sharing-lock
 failure has not been attributed to orphaned processes. A subsequent implicit-
-context regression raised the tooling count to 224 (222 passed, two Windows
-POSIX-only skips); the complete full staged gate passed with that follow-up.
+context and caller-environment isolation regressions raised the tooling count
+to 225 (223 passed, two Windows POSIX-only skips). Matrix fixtures establish
+their own routing defaults, so standalone endpoint settings do not invalidate
+pure/docs tooling tests; the actual full CLI still rejects nondefault targets.
+One intermediate gate passed all Go tests but failed temporary-executable
+cleanup after the existing 30-second Windows sharing-lock retry bound. No
+surviving test executable process was found; the directory was removable on
+subsequent bounded cleanup. The unchanged source retry passed the complete full
+staged gate. The cleanup timeout and policy were not weakened.
 
 Run unit tests without external services:
 
