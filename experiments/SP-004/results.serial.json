@@ -1,0 +1,42 @@
+{
+  "cleanup": "Both native-attempt containers removed; mutation changes rolled back. Rootless startup failure container also removed before the rootful attempts.",
+  "date": "2026-10-14",
+  "mutation": "Removing the management-operation INSERT guard made the forbidden write succeed; the rejection oracle detected absence of SQLSTATE 42501. The mutation transaction rolled back.",
+  "not_qualified": [
+    "real authentication/session/channel mechanisms",
+    "concurrent revocation schedules",
+    "read/projection races",
+    "generic original-scope replay",
+    "production migration/adapter"
+  ],
+  "outcome": "passed",
+  "platform": "Windows",
+  "postgresql_version": "16.15 (Debian 16.15-1.pgdg12+2)",
+  "prior_attempt": {
+    "baseline": "passed",
+    "correction": "Grant manager SELECT on operations and operation_payloads, retaining no direct mutation privileges",
+    "failure": "SQLSTATE 42501: deferred payload trigger lacked operation-table SELECT after the management helper returned",
+    "outcome": "failed",
+    "overlay_sha256": "5dadabebe1a2bf81f78ba13519a80b91cdba480317026745faf0c33a0666b69d",
+    "run_id": "SP-004-R01"
+  },
+  "remaining_A05": [
+    "earlier-history-gap audit",
+    "growing-history measurements",
+    "multi-actor/concurrent grant changes"
+  ],
+  "run_id": "SP-004-R02",
+  "runtime": "Windows / WSL2 / Podman, rootful connection; unprivileged networkless ephemeral container",
+  "scope": "SP-004 A05 serial management subset",
+  "source_baseline": "988631a353b3086769e302943fa0d7b7fbebffd1",
+  "source_state": "A05 source files uncommitted at execution; exact SHA-256 values recorded below",
+  "sources": {
+    "experiments/SP-004/overlay.sql": "46a187a72dc47c95388477a9558c0a6517833daf26108897dde9c443e7a627e3",
+    "experiments/SP-004/run.py": "5271d474bd1335cb09bb8c683ea6587fde3fbb6e15d273a5507d02b3f3f3162f",
+    "scripts/check_postgresql.py": "3d239026953017c0ff92dd7ccc7da3d5a60c62677399eb1b5a0aa5bf04589127",
+    "storage/postgresql/access.sql": "227ead303af2dc92ed2cf621071ad01a22b87c6400da34a65ac73ffd787002b9",
+    "storage/postgresql/install.sql": "5f75ac5b08ec2d3f1fef4c98cd68a693622c877c52328db34c6c809ce2569612",
+    "storage/postgresql/operations.sql": "49842d978f959c4def421c0829fd195a3aa99ea369b982ff74cf7bbf364f8236",
+    "storage/postgresql/project_create.sql": "0fad74af1a8ad7974b3a1ca2c5f17e6449cc0f0b6df864a4631054efebf7a830"
+  }
+}
