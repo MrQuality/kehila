@@ -38,7 +38,9 @@ The implementation builds before service startup, uses one compiler job, and
 runs offline tests before the VM and NATS, OpenSearch and PostgreSQL/FerretDB
 in separate required phases. Review follow-up binds machine/store routing,
 requires explicit exclusive ownership for VM shutdown, keeps the work deadline
-inside the cleanup owner, and bounds generated oracle-output retention.
+inside cleanup owners, preserves every labelled teardown failure, requires
+consistent local test/daemon routing, scopes VM leases by OS user, and bounds
+failure-log lines and generated oracle-output retention.
 It is submitted for review with service-backed evidence in the
 [testing guide](../TESTING.md#owned-test-services). This changes development
 resource overlap; it completes no product milestone or #49 delivery obligation.

@@ -64,10 +64,22 @@ then confirms no owned containers remain after teardown. Each project is removed
 with its volumes before the next phase starts. The
 runner registers cleanup before startup, so partial starts, failed checks and
 child-command timeouts still clean up. Failure diagnostics are printed before
-teardown; cleanup failures remain errors and retain an earlier test error.
+teardown (`logs --tail 200`, with a 30-second command limit). This bounds
+lines per container, not bytes per line. Cleanup failures remain errors: the
+primary failure and every labelled Compose/VM/directory cleanup failure are
+retained and printed without rewriting the original exception cause. The shared
+reporter is used at both verifier and child-check CLI boundaries, including
+normal interruption (exit 130); argument-parser exit codes remain unchanged.
 The verifier owns a 600-second work budget (`--timeout`, positive and at most
 600). Every work command receives the smaller of its own timeout and the
-remaining budget. Diagnostics and teardown use their separate bounded command
+remaining budget. Resource-owning Python checks (Go tests, SP-002/SP-003 check
+drivers and task-path preparation/execution) receive a same-host monotonic
+deadline through `KEHILA_VERIFICATION_DEADLINE`. Their parent waits while they
+time out leaf work and unwind their own directories, processes and collection
+cleanup. Task-path readiness/network operations also check the deadline, including
+requests running in helper threads. The parent does not kill these Python owners
+at the work deadline. Standalone commands keep their existing local timeouts.
+Diagnostics and teardown use their separate bounded command
 limits after work expires. The staged hook passes this budget and waits for the
 owner to finish cleanup; it does not kill the owner at 600 seconds. Cleanup can
 extend total elapsed time beyond the work budget. Normal interruption unwinds
@@ -93,7 +105,7 @@ python scripts/verify.py --engine podman --podman-machine NAME --exclusive-podma
 
 This declares that no other program or user will use the VM during the run.
 The machine must initially be stopped. A nonblocking OS file lease serializes
-verifiers using the same explicit machine name; it cannot prevent unrelated
+verifiers using the same OS user and explicit machine name; it cannot prevent unrelated
 Podman clients from using that VM. Do not select exclusive mode for a shared VM.
 An unexpected active container in either store fails exclusive cleanup and leaves
 the VM running. Without the exclusive declaration, idle snapshots never authorize
@@ -107,7 +119,15 @@ must use `/run/user/<uid>/podman/podman.sock`. The chosen verified connection is
 carried explicitly to Compose and container inspection without changing global
 connection defaults. `CONTAINER_CONNECTION` can select either verified store;
 a foreign connection or `CONTAINER_HOST` combined with an explicit machine is
-rejected. Engine/machine/mode conflicts are rejected before any builds.
+rejected. Owned mode also rejects ambient `DOCKER_HOST`/`DOCKER_CONTEXT` and
+`CONTAINER_HOST`; without an explicit machine it rejects `CONTAINER_CONNECTION`.
+Unset these overrides or use caller-managed external services. Without a named
+machine, native Podman must report `serviceIsRemote=false` and subsequent commands
+use `--remote=false`. Docker's effective saved context must identify a local Unix
+socket or Windows named pipe; the validated context is pinned for Compose and
+inspection. Remote Docker contexts are rejected even when no override variable
+is set. Engine/machine/mode and static routing conflicts fail before builds;
+saved daemon metadata is checked before container creation.
 
 For commit hooks, set `KEHILA_TEST_ENGINE` and optionally
 `KEHILA_TEST_PODMAN_MACHINE` in the shell that invokes Git; the verifier uses them
@@ -129,15 +149,20 @@ python scripts/verify.py --external-services
 
 That explicit mode performs all full checks against existing services and leaves
 their lifecycle to the caller. It does not provide the overlap reduction of the
-owned mode. Owned mode rejects custom `KEHILA_TEST_MONGO_URL` and
-`KEHILA_NATS_ADDRESS` settings before builds: checks must use its local
-`mongodb://127.0.0.1:27017` and `127.0.0.1:4222` services. Use
-`--external-services` for caller-managed endpoints. Native PostgreSQL investigations retain their separate documented
-container/resource preflight and qualification scope.
+owned mode. Both full modes require the default local test endpoints:
+`KEHILA_TEST_MONGO_URL=mongodb://127.0.0.1:27017`,
+`KEHILA_NATS_ADDRESS=127.0.0.1:4222`, `KEHILA_NATS_HOST=127.0.0.1` and
+`KEHILA_NATS_PORT=4222` (unset variables use these defaults). Overrides are rejected
+before builds so readiness, the Python account probe, Rust broker tests and live
+task-path checks agree about their targets. `--external-services` changes lifecycle
+ownership; it does not add custom endpoint support. Use standalone `task_path.py`
+or `nats_probe.py` for custom endpoints. Native PostgreSQL investigations retain
+their separate documented container/resource preflight and qualification scope.
 
 Generated SP-002 check executables now use the shared owned temporary-directory
 cleanup policy on success and failure. The frozen oracle source/fixtures and
-historical evidence remain unchanged; current check-driver behavior is separate
+historical evidence remain unchanged. Current SP-002/SP-003 Python support
+scripts participate in deadline handling; their behavior is separate
 from those recorded native runs.
 
 ### Lifecycle verification record
@@ -179,6 +204,24 @@ bound. The unchanged retry passed; no timeout, cleanup policy or test was
 weakened. The final source gate passed. Obsolete generated SP-002 executables
 were removed; future check runs clean their own temporary outputs on success or
 failure. No controlled memory benchmark is claimed.
+
+Further review fixes at `c941ab8` passed all five focused source-commit gates;
+the final full staged gate ran 223 tooling tests (221 passed, two POSIX-only
+Windows skips), the complete Rust/Go/static/frozen-oracle matrix and every
+required service check. Seven targeted fault mutations were detected, covering
+rootful selection, host-override rejection, URI metadata, per-user lease
+identity, log limits, remote Docker context rejection and the owner wait policy.
+
+An additional real PostgreSQL/FerretDB run injected elapsed time past the child
+work deadline after both Rust workers were ready. The cooperative child stopped
+both workers and successfully dropped its unique test collection. Its failure
+propagated to the parent, which printed bounded Compose diagnostics, removed the
+temporary binaries and owned service group, and stopped the exclusive VM. This
+is controlled deadline-exhaustion evidence, not a 600-second wait or a
+forced-termination test. Nested-failure regressions separately confirm that
+Compose, VM and directory cleanup failures all remain visible with the primary
+failure, including at child CLI boundaries. The earlier Windows sharing-lock
+failure has not been attributed to orphaned processes.
 
 Run unit tests without external services:
 

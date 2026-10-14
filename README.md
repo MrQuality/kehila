@@ -73,6 +73,7 @@ On Windows, `python scripts/verify.py --engine podman --podman-machine NAME`
 starts an explicit stopped VM after builds and retains it as shared. Add
 `--exclusive-podman-machine` only for an initially stopped VM reserved exclusively
 for the run, allowing automatic cleanup and shutdown.
+Full checks require default local endpoints, including with `--external-services`.
 See [test lifecycle and hook settings](docs/TESTING.md#owned-test-services).
 OpenSearch requires `vm.max_map_count` of at least 262144 on the Linux host or
 VM. CI configures this in its disposable runner.
