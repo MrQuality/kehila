@@ -57,7 +57,7 @@ applicable API, storage, access, and interface integration through its parents.
 
 | Child ID | Parent / dependencies | Deliverable and acceptance |
 | --- | --- | --- |
-| [M1-01](https://github.com/MrQuality/kehila/issues/26) | B-005; B-003 | Configuration revisions, history, reference integrity, and coordinated command acceptance. Track and protect historical status, status-group assignment/grant, workflow, type, field, and relationship-type use even after current items migrate away. Demonstrate configuration/item contention, replay after configuration changes, and recovery without partial accepted state. Use actor/family/target-scoped operation lookup, freeze versioned exact-request fingerprints, and demonstrate 90-day replay, gap-free compaction to permanent tombstones, and tombstone backup/restore. Establish a consistency protocol for archive and current-selection clearing using native PostgreSQL and bounded transactions (ADR-102); test crash, retry, concurrent selection, and recovery behavior before exposing archival routes. |
+| [M1-01](https://github.com/MrQuality/kehila/issues/49) | B-005; B-003 | Configuration revisions, history, reference integrity, and coordinated command acceptance. Track and protect historical status, status-group assignment/grant, workflow, type, field, and relationship-type use even after current items migrate away. Demonstrate configuration/item contention, replay after configuration changes, and recovery without partial accepted state. Use actor/family/target-scoped operation lookup, freeze versioned exact-request fingerprints, and demonstrate 90-day replay, gap-free compaction to permanent tombstones, and tombstone backup/restore. Establish a consistency protocol for archive and current-selection clearing using native PostgreSQL and bounded transactions (ADR-102); test crash, retry, concurrent selection, and recovery behavior before exposing archival routes. |
 | [M1-02](https://github.com/MrQuality/kehila/issues/27) | B-004/B-006; M1-01, B-007 | Project and WorkItem identity, Task/Milestone, estimates, replayable current selection, archival/restoration. Integrate the accepted trusted revision-one Task/Milestone seed and replayable project creation command. Verify untitled-item display, zero versus absent estimates, unit locking, selection retry after uncertain response, and selection clearing under the accepted project archival contract. |
 | [M1-03](https://github.com/MrQuality/kehila/issues/28) | B-004/B-006; M1-02 | Project-defined types, application/custom fields, hidden/optional/required modes, and five initial value kinds. Protect application-defined fields from project removal, archival, and retyping; specify trusted upgrade of built-in definitions. Verify hidden-value preservation/write rejection, required-field changes under contention, and safe definition evolution. |
 | [M1-04](https://github.com/MrQuality/kehila/issues/29) | B-004/B-006; M1-03 | Multiple workflows, statuses, defaults, permitted workflows per type, phase restrictions, and configuration archival. Verify phase derivation, initial/default replacements, reference preservation, and zero implicit usage. |
@@ -72,15 +72,47 @@ assignment and revocation remain B-007 work. Resource reservations, costs, and
 scheduling retain their later milestone placement. Their lifecycle effects
 must not be claimed by M1 checks.
 
-**Native storage evidence (2026-10-08):** [SP-002](../spikes/SP-002-postgresql-project-create.md)
-records bounded project-creation structure, role/protocol and fault/restore tests.
-It does not complete M1-01 or the access/identity slices. Planned follow-ups are
-[SP-003/#39](../spikes/SP-003-replay-codecs.md) under #26,
-[SP-004/#40](../spikes/SP-004-actor-authority.md) under #11 (related #32), and
-[SP-005/#41](../spikes/SP-005-project-target-allocation.md) under #27.
-Migration, payload identity protection, native clock and compactor integration
-remain #26 delivery work. Install the separately verified payload-identity guard; preserve the frozen failure and
-missing-product checks when promoting experiments into regressions.
+<a id="m1-01-remaining-delivery"></a>
+### M1-01 remaining delivery: successor execution record
+
+**Status: Documented plan; implementation awaiting maintainer approval.**
+[#49](https://github.com/MrQuality/kehila/issues/49) tracks the unfinished M1-01
+scope under B-005/#9. By maintainer direction, historical
+[#26](https://github.com/MrQuality/kehila/issues/26) remains closed. This successor
+preserves M1-01's existing ID, dependencies and full acceptance criteria; it adds
+no product milestone and makes no completion claim.
+
+[PR #46](https://github.com/MrQuality/kehila/pull/46) delivered the native SQL
+foundation; [PR #48](https://github.com/MrQuality/kehila/pull/48) delivered the pure
+production codecs tracked by #47. [ADR-104](../architecture/ADR-104-project-create-codecs.md)
+is Accepted; ADR-103 remains Proposed for production adoption. Native application
+persistence and supported routes remain absent. The proposed first slice is the
+separate project snapshot codec required by ADR-104, with actual JSONB round-trip
+verification. Implementation requires explicit maintainer approval after review
+of #49 and the [successor plan](../implementation/m1-01-remaining-delivery.md).
+
+#49 retains adapter/transaction ownership, attribution, stored-version replay,
+trusted clocks/retries, compaction/tombstone restore, historical reference
+integrity, configuration/item contention, archive/selection consistency and
+B-005 durability/recovery evidence. The snapshot PR alone cannot complete it.
+The successor plan now sequences W1-W7 work packages with explicit dependencies
+and exit evidence, including early #40/#41 contract review, separately reviewable
+compactor delivery and a distinct ADR-103 production-adoption gate. Its
+[snapshot verification plan](../implementation/m1-01-snapshot-verification.md)
+defines the production-codec/native bridge, fixture classes, coherence checks and
+JSONB compatibility gates; these are planned checks, not delivered capabilities.
+All ADR-104 ingress, actor/scope, structural snapshot and legacy isolation
+contracts remain mandatory.
+
+[SP-002](../spikes/SP-002-postgresql-project-create.md) and
+[SP-003/#39](../spikes/SP-003-replay-codecs.md) remain bounded experimental
+records; frozen failures and missing production checks must stay visible.
+[SP-004/#40](../spikes/SP-004-actor-authority.md), under #11 (related #32), and
+[SP-005/#41](../spikes/SP-005-project-target-allocation.md), under #27, remain
+native-route dependencies. #39/#47 receive successor references; their issue
+states are unchanged by this planning record. See #49 for the execution checklist
+and linked evidence. Approval of this tracking arrangement is not approval to
+begin implementation.
 
 <a id="b-001"></a>
 ## B-001 — Establish the product planning baseline

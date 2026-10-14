@@ -6,6 +6,17 @@ The foundation is a bounded storage slice, not completion of M1-01. GitHub #26
 is closed despite outstanding production deliverables; its closure is not
 implementation evidence. #39 remains open. Remaining work is listed below.
 
+## Current execution tracking (2026-10-13)
+
+PR #46 and PR #48 are merged. Remaining M1-01 production delivery now belongs to
+[#49](https://github.com/MrQuality/kehila/issues/49) and the
+[successor plan](m1-01-remaining-delivery.md). By maintainer direction, historical
+#26 remains closed. The proposed first slice is the separate project snapshot
+codec and real JSONB round-trip verification; implementation waits for explicit
+maintainer approval. ADR-104 is Accepted; ADR-103 remains Proposed. This current
+tracking record supersedes historical next-step/status references below without
+changing their evidence or claiming adapter/route completion.
+
 ## Pre-Execution Plan
 
 1. **Goal & Context:** Turn the reviewed project-creation schema into a versioned,

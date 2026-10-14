@@ -16,6 +16,13 @@ version-one installer, structural integrity guards and restricted creation roles
 No native application adapter, legacy-data migration, or supported
 configurable-model persistence path is implemented.
 
+Remaining M1-01 delivery is tracked by [#49](https://github.com/MrQuality/kehila/issues/49)
+and the [successor plan](implementation/m1-01-remaining-delivery.md). Historical
+#26 remains closed by maintainer direction. The proposed first slice is the
+project-only snapshot codec and native JSONB verification; implementation awaits
+explicit maintainer approval. PR #48 delivered the existing pure codec scope,
+not the native adapter or the remaining M1-01 delivery obligations.
+
 | Component | Implemented behavior | Verification |
 | --- | --- | --- |
 | Rust query parser | Single `identifier = 'nonempty value'` expression; rejects trailing clauses | Unit tests |
