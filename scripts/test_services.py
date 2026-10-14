@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 import uuid
 
 from setup_env import compose_command
+from verification_budget import cleanup_time, command_timeout
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVICES = {'postgres', 'ferretdb', 'nats', 'opensearch'}
@@ -32,6 +33,7 @@ class ComposeRuntime:
 
 
 def run(command, timeout=120, **kwargs):
+    timeout = command_timeout(timeout)
     print('TEST RESOURCE:', ' '.join(command), flush=True)
     return subprocess.run(command, cwd=ROOT, check=True, timeout=timeout, **kwargs)
 
@@ -176,7 +178,8 @@ def _runtime(preferred, machine, environment, exclusive):
     finally:
         if owned_machine:
             try:
-                _stop_owned_machine(machine, environment=environment)
+                with cleanup_time():
+                    _stop_owned_machine(machine, environment=environment)
             except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as cleanup_error:
                 if failure is not None:
                     raise failure from cleanup_error
@@ -201,15 +204,17 @@ def service_group(runtime, selected):
     except BaseException as error:
         failure = error
         try:
-            run([*command, 'logs', '--no-color'], timeout=30, env=runtime.environment)
+            with cleanup_time():
+                run([*command, 'logs', '--no-color'], timeout=30, env=runtime.environment)
         except (OSError, subprocess.SubprocessError) as diagnostic_error:
             print('TEST RESOURCE: diagnostics failed: ' + str(diagnostic_error), file=sys.stderr)
         raise
     finally:
         try:
-            run([*command, 'down', '--volumes'], timeout=120, env=runtime.environment)
-            if _containers(runtime, project, include_stopped=True):
-                raise RuntimeError('Owned test containers remain after Compose cleanup')
+            with cleanup_time():
+                run([*command, 'down', '--volumes'], timeout=120, env=runtime.environment)
+                if _containers(runtime, project, include_stopped=True):
+                    raise RuntimeError('Owned test containers remain after Compose cleanup')
         except (OSError, RuntimeError, subprocess.SubprocessError) as cleanup_error:
             if failure is not None:
                 raise failure from cleanup_error

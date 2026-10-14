@@ -87,14 +87,16 @@ def main():
             if entry and entry.split(b" ", 1)[0] not in (b"100644", b"100755"):
                 return fail(3, "Symlinks and submodules are unsupported in the verified snapshot")
         live = scope == "full"
-        command = [sys.executable, str(snapshot / "scripts/verify.py")]
+        command = [sys.executable, str(snapshot / "scripts/verify.py"), "--timeout", "600"]
         if not live:
             command.append("--pure")
         # Build cache is outside the snapshot; source still comes only from index.
         environment = os.environ.copy()
         environment["CARGO_TARGET_DIR"] = str(ROOT / "target")
         try:
-            subprocess.run(command, cwd=snapshot, env=environment, check=True, timeout=600)
+            # The staged verifier owns the 600s work deadline and bounded
+            # teardown. Killing that owner here would bypass resource cleanup.
+            subprocess.run(command, cwd=snapshot, env=environment, check=True)
         except (OSError, subprocess.SubprocessError) as error:
             return fail(3, f"Staged verification failed: {error}")
         if git("write-tree") != tree_before:

@@ -9,13 +9,14 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from temp_work import owned_directory
 from test_services import managed_runtime, service_group, validate_runtime
+from verification_budget import command_timeout, validate_seconds, work_budget
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def execute(command, environment):
     print('VERIFY:', ' '.join(command), flush=True)
-    timeout = 450 if os.name == 'nt' and command[0] == 'cargo' else 300
+    timeout = command_timeout(450 if os.name == 'nt' and command[0] == 'cargo' else 300)
     subprocess.run(command, cwd=ROOT, env=environment, check=True, timeout=timeout)
 
 
@@ -62,6 +63,8 @@ def main():
         parser.error('KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE must be 0 or 1')
     parser.add_argument('--exclusive-podman-machine', action='store_true', default=exclusive == '1',
                         help='Promise exclusive VM use for this run; requires an initially stopped named machine')
+    parser.add_argument('--timeout', type=float, default=600,
+                        help='Total work budget in seconds (at most 600); bounded cleanup runs afterward')
     args = parser.parse_args()
     if args.external_services and (args.pure or args.docs):
         parser.error('--external-services applies only to full verification')
@@ -69,8 +72,14 @@ def main():
         parser.error('--external-services cannot own a Podman machine')
     try:
         validate_runtime(args.engine, args.podman_machine, args.exclusive_podman_machine)
+        validate_seconds(args.timeout)
     except ValueError as error:
         parser.error(str(error))
+    with work_budget(args.timeout):
+        run_checks(args)
+
+
+def run_checks(args):
     environment = dict(os.environ, CARGO_BUILD_JOBS='1')
     environment['GOFLAGS'] = (environment.get('GOFLAGS', '') + ' -p=1').strip()
     commands = [[sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],

@@ -7,6 +7,7 @@ import shutil
 import stat
 import subprocess
 import sys
+from verification_budget import DeadlineExceeded, command_timeout
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -22,9 +23,11 @@ def compose_command(preferred="auto", environment=None):
         if not shutil.which(engine):
             continue
         try:
-            subprocess.run([engine, "info"], env=environment, check=True, capture_output=True, timeout=15)
-            subprocess.run(compose + ["version"], env=environment, check=True, capture_output=True, timeout=15)
+            subprocess.run([engine, "info"], env=environment, check=True, capture_output=True, timeout=command_timeout(15))
+            subprocess.run(compose + ["version"], env=environment, check=True, capture_output=True, timeout=command_timeout(15))
             return compose
+        except DeadlineExceeded:
+            raise
         except (subprocess.SubprocessError, OSError):
             continue
     raise RuntimeError("Start Podman (podman machine start on Windows) and install a Compose provider, or start Docker.")
