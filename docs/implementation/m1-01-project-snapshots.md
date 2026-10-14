@@ -9,9 +9,10 @@ of Proposed ADR-103 or authorization of later work packages.
 
 Planning [PR #50](https://github.com/MrQuality/kehila/pull/50) merged on 2026-10-14
 at 0c89bfbfd0c20b8556894e4c91c7814d6eacc96c. W1
-[PR #51](https://github.com/MrQuality/kehila/pull/51) now targets main and remains
-unmerged for maintainer review. Integrating that baseline and updating tracking
-does not change the implementation tree or replace the native evidence below.
+[PR #51](https://github.com/MrQuality/kehila/pull/51) merged into main on
+2026-10-14 at 2efd444e38a4d60eaeb195a00359813174aa3d23. W1 is delivered. The source-bound
+native and hosted evidence below remains distinct from the merge record;
+this tracking reconciliation introduces no implementation or new native run.
 
 ## Implementation boundary
 

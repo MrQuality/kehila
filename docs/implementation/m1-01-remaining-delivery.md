@@ -1,15 +1,14 @@
 # M1-01 remaining delivery: successor plan
 
 Status: W1 implementation approved by explicit maintainer instruction on
-2026-10-13 and prepared for review, as recorded in [#49](https://github.com/MrQuality/kehila/issues/49#issuecomment-6154165059).
+2026-10-13 and merged in PR #51 on 2026-10-14, as tracked by [#49](https://github.com/MrQuality/kehila/issues/49#issuecomment-6154165059).
 Later work packages and ADR-103 production adoption retain separate review gates.
 
 Planning [PR #50](https://github.com/MrQuality/kehila/pull/50) merged into main on
 2026-10-14 at 0c89bfbfd0c20b8556894e4c91c7814d6eacc96c. Implementation
-[PR #51](https://github.com/MrQuality/kehila/pull/51) now targets main and remains
-open for review. The working branch incorporates the merged planning baseline
-without rewriting its published implementation commits. W1 and W2-W7 completion
-remain separate from the planning merge; #49 stays open and #26 stays closed.
+[PR #51](https://github.com/MrQuality/kehila/pull/51) merged on 2026-10-14 at
+2efd444e38a4d60eaeb195a00359813174aa3d23. W1 is delivered. W2-W7 remain outstanding;
+#49 is the continuing delivery issue and #26 retains its historical closed state.
 
 ## Tracking decision and baseline
 
@@ -52,7 +51,7 @@ application adapter or later work packages.
 1. **Goal and context:** Implement the separate version-one
    `configuration_revisions.project_snapshot` codec specified by ADR-104 Contract 3
    and verify actual PostgreSQL JSONB reconstruction before implementing the
-   internal persistence adapter. This is the proposed first PR under #49.
+   internal persistence adapter. This first slice was delivered in PR #51 under #49.
 2. **Definition of Done:** Exact envelope keys `codec_version`, `kind`, `value`,
    integer version 1, kind `project_snapshot`, and complete project fields
    `id`, `name`, `prefix`, `configuration_revision`, `next_sequence`, `archived`,
@@ -96,14 +95,15 @@ tracks execution. The [snapshot verification plan](m1-01-snapshot-verification.m
 defines the production-codec/native runner bridge, fixture classes, row/pair
 coherence, required native command and JSONB compatibility gates. Native checks
 remain separately required PR evidence; current shared/hosted checks do not run
-them. No check above claims an implementation or successful test.
+them. Their execution results are recorded in the W1 implementation report;
+this retained plan alone is not execution evidence.
 
 ## Remaining delivery after the first slice
 
 These work packages preserve the existing acceptance scope. They establish
 ordering and review gates, not a commitment to one PR per package. Each stateful
 package needs its own bounded plan, negative/failure evidence and maintainer
-review before execution. W1 is approved and in progress; other packages are pending.
+review before execution. W1 is merged; W2-W7 remain pending their separate plans and review.
 
 | Package | Prerequisites and boundary | Required exit evidence |
 | --- | --- | --- |
@@ -120,7 +120,34 @@ integration in W7 does not defer those architectural constraints. Native
 Linux-host evidence must be explicit, not inferred from Linux-hosted pure CI or
 a Linux container on Windows. Legacy translation is excluded until a dedicated
 approved migration RFC exists; isolation is required throughout these packages.
-Completion of W1 alone must not close #49 or claim completion of M1-01.
+Completion of W1 alone leaves #49 open and does not establish M1-01 completion.
+
+## Progress against the product backlog
+
+The current product backlog defines M1-01 under B-005; the historical v0.2
+technical milestone labels describe a different plan and are not completion
+labels for today's product backlog. The native SQL foundation (PR #46), accepted
+version-one codecs (PR #48), and W1 snapshot/JSONB verification (PR #51) are
+usable engineering prerequisites. The running worker still uses FerretDB. There
+is no supported native application command path, so the B-005 configurable
+project/task and restart/recovery acceptance criteria have not been met.
+
+The immediate dependency is W2. Prepare a bounded #40/SP-004 plan for maintainer
+review using the existing single-owner local access requirements in B-007/#11.
+Identify where the current API and worker obtain actor and permission context;
+specify a trusted actor/session boundary, initial-owner mapping, current grant
+and revocation ownership, and authorization precedence before replay details.
+List product decisions separately from facts established by the prototype. The
+plan should name denied spoofed, absent/expired, cross-scope and revoked actors,
+plus competing creation/replay and revocation schedules as required evidence.
+An experimental identity fixture cannot establish production authentication.
+
+After that contract is reviewed, plan #41/SP-005's stable target allocation and
+response-loss reconciliation against the same actor/family/target/token scope.
+Use both contracts before finalizing W3 adapter interfaces. W3 still needs a
+separate transaction/dependency plan and ADR-103 production-adoption disposition;
+W4-W7 retain their own gates. This next planning action does not execute either
+spike, expose routes, or accept a new product or architecture decision.
 
 ### W3 creation-envelope admission obligation
 
@@ -187,9 +214,10 @@ evidence. Action stacks #44 remains postponed.
 
 ## Historical issue reconciliation
 
-#26 remains closed. #47's stated codec scope landed in PR #48; #39 retains its
-experimental history. Successor links clarify where unfinished implementation
-is tracked without rewriting frozen observations or silently accepting historical
-proposals. This planning change does not change their issue states. Historical
-pending-assessment text must be read alongside ADR-104's explicit acceptance;
-it does not override ADR-103's separately Proposed status.
+#26 remains closed. #47's stated codec scope landed in PR #48 and is complete;
+PR #51 adds W1. #39 is complete: Accepted ADR-104 supersedes its codec
+recommendation and PR #48 delivers the production codec. Historical experiment
+observations remain frozen; global identifier narrowing is not authorized.
+Remaining application delivery belongs to #49, with authority/allocation
+contracts in #40/#41. There is no separate pending historical-assessment task.
+ADR-103 retains its separately Proposed status.

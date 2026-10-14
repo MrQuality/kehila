@@ -77,12 +77,11 @@ must not be claimed by M1 checks.
 
 Planning [PR #50](https://github.com/MrQuality/kehila/pull/50) merged on 2026-10-14
 at 0c89bfbfd0c20b8556894e4c91c7814d6eacc96c. The successor issue and plan are now
-on main. W1 implementation remains under review in
-[PR #51](https://github.com/MrQuality/kehila/pull/51), targeting main; this tracking
-update belongs to its working branch. Planning merge does not complete W1 or
-the remaining M1-01 obligations.
+on main. W1 [PR #51](https://github.com/MrQuality/kehila/pull/51) merged on
+2026-10-14 at 2efd444e38a4d60eaeb195a00359813174aa3d23. W1 is delivered; W2-W7 and
+the remaining M1-01 obligations are not complete.
 
-**Status: W1 execution approved; snapshot implementation prepared for review.**
+**Status: W1 merged; W2-W7 pending their bounded plans and review gates.**
 [#49](https://github.com/MrQuality/kehila/issues/49) tracks the unfinished M1-01
 scope under B-005/#9. By maintainer direction, historical
 [#26](https://github.com/MrQuality/kehila/issues/26) remains closed. This successor
@@ -127,8 +126,10 @@ contracts remain mandatory.
 records; frozen failures and missing production checks must stay visible.
 [SP-004/#40](../spikes/SP-004-actor-authority.md), under #11 (related #32), and
 [SP-005/#41](../spikes/SP-005-project-target-allocation.md), under #27, remain
-native-route dependencies. #39/#47 receive successor references; their issue
-states are unchanged by this planning record. See #49 for the execution checklist
+native-route dependencies. #47's scoped production codec delivery is complete
+through PR #48, with W1 supplied by PR #51. #39 is complete; Accepted ADR-104
+supersedes its codec recommendation. Remaining delivery belongs to #49, not an
+open historical assessment. See #49 for the execution checklist
 and linked evidence. W1 approval does not approve later packages or ADR-103
 production adoption.
 
