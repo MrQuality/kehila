@@ -167,6 +167,9 @@ recorded source; hosted checks alone do not qualify the updated native path.
   (owned process lifetime), `a2641c7` (native preflight/serialization), `bb51c60`
   (typed IPC and specific rejection oracles), and
   `1aba3566eb4f2342da270af18b7be43d5540dfc1` (native scenarios/constraint evidence).
+  The final audit correction `b64c66769b3e4e0b71022a775ac6f34a6ac6f9e9` also passed its full staged
+  gate, restoring the original UTF-8 text and bounding asynchronous descendant
+  termination observation by the original execution deadline.
   The final gate ran 124 Python tests: 122 passed and two POSIX-only skips on
   Windows, plus workspace tests, frozen oracles, engineering/Go checks and live
   task-path contention/deadline/recovery/search-unavailable checks.
@@ -174,7 +177,7 @@ recorded source; hosted checks alone do not qualify the updated native path.
   Clippy with all targets and warnings denied, and workspace formatting, passed.
 - The documented native command, with an explicitly selected disposable
   container and resource-capable test connection, passed at source
-  `1aba3566eb4f2342da270af18b7be43d5540dfc1` on Windows/WSL2/Podman with the same
+  `b64c66769b3e4e0b71022a775ac6f34a6ac6f9e9` on Windows/WSL2/Podman with the same
   pinned PostgreSQL 16.15 image. Both the extended snapshot phase and the
   foundation integrity/role/mutation suite passed. The source tree was unchanged
   during that run; documentation changes were separate.
@@ -185,6 +188,14 @@ recorded source; hosted checks alone do not qualify the updated native path.
   connection, machine mode or admission check was weakened. All task-owned
   disposable containers were removed, the four test services stopped and the VM
   stopped after verification.
+- Final diff inspection found Windows default text decoding had changed the
+  Unicode fixture name and unrelated backlog punctuation. Original UTF-8 text
+  was restored and compared with the baseline before publication. One correction
+  gate then exposed an immediate-handle-observation race during asynchronous
+  Windows job termination. The regression now waits for actual descendant exit
+  only within the original deadline; the original leaking implementation still
+  fails it. The correction gate and native suite subsequently passed, without
+  omitting the test or weakening its lifetime/elapsed-time assertions.
 - New regressions first exposed the early-parent pipe lifetime and reader/close
   error masking. In-memory mutations omitting the positive fixture loop and
   ignoring the primary SQL diagnostic were detected. Removing production
