@@ -2,6 +2,7 @@
 from pathlib import Path
 from contextlib import nullcontext
 import json
+import os
 import tempfile
 import io
 import subprocess
@@ -319,15 +320,49 @@ class MachineOwnershipTests(unittest.TestCase):
 
 
 class MachineLeaseTests(unittest.TestCase):
-    def test_same_machine_name_has_distinct_leases_for_distinct_os_users(self):
-        with patch.object(services.os,'getuid',return_value=1001,create=True):
-            first=services._machine_lease_path('fixture')
-            self.assertEqual(first,services._machine_lease_path('fixture'))
-        with patch.object(services.os,'getuid',return_value=1002,create=True):
-            self.assertNotEqual(first,services._machine_lease_path('fixture'))
+    def test_a_second_process_cannot_bypass_the_account_lease_with_environment_aliases(self):
+        code = """
+import sys
+from pathlib import Path
+import test_services as services
+services._account_directory = lambda: Path(sys.argv[1])
+try:
+    with services._machine_lease('fixture'):
+        sys.exit(1)
+except RuntimeError as error:
+    print(error)
+"""
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(services, '_account_directory', return_value=Path(folder)):
+            environment = dict(os.environ, LOGNAME='different-alias', TEMP='different-temp',
+                               PYTHONPATH=str(Path(__file__).resolve().parents[1] / 'scripts'))
+            with services._machine_lease('fixture'):
+                result = subprocess.run([sys.executable, '-c', code, folder], env=environment,
+                                        capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('Another verifier owns', result.stdout)
+
+    def test_machine_lease_ignores_user_and_temporary_environment_overrides(self):
+        first = services._machine_lease_path('fixture')
+        overrides = dict.fromkeys(
+            ('LOGNAME', 'USER', 'USERNAME', 'TEMP', 'TMP', 'TMPDIR', 'HOME',
+             'USERPROFILE', 'LOCALAPPDATA'), 'unrelated-environment-value')
+        with patch.dict(os.environ, overrides):
+            self.assertEqual(first, services._machine_lease_path('fixture'))
+        self.assertNotEqual(first, services._machine_lease_path('other-machine'))
+
+    def test_same_machine_name_has_distinct_leases_for_distinct_account_directories(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for account in ('first', 'second'):
+                with patch.object(services, '_account_directory', return_value=Path(folder) / account):
+                    path = services._machine_lease_path('fixture')
+                if account == 'first':
+                    first = path
+                else:
+                    self.assertNotEqual(first, path)
 
     def test_lease_excludes_a_second_verifier_and_releases_after_failure(self):
-        with tempfile.TemporaryDirectory() as folder, patch.object(services.tempfile, 'gettempdir', return_value=folder):
+        with tempfile.TemporaryDirectory() as folder, patch.object(services, '_account_directory', return_value=Path(folder)):
             with self.assertRaisesRegex(RuntimeError, 'body failed'):
                 with services._machine_lease('fixture'):
                     with self.assertRaisesRegex(RuntimeError, 'Another verifier'):

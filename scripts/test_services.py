@@ -2,7 +2,6 @@
 from cleanup_errors import retain_cleanup_failure
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
-import getpass
 import hashlib
 import json
 import os
@@ -10,7 +9,6 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-import tempfile
 from urllib.parse import urlsplit
 import uuid
 
@@ -148,10 +146,48 @@ def validate_runtime(preferred, machine, exclusive=False):
         raise ValueError('Exclusive VM use requires an explicit Podman machine')
 
 
+def _account_directory():
+    """Resolve the current OS account's directory without environment aliases."""
+    if os.name != 'nt':
+        import pwd
+        return Path(pwd.getpwuid(os.getuid()).pw_dir).resolve()
+
+    import ctypes
+    from ctypes import wintypes
+    # FOLDERID_Profile avoids per-application LocalAppData virtualization.
+    folder_id = (ctypes.c_ubyte * 16).from_buffer_copy(
+        uuid.UUID('5e6c858f-0e22-4760-9afe-ea3317b67173').bytes_le)
+    shell = ctypes.WinDLL('shell32')
+    ole = ctypes.WinDLL('ole32')
+    ole.CoInitializeEx.argtypes = [ctypes.c_void_p, wintypes.DWORD]
+    ole.CoInitializeEx.restype = ctypes.c_long
+    ole.CoTaskMemFree.argtypes = [ctypes.c_void_p]
+    ole.CoTaskMemFree.restype = None
+    initialized = ole.CoInitializeEx(None, 0)
+    if initialized not in (0, 1, -2147417850):  # RPC_E_CHANGED_MODE: already initialized.
+        raise OSError('Cannot initialize the Windows account-directory API', initialized)
+    shell.SHGetKnownFolderPath.argtypes = [ctypes.c_void_p, wintypes.DWORD,
+                                          wintypes.HANDLE, ctypes.POINTER(ctypes.c_void_p)]
+    shell.SHGetKnownFolderPath.restype = ctypes.c_long
+    result = ctypes.c_void_p()
+    try:
+        status = shell.SHGetKnownFolderPath(ctypes.byref(folder_id), 0, None, ctypes.byref(result))
+        if status != 0:
+            raise OSError('Cannot resolve the current Windows account directory', status)
+        return Path(ctypes.wstring_at(result)).resolve()
+    finally:
+        if result.value:
+            ole.CoTaskMemFree(result)
+        if initialized in (0, 1):
+            ole.CoUninitialize()
+
+
 def _machine_lease_path(name):
-    user = str(os.getuid()) if hasattr(os, 'getuid') else getpass.getuser()
-    key = hashlib.sha256((user + '\0' + name).encode('utf-8')).hexdigest()
-    return Path(tempfile.gettempdir()) / ('kehila-machine-' + key + '.lock')
+    account = _account_directory()
+    if not account.is_absolute():
+        raise ValueError('Expected an absolute OS account directory')
+    key = hashlib.sha256(name.encode('utf-8')).hexdigest()
+    return account / '.kehila-verifier-locks' / ('machine-' + key + '.lock')
 
 
 @contextmanager
@@ -159,6 +195,14 @@ def _machine_lease(name):
     # Keep the inode after unlocking: unlinking it could admit a second owner
     # holding a new inode while another verifier still owns the old one.
     path = _machine_lease_path(name)
+    directory = path.parent
+    directory.mkdir(mode=0o700, exist_ok=True)
+    if directory.is_symlink() or directory.resolve() != directory:
+        raise ValueError('Machine lease directory must not be redirected')
+    if os.name != 'nt':
+        info = directory.stat()
+        if info.st_uid != os.getuid() or info.st_mode & 0o077:
+            raise ValueError('Machine lease directory must be private to the OS account')
     with path.open('a+b') as lease:
         lease.seek(0)
         if os.name == 'nt':
