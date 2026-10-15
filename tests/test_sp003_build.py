@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
-import unittest
 from unittest.mock import patch
 from matrix_fixtures import IsolatedEnvironmentTests
 

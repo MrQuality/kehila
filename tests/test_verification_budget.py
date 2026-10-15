@@ -1,17 +1,19 @@
 """The verifier owns its deadline and keeps bounded teardown time available."""
 from pathlib import Path
+from contextlib import nullcontext
 import os
 import subprocess
 import sys
 import unittest
 from unittest.mock import patch
+from matrix_fixtures import IsolatedEnvironmentTests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import verification_budget as budget
 import test_services as services
 
 
-class DeadlineTests(unittest.TestCase):
+class DeadlineTests(IsolatedEnvironmentTests):
     def test_work_timeout_is_clamped_and_expired_work_is_not_started(self):
         now = [100]
         with patch.object(budget.time, 'monotonic', side_effect=lambda: now[0]):
@@ -45,7 +47,7 @@ class DeadlineTests(unittest.TestCase):
                         now[0] = 20
                         services.run(['work-that-must-not-start'])
             self.assertEqual([call.kwargs['timeout'] for call in run.call_args_list], [10, 30, 120])
-            self.assertEqual(run.call_args_list[-1].args[0][-2:], ['down', '--volumes'])
+            self.assertEqual(run.call_args_list[-1].args[0][-2: ], ['down', '--volumes'])
 
     def test_child_timeout_returns_control_to_the_owner(self):
         with self.assertRaises(subprocess.TimeoutExpired):
@@ -62,17 +64,51 @@ class DeadlineTests(unittest.TestCase):
                 with self.assertRaises(budget.DeadlineExceeded):
                     threads.submit(budget.command_timeout, 10).result()
             with budget.cleanup_time():
-                self.assertEqual(budget.command_timeout(15),15)
+                self.assertEqual(budget.command_timeout(15), 15)
 
     def test_inherited_deadline_rejects_nonfinite_or_invalid_values(self):
-        for value in ('nan','inf','bad'):
+        for value in ('nan', 'inf', 'bad'):
             with self.subTest(value=value), patch.dict(os.environ, KEHILA_VERIFICATION_DEADLINE=value):
-                with self.assertRaises(ValueError): budget.command_timeout(10)
+                with self.assertRaises(ValueError):
+                    budget.command_timeout(10)
+
+    def test_expired_work_still_inspects_both_stores_and_stops_the_owned_vm(self):
+        now = [0]
+        primary = budget.DeadlineExceeded('expired parent work')
+        with patch.object(budget.time, 'monotonic', side_effect=lambda: now[0]), \
+                patch.object(services, '_machine_lease', return_value=nullcontext()), \
+                patch.object(services, '_machine_info', side_effect=[{'State': 'stopped'}, {'State': 'running'}]), \
+                patch.object(services, '_machine_connections', return_value=['fixture', 'fixture-root']), \
+                patch.object(services, 'compose_command', return_value=['podman', 'compose']), \
+                patch.object(services.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '')) as run:
+            with self.assertRaises(budget.DeadlineExceeded) as caught, budget.work_budget(10):
+                with services.managed_runtime('podman', 'fixture', environment={}, exclusive=True):
+                    now[0] = 20
+                    raise primary
+        self.assertIs(caught.exception, primary)
+        calls = run.call_args_list
+        self.assertEqual([call.args[0] for call in calls], [
+            ['podman', 'machine', 'start', 'fixture'],
+            ['podman', '--connection', 'fixture', 'ps', '-q'],
+            ['podman', '--connection', 'fixture-root', 'ps', '-q'],
+            ['podman', 'machine', 'stop', 'fixture'],
+        ])
+        self.assertEqual([call.kwargs['timeout'] for call in calls], [10, 30, 30, 120])
+        for call in calls[1: ]:
+            self.assertEqual(call.kwargs['env'], {'CONTAINER_CONNECTION': 'fixture'})
+
+    def test_deadline_fixture_is_independent_of_an_expired_parent_environment(self):
+        fixture = DeadlineTests('test_work_timeout_is_clamped_and_expired_work_is_not_started')
+        with patch.dict(os.environ, KEHILA_VERIFICATION_DEADLINE='0'):
+            result = unittest.TestResult()
+            fixture.run(result)
+            self.assertTrue(result.wasSuccessful(), result.errors + result.failures)
+            self.assertEqual(os.environ['KEHILA_VERIFICATION_DEADLINE'], '0')
 
     def test_cooperative_child_unwinds_its_process_and_directory_on_timeout(self):
         import tempfile
         with tempfile.TemporaryDirectory() as directory:
-            marker=Path(directory)/'cleaned'
+            marker = Path(directory) / 'cleaned'
             code = """
 import subprocess,sys
 from pathlib import Path
@@ -89,10 +125,10 @@ except subprocess.TimeoutExpired:
     sys.exit(3)
 """
             import time
-            env=dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1]/'scripts'),
-                     KEHILA_VERIFICATION_DEADLINE=str(time.monotonic()+1))
-            result=subprocess.run([sys.executable,'-c',code,str(marker)],env=env,
-                                  capture_output=True,text=True,timeout=10)
-            self.assertEqual(result.returncode,3,result.stderr)
+            env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1] / 'scripts'),
+                     KEHILA_VERIFICATION_DEADLINE=str(time.monotonic() + 1))
+            result = subprocess.run([sys.executable, '-c', code, str(marker)], env=env,
+                                  capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 3, result.stderr)
             self.assertTrue(marker.is_file())
             self.assertFalse(Path(marker.read_text()).exists())

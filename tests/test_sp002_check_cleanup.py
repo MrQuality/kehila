@@ -4,8 +4,8 @@ import importlib.util
 import json
 from pathlib import Path
 import sys
-import unittest
 from unittest.mock import Mock, patch
+from matrix_fixtures import IsolatedEnvironmentTests
 
 root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root / 'experiments/SP-002'))
@@ -16,7 +16,7 @@ sys.path.insert(0, str(root / 'scripts'))
 from temp_work import owned_directory
 
 
-class CheckCleanupTests(unittest.TestCase):
+class CheckCleanupTests(IsolatedEnvironmentTests):
     def exercise(self, failure):
         allocated = []
 

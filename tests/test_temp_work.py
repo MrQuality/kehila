@@ -84,6 +84,18 @@ class OwnedDirectoryTests(unittest.TestCase):
         self.assertIs(caught.exception._cleanup_failures[0][1], cleanup)
         self.assertIsNone(caught.exception.__cause__)
 
+    def test_ownership_refusal_and_interruption_cannot_replace_a_body_failure(self):
+        for cleanup in (ValueError('ownership check failed'), KeyboardInterrupt()):
+            primary = RuntimeError('integration failed')
+            with self.subTest(cleanup=type(cleanup).__name__), \
+                    patch.object(temp_work, '_remove_owned', side_effect=cleanup):
+                with self.assertRaises(RuntimeError) as caught:
+                    with temp_work.owned_directory('kehila-cleanup-test-') as work:
+                        self.addCleanup(self.remove, work)
+                        raise primary
+                self.assertIs(caught.exception, primary)
+                self.assertEqual(primary._cleanup_failures, (('temporary directory', cleanup),))
+
     def test_assertion_failure_in_a_cleanup_fixture_does_not_leak_its_directory(self):
         allocated = []
         allocate = tempfile.mkdtemp

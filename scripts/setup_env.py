@@ -2,7 +2,6 @@
 """Configure hooks, optionally start disposable infrastructure, and check readiness."""
 from pathlib import Path
 import argparse
-import os
 import shutil
 import stat
 import subprocess

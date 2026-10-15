@@ -42,7 +42,7 @@ def owned_directory(prefix, *, parent=None, retry_seconds=30):
     finally:
         try:
             _remove_owned(work, root, prefix, retry_seconds=retry_seconds)
-        except OSError as cleanup_error:
+        except BaseException as cleanup_error:
             if failure is not None:
                 retain_cleanup_failure(failure, cleanup_error, 'temporary directory')
                 raise failure

@@ -7,8 +7,8 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
-import unittest
 from unittest.mock import patch
+from matrix_fixtures import IsolatedEnvironmentTests
 
 integration = Path(__file__).resolve().parent / 'integration'
 sys.path.insert(0, str(integration))
@@ -17,7 +17,7 @@ task_path = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(task_path)
 
 
-class PreparationTests(unittest.TestCase):
+class PreparationTests(IsolatedEnvironmentTests):
     def test_default_mode_prepares_then_executes_inside_the_owned_directory(self):
         folder = Path('unused-fixture')
         order = []

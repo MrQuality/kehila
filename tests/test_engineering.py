@@ -10,7 +10,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
-from matrix_fixtures import DEFAULT_ENVIRONMENT
+from matrix_fixtures import isolated_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('engineering', ROOT / 'scripts/check_engineering.py')
@@ -208,7 +208,7 @@ class RegisterTests(unittest.TestCase):
         verify = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(verify)
         for args in (['--external-services'], ['--pure']):
-            with patch.dict(os.environ, DEFAULT_ENVIRONMENT), \
+            with isolated_environment(), \
                     patch.object(sys, 'argv', ['verify.py', *args]), patch.object(verify.subprocess, 'run') as run:
                 verify.main()
                 commands = [call.args[0] for call in run.call_args_list]

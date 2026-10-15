@@ -8,7 +8,7 @@ import subprocess
 import sys
 import unittest
 from unittest.mock import patch
-from matrix_fixtures import DEFAULT_ENVIRONMENT
+from matrix_fixtures import IsolatedEnvironmentTests
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('verify', ROOT / 'scripts/verify.py')
@@ -16,14 +16,7 @@ VERIFY = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(VERIFY)
 
 
-class MatrixTests(unittest.TestCase):
-    def setUp(self):
-        environment = patch.dict(os.environ, DEFAULT_ENVIRONMENT)
-        environment.start()
-        self.addCleanup(environment.stop)
-
-
-class PureMatrixTests(MatrixTests):
+class PureMatrixTests(IsolatedEnvironmentTests):
     def test_task_contract_failure_fails_the_pure_command(self):
         seen = []
 
@@ -46,7 +39,7 @@ class PureMatrixTests(MatrixTests):
                 VERIFY.main()
 
 
-class FullLifecycleTests(MatrixTests):
+class FullLifecycleTests(IsolatedEnvironmentTests):
     def test_matrix_fixtures_are_independent_of_caller_routing_settings(self):
         from test_engineering import RegisterTests
         fixtures = (FullLifecycleTests('test_all_builds_precede_owned_phases_and_all_live_checks_remain'),
@@ -78,27 +71,29 @@ class FullLifecycleTests(MatrixTests):
                 checks.assert_not_called()
 
     def test_owned_daemon_overrides_are_rejected_before_builds(self):
-        for variable in ('DOCKER_HOST','DOCKER_CONTEXT','CONTAINER_HOST','CONTAINER_CONNECTION'):
+        for variable in ('DOCKER_HOST', 'DOCKER_CONTEXT', 'CONTAINER_HOST', 'CONTAINER_CONNECTION'):
             with self.subTest(variable=variable), \
-                    patch.dict(os.environ,{variable:'foreign','KEHILA_TEST_ENGINE':'docker',
-                        'KEHILA_TEST_PODMAN_MACHINE':'','KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE':'0'}), \
-                    patch.object(sys,'argv',['verify.py']), \
-                    patch.object(VERIFY,'run_checks') as checks, \
-                    patch('sys.stderr',new_callable=io.StringIO):
-                with self.assertRaises(SystemExit): VERIFY.main()
+                    patch.dict(os.environ, {variable: 'foreign', 'KEHILA_TEST_ENGINE': 'docker',
+                        'KEHILA_TEST_PODMAN_MACHINE': '', 'KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE': '0'}), \
+                    patch.object(sys, 'argv', ['verify.py']), \
+                    patch.object(VERIFY, 'run_checks') as checks, \
+                    patch('sys.stderr', new_callable=io.StringIO):
+                with self.assertRaises(SystemExit):
+                    VERIFY.main()
                 checks.assert_not_called()
 
     def test_external_mode_rejects_endpoints_that_disagree_with_local_readiness(self):
-        for key,value in (('KEHILA_TEST_MONGO_URL','mongodb://127.0.0.1:27018'),
-                          ('KEHILA_NATS_ADDRESS','127.0.0.1:4223'),
-                          ('KEHILA_NATS_HOST','other-host'),('KEHILA_NATS_PORT','4223')):
+        for key, value in (('KEHILA_TEST_MONGO_URL', 'mongodb://127.0.0.1:27018'),
+                          ('KEHILA_NATS_ADDRESS', '127.0.0.1:4223'),
+                          ('KEHILA_NATS_HOST', 'other-host'), ('KEHILA_NATS_PORT', '4223')):
             with self.subTest(key=key), \
-                    patch.dict(os.environ, {key:value,'KEHILA_TEST_ENGINE':'auto',
-                        'KEHILA_TEST_PODMAN_MACHINE':'','KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE':'0'}), \
-                    patch.object(sys,'argv',['verify.py','--external-services']), \
-                    patch.object(VERIFY,'run_checks') as checks, \
-                    patch('sys.stderr',new_callable=io.StringIO):
-                with self.assertRaises(SystemExit): VERIFY.main()
+                    patch.dict(os.environ, {key: value, 'KEHILA_TEST_ENGINE': 'auto',
+                        'KEHILA_TEST_PODMAN_MACHINE': '', 'KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE': '0'}), \
+                    patch.object(sys, 'argv', ['verify.py', '--external-services']), \
+                    patch.object(VERIFY, 'run_checks') as checks, \
+                    patch('sys.stderr', new_callable=io.StringIO):
+                with self.assertRaises(SystemExit):
+                    VERIFY.main()
                 checks.assert_not_called()
 
     def test_external_mode_executes_every_live_check_without_resource_ownership(self):
@@ -112,7 +107,7 @@ class FullLifecycleTests(MatrixTests):
             VERIFY.main()
         runtime.assert_not_called()
         commands = [call.args[0] for call in run.call_args_list]
-        self.assertEqual(commands[-4:], [
+        self.assertEqual(commands[-4: ], [
             [sys.executable, 'scripts/healthcheck.py', '--wait', '180', '--services',
              'PostgreSQL', 'FerretDB', 'NATS', 'OpenSearch'],
             [sys.executable, 'tests/integration/nats_probe.py'],
@@ -166,22 +161,22 @@ class FullLifecycleTests(MatrixTests):
                 patch.object(VERIFY.subprocess, 'run', run):
             VERIFY.main()
         start = events.index('VM start')
-        self.assertIn(['cargo', 'test', '--locked', '--workspace', '--no-run'], events[:start])
-        self.assertIn(['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher'], events[:start])
-        self.assertTrue(any(isinstance(event, list) and '--build-only' in event for event in events[:start]))
-        self.assertFalse(any(isinstance(event, list) and '--build-only' in event for event in events[start:]))
+        self.assertIn(['cargo', 'test', '--locked', '--workspace', '--no-run'], events[: start])
+        self.assertIn(['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher'], events[: start])
+        self.assertTrue(any(isinstance(event, list) and '--build-only' in event for event in events[: start]))
+        self.assertFalse(any(isinstance(event, list) and '--build-only' in event for event in events[start: ]))
         lifecycle = [event for event in events if isinstance(event, tuple)]
         self.assertEqual(lifecycle, [
-            ('start', ('nats',)), ('stop', ('nats',)),
-            ('start', ('opensearch',)), ('stop', ('opensearch',)),
+            ('start', ('nats', )), ('stop', ('nats', )),
+            ('start', ('opensearch', )), ('stop', ('opensearch', )),
             ('start', ('postgres', 'ferretdb')), ('stop', ('postgres', 'ferretdb'))])
         commands = [event for event in events if isinstance(event, list)]
-        readiness = [command[command.index('--services') + 1:] for command in commands if '--services' in command]
+        readiness = [command[command.index('--services') + 1: ] for command in commands if '--services' in command]
         self.assertEqual(readiness, [['NATS'], ['OpenSearch'], ['PostgreSQL', 'FerretDB']])
         self.assertIn([sys.executable, 'tests/integration/nats_probe.py'], commands)
         test = ['cargo', 'test', '--locked', '-p', 'event_dispatcher']
-        self.assertLess(events.index(('start', ('nats',))), events.index(test))
-        self.assertLess(events.index(test), events.index(('stop', ('nats',))))
+        self.assertLess(events.index(('start', ('nats', ))), events.index(test))
+        self.assertLess(events.index(test), events.index(('stop', ('nats', ))))
         self.assertTrue(any('--run-only' in command for command in commands))
         self.assertEqual(events[-1], 'VM stop')
         self.assertTrue(all(env['CARGO_BUILD_JOBS'] == '1' and env['GOFLAGS'] == '-tags=fixture -p=1'
@@ -227,18 +222,33 @@ class FullLifecycleTests(MatrixTests):
                 patch.object(VERIFY.subprocess, 'run', run):
             with self.assertRaises(subprocess.TimeoutExpired):
                 VERIFY.main()
-        self.assertEqual(events, [('nats',), 'group released', 'VM released'])
+        self.assertEqual(events, [('nats', ), 'group released', 'VM released'])
 
 
-class OwnerDeadlineTests(unittest.TestCase):
+class OwnerDeadlineTests(IsolatedEnvironmentTests):
+    def test_only_windows_cargo_receives_the_longer_default_timeout(self):
+        from types import SimpleNamespace
+        for platform, command, expected in (
+                ('nt', ['cargo', 'test'], 450),
+                ('nt', ['go', 'test'], 300),
+                ('posix', ['cargo', 'test'], 300),
+                ('posix', ['go', 'test'], 300)):
+            environment = {'fixture': 'retained'}
+            with self.subTest(platform=platform, command=command), \
+                    patch.object(VERIFY, 'os', SimpleNamespace(name=platform)), \
+                    patch.object(VERIFY.subprocess, 'run') as run:
+                VERIFY.execute(command, environment)
+            self.assertEqual(run.call_args.kwargs['timeout'], expected)
+            self.assertIs(run.call_args.kwargs['env'], environment)
+
     def test_each_resource_owner_receives_deadline_without_a_parent_kill_timer(self):
         import verification_budget as budget
-        with budget.work_budget(10), patch.object(VERIFY.subprocess,'run') as run:
-            for script in ('scripts/go_test.py','experiments/SP-002/check_seed_oracle.py',
-                           'experiments/SP-003/check.py','tests/integration/task_path.py'):
-                VERIFY.execute([sys.executable,script],{'KEHILA_FIXTURE':'retained'})
-        self.assertEqual(run.call_count,4)
+        with budget.work_budget(10), patch.object(VERIFY.subprocess, 'run') as run:
+            for script in ('scripts/go_test.py', 'experiments/SP-002/check_seed_oracle.py',
+                           'experiments/SP-003/check.py', 'tests/integration/task_path.py'):
+                VERIFY.execute([sys.executable, script], {'KEHILA_FIXTURE': 'retained'})
+        self.assertEqual(run.call_count, 4)
         for call in run.call_args_list:
             self.assertIsNone(call.kwargs['timeout'])
-            self.assertIn('KEHILA_VERIFICATION_DEADLINE',call.kwargs['env'])
-            self.assertEqual(call.kwargs['env']['KEHILA_FIXTURE'],'retained')
+            self.assertIn('KEHILA_VERIFICATION_DEADLINE', call.kwargs['env'])
+            self.assertEqual(call.kwargs['env']['KEHILA_FIXTURE'], 'retained')
