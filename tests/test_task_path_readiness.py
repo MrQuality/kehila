@@ -3,8 +3,8 @@ import importlib.util
 from pathlib import Path
 import sys
 import tempfile
-import unittest
 from unittest.mock import Mock
+from matrix_fixtures import IsolatedEnvironmentTests
 
 INTEGRATION = Path(__file__).resolve().parent / 'integration'
 sys.path.insert(0, str(INTEGRATION))
@@ -13,7 +13,7 @@ task_path = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(task_path)
 
 
-class BoundAddressTests(unittest.TestCase):
+class BoundAddressTests(IsolatedEnvironmentTests):
     def discover(self, output, returncode=None, timeout=1):
         with tempfile.TemporaryDirectory() as directory:
             log = Path(directory, 'child.log')

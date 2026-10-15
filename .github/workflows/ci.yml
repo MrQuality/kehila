@@ -12,6 +12,9 @@ jobs:
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    env:
+      KEHILA_TEST_ENGINE: docker
+      CARGO_BUILD_JOBS: '1'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,18 +51,8 @@ jobs:
       - name: Prepare disposable host
         if: steps.scope.outputs.scope != 'docs'
         run: python scripts/ci_prepare.py
-      - name: Start test services
-        id: services
-        if: steps.scope.outputs.scope != 'docs'
-        run: python scripts/setup_env.py --start --engine docker
       - name: Run shared verification, engineering validation and Go static checks
         if: steps.scope.outputs.scope != 'docs'
         run: python scripts/verify.py
       - name: Verify changed code against event base
         run: python scripts/ci_enforce.py
-      - name: Container diagnostics
-        if: failure() && (steps.services.outcome == 'success' || steps.services.outcome == 'failure')
-        run: docker compose -f docker-compose.yml logs --no-color
-      - name: Tear down ephemeral containers
-        if: always() && (steps.services.outcome == 'success' || steps.services.outcome == 'failure')
-        run: docker compose -f docker-compose.yml down --volumes --remove-orphans

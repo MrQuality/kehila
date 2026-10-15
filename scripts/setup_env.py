@@ -2,11 +2,11 @@
 """Configure hooks, optionally start disposable infrastructure, and check readiness."""
 from pathlib import Path
 import argparse
-import os
 import shutil
 import stat
 import subprocess
 import sys
+from verification_budget import DeadlineExceeded, command_timeout
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -15,16 +15,18 @@ def run(command, **kwargs):
     return subprocess.run(command, cwd=ROOT, check=True, timeout=600, **kwargs)
 
 
-def compose_command(preferred="auto"):
+def compose_command(preferred="auto", environment=None):
     for engine, compose in (("podman", ["podman", "compose"]), ("docker", ["docker", "compose"])):
         if preferred != "auto" and engine != preferred:
             continue
         if not shutil.which(engine):
             continue
         try:
-            subprocess.run([engine, "info"], check=True, capture_output=True, timeout=15)
-            subprocess.run(compose + ["version"], check=True, capture_output=True, timeout=15)
+            subprocess.run([engine, "info"], env=environment, check=True, capture_output=True, timeout=command_timeout(15))
+            subprocess.run(compose + ["version"], env=environment, check=True, capture_output=True, timeout=command_timeout(15))
             return compose
+        except DeadlineExceeded:
+            raise
         except (subprocess.SubprocessError, OSError):
             continue
     raise RuntimeError("Start Podman (podman machine start on Windows) and install a Compose provider, or start Docker.")

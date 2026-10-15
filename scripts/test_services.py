@@ -1,0 +1,308 @@
+"""Own short-lived Compose groups; never tear down the development project."""
+from cleanup_errors import retain_cleanup_failure
+from contextlib import contextmanager, nullcontext
+from dataclasses import dataclass
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+from urllib.parse import urlsplit
+import uuid
+
+from setup_env import compose_command
+from verification_budget import cleanup_time, command_timeout
+
+ROOT = Path(__file__).resolve().parents[1]
+SERVICES = {'postgres', 'ferretdb', 'nats', 'opensearch'}
+
+
+@dataclass(frozen=True)
+class ComposeRuntime:
+    compose: list[str]
+    environment: dict[str, str]
+
+    @property
+    def engine(self):
+        command = [self.compose[0]]
+        if command[0] == 'podman' and self.environment.get('CONTAINER_CONNECTION'):
+            command += ['--connection', self.environment['CONTAINER_CONNECTION']]
+        elif command[0] == 'podman' and '--remote=false' in self.compose:
+            command.append('--remote=false')
+        return command
+
+
+def run(command, timeout=120, **kwargs):
+    timeout = command_timeout(timeout)
+    print('TEST RESOURCE:', ' '.join(command), flush=True)
+    return subprocess.run(command, cwd=ROOT, check=True, timeout=timeout, **kwargs)
+
+
+def _containers(runtime, project, service=None, include_stopped=False):
+    command = [*runtime.engine, 'ps', '--filter', 'label=com.docker.compose.project=' + project]
+    if service:
+        command += ['--filter', 'label=com.docker.compose.service=' + service]
+    if include_stopped:
+        command.append('--all')
+    return run([*command, '--format', '{{.ID}}'], capture_output=True,
+               text=True, timeout=15, env=runtime.environment).stdout.split()
+
+
+def validate_daemon_environment(environment, machine):
+    forbidden = ['DOCKER_HOST', 'DOCKER_CONTEXT', 'CONTAINER_HOST']
+    if machine is None:
+        forbidden.append('CONTAINER_CONNECTION')
+    if any(environment.get(name) for name in forbidden):
+        raise ValueError('Owned services require local daemon routing; unset daemon overrides or use --external-services')
+
+
+def local_runtime(compose, environment):
+    """Validate effective saved routing, then pin it for creation and inspection."""
+    engine = compose[0]
+    if engine == 'podman':
+        info = json.loads(run(['podman', 'info', '--format', 'json'], capture_output=True,
+                              text=True, timeout=15, env=environment).stdout)
+        if not isinstance(info, dict) or not isinstance(info.get('host'), dict) or info['host'].get('serviceIsRemote') is not False:
+            raise ValueError('Remote Podman requires an explicit local --podman-machine')
+        return ComposeRuntime(['podman', '--remote=false', *compose[1:]], environment)
+    contexts = json.loads(run(['docker', 'context', 'inspect'], capture_output=True,
+                              text=True, timeout=15, env=environment).stdout)
+    if (not isinstance(contexts, list) or len(contexts) != 1 or not isinstance(contexts[0], dict)
+            or not isinstance(contexts[0].get('Name'), str) or not contexts[0]['Name']):
+        raise ValueError('Expected one current Docker context')
+    endpoints = contexts[0].get('Endpoints')
+    docker = endpoints.get('docker') if isinstance(endpoints, dict) else None
+    host = docker.get('Host') if isinstance(docker, dict) else None
+    if not isinstance(host, str) or not (host.startswith('unix:///') or host.startswith('npipe:////./pipe/')):
+        raise ValueError('Owned services require a local Docker socket context')
+    return ComposeRuntime(compose, dict(environment, DOCKER_CONTEXT=contexts[0]['Name']))
+
+
+def _machine_info(name, environment=None, allow_starting=False):
+    info = json.loads(run(['podman', 'machine', 'inspect', name],
+                          capture_output=True, text=True, timeout=15, env=environment).stdout)
+    states = {'stopped', 'running', 'starting'} if allow_starting else {'stopped', 'running'}
+    if (not isinstance(info, list) or len(info) != 1 or not isinstance(info[0], dict)
+            or info[0].get('Name') != name
+            or info[0].get('State') not in states):
+        raise ValueError('Expected one named Podman machine in a stable state')
+    return info[0]
+
+
+def _machine_connections(name, info, environment=None):
+    connections = json.loads(run(['podman', 'system', 'connection', 'list', '--format', 'json'],
+                                 capture_output=True, text=True, timeout=15, env=environment).stdout)
+    if not isinstance(connections, list) or not all(isinstance(c, dict) for c in connections):
+        raise ValueError('Expected the Podman connection inventory')
+    ssh = info.get('SSHConfig')
+    if (not isinstance(ssh, dict) or type(ssh.get('Port')) is not int
+            or not 1 <= ssh['Port'] <= 65535
+            or not isinstance(ssh.get('RemoteUsername'), str) or not ssh['RemoteUsername']):
+        raise ValueError('Expected the requested machine SSH endpoint')
+    selected = []
+    for connection_name, user in ((name, ssh['RemoteUsername']), (name + '-root', 'root')):
+        matching = [c for c in connections if c.get('Name') == connection_name]
+        if len(matching) != 1 or not isinstance(matching[0].get('URI'), str):
+            raise ValueError('Both machine-created Podman connections are required for safe VM cleanup')
+        endpoint = urlsplit(matching[0]['URI'])
+        socket_matches = (endpoint.path == '/run/podman/podman.sock' if user == 'root' else
+                          re.fullmatch(r'/run/user/[1-9][0-9]*/podman/podman\.sock', endpoint.path))
+        if (endpoint.scheme != 'ssh' or endpoint.hostname not in {'127.0.0.1', 'localhost', '::1'}
+                or endpoint.port != ssh['Port'] or endpoint.username != user or not socket_matches
+                or endpoint.query or endpoint.fragment or endpoint.password is not None
+                or ssh['RemoteUsername'] == 'root'):
+            raise ValueError('Podman connection does not identify the requested machine/store')
+        selected.append(connection_name)
+    return selected
+
+
+def _stop_owned_machine(name, environment=None):
+    info = _machine_info(name, environment=environment, allow_starting=True)
+    if info['State'] == 'stopped':
+        return
+    if info['State'] == 'starting':
+        run(['podman', 'machine', 'stop', name], timeout=120, env=environment)
+        return
+    # Both stores share this VM; a concurrent user may have started other work.
+    # Query the registered endpoints: `machine ssh` can create a literal NUL
+    # known-hosts file in its Windows working directory.
+    for connection in _machine_connections(name, info, environment=environment):
+        active = run(['podman', '--connection', connection, 'ps', '-q'],
+                     capture_output=True, text=True, timeout=30, env=environment).stdout.strip()
+        if active:
+            raise RuntimeError('VM exclusive-use contract violated; active containers remain, VM retained')
+    run(['podman', 'machine', 'stop', name], timeout=120, env=environment)
+
+
+def validate_runtime(preferred, machine, exclusive=False):
+    if preferred not in {'auto', 'podman', 'docker'}:
+        raise ValueError('Unknown container engine')
+    if machine is not None and (preferred == 'docker' or
+                    re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', machine) is None):
+        raise ValueError('An explicit Podman machine requires a simple name and the Podman engine')
+    if exclusive and machine is None:
+        raise ValueError('Exclusive VM use requires an explicit Podman machine')
+
+
+def _account_directory():
+    """Resolve the current OS account's directory without environment aliases."""
+    if os.name != 'nt':
+        import pwd
+        return Path(pwd.getpwuid(os.getuid()).pw_dir).resolve()
+
+    import ctypes
+    from ctypes import wintypes
+    # FOLDERID_Profile avoids per-application LocalAppData virtualization.
+    folder_id = (ctypes.c_ubyte * 16).from_buffer_copy(
+        uuid.UUID('5e6c858f-0e22-4760-9afe-ea3317b67173').bytes_le)
+    shell = ctypes.WinDLL('shell32')
+    ole = ctypes.WinDLL('ole32')
+    ole.CoInitializeEx.argtypes = [ctypes.c_void_p, wintypes.DWORD]
+    ole.CoInitializeEx.restype = ctypes.c_long
+    ole.CoTaskMemFree.argtypes = [ctypes.c_void_p]
+    ole.CoTaskMemFree.restype = None
+    initialized = ole.CoInitializeEx(None, 0)
+    if initialized not in (0, 1, -2147417850):  # RPC_E_CHANGED_MODE: already initialized.
+        raise OSError('Cannot initialize the Windows account-directory API', initialized)
+    shell.SHGetKnownFolderPath.argtypes = [ctypes.c_void_p, wintypes.DWORD,
+                                          wintypes.HANDLE, ctypes.POINTER(ctypes.c_void_p)]
+    shell.SHGetKnownFolderPath.restype = ctypes.c_long
+    result = ctypes.c_void_p()
+    try:
+        status = shell.SHGetKnownFolderPath(ctypes.byref(folder_id), 0, None, ctypes.byref(result))
+        if status != 0:
+            raise OSError('Cannot resolve the current Windows account directory', status)
+        return Path(ctypes.wstring_at(result)).resolve()
+    finally:
+        if result.value:
+            ole.CoTaskMemFree(result)
+        if initialized in (0, 1):
+            ole.CoUninitialize()
+
+
+def _machine_lease_path(name):
+    account = _account_directory()
+    if not account.is_absolute():
+        raise ValueError('Expected an absolute OS account directory')
+    key = hashlib.sha256(name.encode('utf-8')).hexdigest()
+    return account / '.kehila-verifier-locks' / ('machine-' + key + '.lock')
+
+
+@contextmanager
+def _machine_lease(name):
+    # Keep the inode after unlocking: unlinking it could admit a second owner
+    # holding a new inode while another verifier still owns the old one.
+    path = _machine_lease_path(name)
+    directory = path.parent
+    directory.mkdir(mode=0o700, exist_ok=True)
+    if directory.is_symlink() or directory.resolve() != directory:
+        raise ValueError('Machine lease directory must not be redirected')
+    if os.name != 'nt':
+        info = directory.stat()
+        if info.st_uid != os.getuid() or info.st_mode & 0o077:
+            raise ValueError('Machine lease directory must be private to the OS account')
+    with path.open('a+b') as lease:
+        lease.seek(0)
+        if os.name == 'nt':
+            import msvcrt
+            lock = lambda: msvcrt.locking(lease.fileno(), msvcrt.LK_NBLCK, 1)
+            unlock = lambda: msvcrt.locking(lease.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            lock = lambda: fcntl.flock(lease.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            unlock = lambda: fcntl.flock(lease.fileno(), fcntl.LOCK_UN)
+        try:
+            lock()
+        except OSError as error:
+            raise RuntimeError('Another verifier owns the requested Podman machine') from error
+        try:
+            if not lease.read(1):
+                lease.write(b'0')
+                lease.flush()
+            yield
+        finally:
+            lease.seek(0)
+            unlock()
+
+
+@contextmanager
+def managed_runtime(preferred='auto', machine=None, environment=None, exclusive=False):
+    validate_runtime(preferred, machine, exclusive)
+    with _machine_lease(machine) if machine else nullcontext():
+        with _runtime(preferred, machine, environment, exclusive) as runtime:
+            yield runtime
+
+
+@contextmanager
+def _runtime(preferred, machine, environment, exclusive):
+    owned_machine = False
+    failure = None
+    environment = dict(os.environ if environment is None else environment)
+    validate_daemon_environment(environment, machine)
+    try:
+        if machine:
+            preferred = 'podman'
+            info = _machine_info(machine, environment=environment)
+            connections = _machine_connections(machine, info, environment=environment)
+            selected = environment.get('CONTAINER_CONNECTION') or connections[bool(info.get('Rootful'))]
+            if selected not in connections:
+                raise ValueError('Select a verified connection belonging to the requested Podman machine')
+            environment['CONTAINER_CONNECTION'] = selected
+            if exclusive and info['State'] != 'stopped':
+                raise ValueError('Exclusive VM use requires an initially stopped machine')
+            owned_machine = exclusive and info['State'] == 'stopped'
+            if info['State'] == 'stopped':
+                run(['podman', 'machine', 'start', machine], timeout=120, env=environment)
+        compose = compose_command(preferred, environment=environment)
+        yield ComposeRuntime(compose, environment) if machine else local_runtime(compose, environment)
+    except BaseException as error:
+        failure = error
+        raise
+    finally:
+        if owned_machine:
+            try:
+                with cleanup_time():
+                    _stop_owned_machine(machine, environment=environment)
+            except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as cleanup_error:
+                if failure is not None:
+                    retain_cleanup_failure(failure, cleanup_error, 'Podman machine')
+                    raise failure
+                raise
+
+
+@contextmanager
+def service_group(runtime, selected):
+    if not selected or len(set(selected)) != len(selected) or not set(selected) <= SERVICES:
+        raise ValueError('Expected a nonempty set of known test services')
+    # -p overrides the Compose file's development name. Every group owns a fresh
+    # project, including partial startup; cleanup can only address that project.
+    project = 'kehila-test-' + uuid.uuid4().hex
+    command = [*runtime.compose, '-p', project, '-f', str(ROOT / 'docker-compose.yml')]
+    failure = None
+    try:
+        run([*command, 'up', '-d', *selected], timeout=300, env=runtime.environment)
+        for service in selected:
+            if len(_containers(runtime, project, service)) != 1:
+                raise RuntimeError('Expected one running owned container for ' + service)
+        yield
+    except BaseException as error:
+        failure = error
+        try:
+            with cleanup_time():
+                run([*command, 'logs', '--no-color', '--tail', '200'], timeout=30, env=runtime.environment)
+        except (OSError, subprocess.SubprocessError) as diagnostic_error:
+            print('TEST RESOURCE: diagnostics failed: ' + str(diagnostic_error), file=sys.stderr)
+        raise
+    finally:
+        try:
+            with cleanup_time():
+                run([*command, 'down', '--volumes'], timeout=120, env=runtime.environment)
+                if _containers(runtime, project, include_stopped=True):
+                    raise RuntimeError('Owned test containers remain after Compose cleanup')
+        except (OSError, RuntimeError, subprocess.SubprocessError) as cleanup_error:
+            if failure is not None:
+                retain_cleanup_failure(failure, cleanup_error, 'Compose project')
+                raise failure
+            raise

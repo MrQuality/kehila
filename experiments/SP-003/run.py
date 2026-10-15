@@ -13,6 +13,7 @@ import time
 import uuid
 
 from build import build, command, SOURCE, REPO
+from verification_budget import command_timeout, DeadlineExceeded
 from containers import cleanup, run_probe
 
 # Reuse the established host/resource checks and immutable PostgreSQL image pin.
@@ -41,7 +42,7 @@ class Cases:
 
     def oracle(self, action, value, *, valid=True):
         result = subprocess.run([str(self.binary), action], input=json.dumps(value, ensure_ascii=False).encode(),
-                                capture_output=True, timeout=15)
+                                capture_output=True, timeout=command_timeout(15))
         if valid:
             require(result.returncode == 0, result.stderr.decode(errors="replace"))
             return json.loads(result.stdout)
@@ -52,6 +53,8 @@ class Cases:
         try:
             function()
             self.records.append(dict(case=name, status="PASS"))
+        except DeadlineExceeded:
+            raise
         except Exception as error:
             self.records.append(dict(case=name, status="FAIL", error=str(error)))
         print(name, self.records[-1]["status"], flush=True)

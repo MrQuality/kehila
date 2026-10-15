@@ -17,8 +17,10 @@ python scripts/verify.py
 ```
 
 Use `python scripts/verify.py --pure` when working on pure logic without the
-development services. Integration changes need the full suite against running
-services. See [the testing guide](docs/TESTING.md) for coverage and limitations.
+development services. Full verification builds first, then owns and cleans up
+only the services needed by each phase. Integration changes still require the
+complete service-backed suite. See [the testing guide](docs/TESTING.md) for
+coverage and limitations.
 
 Use the [test strategy](docs/TEST_STRATEGY.md) to identify the evidence relevant
 to a change. It is proposed; [the testing guide](docs/TESTING.md) describes the

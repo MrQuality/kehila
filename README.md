@@ -62,11 +62,19 @@ declarations-only JavaScript workspace.
 From a checkout:
 
 ```text
-python scripts/setup_env.py --start
+python scripts/setup_env.py --hooks-only
 python scripts/verify.py
 ```
 
-On Windows with Podman, start the VM first using `podman machine start`.
+Full verification builds with one compiler job before starting short-lived,
+owned service groups. It removes each group after its checks. Keep the listed
+ports free; existing development containers are not borrowed or stopped.
+On Windows, `python scripts/verify.py --engine podman --podman-machine NAME`
+starts an explicit stopped VM after builds and retains it as shared. Add
+`--exclusive-podman-machine` only for an initially stopped VM reserved exclusively
+for the run, allowing automatic cleanup and shutdown.
+Full checks require default local endpoints, including with `--external-services`.
+See [test lifecycle and hook settings](docs/TESTING.md#owned-test-services).
 OpenSearch requires `vm.max_map_count` of at least 262144 on the Linux host or
 VM. CI configures this in its disposable runner.
 
@@ -76,7 +84,9 @@ For unit tests without containers:
 python scripts/verify.py --pure
 ```
 
-Inspect or stop the services with your chosen container engine:
+For a development stack that stays running, use `python scripts/setup_env.py --start`,
+then `python scripts/verify.py --external-services`. That mode retains
+all checks and leaves the stack under your ownership. Inspect or stop it with:
 
 ```text
 podman compose -f docker-compose.yml logs
