@@ -39,8 +39,13 @@ runs offline tests before the VM and NATS, OpenSearch and PostgreSQL/FerretDB
 in separate required phases. Review follow-up binds machine/store routing,
 requires explicit exclusive ownership for VM shutdown, keeps the work deadline
 inside cleanup owners, preserves every labelled teardown failure, requires
-consistent local test/daemon routing, scopes VM leases by OS user, and bounds
-failure-log lines and generated oracle-output retention.
+consistent local test/daemon routing, scopes VM leases by the OS account profile
+independently of environment aliases, and bounds failure-log lines and generated
+oracle-output retention. Task-path callbacks retain the body error explicitly;
+SP-003 uses shared directory ownership with its five-second retry budget and
+bounded case diagnostics. Regression coverage includes expired-parent VM cleanup,
+both store connections and routing environment, timeout selection and inherited
+deadline isolation.
 It is submitted for review with service-backed evidence in the
 [testing guide](../TESTING.md#owned-test-services). This changes development
 resource overlap; it completes no product milestone or #49 delivery obligation.

@@ -70,9 +70,12 @@ primary failure and every labelled Compose/VM/directory cleanup failure are
 retained and printed without rewriting the original exception cause. The shared
 reporter is used at both verifier and child-check CLI boundaries, including
 normal interruption (exit 130); argument-parser exit codes remain unchanged.
-Implicit exception contexts from child `ExitStack` callbacks are also printed,
-with cycle/duplicate protection, so a later callback error cannot conceal the
-body failure or another cleanup error.
+Task-path resources use an explicit cleanup owner: the body exception remains
+primary and each callback failure is attached with its resource label, even if
+the callback suppresses its Python context or supplies its own cause. All
+registered callbacks run. On a successful body, the first cleanup failure is
+primary. The reporter follows unsuppressed Python contexts with cycle/duplicate
+protection; it does not undo deliberate context suppression.
 The verifier owns a 600-second work budget (`--timeout`, positive and at most
 600). Every work command receives the smaller of its own timeout and the
 remaining budget. Resource-owning Python checks (Go tests, SP-002/SP-003 check
@@ -108,8 +111,17 @@ python scripts/verify.py --engine podman --podman-machine NAME --exclusive-podma
 
 This declares that no other program or user will use the VM during the run.
 The machine must initially be stopped. A nonblocking OS file lease serializes
-verifiers using the same OS user and explicit machine name; it cannot prevent unrelated
-Podman clients from using that VM. Do not select exclusive mode for a shared VM.
+verifiers using the same OS account and explicit machine name. The lock lives
+under `.kehila-verifier-locks` in the OS-resolved account profile (Windows
+`FOLDERID_Profile`, POSIX account-database home), independently of shell username,
+home and temporary-directory variables. The Windows profile also avoids
+per-application [LocalAppData redirection](https://docs.python.org/3.10/using/windows.html#redirection-of-local-data-registry-and-temporary-paths).
+The directory must not be redirected;
+on POSIX it must belong to the account and exclude group/other permissions.
+Lock files persist after release so another owner cannot lock a replacement
+inode. Stop older verifier versions before using the new lease namespace; their
+temporary-directory locks do not coordinate with it. The lease cannot prevent
+unrelated Podman clients from using that VM. Do not select exclusive mode for a shared VM.
 An unexpected active container in either store fails exclusive cleanup and leaves
 the VM running. Without the exclusive declaration, idle snapshots never authorize
 shutdown. An exclusively owned partial start receives a bounded stop attempt;
@@ -234,6 +246,37 @@ cleanup after the existing 30-second Windows sharing-lock retry bound. No
 surviving test executable process was found; the directory was removable on
 subsequent bounded cleanup. The unchanged source retry passed the complete full
 staged gate. The cleanup timeout and policy were not weakened.
+
+The next follow-up covers callback errors with suppressed contexts/explicit
+causes, stable account-profile leases, explicit dual-store routing/environment
+forwarding, VM teardown after the parent work deadline and the Windows/Cargo
+timeout matrix. All five previously surviving targeted mutations now fail their
+intended assertions. Tooling fixtures isolate inherited verification deadlines,
+including an expired value, while deliberate inheritance tests and production
+configuration validation remain active. SP-003 shares the directory owner with
+an explicit five-second retry budget; failed pure cases print a single diagnostic
+line limited to 4096 UTF-8 bytes, excluding its newline. These checks do not
+establish crash/forced-termination cleanup guarantees.
+
+Source `00e02fe` passed the full staged Windows/WSL2/Podman gate on 2026-10-15:
+240 tooling tests (238 passed, two POSIX-only skips), all Rust/Go/static/frozen-
+oracle checks and every required service phase. The same tooling suite passed
+with inherited `KEHILA_VERIFICATION_DEADLINE=0`. Windows installer and packaged
+Python resolved the same account-profile lease path. Four earlier gate attempts
+failed on Windows Go-executable sharing locks after testing (one also failed a
+startup timing assertion); no surviving test process or matching file handle was
+found afterward. The files became removable later. Full gates then passed with
+isolated temporary storage and serial Go package work, keeping the existing
+30-second cleanup policy and all checks. A lease-development gate also rejected
+LocalAppData redirection before VM startup; the profile-based lease passed.
+
+At the same source, the controlled PostgreSQL/FerretDB deadline check was rerun
+after both real Rust workers became ready. Injected elapsed time expired the
+child's inherited deadline; both workers stopped, collection cleanup succeeded,
+the failure propagated, bounded diagnostics ran, temporary outputs and the owned
+service group were removed, and the exclusive VM stopped. This checks the new
+callback owner against real services; it remains controlled deadline-exhaustion
+evidence rather than a 600-second wall-clock timeout or forced termination.
 
 Run unit tests without external services:
 
