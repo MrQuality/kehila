@@ -6,16 +6,19 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
+from matrix_fixtures import IsolatedEnvironmentTests
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "experiments/SP-003"
 SPEC = importlib.util.spec_from_file_location("sp003_build_lifecycle", SOURCE / "build.py")
 BUILD = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(BUILD)
+import temp_work
 
 
-class BuildLifecycleTests(unittest.TestCase):
+class BuildLifecycleTests(IsolatedEnvironmentTests):
     def setUp(self):
+        super().setUp()
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.dependencies = Path(temporary.name) / "deps"
@@ -89,28 +92,30 @@ class BuildLifecycleTests(unittest.TestCase):
         self.assert_no_builds()
 
     def test_windows_sharing_violations_retry_cleanup(self):
-        for code in (32, 33):
+        for code in (5, 32, 33):
             with self.subTest(code=code):
                 error = PermissionError("temporary lock")
                 error.winerror = code
-                with patch.object(BUILD.sys, "platform", "win32"), \
-                     patch.object(BUILD.shutil, "rmtree", side_effect=[error, None]) as remove, \
-                     patch.object(BUILD.time, "sleep") as sleep:
-                    BUILD.remove_build_directory(self.dependencies / "owned")
+                with patch.object(temp_work.sys, "platform", "win32"), \
+                     patch.object(temp_work.shutil, "rmtree", side_effect=[error, None]) as remove, \
+                     patch.object(temp_work.time, "sleep") as sleep:
+                    with BUILD.build():
+                        pass
                 self.assertEqual(remove.call_count, 2)
-                sleep.assert_called_once_with(0.1)
+                sleep.assert_called_once_with(0.25)
 
     def test_cleanup_deadline_and_other_errors_fail_visibly(self):
-        for code, times in ((32, [0, 6]), (5, [0])):
+        for code, times in ((32, [0, 5]), (87, [0])):
             with self.subTest(code=code):
                 error = PermissionError("cleanup failed")
                 error.winerror = code
-                with patch.object(BUILD.sys, "platform", "win32"), \
-                     patch.object(BUILD.shutil, "rmtree", side_effect=error), \
-                     patch.object(BUILD.time, "monotonic", side_effect=times), \
-                     patch.object(BUILD.time, "sleep") as sleep:
+                with patch.object(temp_work.sys, "platform", "win32"), \
+                     patch.object(temp_work.shutil, "rmtree", side_effect=error), \
+                     patch.object(temp_work.time, "monotonic", side_effect=times), \
+                     patch.object(temp_work.time, "sleep") as sleep:
                     with self.assertRaises(PermissionError) as raised:
-                        BUILD.remove_build_directory(self.dependencies / "owned")
+                        with BUILD.build():
+                            pass
                 self.assertIs(raised.exception, error)
                 sleep.assert_not_called()
 

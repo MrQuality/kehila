@@ -33,6 +33,14 @@ class OwnedDirectoryTests(unittest.TestCase):
                         self.fail('invalid prefix admitted')
             allocate.assert_not_called()
 
+    def test_invalid_retry_budget_does_not_allocate(self):
+        with patch.object(temp_work.tempfile, 'mkdtemp') as allocate:
+            for seconds in (-1, 31, float('nan'), float('inf')):
+                with self.subTest(seconds=seconds), self.assertRaises(ValueError):
+                    with temp_work.owned_directory('kehila-cleanup-test-', retry_seconds=seconds):
+                        self.fail('invalid cleanup budget admitted')
+            allocate.assert_not_called()
+
     def test_windows_transient_locks_retry_then_remove(self):
         for code in (5, 32, 33):
             with self.subTest(code=code), patch.object(temp_work.sys, 'platform', 'win32'), \
