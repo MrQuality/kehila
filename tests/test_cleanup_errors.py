@@ -116,3 +116,52 @@ runpy.run_path('scripts/verify.py',run_name='__main__')
                 print_failure('ERR_CHILD_CHECK',error)
         for message in ('last cleanup','first cleanup','body failure'):
             self.assertIn(message,output.getvalue())
+
+    def test_owned_callbacks_preserve_body_through_suppressed_and_explicit_causes(self):
+        from cleanup_errors import CleanupStack
+        for explicit_cause in (False, True):
+            primary = RuntimeError('body failed')
+            cleanup = OSError('callback failed')
+            calls = []
+            def fail():
+                calls.append('failed cleanup')
+                raise cleanup from (ValueError('callback cause') if explicit_cause else None)
+            with self.subTest(explicit_cause=explicit_cause):
+                with self.assertRaises(RuntimeError) as caught:
+                    with CleanupStack() as owned:
+                        owned.callback(lambda: calls.append('last cleanup'), resource='last resource')
+                        owned.callback(fail, resource='failed resource')
+                        raise primary
+                self.assertIs(caught.exception, primary)
+                self.assertIsNone(primary.__cause__)
+                self.assertEqual(primary._cleanup_failures, (('failed resource', cleanup),))
+                self.assertEqual(calls, ['failed cleanup', 'last cleanup'])
+                with patch('sys.stderr', new_callable=io.StringIO) as output:
+                    print_failure('ERR', primary)
+                self.assertIn('ERR: body failed', output.getvalue())
+                self.assertIn('CLEANUP FAILED (failed resource): callback failed', output.getvalue())
+
+    def test_owned_stack_preserves_first_cleanup_error_when_body_succeeds(self):
+        from cleanup_errors import CleanupStack
+        first, second = OSError('first'), OSError('second')
+        def fail(error): raise error
+        with self.assertRaises(OSError) as caught:
+            with CleanupStack() as owned:
+                owned.callback(fail, second, resource='second')
+                owned.callback(fail, first, resource='first')
+        self.assertIs(caught.exception, first)
+        self.assertEqual(first._cleanup_failures, (('second', second),))
+
+    def test_owned_context_exit_cannot_suppress_body_or_replace_it(self):
+        from cleanup_errors import CleanupStack
+        from unittest.mock import Mock
+        manager = Mock()
+        manager.__enter__ = Mock(return_value='resource')
+        manager.__exit__ = Mock(return_value=True)
+        primary = RuntimeError('body failed')
+        with self.assertRaises(RuntimeError) as caught:
+            with CleanupStack() as owned:
+                self.assertEqual(owned.enter_context(manager, resource='context'), 'resource')
+                raise primary
+        self.assertIs(caught.exception, primary)
+        self.assertIs(manager.__exit__.call_args.args[1], primary)

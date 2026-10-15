@@ -1,4 +1,5 @@
 """Retain teardown failures without rewriting the primary exception's cause."""
+from contextlib import ExitStack
 import sys
 
 
@@ -35,3 +36,39 @@ def run_main(main, prefix):
     except Exception as error:
         print_failure(prefix, error)
         return 3
+
+
+class CleanupStack:
+    """Own resource teardown; preserve body errors and never honor suppression."""
+
+    def __init__(self):
+        self._stack = ExitStack()
+        self._failure = None
+        self._exception = (None, None, None)
+
+    def __enter__(self):
+        return self
+
+    def callback(self, function, *args, resource, **kwargs):
+        def cleanup():
+            try:
+                function(*args, **kwargs)
+            except BaseException as error:
+                if self._failure is None:
+                    self._failure = error
+                else:
+                    retain_cleanup_failure(self._failure, error, resource)
+        self._stack.callback(cleanup)
+
+    def enter_context(self, manager, *, resource):
+        value = manager.__enter__()
+        self.callback(lambda: manager.__exit__(*self._exception), resource=resource)
+        return value
+
+    def __exit__(self, kind, error, traceback):
+        self._failure = error
+        self._exception = (kind, error, traceback)
+        self._stack.close()
+        if error is None and self._failure is not None:
+            raise self._failure
+        return False

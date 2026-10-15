@@ -4,7 +4,6 @@ Builds and owns two workers, a Go API, a fault proxy, and one unique collection.
 Requires a running single-host FerretDB at KEHILA_TEST_MONGO_URL (default localhost).
 """
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import ExitStack
 import argparse
 import json
 import os
@@ -27,7 +26,7 @@ from live_task_worker import uuid7
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from cleanup_errors import run_main
+from cleanup_errors import CleanupStack, run_main
 from temp_work import owned_directory
 from verification_budget import command_timeout, cleanup_time, DeadlineExceeded
 
@@ -245,23 +244,23 @@ def exercise(folder):
         raise ValueError('Both task-path executables must be prepared before live verification')
     environment = dict(os.environ, KEHILA_MONGO_URL=uri, KEHILA_TASK_DB='yaja',
                        KEHILA_TASK_COLLECTION='kehila_test_' + uuid.uuid4().hex)
-    with ExitStack() as owned:
+    with CleanupStack() as owned:
         # Register cleanup before installation, including partially created indexes.
         def drop_collection():
             with cleanup_time():
                 subprocess.run([worker, 'drop-test-collection'], env=environment, check=True, timeout=15)
-        owned.callback(drop_collection)
+        owned.callback(drop_collection, resource="test collection")
         subprocess.run([worker, 'install-indexes'], env=environment, check=True, timeout=command_timeout(15))
         proxy = FaultProxy((parsed.hostname, parsed.port or 27017))
-        owned.callback(proxy.close)
+        owned.callback(proxy.close, resource="fault proxy")
         processes = []
 
         def launch(command, env):
             command_timeout(1)
-            log = owned.enter_context(open(Path(folder) / ('process-' + str(len(processes)) + '.log'), 'w+'))
+            log = owned.enter_context(open(Path(folder) / ('process-' + str(len(processes)) + '.log'), 'w+'), resource='process log')
             process = subprocess.Popen(command, env=env, cwd=ROOT, stdout=log, stderr=log,
                                        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
-            owned.callback(stop, process)
+            owned.callback(stop, process, resource="task-path process")
             processes.append(process)
             return process, Path(log.name)
 
@@ -279,7 +278,7 @@ def exercise(folder):
         boundary(bases[0])
         database_outage(bases, proxy, processes)
         # Reserve an unserved socket to make search unavailability deterministic.
-        unavailable = owned.enter_context(socket.socket())
+        unavailable = owned.enter_context(socket.socket(), resource='reserved search socket')
         unavailable.bind(('127.0.0.1', 0))
         process, log_path = launch(
             [api], dict(environment, KEHILA_LISTEN_ADDR='127.0.0.1:0',
