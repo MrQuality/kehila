@@ -4,7 +4,7 @@
 | --- | --- |
 | Status / outcome | PR #53 approved/merged; serial A05 subset passed, broader investigation incomplete |
 | Owner / assessor | Project maintainer; remaining mechanism decisions and result assessment are separate |
-| Created / last updated | 2026-10-08 / 2026-10-14 |
+| Created / last updated | 2026-10-08 / 2026-10-16 |
 | Tracking issue | [40](https://github.com/MrQuality/kehila/issues/40) |
 | Parent delivery issue | [#11](https://github.com/MrQuality/kehila/issues/11) |
 | Prior evidence | [SP-002](SP-002-postgresql-project-create.md) |
@@ -380,6 +380,91 @@ supported for the recorded overlay and fixtures. This is not production schema,
 authentication, session, peer-channel or concurrent-revocation qualification.
 Reuse SP-002 only within its stated boundaries; ADR-103 remains Proposed.
 
+## Next bounded slice: history and concurrent authority
+
+**Status: planning only, awaiting maintainer review before implementation.**
+The accepted next direction is to finish the database permission-safety checks,
+not to select authentication or expose application routes. PR #54 merged on
+2026-10-16 at `7b7e78825e1b639e2a222bb1403d24b74e71665a`; its serial results are
+the baseline. This plan adds no successful execution claim or architecture decision.
+The maintainer owns scope approval and result assessment under SOP-001.
+
+### Scope and authority distinctions
+
+- Extend the existing disposable SP-004 overlay/runner after the unmodified
+  native baseline and retained serial cases pass. Keep production SQL, codecs,
+  application APIs and dependencies unchanged. Preserve R01-R03 evidence.
+- Project access and project-creation permission are different scopes. Revoking
+  an `initial_owner` project grant must deny that project's fixture command and
+  replay; it must not be used as evidence that `project_create` is denied.
+  Creation/replay denial instead changes the fixture actor's current
+  `can_create_project` under the same actor fence, without changing its identity.
+- A creation/replay driver must execute the reviewed lookup, current-authority
+  and transaction ordering explicitly against native records. Project-scoped
+  save/replay checks use clearly labelled fixtures, not an invented production
+  mutation family. Neither constitutes application adapter integration.
+- Any new actor-permission management helper is disposable test infrastructure.
+  Review its exact role/DDL diff before execution: restricted manager capability,
+  trusted fixture identity, deterministic manager/subject locks, no serving
+  UPDATE rights, rollback and unchanged unrelated actor/project state. This
+  selects no credential/session mechanism or production actor-history schema.
+
+### Cases and required observations
+
+| Case | Controlled action | Passing evidence |
+| --- | --- | --- |
+| H01: complete-history audit | Audit a coherent grant chain; then separately remove an earlier event while leaving current/latest equal, alter earlier attribution, and alter a retained request/digest association. Only the trusted fixture administrator may inject corruption. | The explicit audit accepts the coherent fixture and rejects each corruption for its specific reason. Verify version-one origin, every successor, operation/event/subject attribution and retained request/result/digest coherence. Roll back each injection and verify restoration. Current/latest lookup alone is not credited with detecting an earlier gap. |
+| H02: growing history | Build valid chains of 10, 100 and 1,000 events with distinct operation tokens; run three current/latest checks and one explicit full audit per size. | Record exact row counts, indexed query shape/plans, timings and outcomes. Serving checks request only the indexed current row and latest event; full scans belong to the declared audit. These observations establish no throughput target. A bounded timeout is an incomplete measurement, not a pass. |
+| C01: creation/revocation order | Reach creation-first and creation-permission-revocation-first using independent restricted sessions and the actor fence; ten trials of each. | A command holding the fence may commit before revocation. Earlier committed revocation denies the later command before persistence. Verify the complete operation/project/revision/grant state, with no partial accepted creation or unrelated changes. |
+| C02: replay/revocation order | Seed a committed creation, then reach replay-first and creation-permission-revocation-first; ten trials of each. | Replay checks current creation authority before exposing saved outcomes. Earlier revocation denies even an identical retry, preserving the original committed record. Successful replay creates no second operation/project/event. |
+| C03: rollback and project scope | For each C01/C02 ordering, roll back the first transaction and retry in a fresh bounded transaction. Separately repeat command-first and revocation-first with a project-grant save/replay fixture. | Rollback releases the fence; retry reloads current authority. Project-grant denial applies only to that project; another project's grant and creation authority remain independently evaluated. Fixture-only results stay distinct from native creation evidence. |
+| C04: multiple actors | Use distinct managers/subjects, then concurrent management requests with the same affected actors supplied in opposite argument orders. Include rollback and expected-version contention. | Both acquire the complete actor set in C collation order before other rows. Record reached locks/waits; no lock-order inversion, partial operation/event/current change or duplicate successor is accepted. A stale expected version is rejected; retry requires fresh state. |
+
+### Controlled scheduling, bounds and failure evidence
+
+Use independent native PostgreSQL connections and explicit coordinator barriers.
+Identify backend PIDs, observe the intended blocker with `pg_blocking_pids`, then
+release commit/rollback and check both outcomes plus final durable state. Sleeps,
+elapsed time or a lock timeout alone do not establish that a schedule was reached.
+The coordinator may inspect lock metadata; application fixtures retain restricted
+roles. No credentials or personal data belong in recorded diagnostics.
+
+Proposed concurrent-case bounds are 10 seconds for lock waits, 20 seconds per
+statement, 30 seconds idle in transaction and 60 seconds per participant process.
+The coordinator must release each barrier within the lock budget; missed barriers
+fail the case. Keep existing serial-case bounds unchanged. On failure, cancel and
+reap participants, roll back outstanding transactions, verify fixture state and
+retain both primary and cleanup failures. No unbounded automatic retry is allowed.
+
+Demonstrate that the negative oracles detect a skipped earlier-gap check and a
+skipped post-fence current-authority check. Demonstrate that reversing actor lock
+order is detected by the observed-lock/order oracle. Run each altered fixture only
+in isolated disposable state, restore it, and rerun the intact case. A deadlock or
+timeout without the expected lock evidence does not qualify mutation detection.
+
+Proposed investigation budget: 90 minutes excluding setup and mandatory checks;
+stop at a prerequisite failure, exhausted budget or bounded conclusion. Report
+unreached schedules and incomplete cases explicitly rather than expanding scope.
+Before implementation is executed, publish exact reproduction commands, changed
+fixture/helper sources and reviewed role grants. Pin PostgreSQL 16.15 by the
+existing image digest, use one compiler job and the existing networkless 256 MiB
+disposable container, and check host/disk/port prerequisites. **Ask the maintainer
+for permission before memory-heavy builds, native tests or VM/service startup,
+even when RAM appears sufficient.** After permission, require at least 3 GiB host
+RAM available after VM startup and 2 GiB free disk; ask again if headroom is lost.
+
+### Exit and retained work
+
+Record source hashes, platform/image, attempted cases/trial counts, observed
+barriers, SQLSTATE/primary diagnostics, final-state assertions, history measurements,
+mutation results and confirmed participant/container cleanup. Keep native evidence
+separate from orchestration unit tests and hosted checks. Update this record,
+the spike register, #40/#49 and the implementation PR summary with actual results.
+This slice can resolve specific A05/A07/A08 database cases only. Authentication,
+session/internal-channel choices, remaining read/composite-scope/tombstone cases,
+production schema/adapter adoption and supported-platform qualification remain
+open. #40/#49 must not close on this planning PR or on partial experimental results.
+
 ## Decision and follow-up
 
 Deliver a supported recommendation and retain rejected alternatives/limitations.
@@ -391,7 +476,8 @@ coverage; finishing this investigation does not close it.
 
 Latest work: reviewed PR #53 baseline and serial A05 prototype/evidence, including
 R03's distinct-manager and input/authority guard checks. Next
-bounded database slice: earlier-gap audit and reached multi-actor grant/revocation
-schedules against the same overlay/fence. Actual credential/session/channel cases
+bounded database slice is specified in [the history and concurrent-authority plan](#next-bounded-slice-history-and-concurrent-authority),
+pending review before implementation and separate permission before heavy execution.
+Actual credential/session/channel cases
 need the explicit mechanism decisions above. #40 stays open for those specific
 acceptance gaps; #11/#32 retain production access and #49 retains native integration.

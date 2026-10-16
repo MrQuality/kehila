@@ -144,6 +144,12 @@ defines that retained acceptance gate. No W2-W7 completion is implied.
 All ADR-104 ingress, actor/scope, structural snapshot and legacy isolation
 contracts remain mandatory.
 
+The next #40/W2 slice has a [bounded history/concurrency plan](../spikes/SP-004-actor-authority.md#next-bounded-slice-history-and-concurrent-authority)
+for review before implementation. It distinguishes project-grant revocation from
+creation-permission revocation, requires observed lock barriers and retains
+explicit corruption/rollback oracles. Heavy local execution requires separate
+maintainer permission. #40/#49 remain open for their unfinished acceptance.
+
 [SP-002](../spikes/SP-002-postgresql-project-create.md) and
 [SP-003/#39](../spikes/SP-003-replay-codecs.md) remain bounded experimental
 records; frozen failures and missing production checks must stay visible.
