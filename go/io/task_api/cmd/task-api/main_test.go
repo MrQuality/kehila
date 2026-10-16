@@ -55,6 +55,32 @@ func TestStartupHelperProcess(t *testing.T) {
 	main()
 }
 
+func TestLoopbackListenAddress(t *testing.T) {
+	for _, address := range []string{"127.0.0.1:0", "127.1.2.3:8080", "[::1]:0", "[::ffff:127.0.0.1]:65535"} {
+		t.Run(address, func(t *testing.T) {
+			if _, err := loopbackListenAddress(address); err != nil {
+				t.Fatalf("loopback address rejected: %v", err)
+			}
+		})
+	}
+	for _, address := range []string{"", ":0", "0.0.0.0:0", "[::]:0", "192.0.2.1:8080", "[2001:db8::1]:8080", "localhost:8080", "127.0.0.1:65536", "127.0.0.1:-1", "127.0.0.1:http"} {
+		t.Run(address, func(t *testing.T) {
+			if _, err := loopbackListenAddress(address); err == nil {
+				t.Fatal("unsafe or invalid listen address admitted")
+			}
+		})
+	}
+}
+
+func TestUnsafeBindFailsBeforeListening(t *testing.T) {
+	for _, address := range []string{"0.0.0.0:0", "[::]:0", ":0"} {
+		output := startup(t, map[string]string{"KEHILA_WORKER_URL": "http://127.0.0.1:1", "KEHILA_SEARCH_URL": "http://127.0.0.1:1", "KEHILA_LISTEN_ADDR": address})
+		if !strings.Contains(output, "loopback IP") || strings.Contains(output, "KEHILA_BOUND_ADDR=") {
+			t.Fatalf("unsafe bind did not fail before listener publication: %s", output)
+		}
+	}
+}
+
 func TestRetiredSettingsFailBeforeListening(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -86,7 +112,7 @@ func TestOtherComponentAndUnknownRetiredSettingsAllowCurrentConfiguration(t *tes
 	for _, suffix := range unrelatedSuffixes {
 		t.Run(suffix, func(t *testing.T) {
 			output := startup(t, map[string]string{"KEHILA_WORKER_URL": "http://127.0.0.1:1", "KEHILA_SEARCH_URL": "http://127.0.0.1:1", "KEHILA_LISTEN_ADDR": "invalid-address", retiredKey(suffix): "secret"})
-			if strings.Contains(output, "retired environment variable") || !strings.Contains(output, "missing port in address") {
+			if strings.Contains(output, "retired environment variable") || !strings.Contains(output, "loopback IP") {
 				t.Fatalf("current configuration not used: %s", output)
 			}
 		})

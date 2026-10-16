@@ -67,6 +67,19 @@ class GitGateTests(unittest.TestCase):
         self.assertIn("full-suite-selected", result.stdout)
         self.assertIn("VERIFICATION_FAILED", result.stderr)
 
+    def test_verifier_receives_the_deadline_and_can_clean_up_after_work_timeout(self):
+        self.write('scripts/verify.py', '''import subprocess, sys
+assert sys.argv[sys.argv.index('--timeout') + 1] == '600'
+try:
+    subprocess.run([sys.executable, '-c', 'import time; time.sleep(5)'], check=True, timeout=0.2)
+finally:
+    print('owner-cleanup-after-work-timeout', flush=True)
+''')
+        self.git('add', 'scripts/verify.py')
+        result = self.hook()
+        self.assertEqual(result.returncode, 3, result.stderr)
+        self.assertIn('owner-cleanup-after-work-timeout', result.stdout)
+
     def test_failing_staged_code_cannot_be_repaired_by_unstaged_code(self):
         self.write("src/pure/value.py", "assert 2 + 2 == 5\n")
         self.git("add", "src/pure/value.py")

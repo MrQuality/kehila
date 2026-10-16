@@ -148,9 +148,13 @@ hashing must declare sha2 directly and own its dependency/update review.
 The build selects exact Cargo-reported artifacts, rejects ambiguous libraries
 and creates uniquely owned temporary compiler outputs under Cargo's artifact
 directory. Callers hold a build context through all oracle use; outputs are removed
-on success, compilation/test failure or caller failure. Windows sharing/lock
-violations receive a bounded five-second cleanup retry; other errors fail
-immediately and exhausted retries fail visibly. Shared Cargo libraries
+on success, compilation/test failure or caller failure. The shared directory
+owner preserves the compiler/consumer failure as primary and attaches a labelled
+cleanup failure if teardown also fails. Windows lock errors 5, 32 and 33 receive
+an explicit five-second retry budget, with 0.25-second retry intervals; other
+errors fail immediately and exhausted retries fail visibly. The shared pure
+check prints each failed case's actual error as one line of at most 4096 UTF-8
+bytes (excluding its newline), then fails verification. Shared Cargo libraries
 and retained observation summaries are outside this cleanup scope. The standalone
 `python experiments/SP-003/build.py` command runs Rust tests and prints their
 output; it does not return an executable path for later use. Old build directories

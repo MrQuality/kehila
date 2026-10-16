@@ -186,9 +186,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         return Err("worker must bind to loopback".into());
     }
     let listener = TcpListener::bind(listen).await?;
+    let authority = listener.local_addr()?.to_string();
+    println!("KEHILA_BOUND_ADDR={authority}");
     let app = App {
         store: Arc::new(store),
-        authority: listener.local_addr()?.to_string(),
+        authority,
         slots: Arc::new(Semaphore::new(16)),
     };
     let router = Router::new()

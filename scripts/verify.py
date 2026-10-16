@@ -6,7 +6,51 @@ import os
 import subprocess
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from cleanup_errors import run_main
+from temp_work import owned_directory
+from test_services import managed_runtime, service_group, validate_runtime, validate_daemon_environment
+from verification_budget import command_timeout, owner_environment, validate_seconds, work_budget
+
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def execute(command, environment):
+    print('VERIFY:', ' '.join(command), flush=True)
+    timeout = command_timeout(450 if os.name == 'nt' and command[0] == 'cargo' else 300)
+    owners = {'scripts/go_test.py', 'experiments/SP-002/check_seed_oracle.py',
+              'experiments/SP-003/check.py', 'tests/integration/task_path.py'}
+    if len(command) > 1 and command[0] == sys.executable and command[1] in owners:
+        environment = owner_environment(environment, timeout)
+        timeout = None  # Cooperative child bounds work and unwinds its own resources.
+    subprocess.run(command, cwd=ROOT, env=environment, check=True, timeout=timeout)
+
+
+def live_checks(folder, environment, args):
+    def run(command):
+        execute(command, environment)
+
+    def health(*names):
+        run([sys.executable, 'scripts/healthcheck.py', '--wait', '180', '--services', *names])
+
+    broker_tests = ['cargo', 'test', '--locked', '-p', 'event_dispatcher']
+    task_path = [sys.executable, 'tests/integration/task_path.py', '--run-only', str(folder)]
+    if args.external_services:
+        health('PostgreSQL', 'FerretDB', 'NATS', 'OpenSearch')
+        run([sys.executable, 'tests/integration/nats_probe.py'])
+        run(broker_tests)
+        run(task_path)
+        return
+    with managed_runtime(args.engine, args.podman_machine, environment=environment, exclusive=args.exclusive_podman_machine) as compose:
+        with service_group(compose, ['nats']):
+            health('NATS')
+            run([sys.executable, 'tests/integration/nats_probe.py'])
+            run(broker_tests)
+        with service_group(compose, ['opensearch']):
+            health('OpenSearch')
+        with service_group(compose, ['postgres', 'ferretdb']):
+            health('PostgreSQL', 'FerretDB')
+            run(task_path)
 
 
 def main():
@@ -14,33 +58,69 @@ def main():
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--pure", action="store_true", help="Run unit tests without external services")
     modes.add_argument("--docs", action="store_true", help="Run Python, naming and engineering metadata checks")
+    parser.add_argument('--external-services', action='store_true',
+                        help='Use already-running disposable services without owning their lifecycle')
+    parser.add_argument('--engine', choices=('auto', 'podman', 'docker'),
+                        default=os.environ.get('KEHILA_TEST_ENGINE', 'auto'))
+    parser.add_argument('--podman-machine', default=os.environ.get('KEHILA_TEST_PODMAN_MACHINE') or None,
+                        help='Start this explicit machine after builds; retain shared machines')
+    exclusive = os.environ.get('KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE', '0')
+    if exclusive not in {'0', '1'}:
+        parser.error('KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE must be 0 or 1')
+    parser.add_argument('--exclusive-podman-machine', action='store_true', default=exclusive == '1',
+                        help='Promise exclusive VM use for this run; requires an initially stopped named machine')
+    parser.add_argument('--timeout', type=float, default=600,
+                        help='Total work budget in seconds (at most 600); bounded cleanup runs afterward')
     args = parser.parse_args()
+    if args.external_services and (args.pure or args.docs):
+        parser.error('--external-services applies only to full verification')
+    if args.external_services and (args.podman_machine is not None or args.exclusive_podman_machine):
+        parser.error('--external-services cannot own a Podman machine')
+    try:
+        validate_runtime(args.engine, args.podman_machine, args.exclusive_podman_machine)
+        validate_seconds(args.timeout)
+    except ValueError as error:
+        parser.error(str(error))
+    if not (args.pure or args.docs):
+        for name, address in (('KEHILA_TEST_MONGO_URL', 'mongodb://127.0.0.1:27017'),
+                              ('KEHILA_NATS_ADDRESS', '127.0.0.1:4222'),
+                              ('KEHILA_NATS_HOST', '127.0.0.1'), ('KEHILA_NATS_PORT', '4222')):
+            if os.environ.get(name, address) != address:
+                parser.error(name + ' must use default local endpoints; use standalone probes for custom endpoints')
+    if not (args.pure or args.docs or args.external_services):
+        try:
+            validate_daemon_environment(os.environ, args.podman_machine)
+        except ValueError as error:
+            parser.error(str(error))
+    with work_budget(args.timeout):
+        run_checks(args)
+
+
+def run_checks(args):
+    environment = dict(os.environ, CARGO_BUILD_JOBS='1')
+    environment['GOFLAGS'] = (environment.get('GOFLAGS', '') + ' -p=1').strip()
     commands = [[sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
                 [sys.executable, "scripts/check_branding.py"],
                 [sys.executable, "scripts/check_engineering.py"]]
     if not args.docs:
         commands.append([sys.executable, "scripts/go_static.py"])
-    if not args.pure and not args.docs:
-        commands += [[sys.executable, "scripts/healthcheck.py"], [sys.executable, "tests/integration/nats_probe.py"]]
-    if not args.docs:
-        commands += [["cargo", "test", "--locked", "-p", "kehila_query", "-p", "task_contract", "-p", "project_create_codec"] if args.pure
-                     else ["cargo", "test", "--locked", "--workspace"],
-                     [sys.executable, "experiments/SP-002/check_seed_oracle.py"],
+        if args.pure:
+            commands.append(['cargo', 'test', '--locked', '-p', 'kehila_query', '-p', 'task_contract',
+                             '-p', 'project_create_codec'])
+        else:
+            commands += [['cargo', 'test', '--locked', '--workspace', '--no-run'],
+                         ['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher']]
+        commands += [[sys.executable, "experiments/SP-002/check_seed_oracle.py"],
                      [sys.executable, "experiments/SP-003/check.py"],
                      [sys.executable, "scripts/go_test.py"]]
-    if not args.pure and not args.docs:
-        commands.append([sys.executable, "tests/integration/task_path.py"])
     for command in commands:
-        print("VERIFY:", " ".join(command), flush=True)
-        # Observed Windows workspace runs exceed 300s despite passing tests.
-        # Keep a finite command budget inside the staged hook's 600s deadline.
-        timeout = 450 if os.name == "nt" and command[0] == "cargo" else 300
-        subprocess.run(command, cwd=ROOT, check=True, timeout=timeout)
+        execute(command, environment)
+    if not args.pure and not args.docs:
+        with owned_directory('kehila-verify-') as folder:
+            execute([sys.executable, 'tests/integration/task_path.py', '--build-only', str(folder)],
+                    environment)
+            live_checks(folder, environment, args)
 
 
-if __name__ == "__main__":
-    try:
-        main()
-    except (OSError, subprocess.SubprocessError) as error:
-        print(f"ERR_TEST_EXECUTION_FAILED: {error}", file=sys.stderr)
-        sys.exit(3)
+if __name__ == '__main__':
+    sys.exit(run_main(main, 'ERR_TEST_EXECUTION_FAILED'))

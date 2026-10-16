@@ -30,6 +30,28 @@ An explicit scoped amendment or successor to [D-012](decisions.md#d-012) and
 linked product records are required before implementation changes that scope.
 The existing M1 scope and M0–M4 delivery plan remain unchanged.
 
+## Engineering maintenance
+
+[#55](https://github.com/MrQuality/kehila/issues/55) tracks sequential verification
+and automatic ownership/cleanup of short-lived test services. PR #56 merged into
+PR #54's branch on 2026-10-15; delivery to `main` awaits PR #54 review/merge.
+#55 remains open until that delivery, and PR #54 carries its closure reference.
+The implementation builds before service startup, uses one compiler job, and
+runs offline tests before the VM and NATS, OpenSearch and PostgreSQL/FerretDB
+in separate required phases. Review follow-up binds machine/store routing,
+requires explicit exclusive ownership for VM shutdown, keeps the work deadline
+inside cleanup owners, preserves every labelled teardown failure, requires
+consistent local test/daemon routing, scopes VM leases by the OS account profile
+independently of environment aliases, and bounds failure-log lines and generated
+oracle-output retention. Task-path callbacks retain the body error explicitly;
+SP-003 uses shared directory ownership with its five-second retry budget and
+bounded case diagnostics. Regression coverage includes expired-parent VM cleanup,
+both store connections and routing environment, timeout selection and inherited
+deadline isolation.
+The combined branch is submitted for review with service-backed evidence in the
+[testing guide](../TESTING.md#owned-test-services). This changes development
+resource overlap; it completes no product milestone or #49 delivery obligation.
+
 ## Proposed milestones and order
 
 These M0–M4 labels are **product delivery milestones**, not the independent
@@ -259,13 +281,14 @@ design's accepted [bounded-transaction direction](../architecture/ADR-102-postgr
 
 **Status:** One authenticated local owner accepted; onboarding, session expiry/recovery, browser CSRF, CLI access, and enforcement remain to design and implement. **Dependencies:** B-002, B-003.
 
-[SP-004/#40](../spikes/SP-004-actor-authority.md) now contains the source inventory,
-proposed trusted actor/initial-owner mapping and revocation contract for review,
-with explicit decision inputs and A01-A08 acceptance cases. No authentication
-mechanism or new permission policy is accepted and no experiment has run.
-The proposal now defines original-scope replay/policy interpretation, read
-snapshot/revocation ordering, authenticated framing requirements and a proposed
-disposable-overlay boundary requiring review, with bounded serving/history-audit checks.
+[SP-004/#40](../spikes/SP-004-actor-authority.md) records the contract approved and
+merged in PR #53 on 2026-10-14, plus a passed serial A05 grant-management subset
+on native PostgreSQL 16.15. The serial R03 extension adds distinct-manager
+attribution/rollback and NULL/authority/missing-grant rejection evidence, with
+native mutation detection and confirmed cleanup. The failed privilege attempt
+and correction remain recorded separately. Full A05, concurrent/read/replay cases and actual authentication,
+session and internal-channel mechanisms remain outstanding. This is experimental
+evidence with explicit fixture/overlay limits, not production access delivery.
 This is the W2 prerequisite for #49; #41 owns subsequent stable target allocation.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).

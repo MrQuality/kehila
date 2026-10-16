@@ -2,8 +2,8 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Contract proposal for review / no experiment results |
-| Owner / assessor | Project maintainer; execution and assessment to be confirmed before starting |
+| Status / outcome | PR #53 approved/merged; serial A05 subset passed, broader investigation incomplete |
+| Owner / assessor | Project maintainer; remaining mechanism decisions and result assessment are separate |
 | Created / last updated | 2026-10-08 / 2026-10-14 |
 | Tracking issue | [40](https://github.com/MrQuality/kehila/issues/40) |
 | Parent delivery issue | [#11](https://github.com/MrQuality/kehila/issues/11) |
@@ -13,6 +13,11 @@
 ## Question, cases and execution plan
 
 **Parent:** #11. Related: #32, #49, #27, #41; historical #26. Follow-up to SP-002.
+
+[PR #53](https://github.com/MrQuality/kehila/pull/53) was approved and merged on
+2026-10-14 at `988631a353b3086769e302943fa0d7b7fbebffd1`. Its contract is the
+reviewed baseline for this investigation. Authentication/session/channel
+mechanisms remain unselected; approval of the contract is not their selection.
 
 ## Source inventory
 
@@ -29,7 +34,8 @@ observations, not new runtime verification.
 
 ## Proposed contract for review
 
-This section proposes the W2 boundary; it accepts no new ADR or product decision.
+This section records the reviewed W2 contract baseline; it accepts no new ADR or
+unselected authentication mechanism through experimental execution.
 The accepted local-owner/loopback direction comes from D-016/D-017 and Q-002.
 Current original-grant replay comes from D-032/D-033; ADR-104 forbids deriving
 authority from codec admission or fingerprints. Existing APIs are not changed.
@@ -72,10 +78,10 @@ replay behavior require security review with the chosen mechanism. These are
 acceptance requirements, not selection of a custom MAC protocol. Authentication
 of an envelope never replaces current permission/session-revocation checks.
 
-### Proposed initial-owner permission mapping
+### Initial-owner permission mapping reviewed in PR #53
 
 The existing SQL profile is a storage label, not an implemented permission set.
-The following mapping requires maintainer review under Q-014.
+The following mapping is the reviewed experimental contract baseline under Q-014.
 
 | Action | Proposed current authority |
 | --- | --- |
@@ -117,7 +123,7 @@ nor a newer policy may replace it with an easier authorization requirement.
 
 ### Authority, history and revocation ownership
 
-Proposed mutation/replay protocol:
+Reviewed mutation/replay protocol:
 
 1. Begin a bounded transaction, lock the verified actor with `lock_actor`, and
    recheck actor liveness and the selected credential/session revocation state.
@@ -165,11 +171,11 @@ production management role is authorized by this proposal.
 
 ### Read authorization and concurrent revocation
 
-Proposed read semantics: authorize at a fresh PostgreSQL snapshot established for
+Reviewed read semantics: authorize at a fresh PostgreSQL snapshot established for
 that request. Any logout, credential revocation or permission change committed
 before that snapshot must be observed. An authorized read may finish if revocation
 commits after its snapshot; it does not promise revocation of bytes already being
-returned. This ordering requires maintainer review alongside session semantics.
+returned. This ordering does not select the outstanding credential/session mechanisms.
 
 Authoritative reads must check actor/session state, applicable grants and
 current/latest-event agreement in the same snapshot as the returned authoritative
@@ -192,24 +198,25 @@ after the request deadline. A later revocation may overlap an already-authorized
 bounded read; a subsequent request must acquire fresh authority. Projection
 freshness and rebuild/recovery remain #49 integration obligations.
 
-### Decisions needed before experimental execution
+### Remaining decisions for mechanism-dependent experiments
 
-- Approve or amend the owner mapping, actor-fence protocol and proposed read
-  snapshot/revocation semantics above.
+- The contract's owner mapping, actor-fence and read snapshot semantics were
+  reviewed in PR #53. Amendments require explicit review.
 - Choose the local enrollment/credential mechanism, browser session transport
   and authenticated CLI mechanism; define expiry, logout and recovery behavior,
   including how durable actor identity survives credential replacement.
 - Choose authenticated Go-to-worker context transport, or consolidate that
   boundary; do not treat the current loopback listener as trusted identity.
-- Approve the bounded experimental scope/time limit below. Synthetic verified
-  identity can test authority plumbing but cannot qualify real authentication.
+- Review any subsequent experimental scope/time limit against the cases below.
+  The first serial A05 subset uses a declared verified-identity fixture to test
+  authority plumbing; it cannot qualify real authentication.
 
 These are owned by #40 under #11/#32. #49 owns runtime integration; #41 consumes
 the reviewed stable actor identity. No extra historical-assessment issue is needed.
 
 ### Experimental schema boundary
 
-Proposed choice: an explicit post-install overlay in a fresh disposable native
+The first implementation uses an explicit post-install overlay in a fresh disposable native
 database. Keep all `storage/postgresql/*.sql` source files unchanged. First verify
 the unmodified installer and its creation-only denials; only then apply the
 versioned experimental overlay in that database. It is not a production upgrade.
@@ -243,23 +250,24 @@ Passing this experiment establishes only that declared overlay's mechanics;
 
 ## Revised pre-execution plan
 
-1. **Goal & Context:** Review the proposed contract above against Q-002/Q-014, then investigate actor binding and authority/revocation ownership for #49 W2. The inventory establishes the missing boundary; this is not another database feasibility investigation.
+1. **Goal & Context:** Use the reviewed PR #53 contract against Q-002/Q-014 to investigate actor binding and authority/revocation ownership for #49 W2. The inventory establishes the missing boundary; this is not another database feasibility investigation.
 2. **Definition of Done:**
    - [x] Document the proposed actor/session contract and initial-owner permission mapping against B-003/B-007 for review.
+   - [x] Record the first serial A05 subset, including its failed privilege attempt and corrected native evidence; full A05 acceptance remains unchecked below.
    - [ ] Demonstrate denied spoofed actor input, missing/expired identity and forbidden role escalation using a declared experimental integration.
    - [ ] Demonstrate current grant/event agreement and atomic revocation in a separately scoped management prototype; retained history alone must not authorize.
    - [ ] Repeat selected creation/replay versus revocation orderings; preserve observed lock barriers.
    - [ ] Publish SP-004 recommendation and gaps; actual authentication and grant-management implementation remain open.
-3. **Dependencies & Prerequisites:** Resolve the decisions above before execution. Use #11/#32 requirements, B-003, ADR-104 and SP-002's source-bound locking observations. #41 receives stable actor identity; its allocation protocol is not implemented here. Check available memory before compiler/service work; request headroom if the selected workload cannot fit.
+3. **Dependencies & Prerequisites:** Resolve the remaining mechanism decisions before dependent cases. Serial A05 uses only the declared verified-identity fixture. Use #11/#32 requirements, B-003, ADR-104 and SP-002's source-bound locking observations. #41 receives stable actor identity; its allocation protocol is not implemented here. Check available memory before compiler/service work; request headroom if the selected workload cannot fit.
 4. **Risks & Mitigations:** Supplied identity, cached roles and database capability possession cannot establish caller authority. Actor-wide serialization is deliberately conservative and may limit concurrency; measure selected schedules rather than claiming throughput. Freeze affected-actor lock ordering and protect both the management caller and grant subject. Detect current/event mismatches and never repair them implicitly during serving.
 5. **Spikes & Open Questions:** Proposed 90-minute investigation, excluding setup and required checks, after contract/decision review. Stop on failed prerequisites, a bounded conclusion or the time limit; unresolved real authentication remains an explicit blocked case. A synthetic identity fixture must not turn that case into a pass.
 6. **High-Level Architecture / File Changes:** Keep this record canonical. A later approved experiment may add isolated `experiments/SP-004/` code, fixtures and a bounded runner using the explicit disposable overlay above. Production SQL files stay unchanged; the changed experimental guard set and role limits require their own review before execution. Such results cannot qualify a production migration; #49 retains that separate gate.
 7. **Verification & Testing Plan:** Use the cases below with independent restricted connections and explicit barriers. Record actual source, image, platform, role, state before/after, observed waits, commit/rollback and primary diagnostics. A timeout is not evidence that the intended race was reached. No experiment or service execution has occurred for this proposal.
 
-Status: contract proposed for review; experiment not executed. Completing this
-spike leaves #11/#32 responsible for production access delivery.
+Status: reviewed contract with serial A05 subset evidence; the full investigation
+is incomplete. Completing it leaves #11/#32 responsible for production access delivery.
 
-### Required experimental cases (not executed)
+### Required experimental cases (full-case acceptance remains outstanding)
 
 Use typed pure replay fixtures and the experimental permission evaluator for
 A06's composite-scope cases. Native creation replay uses the actual stored
@@ -285,20 +293,92 @@ runner exists. These cases define acceptance, not successful observations.
 
 ## Environment and reproduction
 
-Not executed. Use Podman for database/service cases and the public contribution
-and testing guides. Record tools, image pins, scope, timeouts, fixtures, commands,
-barriers and fresh preflight before starting. Experimental artifacts belong in
-`experiments/SP-004/` once needed; no executable prototype is claimed here.
+The first [serial A05 runner](../../experiments/SP-004/README.md) reuses the native
+verifier's fresh/disposable container checks and pinned image. It runs the
+unmodified baseline first, then the [experimental overlay](../../experiments/SP-004/overlay.sql).
+The README specifies exact commands, role limits, fixture representation and
+statement/lock/process budgets. The caller owns container cleanup. Check memory
+before each compiler/native-service run; source and container limits do not
+establish that the host has enough available memory.
 
 ## Run summaries
 
-No runs. Expected cases in the plan are planned observations, not test results.
+### Serial A05: SP-004-R01/R02, 2026-10-14
+
+Baseline main: `988631a353b3086769e302943fa0d7b7fbebffd1`, with then-uncommitted
+A05 sources identified by exact hashes in the [serial evidence](../../experiments/SP-004/results.serial.json).
+Those exercised source files are preserved at commit `f12466e`; subsequent
+removal of an unused signature constant does not change the exercised functions.
+Windows/WSL2/Podman used the existing rootful connection, with an unprivileged,
+networkless 256 MiB ephemeral container and PostgreSQL 16.15. Rootless startup
+failed because memory controllers were unavailable; that failed container was
+removed before the native attempts. This is not Linux-host qualification.
+
+R01 passed the native baseline but failed with SQLSTATE 42501: the deferred
+payload trigger ran under the manager login after its SECURITY DEFINER helper
+returned and lacked operation-table reads. R02 passed after granting only
+operation/payload SELECT needed by that trigger, retaining no direct mutation
+rights. Both attempt containers were removed.
+
+R02 covered baseline version-two event denial, separate creator/manager logins,
+forbidden management operation/event INSERT, stale/no-op rejection, atomic
+rollback, revocation/restoration, operation/payload/event/current attribution,
+exact experimental request/result/digest coherence, current/latest disagreement
+and history protection. Removing the management-operation guard made the
+forbidden write succeed; the existing rejection oracle detected the mutation,
+and its transaction rolled back. Six Python tests separately cover runner
+prerequisite/failure propagation; they are not native SQL evidence.
+
+This does not complete A05: earlier-history-gap audits, growing-history
+measurements and multi-actor/concurrent changes remain outstanding. A01-A04 and
+A06-A08 also remain outstanding; synthetic identity is not authentication and
+the helper is not a general replay protocol.
+
+Earlier staged attempts stopped at the existing Go API readiness check. Captured
+child output identified a Windows bind collision after the test's probe/release
+port selection. The worker/API now bind port zero atomically and report their
+owned address; bounded discovery replaces the released-port probe while the
+HTTP readiness and live checks remain required. Six discovery tests cover exact/
+over-limit output, invalid/duplicate/partial reports and child failure; allowing
+reported port zero was detected by an in-memory mutation without changing source.
+The next live run passed its behavior checks but failed deleting the generated
+Go executable while Windows still held it. The Go test runner and live runner
+now share owned-directory cleanup with at most 30 seconds of retry for Windows
+access/sharing/lock errors (5/32/33); other errors and exhausted retries fail the
+gate. Seven tests cover ownership, retries, deadlines and preserved primary
+failures. Those original source gates included 143 tooling tests (141 passed, two
+POSIX-only skips), workspace Rust/Go checks, frozen oracles and live task-path
+checks.
+
+### Serial A05 extension: SP-004-R03, 2026-10-16
+
+The [serial extension evidence](../../experiments/SP-004/results.serial-guards.json)
+records a fresh Windows/WSL2/Podman PostgreSQL 16.15 run against the unchanged
+native baseline and expanded experimental fixtures. A distinct active manager
+with no creation permission revoked/restored the subject's grant. Request/result
+subject identity, manager operation/event attribution, digests, successor
+versions and final state/history counts were checked separately.
+All six NULL arguments, unregistered/inactive/missing managers, a missing subject
+and a subject without a grant were rejected with the specified SQLSTATE and
+primary diagnostic. Rejection probes and a distinct-manager rollback retained
+the prior committed grant/event/operation state.
+
+Removing management-authority admission allowed an otherwise forbidden mutation;
+the rejection oracle detected it. Replacing manager attribution with subject
+attribution was detected by the distinct-identity oracle. Both probes rolled back;
+final state and guard restoration were checked. The networkless 256 MiB container
+was removed with absence confirmed, and the initially stopped exclusive VM was
+stopped. These serial cases exercise distinct actor rows but do not establish
+concurrent lock ordering, full A05, real authentication or Linux-host execution.
+Earlier R01/R02 records and their exact source hashes remain historical.
+R03's exact exercised source files are preserved at `da59c69`.
 
 ## Conclusion and reuse boundary
 
-No conclusion or accepted architecture choice. Reuse SP-002 only within its stated
-baseline, role/helper, runtime and fault boundaries. Further experiments must
-resolve this record's stated uncertainty rather than repeat engine feasibility.
+Serial grant-management capability separation and transactional attribution are
+supported for the recorded overlay and fixtures. This is not production schema,
+authentication, session, peer-channel or concurrent-revocation qualification.
+Reuse SP-002 only within its stated boundaries; ADR-103 remains Proposed.
 
 ## Decision and follow-up
 
@@ -309,9 +389,9 @@ coverage; finishing this investigation does not close it.
 
 ## Handoff
 
-Latest work: source inventory, proposed actor/owner/revocation contract and
-negative/concurrent cases. Next action: maintainer review of the proposed mapping,
-credential/session/channel decisions and bounded experimental scope. After that
-review, prepare the runner and measure memory before execution. #40 stays open
-until the scoped investigation has results and an explicit disposition; #11/#32
-retain production access delivery and #49 retains native integration.
+Latest work: reviewed PR #53 baseline and serial A05 prototype/evidence, including
+R03's distinct-manager and input/authority guard checks. Next
+bounded database slice: earlier-gap audit and reached multi-actor grant/revocation
+schedules against the same overlay/fence. Actual credential/session/channel cases
+need the explicit mechanism decisions above. #40 stays open for those specific
+acceptance gaps; #11/#32 retain production access and #49 retains native integration.

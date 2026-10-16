@@ -1,0 +1,45 @@
+{
+  "cases": [
+    "Original baseline-first, capability, stale/no-op, rollback, self-management, integrity and history cases retained",
+    "Each of six NULL arguments rejected with SQLSTATE 22004",
+    "Unregistered, inactive and missing managers and a missing subject rejected with SQLSTATE 42501",
+    "Existing subject without a project grant rejected with SQLSTATE 23503",
+    "Rejections and distinct-manager rollback retain committed grant/event/operation state",
+    "Distinct manager without creation permission revokes/restores the subject grant with exact operation/event/request/result/digest attribution"
+  ],
+  "cleanup": "Native container removed and absence confirmed; initially stopped exclusive VM stopped. Mutation transactions rolled back and final state/guard restoration checked.",
+  "date": "2026-10-16",
+  "mutations": [
+    "Removing management authority admission allowed the forbidden mutation; the SQLSTATE oracle detected it. The transaction rolled back.",
+    "Replacing manager attribution with subject attribution was detected by the distinct-identity oracle. The transaction rolled back."
+  ],
+  "not_qualified": [
+    "real authentication/session/channel mechanisms",
+    "concurrent revocation schedules",
+    "read/projection races",
+    "generic original-scope replay",
+    "production migration/adapter"
+  ],
+  "outcome": "passed",
+  "platform": "Windows",
+  "postgresql_version": "16.15 (Debian 16.15-1.pgdg12+2)",
+  "remaining_A05": [
+    "earlier-history-gap audit",
+    "growing-history measurements",
+    "multi-actor/concurrent grant changes"
+  ],
+  "run_id": "SP-004-R03",
+  "runtime": "Windows / WSL2 / Podman, rootful connection; unprivileged networkless ephemeral container",
+  "scope": "SP-004 A05 serial management subset",
+  "source_baseline": "c713afa8c496a89247f15db16420db9643f7e54c",
+  "source_state": "Serial extension sources uncommitted at execution; exact SHA-256 values recorded below",
+  "sources": {
+    "experiments/SP-004/overlay.sql": "749777d65a228e36828e87eb4c2cb50487b1fbc6249867d1d98e05eabeeb3645",
+    "experiments/SP-004/run.py": "74ad32912fe81d4dd3d3e693e80612f217715f8b3ae32e8b9ff86573565faafe",
+    "scripts/check_postgresql.py": "9545c865df9a49724edd097b4b05596af13d37676fb1a447aea6e23eb2a89913",
+    "storage/postgresql/access.sql": "227ead303af2dc92ed2cf621071ad01a22b87c6400da34a65ac73ffd787002b9",
+    "storage/postgresql/install.sql": "5f75ac5b08ec2d3f1fef4c98cd68a693622c877c52328db34c6c809ce2569612",
+    "storage/postgresql/operations.sql": "49842d978f959c4def421c0829fd195a3aa99ea369b982ff74cf7bbf364f8236",
+    "storage/postgresql/project_create.sql": "0fad74af1a8ad7974b3a1ca2c5f17e6449cc0f0b6df864a4631054efebf7a830"
+  }
+}

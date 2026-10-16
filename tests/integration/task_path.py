@@ -4,15 +4,17 @@ Builds and owns two workers, a Go API, a fault proxy, and one unique collection.
 Requires a running single-host FerretDB at KEHILA_TEST_MONGO_URL (default localhost).
 """
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import ExitStack
+import argparse
 import json
 import os
 from pathlib import Path
+import re
 import select
+import shutil
 import socket
 import socketserver
 import subprocess
-import tempfile
+import sys
 import threading
 import time
 import urllib.error
@@ -23,6 +25,10 @@ import uuid
 from live_task_worker import uuid7
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+from cleanup_errors import CleanupStack, run_main
+from temp_work import owned_directory
+from verification_budget import command_timeout, cleanup_time, DeadlineExceeded
 
 
 def call(base, path, payload=None, headers=None):
@@ -30,7 +36,7 @@ def call(base, path, payload=None, headers=None):
     request = urllib.request.Request(base + path, data=body,
                                     headers=headers or {'Content-Type': 'application/json'})
     try:
-        with urllib.request.urlopen(request, timeout=8) as response:
+        with urllib.request.urlopen(request, timeout=command_timeout(8)) as response:
             return response.status, json.load(response)
     except urllib.error.HTTPError as error:
         return error.code, json.load(error)
@@ -39,21 +45,46 @@ def call(base, path, payload=None, headers=None):
 def wait_ready(base, processes, timeout=25):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
+        command_timeout(timeout)
         if any(process.poll() is not None for process in processes):
             raise AssertionError('A task-path process exited before readiness')
         try:
             if call(base, '/health') == (200, {'ready': True}):
                 return
+        except DeadlineExceeded:
+            raise
         except OSError:
             pass
         time.sleep(0.1)
     raise AssertionError('Task-path readiness deadline exceeded')
 
 
-def port():
-    with socket.socket() as connection:
-        connection.bind(('127.0.0.1', 0))
-        return connection.getsockname()[1]
+def bound_base(log_path, process, timeout=25):
+    """Discover the address already owned by this child; never probe/release a port."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        command_timeout(timeout)
+        with log_path.open('rb') as log:
+            output = log.read(8193)
+        returncode = process.poll()
+        if returncode is not None:
+            truncated = ' (output truncated at 8 KiB)' if len(output) > 8192 else ''
+            raise AssertionError('Child exited with status ' + str(returncode) +
+                                 ' before address discovery' + truncated + ': ' +
+                                 output[:8192].decode('utf-8', errors='replace'))
+        if len(output) > 8192:
+            raise AssertionError('Child startup output exceeds 8 KiB')
+        lines = [line for line in output.splitlines(keepends=True)
+                 if line.startswith(b'KEHILA_BOUND_ADDR=') and line.endswith(b'\n')]
+        if len(lines) > 1:
+            raise AssertionError('Child reported multiple bound addresses')
+        if lines:
+            match = re.fullmatch(rb'KEHILA_BOUND_ADDR=127\.0\.0\.1:([0-9]{1,5})\r?\n', lines[0])
+            if match is None or not 1 <= int(match.group(1)) <= 65535:
+                raise AssertionError('Child reported an invalid bound address')
+            return 'http://127.0.0.1:' + str(int(match.group(1)))
+        time.sleep(0.05)
+    raise AssertionError('Child bound-address deadline exceeded')
 
 
 class FaultProxy(socketserver.ThreadingTCPServer):
@@ -159,13 +190,14 @@ def boundary(base):
         assert call(base, '/tasks/forbidden', first, headers)[0] == status
     assert call(base, '/tasks/forbidden')[0] == 404
     address = urllib.parse.urlsplit(base)
-    with socket.create_connection((address.hostname, address.port), timeout=6) as slow:
+    with socket.create_connection((address.hostname, address.port), timeout=command_timeout(6)) as slow:
         slow.sendall(('POST /tasks/slow HTTP/1.1\r\nHost: ' + address.netloc +
                       '\r\nContent-Type: application/json\r\nContent-Length: 4096\r\n\r\n{').encode())
         started = time.monotonic()
         assert call(base, '/health')[0] == 200
         assert call(base, '/tasks/forbidden')[0] == 404
         assert time.monotonic() - started < 2
+        slow.settimeout(command_timeout(6))
         assert b'408' in slow.recv(4096).split(b'\r\n', 1)[0]
         assert time.monotonic() - started < 5
     assert call(base, '/health')[0] == 200
@@ -190,55 +222,72 @@ def database_outage(bases, proxy, processes):
     print('PASS: stalled database requests terminate and worker recovers', flush=True)
 
 
-def main():
+def prepare(folder):
+    """Build both tested executables before any external service is required."""
+    subprocess.run(['cargo', 'build', '--locked', '--jobs', '1', '-p', 'task_worker'],
+                   cwd=ROOT, check=True, timeout=command_timeout(240))
+    metadata = json.loads(subprocess.check_output(
+        ['cargo', 'metadata', '--no-deps', '--format-version', '1'], cwd=ROOT, timeout=command_timeout(30)))
+    extension = '.exe' if os.name == 'nt' else ''
+    shutil.copy2(Path(metadata['target_directory']) / 'debug' / ('task_worker' + extension),
+                 folder / ('task_worker' + extension))
+    subprocess.run(['go', 'build', '-p', '1', '-o', str(folder / ('task-api' + extension)),
+                    './go/io/task_api/cmd/task-api'], cwd=ROOT, check=True, timeout=command_timeout(90))
+
+
+def exercise(folder):
     uri = os.environ.get('KEHILA_TEST_MONGO_URL', 'mongodb://127.0.0.1:27017')
     parsed = urllib.parse.urlsplit(uri)
     if parsed.scheme != 'mongodb' or not parsed.hostname or ',' in parsed.netloc:
         raise ValueError('The fault test requires a single-host mongodb URI')
-    subprocess.run(['cargo', 'build', '--locked', '-p', 'task_worker'], cwd=ROOT, check=True, timeout=240)
-    metadata = json.loads(subprocess.check_output(['cargo', 'metadata', '--no-deps', '--format-version', '1'], cwd=ROOT))
     extension = '.exe' if os.name == 'nt' else ''
-    worker = str(Path(metadata['target_directory']) / 'debug' / ('task_worker' + extension))
+    worker = str(folder / ('task_worker' + extension))
+    api = str(folder / ('task-api' + extension))
+    if not all(Path(binary).is_file() for binary in (worker, api)):
+        raise ValueError('Both task-path executables must be prepared before live verification')
     environment = dict(os.environ, KEHILA_MONGO_URL=uri, KEHILA_TASK_DB='yaja',
                        KEHILA_TASK_COLLECTION='kehila_test_' + uuid.uuid4().hex)
-    with tempfile.TemporaryDirectory(prefix='kehila-task-path-') as folder, ExitStack() as owned:
-        api = str(Path(folder) / ('task-api' + extension))
-        subprocess.run(['go', 'build', '-o', api, './go/io/task_api/cmd/task-api'], cwd=ROOT, check=True, timeout=90)
+    with CleanupStack() as owned:
         # Register cleanup before installation, including partially created indexes.
-        owned.callback(lambda: subprocess.run([worker, 'drop-test-collection'], env=environment, check=True, timeout=15))
-        subprocess.run([worker, 'install-indexes'], env=environment, check=True, timeout=15)
+        def drop_collection():
+            with cleanup_time():
+                subprocess.run([worker, 'drop-test-collection'], env=environment, check=True, timeout=15)
+        owned.callback(drop_collection, resource="test collection")
+        subprocess.run([worker, 'install-indexes'], env=environment, check=True, timeout=command_timeout(15))
         proxy = FaultProxy((parsed.hostname, parsed.port or 27017))
-        owned.callback(proxy.close)
+        owned.callback(proxy.close, resource="fault proxy")
         processes = []
 
         def launch(command, env):
-            log = owned.enter_context(open(Path(folder) / ('process-' + str(len(processes)) + '.log'), 'w+'))
+            command_timeout(1)
+            log = owned.enter_context(open(Path(folder) / ('process-' + str(len(processes)) + '.log'), 'w+'), resource='process log')
             process = subprocess.Popen(command, env=env, cwd=ROOT, stdout=log, stderr=log,
                                        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
-            owned.callback(stop, process)
+            owned.callback(stop, process, resource="task-path process")
             processes.append(process)
+            return process, Path(log.name)
 
         bases = []
         for index in range(2):
-            address = '127.0.0.1:' + str(port())
-            worker_env = dict(environment, KEHILA_WORKER_LISTEN_ADDR=address)
+            worker_env = dict(environment, KEHILA_WORKER_LISTEN_ADDR='127.0.0.1:0')
             if index == 0:
                 credentials = parsed.netloc.rsplit('@', 1)[0] + '@' if '@' in parsed.netloc else ''
                 worker_env['KEHILA_MONGO_URL'] = urllib.parse.urlunsplit(parsed._replace(
                     netloc=credentials + '127.0.0.1:' + str(proxy.server_address[1])))
-            launch([worker], worker_env)
-            bases.append('http://' + address)
+            process, log_path = launch([worker], worker_env)
+            bases.append(bound_base(log_path, process))
             wait_ready(bases[-1], processes)
         concurrency(bases)
         boundary(bases[0])
         database_outage(bases, proxy, processes)
         # Reserve an unserved socket to make search unavailability deterministic.
-        unavailable = owned.enter_context(socket.socket())
+        unavailable = owned.enter_context(socket.socket(), resource='reserved search socket')
         unavailable.bind(('127.0.0.1', 0))
-        address = '127.0.0.1:' + str(port())
-        launch([api], dict(environment, KEHILA_LISTEN_ADDR=address, KEHILA_WORKER_URL=bases[0],
-                           KEHILA_SEARCH_URL='http://127.0.0.1:' + str(unavailable.getsockname()[1])))
-        api_base = 'http://' + address
+        process, log_path = launch(
+            [api], dict(environment, KEHILA_LISTEN_ADDR='127.0.0.1:0',
+                        KEHILA_WORKER_URL=bases[0],
+                        KEHILA_SEARCH_URL='http://127.0.0.1:' + str(unavailable.getsockname()[1])))
+        api_base = bound_base(log_path, process)
         wait_ready(api_base, processes)
         first = mutation()
         saved = call(api_base, '/tasks/go-rust', first,
@@ -251,5 +300,21 @@ def main():
         print('PASS: Go-to-Rust save/replay/read with search unavailable', flush=True)
 
 
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--build-only', type=Path, metavar='DIRECTORY')
+    modes.add_argument('--run-only', type=Path, metavar='DIRECTORY')
+    args = parser.parse_args()
+    if args.build_only is not None:
+        prepare(args.build_only.resolve(strict=True))
+    elif args.run_only is not None:
+        exercise(args.run_only.resolve(strict=True))
+    else:
+        with owned_directory('kehila-task-path-') as folder:
+            prepare(folder)
+            exercise(folder)
+
+
 if __name__ == '__main__':
-    main()
+    sys.exit(run_main(main, 'ERR_TASK_PATH_CHECK'))

@@ -35,12 +35,267 @@ module to both the inventory and workspace before relying on shared checks.
 See [qualification](engineering/QUALIFICATION.md) for future property, fault,
 performance, recovery and release campaigns and their current evidence boundaries.
 
-Run the full suite after starting the development services:
+Run the full suite with a ready container engine:
+
+```text
+python scripts/setup_env.py --hooks-only
+python scripts/verify.py
+```
+
+### Owned test services
+
+Full verification first runs tooling/static checks, precompiles the complete
+Rust workspace test executables, executes the offline workspace tests with
+`--workspace --exclude event_dispatcher`, runs frozen oracles and Go tests, and
+prepares both live task-path binaries. Child commands use `CARGO_BUILD_JOBS=1` and append
+`-p=1` to existing `GOFLAGS`; compiler parallelism is bounded without reducing
+test counts or changing application concurrency.
+
+Only then does it start unique, disposable Compose projects, one phase at a time:
+
+| Phase | Running services | Required checks |
+| --- | --- | --- |
+| Broker execution | NATS | TCP readiness, account API probe and all `event_dispatcher` tests, including the live broker round trip |
+| Search readiness | OpenSearch | TCP readiness and yellow/green HTTP cluster health |
+| Task path | PostgreSQL, FerretDB | Both TCP probes and complete two-worker contention, request/dependency deadline, recovery and Go-to-Rust/search-unavailable checks |
+
+The runner verifies one running owned container for each requested service,
+then confirms no owned containers remain after teardown. Each project is removed
+with its volumes before the next phase starts. The
+runner registers cleanup before startup, so partial starts, failed checks and
+child-command timeouts still clean up. Failure diagnostics are printed before
+teardown (`logs --tail 200`, with a 30-second command limit). This bounds
+lines per container, not bytes per line. Cleanup failures remain errors: the
+primary failure and every labelled Compose/VM/directory cleanup failure are
+retained and printed without rewriting the original exception cause. The shared
+reporter is used at both verifier and child-check CLI boundaries, including
+normal interruption (exit 130); argument-parser exit codes remain unchanged.
+Task-path resources use an explicit cleanup owner: the body exception remains
+primary and each callback failure is attached with its resource label, even if
+the callback suppresses its Python context or supplies its own cause. All
+registered callbacks run. On a successful body, the first cleanup failure is
+primary. The reporter follows unsuppressed Python contexts with cycle/duplicate
+protection; it does not undo deliberate context suppression.
+The verifier owns a 600-second work budget (`--timeout`, positive and at most
+600). Every work command receives the smaller of its own timeout and the
+remaining budget. Resource-owning Python checks (Go tests, SP-002/SP-003 check
+drivers and task-path preparation/execution) receive a same-host monotonic
+deadline through `KEHILA_VERIFICATION_DEADLINE`. Their parent waits while they
+time out leaf work and unwind their own directories, processes and collection
+cleanup. Task-path readiness/network operations also check the deadline, including
+requests running in helper threads. The parent does not kill these Python owners
+at the work deadline. Standalone commands keep their existing local timeouts.
+Diagnostics and teardown use their separate bounded command
+limits after work expires. The staged hook passes this budget and waits for the
+owner to finish cleanup; it does not kill the owner at 600 seconds. Cleanup can
+extend total elapsed time beyond the work budget. Normal interruption unwinds
+these contexts. Forced process termination or host
+failure can prevent cleanup; inspect resources carrying the printed unique
+`kehila-test-...` project label before removing any leftover test project.
+
+Default engine selection tries a ready Podman runtime, then Docker. Use
+`--engine docker` or `--engine podman` to select explicitly. On Windows an
+explicit stopped Podman machine can be started for the run:
+
+```text
+python scripts/verify.py --engine podman --podman-machine NAME
+```
+
+Use the name reported by `podman machine list`. The VM starts after builds;
+shared VMs remain running, including those started by this command. Automatic
+shutdown requires an explicit exclusive-use declaration:
+
+```text
+python scripts/verify.py --engine podman --podman-machine NAME --exclusive-podman-machine
+```
+
+This declares that no other program or user will use the VM during the run.
+The machine must initially be stopped. A nonblocking OS file lease serializes
+verifiers using the same OS account and explicit machine name. The lock lives
+under `.kehila-verifier-locks` in the OS-resolved account profile (Windows
+`FOLDERID_Profile`, POSIX account-database home), independently of shell username,
+home and temporary-directory variables. The Windows profile also avoids
+per-application [LocalAppData redirection](https://docs.python.org/3.10/using/windows.html#redirection-of-local-data-registry-and-temporary-paths).
+The directory must not be redirected;
+on POSIX it must belong to the account and exclude group/other permissions.
+Lock files persist after release so another owner cannot lock a replacement
+inode. Stop older verifier versions before using the new lease namespace; their
+temporary-directory locks do not coordinate with it. The lease cannot prevent
+unrelated Podman clients from using that VM. Do not select exclusive mode for a shared VM.
+An unexpected active container in either store fails exclusive cleanup and leaves
+the VM running. Without the exclusive declaration, idle snapshots never authorize
+shutdown. An exclusively owned partial start receives a bounded stop attempt;
+cleanup failures remain visible alongside the original failure.
+
+Before startup, the runner requires the machine-created `NAME` and `NAME-root`
+connections and checks their loopback SSH host/port/user and distinct service
+socket paths. Rootful access must use `/run/podman/podman.sock`; rootless access
+must use `/run/user/<uid>/podman/podman.sock`. The chosen verified connection is
+carried explicitly to Compose and container inspection without changing global
+connection defaults. `CONTAINER_CONNECTION` can select either verified store;
+a foreign connection or `CONTAINER_HOST` combined with an explicit machine is
+rejected. Owned mode also rejects ambient `DOCKER_HOST`/`DOCKER_CONTEXT` and
+`CONTAINER_HOST`; without an explicit machine it rejects `CONTAINER_CONNECTION`.
+Unset these overrides or use caller-managed external services. Without a named
+machine, native Podman must report `serviceIsRemote=false` and subsequent commands
+use `--remote=false`. Docker's effective saved context must identify a local Unix
+socket or Windows named pipe; the validated context is pinned for Compose and
+inspection. Remote Docker contexts are rejected even when no override variable
+is set. Engine/machine/mode and static routing conflicts fail before builds;
+saved daemon metadata is checked before container creation.
+
+For commit hooks, set `KEHILA_TEST_ENGINE` and optionally
+`KEHILA_TEST_PODMAN_MACHINE` in the shell that invokes Git; the verifier uses them
+as defaults for the equivalent CLI arguments. Set
+`KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE=1` only for an initially stopped VM reserved
+exclusively for that verification run (default `0`). External-services mode
+rejects machine-ownership settings instead of silently ignoring them. CI selects Docker and uses this
+same lifecycle for both shared and staged verification. The staged source
+export, pure/full classification and failure checks remain required.
+
+The shared host ports must be free. Existing development containers are neither
+borrowed nor stopped by the owned mode. To keep a manually managed disposable
+development stack running, use these commands instead:
 
 ```text
 python scripts/setup_env.py --start
-python scripts/verify.py
+python scripts/verify.py --external-services
 ```
+
+That explicit mode performs all full checks against existing services and leaves
+their lifecycle to the caller. It does not provide the overlap reduction of the
+owned mode. Both full modes require the default local test endpoints:
+`KEHILA_TEST_MONGO_URL=mongodb://127.0.0.1:27017`,
+`KEHILA_NATS_ADDRESS=127.0.0.1:4222`, `KEHILA_NATS_HOST=127.0.0.1` and
+`KEHILA_NATS_PORT=4222` (unset variables use these defaults). Overrides are rejected
+before builds so readiness, the Python account probe, Rust broker tests and live
+task-path checks agree about their targets. `--external-services` changes lifecycle
+ownership; it does not add custom endpoint support. Use standalone `task_path.py`
+or `nats_probe.py` for custom endpoints. Native PostgreSQL investigations retain
+their separate documented container/resource preflight and qualification scope.
+
+Generated SP-002 check executables now use the shared owned temporary-directory
+cleanup policy on success and failure. The frozen oracle source/fixtures and
+historical evidence remain unchanged. Current SP-002/SP-003 Python support
+scripts participate in deadline handling; their behavior is separate
+from those recorded native runs.
+
+### Lifecycle verification record
+
+The source at `20c1664` passed the full staged gate on Windows/WSL2/Podman on
+2026-10-14: 170 tooling tests (168 passed, two POSIX-only skips), all Rust
+workspace tests with NATS, Go checks/tests, frozen oracles, OpenSearch readiness
+and the complete live task-path checks. The gate began with a stopped explicit
+VM; each owned service group was removed and the VM stopped automatically.
+An additional real NATS run deliberately raised a test failure after startup:
+the original failure survived, its project was removed, and the VM stopped.
+
+The first lifecycle attempt passed its live checks but failed snapshot cleanup
+because `podman machine ssh` created a literal Windows `NUL` known-hosts file.
+VM cleanup now uses registered Podman connections with checked machine/store
+endpoints. Regression tests additionally reject missing owned containers,
+remaining containers after successful-looking teardown, foreign/missing machine
+connections, and cleanup errors that would conceal test failures. Pure/docs and
+staged-selection regression checks remain in the shared suite. These results
+verify test lifecycle behavior, not a controlled memory benchmark or a new
+native application adapter. Tracking: [#55](https://github.com/MrQuality/kehila/issues/55).
+
+Review follow-up at `5ce6875` passed the full staged gate on
+2026-10-14: 198 tooling tests (196 passed, two POSIX-only skips), the complete
+Rust workspace split between offline and broker phases, Go/static/frozen-oracle
+checks, OpenSearch TCP/HTTP readiness and all live task-path checks. Every owned
+group was removed and the exclusively reserved VM stopped. Nine targeted fault
+mutations were each detected by the regression suite.
+
+An additional native Podman/NATS check rejected a foreign registered connection
+before VM startup. Injecting an elapsed time beyond the work deadline after real
+NATS startup preserved the deadline error, removed the owned project and stopped
+the exclusive VM. This checks cleanup after controlled deadline exhaustion; it
+is not a 600-second wall-clock experiment or a forced-termination guarantee.
+
+One intermediate full gate passed its Go tests but failed temporary executable
+cleanup with Windows sharing violation 32 after the existing 30-second retry
+bound. The unchanged retry passed; no timeout, cleanup policy or test was
+weakened. The final source gate passed. Obsolete generated SP-002 executables
+were removed; future check runs clean their own temporary outputs on success or
+failure. No controlled memory benchmark is claimed.
+
+Further review fixes at `c941ab8` passed all five focused source-commit gates;
+the final full staged gate ran 223 tooling tests (221 passed, two POSIX-only
+Windows skips), the complete Rust/Go/static/frozen-oracle matrix and every
+required service check. Seven targeted fault mutations were detected, covering
+rootful selection, host-override rejection, URI metadata, per-user lease
+identity, log limits, remote Docker context rejection and the owner wait policy.
+
+An additional real PostgreSQL/FerretDB run injected elapsed time past the child
+work deadline after both Rust workers were ready. The cooperative child stopped
+both workers and successfully dropped its unique test collection. Its failure
+propagated to the parent, which printed bounded Compose diagnostics, removed the
+temporary binaries and owned service group, and stopped the exclusive VM. This
+is controlled deadline-exhaustion evidence, not a 600-second wait or a
+forced-termination test. Nested-failure regressions separately confirm that
+Compose, VM and directory cleanup failures all remain visible with the primary
+failure, including at child CLI boundaries. The earlier Windows sharing-lock
+failure has not been attributed to orphaned processes. A subsequent implicit-
+context and caller-environment isolation regressions raised the tooling count
+to 225 (223 passed, two Windows POSIX-only skips). Matrix fixtures establish
+their own routing defaults, so standalone endpoint settings do not invalidate
+pure/docs tooling tests; the actual full CLI still rejects nondefault targets.
+One intermediate gate passed all Go tests but failed temporary-executable
+cleanup after the existing 30-second Windows sharing-lock retry bound. No
+surviving test executable process was found; the directory was removable on
+subsequent bounded cleanup. The unchanged source retry passed the complete full
+staged gate. The cleanup timeout and policy were not weakened.
+
+The next follow-up covers callback errors with suppressed contexts/explicit
+causes, stable account-profile leases, explicit dual-store routing/environment
+forwarding, VM teardown after the parent work deadline and the Windows/Cargo
+timeout matrix. All five previously surviving targeted mutations now fail their
+intended assertions. Tooling fixtures isolate inherited verification deadlines,
+including an expired value, while deliberate inheritance tests and production
+configuration validation remain active. SP-003 shares the directory owner with
+an explicit five-second retry budget; failed pure cases print a single diagnostic
+line limited to 4096 UTF-8 bytes, excluding its newline. These checks do not
+establish crash/forced-termination cleanup guarantees.
+
+Source `00e02fe` passed the full staged Windows/WSL2/Podman gate on 2026-10-15:
+240 tooling tests (238 passed, two POSIX-only skips), all Rust/Go/static/frozen-
+oracle checks and every required service phase. The same tooling suite passed
+with inherited `KEHILA_VERIFICATION_DEADLINE=0`. Windows installer and packaged
+Python resolved the same account-profile lease path. Four earlier gate attempts
+failed on Windows Go-executable sharing locks after testing (one also failed a
+startup timing assertion); no surviving test process or matching file handle was
+found afterward. The files became removable later. Full gates then passed with
+isolated temporary storage and serial Go package work, keeping the existing
+30-second cleanup policy and all checks. A lease-development gate also rejected
+LocalAppData redirection before VM startup; the profile-based lease passed.
+
+At the same source, the controlled PostgreSQL/FerretDB deadline check was rerun
+after both real Rust workers became ready. Injected elapsed time expired the
+child's inherited deadline; both workers stopped, collection cleanup succeeded,
+the failure propagated, bounded diagnostics ran, temporary outputs and the owned
+service group were removed, and the exclusive VM stopped. This checks the new
+callback owner against real services; it remains controlled deadline-exhaustion
+evidence rather than a 600-second wall-clock timeout or forced termination.
+
+The combined PR #54 source at `abc45fa` passed the full staged
+Windows/WSL2/Podman gate on 2026-10-16: 247 tooling tests (244 passed; two
+POSIX-only skips and one unavailable Windows symlink-creation privilege),
+Rust/Go/static/frozen-oracle checks and every required live phase. Literal
+loopback-only Go listener admission, explicit SP-004 connection routing, CLI
+cause/interruption reporting, bounded crash diagnostics and canonical cleanup
+refusal have direct regressions. Six targeted Python/Go mutations were detected;
+failure injection skips overlay DDL so its error text cannot substitute for a
+reached SQL case. These tooling checks are separate from opt-in native evidence.
+
+SP-004's [R03 record](../experiments/SP-004/results.serial-guards.json) preserves
+the serial distinct-manager/guard extension executed against PostgreSQL 16.15,
+its exact source hashes and confirmed cleanup. The source files are preserved
+at `da59c69`. Removing management-authority admission and swapping manager/subject
+attribution were detected in real database transactions; both rolled back and
+state/guard restoration was checked. Full A05/concurrency/authentication and
+Linux-host native qualification remain outstanding. See the
+[canonical scope and remaining cases](spikes/SP-004-actor-authority.md).
 
 Run unit tests without external services:
 
@@ -199,6 +454,27 @@ single-host MongoDB URI for a different disposable development instance. It uses
 the `yaja` database. Never point regression tests at a supported user installation.
 No host Python packages or production CDC/indexer are required.
 
+Each child binds port zero and reports `KEHILA_BOUND_ADDR` after binding. The
+runner discovers that owned loopback address from at most 8 KiB of startup output
+within 25 seconds, then requires HTTP health readiness. It never releases a
+probed port for another process to claim before startup. Missing, malformed,
+duplicate or incomplete address reports cannot satisfy discovery.
+If a child exits, discovery reports its exit status and up to 8 KiB of output,
+marking truncation explicitly. A live child exceeding the output limit still
+fails discovery; exit diagnostics do not relax the admission limits.
+
+The Go test runner and live runner own their temporary build directories. After
+child processes exit, deletion retries only Windows access/sharing/lock errors
+(5/32/33), for at most 30 seconds. Other errors and an exhausted retry deadline
+still fail verification. Cleanup never targets a path outside the allocated
+temporary directory; an earlier test failure remains visible if cleanup also
+fails.
+
+Directory cleanup tests exercise canonical-path refusal before deletion, with
+real directory-symlink coverage where the host permits creation. Windows hosts
+without symlink creation privilege skip that filesystem case; the portable
+redirected-path test still checks refusal and that deletion is never invoked.
+
 The runner tests 48 competing create/update/identical-retry/changed-content pairs
 across two processes, replay after later updates, direct-worker request guards,
 a stalled request body while other reads proceed, a stalled database connection
@@ -221,7 +497,7 @@ Python experiment adapters with search running; it is not a Rust CDC test.
 
 During implementation, run the affected pure and boundary tests. After changes
 to the worker, API, storage decisions, dependencies, or verification runner, run
-`python scripts/verify.py` once against running disposable services on the final
+`python scripts/verify.py` once with its owned disposable services on the final
 revision. This includes the live task-path runner; do not substitute `--pure` or
 a previous revision's passing CI. Run `cargo fmt --all -- --check` and check
 changed Go files with `gofmt`. Required GitHub CI must pass on the final revision.
