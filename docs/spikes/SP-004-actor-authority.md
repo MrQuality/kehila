@@ -346,7 +346,7 @@ Go executable while Windows still held it. The Go test runner and live runner
 now share owned-directory cleanup with at most 30 seconds of retry for Windows
 access/sharing/lock errors (5/32/33); other errors and exhausted retries fail the
 gate. Seven tests cover ownership, retries, deadlines and preserved primary
-failures. The final source gates include 143 tooling tests (141 passed, two
+failures. Those original source gates included 143 tooling tests (141 passed, two
 POSIX-only skips), workspace Rust/Go checks, frozen oracles and live task-path
 checks.
 
@@ -371,6 +371,7 @@ was removed with absence confirmed, and the initially stopped exclusive VM was
 stopped. These serial cases exercise distinct actor rows but do not establish
 concurrent lock ordering, full A05, real authentication or Linux-host execution.
 Earlier R01/R02 records and their exact source hashes remain historical.
+R03's exact exercised source files are preserved at `da59c69`.
 
 ## Conclusion and reuse boundary
 
@@ -388,7 +389,8 @@ coverage; finishing this investigation does not close it.
 
 ## Handoff
 
-Latest work: reviewed PR #53 baseline and serial A05 prototype/evidence. Next
+Latest work: reviewed PR #53 baseline and serial A05 prototype/evidence, including
+R03's distinct-manager and input/authority guard checks. Next
 bounded database slice: earlier-gap audit and reached multi-actor grant/revocation
 schedules against the same overlay/fence. Actual credential/session/channel cases
 need the explicit mechanism decisions above. #40 stays open for those specific

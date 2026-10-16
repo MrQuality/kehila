@@ -33,7 +33,9 @@ The existing M1 scope and M0–M4 delivery plan remain unchanged.
 ## Engineering maintenance
 
 [#55](https://github.com/MrQuality/kehila/issues/55) tracks sequential verification
-and automatic ownership/cleanup of short-lived test services, building on PR #54.
+and automatic ownership/cleanup of short-lived test services. PR #56 merged into
+PR #54's branch on 2026-10-15; delivery to `main` awaits PR #54 review/merge.
+#55 remains open until that delivery, and PR #54 carries its closure reference.
 The implementation builds before service startup, uses one compiler job, and
 runs offline tests before the VM and NATS, OpenSearch and PostgreSQL/FerretDB
 in separate required phases. Review follow-up binds machine/store routing,
@@ -46,7 +48,7 @@ SP-003 uses shared directory ownership with its five-second retry budget and
 bounded case diagnostics. Regression coverage includes expired-parent VM cleanup,
 both store connections and routing environment, timeout selection and inherited
 deadline isolation.
-It is submitted for review with service-backed evidence in the
+The combined branch is submitted for review with service-backed evidence in the
 [testing guide](../TESTING.md#owned-test-services). This changes development
 resource overlap; it completes no product milestone or #49 delivery obligation.
 
@@ -281,8 +283,10 @@ design's accepted [bounded-transaction direction](../architecture/ADR-102-postgr
 
 [SP-004/#40](../spikes/SP-004-actor-authority.md) records the contract approved and
 merged in PR #53 on 2026-10-14, plus a passed serial A05 grant-management subset
-on native PostgreSQL 16.15. The failed privilege attempt and correction remain
-recorded. Full A05, concurrent/read/replay cases and actual authentication,
+on native PostgreSQL 16.15. The serial R03 extension adds distinct-manager
+attribution/rollback and NULL/authority/missing-grant rejection evidence, with
+native mutation detection and confirmed cleanup. The failed privilege attempt
+and correction remain recorded separately. Full A05, concurrent/read/replay cases and actual authentication,
 session and internal-channel mechanisms remain outstanding. This is experimental
 evidence with explicit fixture/overlay limits, not production access delivery.
 This is the W2 prerequisite for #49; #41 owns subsequent stable target allocation.

@@ -278,6 +278,25 @@ service group were removed, and the exclusive VM stopped. This checks the new
 callback owner against real services; it remains controlled deadline-exhaustion
 evidence rather than a 600-second wall-clock timeout or forced termination.
 
+The combined PR #54 source at `abc45fa` passed the full staged
+Windows/WSL2/Podman gate on 2026-10-16: 247 tooling tests (244 passed; two
+POSIX-only skips and one unavailable Windows symlink-creation privilege),
+Rust/Go/static/frozen-oracle checks and every required live phase. Literal
+loopback-only Go listener admission, explicit SP-004 connection routing, CLI
+cause/interruption reporting, bounded crash diagnostics and canonical cleanup
+refusal have direct regressions. Six targeted Python/Go mutations were detected;
+failure injection skips overlay DDL so its error text cannot substitute for a
+reached SQL case. These tooling checks are separate from opt-in native evidence.
+
+SP-004's [R03 record](../experiments/SP-004/results.serial-guards.json) preserves
+the serial distinct-manager/guard extension executed against PostgreSQL 16.15,
+its exact source hashes and confirmed cleanup. The source files are preserved
+at `da59c69`. Removing management-authority admission and swapping manager/subject
+attribution were detected in real database transactions; both rolled back and
+state/guard restoration was checked. Full A05/concurrency/authentication and
+Linux-host native qualification remain outstanding. See the
+[canonical scope and remaining cases](spikes/SP-004-actor-authority.md).
+
 Run unit tests without external services:
 
 ```text
