@@ -20,6 +20,20 @@ TypeScript package scope change together. Consumers must update imports;
 parser behavior, `CompiledQueryArtifact`, and the contract's fields are
 unchanged. No legacy aliases are provided in this early-development repository.
 
+## Project logo
+
+<p align="center">
+  <img src="assets/branding/kehila-logo.png" alt="Kehila community logo and wordmark" width="480">
+</p>
+
+The logo combines the community symbol with the Kehila wordmark. Reuse the
+checked-in assets and preserve their aspect ratio:
+
+- [PNG](assets/branding/kehila-logo.png): 2048 × 768 pixels with a white background;
+  used in the main README so it remains readable in light and dark themes.
+- [SVG](assets/branding/kehila-logo.svg): scalable artwork with a transparent
+  background and outlined lettering; display it on a light surface.
+
 ## Rename and retained storage identities
 
 The maintainer selected Kehila on 2026-10-04. The rename changes current project
