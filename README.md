@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/branding/kehila-logo.png" alt="Kehila community logo and wordmark" width="560">
+</p>
+
 # Kehila — Project and task management
 
 ![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)
