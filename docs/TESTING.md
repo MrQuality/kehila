@@ -440,6 +440,9 @@ runner discovers that owned loopback address from at most 8 KiB of startup outpu
 within 25 seconds, then requires HTTP health readiness. It never releases a
 probed port for another process to claim before startup. Missing, malformed,
 duplicate or incomplete address reports cannot satisfy discovery.
+If a child exits, discovery reports its exit status and up to 8 KiB of output,
+marking truncation explicitly. A live child exceeding the output limit still
+fails discovery; exit diagnostics do not relax the admission limits.
 
 The Go test runner and live runner own their temporary build directories. After
 child processes exit, deletion retries only Windows access/sharing/lock errors
@@ -447,6 +450,11 @@ child processes exit, deletion retries only Windows access/sharing/lock errors
 still fail verification. Cleanup never targets a path outside the allocated
 temporary directory; an earlier test failure remains visible if cleanup also
 fails.
+
+Directory cleanup tests exercise canonical-path refusal before deletion, with
+real directory-symlink coverage where the host permits creation. Windows hosts
+without symlink creation privilege skip that filesystem case; the portable
+redirected-path test still checks refusal and that deletion is never invoked.
 
 The runner tests 48 competing create/update/identical-retry/changed-content pairs
 across two processes, replay after later updates, direct-worker request guards,

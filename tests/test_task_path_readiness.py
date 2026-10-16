@@ -38,6 +38,15 @@ class BoundAddressTests(IsolatedEnvironmentTests):
         with self.assertRaisesRegex(AssertionError, 'address already in use'):
             self.discover(b'address already in use\n', returncode=1)
 
+    def test_exited_child_with_oversized_output_retains_exit_status_and_bounded_diagnostic(self):
+        output = b'PANIC: startup failure\n' + b'x' * 100000
+        with self.assertRaisesRegex(AssertionError, 'Child exited.*7') as caught:
+            self.discover(output, returncode=7)
+        diagnostic = str(caught.exception)
+        self.assertIn('PANIC: startup failure', diagnostic)
+        self.assertIn('truncated', diagnostic)
+        self.assertLess(len(diagnostic), 8400)
+
     def test_output_exact_limit_and_overflow(self):
         marker = b'KEHILA_BOUND_ADDR=127.0.0.1:43210\n'
         output = b'x' * (8192 - len(marker) - 1) + b'\n' + marker

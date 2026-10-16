@@ -111,10 +111,13 @@ class RunnerBoundaryTests(unittest.TestCase):
             with self.subTest(diagnostic=diagnostic):
                 database = Mock()
                 reached = False
+                calls = 0
 
                 def fail(*args, **kwargs):
-                    nonlocal reached
-                    if diagnostic in args[0] or kwargs.get('expected_message') == diagnostic:
+                    nonlocal reached, calls
+                    calls += 1
+                    # The overlay DDL contains rejection messages but does not execute those cases.
+                    if calls > 2 and (diagnostic in args[0] or kwargs.get('expected_message') == diagnostic):
                         reached = True
                         raise ValueError('native case failed')
 

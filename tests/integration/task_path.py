@@ -66,11 +66,14 @@ def bound_base(log_path, process, timeout=25):
         command_timeout(timeout)
         with log_path.open('rb') as log:
             output = log.read(8193)
+        returncode = process.poll()
+        if returncode is not None:
+            truncated = ' (output truncated at 8 KiB)' if len(output) > 8192 else ''
+            raise AssertionError('Child exited with status ' + str(returncode) +
+                                 ' before address discovery' + truncated + ': ' +
+                                 output[:8192].decode('utf-8', errors='replace'))
         if len(output) > 8192:
             raise AssertionError('Child startup output exceeds 8 KiB')
-        if process.poll() is not None:
-            raise AssertionError('Child exited before address discovery: ' +
-                                 output.decode('utf-8', errors='replace'))
         lines = [line for line in output.splitlines(keepends=True)
                  if line.startswith(b'KEHILA_BOUND_ADDR=') and line.endswith(b'\n')]
         if len(lines) > 1:

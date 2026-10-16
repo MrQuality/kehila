@@ -4,7 +4,7 @@ import shutil
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import temp_work
@@ -123,3 +123,37 @@ class OwnedDirectoryTests(unittest.TestCase):
                 with self.subTest(work=work), self.assertRaises(ValueError):
                     temp_work._remove_owned(work, root, 'kehila-')
             remove.assert_not_called()
+
+    def test_redirected_owned_path_is_refused_before_deletion(self):
+        root = Path(tempfile.gettempdir()).resolve()
+        work = Mock(name='owned directory')
+        work.parent = root
+        work.name = 'kehila-test-redirected'
+        work.resolve.return_value = root / 'outside-target'
+        with patch.object(temp_work.shutil, 'rmtree') as remove:
+            with self.assertRaisesRegex(ValueError, 'Refusing cleanup'):
+                temp_work._remove_owned(work, root, 'kehila-')
+            remove.assert_not_called()
+
+    def test_directory_symlink_is_refused_without_touching_its_target(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            target = root / 'retained-target'
+            target.mkdir()
+            marker = target / 'retained'
+            marker.write_bytes(b'target must remain')
+            link = root / 'kehila-test-link'
+            try:
+                link.symlink_to(target, target_is_directory=True)
+            except OSError as error:
+                if getattr(error, 'winerror', None) == 1314:
+                    self.skipTest('Windows symlink creation privilege unavailable; redirected-path guard is separately tested')
+                raise
+            try:
+                with patch.object(temp_work.shutil, 'rmtree') as remove:
+                    with self.assertRaisesRegex(ValueError, 'Refusing cleanup'):
+                        temp_work._remove_owned(link, root, 'kehila-')
+                    remove.assert_not_called()
+                self.assertEqual(marker.read_bytes(), b'target must remain')
+            finally:
+                link.unlink()
