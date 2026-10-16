@@ -350,6 +350,28 @@ failures. The final source gates include 143 tooling tests (141 passed, two
 POSIX-only skips), workspace Rust/Go checks, frozen oracles and live task-path
 checks.
 
+### Serial A05 extension: SP-004-R03, 2026-10-16
+
+The [serial extension evidence](../../experiments/SP-004/results.serial-guards.json)
+records a fresh Windows/WSL2/Podman PostgreSQL 16.15 run against the unchanged
+native baseline and expanded experimental fixtures. A distinct active manager
+with no creation permission revoked/restored the subject's grant. Request/result
+subject identity, manager operation/event attribution, digests, successor
+versions and final state/history counts were checked separately.
+All six NULL arguments, unregistered/inactive/missing managers, a missing subject
+and a subject without a grant were rejected with the specified SQLSTATE and
+primary diagnostic. Rejection probes and a distinct-manager rollback retained
+the prior committed grant/event/operation state.
+
+Removing management-authority admission allowed an otherwise forbidden mutation;
+the rejection oracle detected it. Replacing manager attribution with subject
+attribution was detected by the distinct-identity oracle. Both probes rolled back;
+final state and guard restoration were checked. The networkless 256 MiB container
+was removed with absence confirmed, and the initially stopped exclusive VM was
+stopped. These serial cases exercise distinct actor rows but do not establish
+concurrent lock ordering, full A05, real authentication or Linux-host execution.
+Earlier R01/R02 records and their exact source hashes remain historical.
+
 ## Conclusion and reuse boundary
 
 Serial grant-management capability separation and transactional attribution are

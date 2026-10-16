@@ -65,6 +65,9 @@ preflight. A05 statements use 10-second statement/idle-transaction and 2-second
 lock budgets. An explicit Podman connection is available through the same
 `--podman-connection` option. Save stdout/stderr locally to retain failed attempts;
 the final JSON success summary includes the tested source-file fingerprints.
+Invalid container/connection names fail before resource preflight or database
+setup. CLI failures retain chained and labelled cleanup diagnostics; normal
+interruption returns 130 without a traceback. The caller still owns the container.
 
 ## Acceptance and remaining scope
 
@@ -72,6 +75,15 @@ The serial cases check baseline denial, independent serving/management login
 privileges, forged management INSERT denial, stale/no-op rejection, full rollback,
 revocation/restoration and attributed digest/request/result coherence, plus
 current/latest corruption failure and retained history protection.
+
+The serial extension supplies a distinct active `admin_actor` with no creation
+permission. It checks every NULL argument, unregistered/inactive/missing manager,
+missing subject and existing subject without a grant. Rejections and an explicit
+distinct-manager rollback must retain the prior grant, event and operation state.
+Distinct-manager revoke/restore then verifies the manager's operation/event
+attribution separately from the subject's request/result identity, exact digest,
+successor versions and final current/history counts. These are serial cases;
+they do not qualify concurrent actor-lock ordering or real authentication.
 
 Python unit tests cover orchestration failure propagation and unsafe-input/resource
 gates. They do not establish that SQL executes correctly. Real PostgreSQL evidence
@@ -83,3 +95,8 @@ multi-actor concurrency and actual session/logout ordering remain #40 work.
 Passing this subset does not qualify full A05, production migration/adapter,
 generic scope persistence or Linux-host execution. No other issue is completed
 by adding or running this prototype.
+
+The [R03 serial extension record](results.serial-guards.json) preserves the
+2026-10-16 Windows/WSL2/Podman PostgreSQL 16.15 run, exact tested source hashes,
+authority/adverse-attribution mutation detection and confirmed cleanup. R01/R02's
+[historical record](results.serial.json) and source hashes remain unchanged.

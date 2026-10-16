@@ -14,7 +14,10 @@ CREATE TABLE sp004.management_actors (
   actor_id kehila.ident PRIMARY KEY REFERENCES kehila.actors(actor_id)
 );
 -- Verified identity is a declared fixture, not an end-user credential.
-INSERT INTO sp004.management_actors VALUES ('actor');
+INSERT INTO kehila.actors VALUES
+  ('admin_actor', true, false), ('inactive_manager', false, false),
+  ('unprivileged_actor', true, false);
+INSERT INTO sp004.management_actors VALUES ('actor'), ('admin_actor'), ('inactive_manager');
 
 ALTER TABLE kehila.operations DROP CONSTRAINT slice1_operation_family;
 ALTER TABLE kehila.operations DROP CONSTRAINT operations_family_target;

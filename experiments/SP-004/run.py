@@ -5,15 +5,16 @@ import json
 from pathlib import Path
 import platform
 import re
-import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / 'scripts'))
 import check_postgresql as native
+from cleanup_errors import run_main
 
 CHANGE = "sp004.change_grant('actor','actor','created',{}, {}, '{}')"
+DISTINCT_CHANGE = "sp004.change_grant('admin_actor','actor','created',{}, {}, '{}')"
 
 
 def bounded(statement):
@@ -25,6 +26,57 @@ def verify(database, condition, message):
     # Only constant experiment-owned SQL and messages are passed here.
     database.sql(bounded("DO $$ BEGIN IF (" + condition + ") IS DISTINCT FROM true THEN "
                          "RAISE EXCEPTION '" + message + "'; END IF; END $$;"))
+
+
+def distinct_management(database, login):
+    inputs = ["'admin_actor'", "'actor'", "'created'", '3', 'false', "'null-input'"]
+    for index in range(len(inputs)):
+        invalid = inputs.copy()
+        invalid[index] = 'NULL'
+        database.sql(bounded('SELECT sp004.change_grant(' + ','.join(invalid) + ');'),
+                     user=login, expected_state='22004',
+                     expected_message='all management inputs are required')
+    for manager, subject in (('unprivileged_actor', 'actor'), ('inactive_manager', 'actor'),
+                             ('missing_actor', 'actor'), ('admin_actor', 'missing_actor')):
+        # These values are constant fixture identifiers, not caller-supplied SQL.
+        database.sql(bounded("SELECT sp004.change_grant('" + manager + "','" + subject +
+                             "','created',3,false,'denied');"), user=login,
+                     expected_state='42501', expected_message='management authority denied')
+    database.sql(bounded("SELECT sp004.change_grant('admin_actor','unprivileged_actor',"
+                         "'created',1,false,'missing-grant');"), user=login,
+                 expected_state='23503', expected_message='grant does not exist')
+    unchanged = ("(SELECT active AND version=3 FROM kehila.project_grants "
+                 "WHERE project_id='created' AND actor_id='actor') "
+                 "AND (SELECT count(*)=3 FROM kehila.project_grant_events WHERE project_id='created') "
+                 "AND (SELECT count(*)=2 FROM kehila.operations WHERE command_family='sp004_grant_admin')")
+    verify(database, unchanged, 'management rejection changed committed state')
+
+    database.sql(bounded('BEGIN; SELECT ' + DISTINCT_CHANGE.format(3, 'false', 'distinct-rollback') +
+                         '; SET CONSTRAINTS ALL IMMEDIATE; ROLLBACK;'), user=login)
+    verify(database, unchanged, 'distinct management rollback left state')
+    database.sql(bounded('SELECT ' + DISTINCT_CHANGE.format(3, 'false', 'distinct-revoke') + ';'), user=login)
+    database.sql(bounded('SELECT ' + DISTINCT_CHANGE.format(4, 'true', 'distinct-restore') + ';'), user=login)
+    verify(database,
+           "(SELECT count(*)=2 FROM kehila.project_grant_events e "
+           "JOIN kehila.operations o ON o.operation_row_id=e.granting_operation_row_id "
+           "JOIN kehila.operation_payloads p USING(operation_row_id) "
+           "WHERE e.project_id='created' AND e.actor_id='actor' AND e.version IN (4,5) "
+           "AND e.granted_by='admin_actor' AND o.actor_id=e.granted_by "
+           "AND o.target_project_id=e.project_id AND o.command_family=e.command_family "
+           "AND o.command_family='sp004_grant_admin' AND o.required_grant=o.command_family "
+           "AND o.grant_policy_version=1 AND e.access_profile='initial_owner' "
+           "AND o.token=CASE e.version WHEN 4 THEN 'distinct-revoke' ELSE 'distinct-restore' END "
+           "AND e.active=(e.version=5) AND o.request_sha256=sha256(p.request_bytes) "
+           "AND convert_from(p.request_bytes,'UTF8')::jsonb="
+           "jsonb_build_array('sp004_grant_admin_v1','admin_actor','actor','created',"
+           "(e.version-1)::text,e.active) "
+           "AND p.result=jsonb_build_object('kind','sp004_grant_change','version',e.version::text,"
+           "'actor','actor','project','created','active',e.active)) "
+           "AND (SELECT active AND version=5 FROM kehila.project_grants "
+           "WHERE project_id='created' AND actor_id='actor') "
+           "AND (SELECT count(*)=5 FROM kehila.project_grant_events WHERE project_id='created') "
+           "AND (SELECT count(*)=4 FROM kehila.operations WHERE command_family='sp004_grant_admin')",
+           'distinct management attribution or payload mismatch')
 
 
 def run(database):
@@ -107,6 +159,8 @@ def run(database):
     database.sql(bounded("DELETE FROM kehila.project_grant_events;"),
                  expected_state='23514', expected_message='creation history is append-only')
 
+    distinct_management(database, manager)
+
     return {
         'scope': 'SP-004 A05 serial management subset',
         'outcome': 'passed',
@@ -138,8 +192,4 @@ def main():
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
-        print('ERR_SP004_CHECK: ' + str(error), file=sys.stderr)
-        sys.exit(3)
+    sys.exit(run_main(main, 'ERR_SP004_CHECK'))
