@@ -126,7 +126,12 @@ The worker also lacks replication-readiness verification and separate supported
 installation credentials. Its current index-install command is a development
 setup aid; it does not establish production provisioning.
 
-The Go API defaults to loopback and enforces same-origin browser mutations. It
+The Go API requires a literal loopback IP and numeric port in
+`KEHILA_LISTEN_ADDR`, defaulting to `127.0.0.1:8080`. IPv4/IPv6 loopback and port
+zero are supported; wildcard, non-loopback and hostname binds fail before
+listening. This prevents remote clients from reaching the unauthenticated
+development boundary by choosing a permissive bind address. The API enforces
+same-origin browser mutations. It
 keeps database-backed reads available when search is down. Its projection route
 now checks an actual OpenSearch query and refuses a result older than the
 requested saved version. A live Go-to-Python experiment check passed with the

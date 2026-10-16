@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"time"
 
@@ -23,6 +24,14 @@ func rejectRetiredConfiguration() error {
 	return nil
 }
 
+func loopbackListenAddress(value string) (netip.AddrPort, error) {
+	address, err := netip.ParseAddrPort(value)
+	if err != nil || !address.Addr().IsLoopback() {
+		return netip.AddrPort{}, fmt.Errorf("KEHILA_LISTEN_ADDR must contain a loopback IP and a port from 0 to 65535")
+	}
+	return address, nil
+}
+
 func main() {
 	if err := rejectRetiredConfiguration(); err != nil {
 		log.Fatal(err)
@@ -36,7 +45,11 @@ func main() {
 	if worker == "" || search == "" {
 		log.Fatal("KEHILA_WORKER_URL and KEHILA_SEARCH_URL are required")
 	}
-	listener, err := net.Listen("tcp", listen)
+	address, err := loopbackListenAddress(listen)
+	if err != nil {
+		log.Fatal(err)
+	}
+	listener, err := net.Listen("tcp", address.String())
 	if err != nil {
 		log.Fatal(err)
 	}
