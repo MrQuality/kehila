@@ -1,0 +1,293 @@
+{
+  "cleanup": "Participant backends/process trees absent; native container removed with absence confirmed; initially stopped exclusive VM stopped",
+  "completed_at_utc": "2026-10-17T20:53:26.003017+00:00",
+  "concurrency": {
+    "actor_state_restored": true,
+    "creation_management_boundaries": {
+      "denied_managers": 3,
+      "forged_log_writes": 2,
+      "invalid_tokens": 3,
+      "missing_subject": 1,
+      "no_op": 1,
+      "null_inputs": 5,
+      "stale": 1
+    },
+    "lock_orders": [
+      {
+        "earlier": {
+          "holder": 2040,
+          "waiter": 2042
+        },
+        "later": {
+          "holder": 2038,
+          "waiter": 2040
+        },
+        "manager": "admin_actor",
+        "subject": "actor"
+      },
+      {
+        "earlier": {
+          "holder": 2075,
+          "waiter": 2077
+        },
+        "later": {
+          "holder": 2073,
+          "waiter": 2075
+        },
+        "manager": "actor",
+        "subject": "admin_actor"
+      }
+    ],
+    "management_contention": [
+      {
+        "barrier": {
+          "holder": 2107,
+          "waiter": 2109
+        },
+        "fresh_retry_version": 3,
+        "rollback": false
+      },
+      {
+        "barrier": {
+          "holder": 2145,
+          "waiter": 2147
+        },
+        "fresh_retry_version": 3,
+        "rollback": true
+      }
+    ],
+    "multiline_evidence_regression_detected": true,
+    "mutations_detected": [
+      {
+        "kind": "creation authority bypass",
+        "observed": "created"
+      },
+      {
+        "kind": "actor lock-order reversal",
+        "reached_later_barrier": {
+          "holder": 2240,
+          "waiter": 2242
+        }
+      }
+    ],
+    "qualified": "native structural creation/replay and labelled project fixtures only",
+    "schedules": [
+      {"barrier":{"holder":338,"waiter":340},"command_first":true,"first":"created","label":"create-first-0","project_scope":false,"replay":false,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":368,"waiter":370},"command_first":true,"first":"created","label":"create-first-1","project_scope":false,"replay":false,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":398,"waiter":400},"command_first":true,"first":"created","label":"create-first-2","project_scope":false,"replay":false,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":428,"waiter":430},"command_first":true,"first":"created","label":"create-first-3","project_scope":false,"replay":false,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":459,"waiter":461},"command_first":true,"first":"created","label":"create-first-4","project_scope":false,"replay":false,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":489,"waiter":491},"command_first":true,"first":"created","label":"create-first-5","project_scope":false,"replay":false,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":519,"waiter":521},"command_first":true,"first":"created","label":"create-first-6","project_scope":false,"replay":false,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":549,"waiter":551},"command_first":true,"first":"created","label":"create-first-7","project_scope":false,"replay":false,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":580,"waiter":582},"command_first":true,"first":"created","label":"create-first-8","project_scope":false,"replay":false,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":610,"waiter":612},"command_first":true,"first":"created","label":"create-first-9","project_scope":false,"replay":false,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":640,"waiter":642},"command_first":true,"first":"created","label":"create-first-rollback","project_scope":false,"replay":false,"rollback":true,"second":"f","state_profile":1},
+      {"barrier":{"holder":674,"waiter":676},"command_first":true,"first":"saved","label":"project-create-first","project_scope":true,"replay":false,"rollback":false,"second":"2","state_profile":2},
+      {"barrier":{"holder":715,"waiter":717},"command_first":true,"first":"saved","label":"project-create-first-rollback","project_scope":true,"replay":false,"rollback":true,"second":"2","state_profile":2},
+      {"barrier":{"holder":755,"waiter":757},"command_first":false,"first":"f","label":"create-revoked-0","project_scope":false,"replay":false,"rollback":false,"second":"denied","state_profile":1},
+      {"barrier":{"holder":783,"waiter":785},"command_first":false,"first":"f","label":"create-revoked-1","project_scope":false,"replay":false,"rollback":false,"second":"denied","state_profile":1},
+      {"barrier":{"holder":811,"waiter":813},"command_first":false,"first":"f","label":"create-revoked-2","project_scope":false,"replay":false,"rollback":false,"second":"denied","state_profile":1},
+      {"barrier":{"holder":840,"waiter":842},"command_first":false,"first":"f","label":"create-revoked-3","project_scope":false,"replay":false,"rollback":false,"second":"denied","state_profile":1},
+      {"barrier":{"holder":868,"waiter":870},"command_first":false,"first":"f","label":"create-revoked-4","project_scope":false,"replay":false,"rollback":false,"second":"denied","state_profile":1},
+      {"barrier":{"holder":896,"waiter":898},"command_first":false,"first":"f","label":"create-revoked-5","project_scope":false,"replay":false,"rollback":false,"second":"denied","state_profile":1},
+      {"barrier":{"holder":924,"waiter":926},"command_first":false,"first":"f","label":"create-revoked-6","project_scope":false,"replay":false,"rollback":false,"second":"denied","state_profile":1},
+      {"barrier":{"holder":953,"waiter":955},"command_first":false,"first":"f","label":"create-revoked-7","project_scope":false,"replay":false,"rollback":false,"second":"denied","state_profile":1},
+      {"barrier":{"holder":981,"waiter":983},"command_first":false,"first":"f","label":"create-revoked-8","project_scope":false,"replay":false,"rollback":false,"second":"denied","state_profile":1},
+      {"barrier":{"holder":1009,"waiter":1011},"command_first":false,"first":"f","label":"create-revoked-9","project_scope":false,"replay":false,"rollback":false,"second":"denied","state_profile":1},
+      {"barrier":{"holder":1037,"waiter":1039},"command_first":false,"first":"f","label":"create-revoked-rollback","project_scope":false,"replay":false,"rollback":true,"second":"created","state_profile":0},
+      {"barrier":{"holder":1068,"waiter":1070},"command_first":false,"first":"2","label":"project-create-revoked","project_scope":true,"replay":false,"rollback":false,"second":"denied","state_profile":2},
+      {"barrier":{"holder":1108,"waiter":1110},"command_first":false,"first":"2","label":"project-create-revoked-rollback","project_scope":true,"replay":false,"rollback":true,"second":"saved","state_profile":0},
+      {"barrier":{"holder":1148,"waiter":1150},"command_first":true,"first":"replayed","label":"replay-first-0","project_scope":false,"replay":true,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":1181,"waiter":1183},"command_first":true,"first":"replayed","label":"replay-first-1","project_scope":false,"replay":true,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":1213,"waiter":1215},"command_first":true,"first":"replayed","label":"replay-first-2","project_scope":false,"replay":true,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":1245,"waiter":1247},"command_first":true,"first":"replayed","label":"replay-first-3","project_scope":false,"replay":true,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":1277,"waiter":1279},"command_first":true,"first":"replayed","label":"replay-first-4","project_scope":false,"replay":true,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":1312,"waiter":1314},"command_first":true,"first":"replayed","label":"replay-first-5","project_scope":false,"replay":true,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":1344,"waiter":1346},"command_first":true,"first":"replayed","label":"replay-first-6","project_scope":false,"replay":true,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":1376,"waiter":1378},"command_first":true,"first":"replayed","label":"replay-first-7","project_scope":false,"replay":true,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":1409,"waiter":1411},"command_first":true,"first":"replayed","label":"replay-first-8","project_scope":false,"replay":true,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":1441,"waiter":1443},"command_first":true,"first":"replayed","label":"replay-first-9","project_scope":false,"replay":true,"rollback":false,"second":"f","state_profile":0},
+      {"barrier":{"holder":1473,"waiter":1475},"command_first":true,"first":"replayed","label":"replay-first-rollback","project_scope":false,"replay":true,"rollback":true,"second":"f","state_profile":0},
+      {"barrier":{"holder":1509,"waiter":1511},"command_first":true,"first":"replayed","label":"project-replay-first","project_scope":true,"replay":true,"rollback":false,"second":"2","state_profile":2},
+      {"barrier":{"holder":1552,"waiter":1554},"command_first":true,"first":"replayed","label":"project-replay-first-rollback","project_scope":true,"replay":true,"rollback":true,"second":"2","state_profile":2},
+      {"barrier":{"holder":1594,"waiter":1596},"command_first":false,"first":"f","label":"replay-revoked-0","project_scope":false,"replay":true,"rollback":false,"second":"denied","state_profile":0},
+      {"barrier":{"holder":1626,"waiter":1628},"command_first":false,"first":"f","label":"replay-revoked-1","project_scope":false,"replay":true,"rollback":false,"second":"denied","state_profile":0},
+      {"barrier":{"holder":1659,"waiter":1661},"command_first":false,"first":"f","label":"replay-revoked-2","project_scope":false,"replay":true,"rollback":false,"second":"denied","state_profile":0},
+      {"barrier":{"holder":1691,"waiter":1693},"command_first":false,"first":"f","label":"replay-revoked-3","project_scope":false,"replay":true,"rollback":false,"second":"denied","state_profile":0},
+      {"barrier":{"holder":1723,"waiter":1725},"command_first":false,"first":"f","label":"replay-revoked-4","project_scope":false,"replay":true,"rollback":false,"second":"denied","state_profile":0},
+      {"barrier":{"holder":1756,"waiter":1758},"command_first":false,"first":"f","label":"replay-revoked-5","project_scope":false,"replay":true,"rollback":false,"second":"denied","state_profile":0},
+      {"barrier":{"holder":1788,"waiter":1790},"command_first":false,"first":"f","label":"replay-revoked-6","project_scope":false,"replay":true,"rollback":false,"second":"denied","state_profile":0},
+      {"barrier":{"holder":1820,"waiter":1822},"command_first":false,"first":"f","label":"replay-revoked-7","project_scope":false,"replay":true,"rollback":false,"second":"denied","state_profile":0},
+      {"barrier":{"holder":1852,"waiter":1854},"command_first":false,"first":"f","label":"replay-revoked-8","project_scope":false,"replay":true,"rollback":false,"second":"denied","state_profile":0},
+      {"barrier":{"holder":1887,"waiter":1889},"command_first":false,"first":"f","label":"replay-revoked-9","project_scope":false,"replay":true,"rollback":false,"second":"denied","state_profile":0},
+      {"barrier":{"holder":1919,"waiter":1921},"command_first":false,"first":"f","label":"replay-revoked-rollback","project_scope":false,"replay":true,"rollback":true,"second":"replayed","state_profile":0},
+      {"barrier":{"holder":1951,"waiter":1953},"command_first":false,"first":"2","label":"project-replay-revoked","project_scope":true,"replay":true,"rollback":false,"second":"denied","state_profile":2},
+      {"barrier":{"holder":1994,"waiter":1996},"command_first":false,"first":"2","label":"project-replay-revoked-rollback","project_scope":true,"replay":true,"rollback":true,"second":"replayed","state_profile":0}
+    ],
+    "state_profiles": [
+      {
+        "configuration_revisions": 1,
+        "fields": 1,
+        "operations": 1,
+        "payloads": 1,
+        "project_grant_events": 1,
+        "project_grants": 1,
+        "projects": 1,
+        "statuses": 2,
+        "type_workflows": 1,
+        "work_item_types": 1,
+        "workflow_phase_changes": 1,
+        "workflow_statuses": 2,
+        "workflows": 1
+      },
+      {
+        "configuration_revisions": 0,
+        "fields": 0,
+        "operations": 0,
+        "payloads": 0,
+        "project_grant_events": 0,
+        "project_grants": 0,
+        "projects": 0,
+        "statuses": 0,
+        "type_workflows": 0,
+        "work_item_types": 0,
+        "workflow_phase_changes": 0,
+        "workflow_statuses": 0,
+        "workflows": 0
+      },
+      {
+        "configuration_revisions": 1,
+        "fields": 1,
+        "operations": 1,
+        "payloads": 1,
+        "project_grant_events": 2,
+        "project_grants": 1,
+        "projects": 1,
+        "statuses": 2,
+        "type_workflows": 1,
+        "work_item_types": 1,
+        "workflow_phase_changes": 1,
+        "workflow_statuses": 2,
+        "workflows": 1
+      }
+    ],
+    "timeout_cleanup": "deadline propagated; backend/process reaped; grant/event/operation rolled back"
+  },
+  "elapsed_seconds": 645.9529999999795,
+  "history": {
+    "corruptions": [
+      "audit: grant history gap",
+      "audit: grant attribution mismatch",
+      "audit: grant payload mismatch"
+    ],
+    "gap_mutation_detected": true,
+    "measurements": [
+      {
+        "audit": {
+          "events": 10
+        },
+        "audit_host_elapsed_seconds": 0.42199999999138527,
+        "current_latest_plans": [
+          {"Execution Time":0.047,"Plan":{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.02,"Actual Total Time":0.021,"Async Capable":false,"Inner Unique":false,"Join Type":"Inner","Node Type":"Nested Loop","Parallel Aware":false,"Plan Rows":1,"Plan Width":66,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.008,"Actual Total Time":0.009,"Alias":"g","Async Capable":false,"Index Cond":"(((actor_id)::text = 'actor'::text) AND ((project_id)::text = 'created'::text))","Index Name":"project_grants_by_actor","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":129,"Relation Name":"project_grants","Rows Removed by Index Recheck":0,"Scan Direction":"Forward","Startup Cost":0.15,"Total Cost":8.17},{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.01,"Actual Total Time":0.011,"Alias":"e","Async Capable":false,"Filter":"(((g.version)::numeric = (e.version)::numeric) AND (g.active = e.active) AND (g.access_profile = e.access_profile))","Node Type":"Subquery Scan","Parallel Aware":false,"Parent Relationship":"Inner","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.006,"Actual Total Time":0.006,"Async Capable":false,"Node Type":"Limit","Parallel Aware":false,"Parent Relationship":"Subquery","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.005,"Actual Total Time":0.005,"Alias":"project_grant_events","Async Capable":false,"Index Cond":"(((project_id)::text = (g.project_id)::text) AND ((actor_id)::text = (g.actor_id)::text))","Index Name":"project_grant_events_pkey","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":65,"Relation Name":"project_grant_events","Rows Removed by Index Recheck":0,"Scan Direction":"Backward","Startup Cost":0.15,"Total Cost":8.17}],"Startup Cost":0.15,"Total Cost":8.17}],"Rows Removed by Filter":0,"Startup Cost":0.15,"Total Cost":8.19}],"Startup Cost":0.3,"Total Cost":16.36},"Planning Time":0.357,"Triggers":[]},
+          {"Execution Time":0.058,"Plan":{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.032,"Actual Total Time":0.033,"Async Capable":false,"Inner Unique":false,"Join Type":"Inner","Node Type":"Nested Loop","Parallel Aware":false,"Plan Rows":1,"Plan Width":66,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.02,"Actual Total Time":0.02,"Alias":"g","Async Capable":false,"Index Cond":"(((actor_id)::text = 'actor'::text) AND ((project_id)::text = 'created'::text))","Index Name":"project_grants_by_actor","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":129,"Relation Name":"project_grants","Rows Removed by Index Recheck":0,"Scan Direction":"Forward","Startup Cost":0.15,"Total Cost":8.17},{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.01,"Actual Total Time":0.011,"Alias":"e","Async Capable":false,"Filter":"(((g.version)::numeric = (e.version)::numeric) AND (g.active = e.active) AND (g.access_profile = e.access_profile))","Node Type":"Subquery Scan","Parallel Aware":false,"Parent Relationship":"Inner","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.007,"Actual Total Time":0.007,"Async Capable":false,"Node Type":"Limit","Parallel Aware":false,"Parent Relationship":"Subquery","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.006,"Actual Total Time":0.006,"Alias":"project_grant_events","Async Capable":false,"Index Cond":"(((project_id)::text = (g.project_id)::text) AND ((actor_id)::text = (g.actor_id)::text))","Index Name":"project_grant_events_pkey","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":65,"Relation Name":"project_grant_events","Rows Removed by Index Recheck":0,"Scan Direction":"Backward","Startup Cost":0.15,"Total Cost":8.17}],"Startup Cost":0.15,"Total Cost":8.17}],"Rows Removed by Filter":0,"Startup Cost":0.15,"Total Cost":8.19}],"Startup Cost":0.3,"Total Cost":16.36},"Planning Time":0.377,"Triggers":[]},
+          {"Execution Time":0.04,"Plan":{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.015,"Actual Total Time":0.017,"Async Capable":false,"Inner Unique":false,"Join Type":"Inner","Node Type":"Nested Loop","Parallel Aware":false,"Plan Rows":1,"Plan Width":66,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.005,"Actual Total Time":0.006,"Alias":"g","Async Capable":false,"Index Cond":"(((actor_id)::text = 'actor'::text) AND ((project_id)::text = 'created'::text))","Index Name":"project_grants_by_actor","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":129,"Relation Name":"project_grants","Rows Removed by Index Recheck":0,"Scan Direction":"Forward","Startup Cost":0.15,"Total Cost":8.17},{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.009,"Actual Total Time":0.009,"Alias":"e","Async Capable":false,"Filter":"(((g.version)::numeric = (e.version)::numeric) AND (g.active = e.active) AND (g.access_profile = e.access_profile))","Node Type":"Subquery Scan","Parallel Aware":false,"Parent Relationship":"Inner","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.005,"Actual Total Time":0.006,"Async Capable":false,"Node Type":"Limit","Parallel Aware":false,"Parent Relationship":"Subquery","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.004,"Actual Total Time":0.004,"Alias":"project_grant_events","Async Capable":false,"Index Cond":"(((project_id)::text = (g.project_id)::text) AND ((actor_id)::text = (g.actor_id)::text))","Index Name":"project_grant_events_pkey","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":65,"Relation Name":"project_grant_events","Rows Removed by Index Recheck":0,"Scan Direction":"Backward","Startup Cost":0.15,"Total Cost":8.17}],"Startup Cost":0.15,"Total Cost":8.17}],"Rows Removed by Filter":0,"Startup Cost":0.15,"Total Cost":8.19}],"Startup Cost":0.3,"Total Cost":16.36},"Planning Time":0.34,"Triggers":[]}
+        ],
+        "events": 10
+      },
+      {
+        "audit": {
+          "events": 100
+        },
+        "audit_host_elapsed_seconds": 0.5,
+        "current_latest_plans": [
+          {"Execution Time":0.056,"Plan":{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.029,"Actual Total Time":0.03,"Async Capable":false,"Inner Unique":false,"Join Type":"Inner","Node Type":"Nested Loop","Parallel Aware":false,"Plan Rows":1,"Plan Width":66,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.012,"Actual Total Time":0.013,"Alias":"g","Async Capable":false,"Index Cond":"(((actor_id)::text = 'actor'::text) AND ((project_id)::text = 'created'::text))","Index Name":"project_grants_by_actor","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":129,"Relation Name":"project_grants","Rows Removed by Index Recheck":0,"Scan Direction":"Forward","Startup Cost":0.15,"Total Cost":8.17},{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.015,"Actual Total Time":0.015,"Alias":"e","Async Capable":false,"Filter":"(((g.version)::numeric = (e.version)::numeric) AND (g.active = e.active) AND (g.access_profile = e.access_profile))","Node Type":"Subquery Scan","Parallel Aware":false,"Parent Relationship":"Inner","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.011,"Actual Total Time":0.012,"Async Capable":false,"Node Type":"Limit","Parallel Aware":false,"Parent Relationship":"Subquery","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.01,"Actual Total Time":0.01,"Alias":"project_grant_events","Async Capable":false,"Index Cond":"(((project_id)::text = (g.project_id)::text) AND ((actor_id)::text = (g.actor_id)::text))","Index Name":"project_grant_events_pkey","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":65,"Relation Name":"project_grant_events","Rows Removed by Index Recheck":0,"Scan Direction":"Backward","Startup Cost":0.15,"Total Cost":8.17}],"Startup Cost":0.15,"Total Cost":8.17}],"Rows Removed by Filter":0,"Startup Cost":0.15,"Total Cost":8.19}],"Startup Cost":0.3,"Total Cost":16.36},"Planning Time":0.413,"Triggers":[]},
+          {"Execution Time":0.047,"Plan":{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.023,"Actual Total Time":0.024,"Async Capable":false,"Inner Unique":false,"Join Type":"Inner","Node Type":"Nested Loop","Parallel Aware":false,"Plan Rows":1,"Plan Width":66,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.007,"Actual Total Time":0.007,"Alias":"g","Async Capable":false,"Index Cond":"(((actor_id)::text = 'actor'::text) AND ((project_id)::text = 'created'::text))","Index Name":"project_grants_by_actor","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":129,"Relation Name":"project_grants","Rows Removed by Index Recheck":0,"Scan Direction":"Forward","Startup Cost":0.15,"Total Cost":8.17},{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.015,"Actual Total Time":0.015,"Alias":"e","Async Capable":false,"Filter":"(((g.version)::numeric = (e.version)::numeric) AND (g.active = e.active) AND (g.access_profile = e.access_profile))","Node Type":"Subquery Scan","Parallel Aware":false,"Parent Relationship":"Inner","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.011,"Actual Total Time":0.011,"Async Capable":false,"Node Type":"Limit","Parallel Aware":false,"Parent Relationship":"Subquery","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.01,"Actual Total Time":0.01,"Alias":"project_grant_events","Async Capable":false,"Index Cond":"(((project_id)::text = (g.project_id)::text) AND ((actor_id)::text = (g.actor_id)::text))","Index Name":"project_grant_events_pkey","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":65,"Relation Name":"project_grant_events","Rows Removed by Index Recheck":0,"Scan Direction":"Backward","Startup Cost":0.15,"Total Cost":8.17}],"Startup Cost":0.15,"Total Cost":8.17}],"Rows Removed by Filter":0,"Startup Cost":0.15,"Total Cost":8.19}],"Startup Cost":0.3,"Total Cost":16.36},"Planning Time":0.343,"Triggers":[]},
+          {"Execution Time":0.062,"Plan":{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.022,"Actual Total Time":0.023,"Async Capable":false,"Inner Unique":false,"Join Type":"Inner","Node Type":"Nested Loop","Parallel Aware":false,"Plan Rows":1,"Plan Width":66,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.007,"Actual Total Time":0.007,"Alias":"g","Async Capable":false,"Index Cond":"(((actor_id)::text = 'actor'::text) AND ((project_id)::text = 'created'::text))","Index Name":"project_grants_by_actor","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":129,"Relation Name":"project_grants","Rows Removed by Index Recheck":0,"Scan Direction":"Forward","Startup Cost":0.15,"Total Cost":8.17},{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.014,"Actual Total Time":0.014,"Alias":"e","Async Capable":false,"Filter":"(((g.version)::numeric = (e.version)::numeric) AND (g.active = e.active) AND (g.access_profile = e.access_profile))","Node Type":"Subquery Scan","Parallel Aware":false,"Parent Relationship":"Inner","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.01,"Actual Total Time":0.011,"Async Capable":false,"Node Type":"Limit","Parallel Aware":false,"Parent Relationship":"Subquery","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.009,"Actual Total Time":0.01,"Alias":"project_grant_events","Async Capable":false,"Index Cond":"(((project_id)::text = (g.project_id)::text) AND ((actor_id)::text = (g.actor_id)::text))","Index Name":"project_grant_events_pkey","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":65,"Relation Name":"project_grant_events","Rows Removed by Index Recheck":0,"Scan Direction":"Backward","Startup Cost":0.15,"Total Cost":8.17}],"Startup Cost":0.15,"Total Cost":8.17}],"Rows Removed by Filter":0,"Startup Cost":0.15,"Total Cost":8.19}],"Startup Cost":0.3,"Total Cost":16.36},"Planning Time":0.383,"Triggers":[]}
+        ],
+        "events": 100
+      },
+      {
+        "audit": {
+          "events": 1000
+        },
+        "audit_host_elapsed_seconds": 0.5,
+        "current_latest_plans": [
+          {"Execution Time":0.13,"Plan":{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.102,"Actual Total Time":0.104,"Async Capable":false,"Inner Unique":false,"Join Type":"Inner","Node Type":"Nested Loop","Parallel Aware":false,"Plan Rows":1,"Plan Width":66,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.08,"Actual Total Time":0.081,"Alias":"g","Async Capable":false,"Index Cond":"(((actor_id)::text = 'actor'::text) AND ((project_id)::text = 'created'::text))","Index Name":"project_grants_by_actor","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":129,"Relation Name":"project_grants","Rows Removed by Index Recheck":0,"Scan Direction":"Forward","Startup Cost":0.15,"Total Cost":8.17},{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.02,"Actual Total Time":0.02,"Alias":"e","Async Capable":false,"Filter":"(((g.version)::numeric = (e.version)::numeric) AND (g.active = e.active) AND (g.access_profile = e.access_profile))","Node Type":"Subquery Scan","Parallel Aware":false,"Parent Relationship":"Inner","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.016,"Actual Total Time":0.017,"Async Capable":false,"Node Type":"Limit","Parallel Aware":false,"Parent Relationship":"Subquery","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.015,"Actual Total Time":0.015,"Alias":"project_grant_events","Async Capable":false,"Index Cond":"(((project_id)::text = (g.project_id)::text) AND ((actor_id)::text = (g.actor_id)::text))","Index Name":"project_grant_events_pkey","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":65,"Relation Name":"project_grant_events","Rows Removed by Index Recheck":0,"Scan Direction":"Backward","Startup Cost":0.27,"Total Cost":8.29}],"Startup Cost":0.27,"Total Cost":8.29}],"Rows Removed by Filter":0,"Startup Cost":0.27,"Total Cost":8.31}],"Startup Cost":0.42,"Total Cost":16.49},"Planning Time":0.388,"Triggers":[]},
+          {"Execution Time":0.059,"Plan":{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.034,"Actual Total Time":0.035,"Async Capable":false,"Inner Unique":false,"Join Type":"Inner","Node Type":"Nested Loop","Parallel Aware":false,"Plan Rows":1,"Plan Width":66,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.012,"Actual Total Time":0.012,"Alias":"g","Async Capable":false,"Index Cond":"(((actor_id)::text = 'actor'::text) AND ((project_id)::text = 'created'::text))","Index Name":"project_grants_by_actor","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":129,"Relation Name":"project_grants","Rows Removed by Index Recheck":0,"Scan Direction":"Forward","Startup Cost":0.15,"Total Cost":8.17},{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.02,"Actual Total Time":0.021,"Alias":"e","Async Capable":false,"Filter":"(((g.version)::numeric = (e.version)::numeric) AND (g.active = e.active) AND (g.access_profile = e.access_profile))","Node Type":"Subquery Scan","Parallel Aware":false,"Parent Relationship":"Inner","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.017,"Actual Total Time":0.017,"Async Capable":false,"Node Type":"Limit","Parallel Aware":false,"Parent Relationship":"Subquery","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.016,"Actual Total Time":0.016,"Alias":"project_grant_events","Async Capable":false,"Index Cond":"(((project_id)::text = (g.project_id)::text) AND ((actor_id)::text = (g.actor_id)::text))","Index Name":"project_grant_events_pkey","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":65,"Relation Name":"project_grant_events","Rows Removed by Index Recheck":0,"Scan Direction":"Backward","Startup Cost":0.27,"Total Cost":8.29}],"Startup Cost":0.27,"Total Cost":8.29}],"Rows Removed by Filter":0,"Startup Cost":0.27,"Total Cost":8.31}],"Startup Cost":0.42,"Total Cost":16.49},"Planning Time":0.356,"Triggers":[]},
+          {"Execution Time":0.06,"Plan":{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.035,"Actual Total Time":0.036,"Async Capable":false,"Inner Unique":false,"Join Type":"Inner","Node Type":"Nested Loop","Parallel Aware":false,"Plan Rows":1,"Plan Width":66,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.011,"Actual Total Time":0.012,"Alias":"g","Async Capable":false,"Index Cond":"(((actor_id)::text = 'actor'::text) AND ((project_id)::text = 'created'::text))","Index Name":"project_grants_by_actor","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":129,"Relation Name":"project_grants","Rows Removed by Index Recheck":0,"Scan Direction":"Forward","Startup Cost":0.15,"Total Cost":8.17},{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.022,"Actual Total Time":0.022,"Alias":"e","Async Capable":false,"Filter":"(((g.version)::numeric = (e.version)::numeric) AND (g.active = e.active) AND (g.access_profile = e.access_profile))","Node Type":"Subquery Scan","Parallel Aware":false,"Parent Relationship":"Inner","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.018,"Actual Total Time":0.019,"Async Capable":false,"Node Type":"Limit","Parallel Aware":false,"Parent Relationship":"Subquery","Plan Rows":1,"Plan Width":65,"Plans":[{"Actual Loops":1,"Actual Rows":1,"Actual Startup Time":0.017,"Actual Total Time":0.017,"Alias":"project_grant_events","Async Capable":false,"Index Cond":"(((project_id)::text = (g.project_id)::text) AND ((actor_id)::text = (g.actor_id)::text))","Index Name":"project_grant_events_pkey","Node Type":"Index Scan","Parallel Aware":false,"Parent Relationship":"Outer","Plan Rows":1,"Plan Width":65,"Relation Name":"project_grant_events","Rows Removed by Index Recheck":0,"Scan Direction":"Backward","Startup Cost":0.27,"Total Cost":8.29}],"Startup Cost":0.27,"Total Cost":8.29}],"Rows Removed by Filter":0,"Startup Cost":0.27,"Total Cost":8.31}],"Startup Cost":0.42,"Total Cost":16.49},"Planning Time":0.342,"Triggers":[]}
+        ],
+        "events": 1000
+      }
+    ]
+  },
+  "image": "docker.io/library/postgres@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4",
+  "not_qualified": [
+    "real authentication/session/channel mechanisms",
+    "read/projection races",
+    "generic original-scope replay",
+    "production migration/adapter",
+    "complete A07/A08, credential/session revocation and other command scopes"
+  ],
+  "outcome": "passed",
+  "platform": "Windows",
+  "postgresql_version": "16.15 (Debian 16.15-1.pgdg12+2)",
+  "qualification_limits": [
+    "Windows/WSL2/Podman PostgreSQL 16.15 only; no Linux-host native qualification",
+    "Trusted actor identities and labelled structural request/result/seed fixtures; no authentication or production codec/adapter qualification",
+    "Fixed replay clocks; no expiry, compaction/tombstone or composite original-scope qualification",
+    "History and query timings are bounded fixture observations, not throughput or capacity thresholds",
+    "The complete SP-004 investigation, #40/#49 and ADR-103 production adoption remain outstanding"
+  ],
+  "resources": {
+    "available_host_ram_bytes_after_vm_start": 6644469760,
+    "container_cpu_limit": 1,
+    "container_memory_bytes": 268435456,
+    "container_pid_limit": 128,
+    "free_host_disk_bytes": 114660212736,
+    "network": "none",
+    "storage": "256 MiB ephemeral tmpfs"
+  },
+  "retained_failure": {
+    "cleanup": "Native container removed with absence confirmed; exclusive VM stopped",
+    "completed_at_utc": "2026-10-17T20:20:25.095903+00:00",
+    "correction": "Use a compact JSONB root for metadata evidence; retain the old multiline producer as a native regression without relaxing one-record decoding",
+    "diagnostic": "expected exactly one history evidence record",
+    "exercised_sources": {
+      "experiments\\SP-004\\concurrency.py": "59c76351054e9865a8bd4429a8815eab6ec2c4b05cc79ec763e8292a125d74e9",
+      "experiments\\SP-004\\concurrent.sql": "6dd73b93d0701defe6bf0f0aa375694cd86b8b0a116e1a9468e98b2d9fad5da5",
+      "experiments\\SP-004\\history.py": "668ddc1a970dc294d9a4bc3b1c1d2add336c4028c3f9157cf38b091b2b3c25ab",
+      "experiments\\SP-004\\history.sql": "e5b1c6f6892f2f3ced187fce85f6e5de400e45d10a7549205f683565817e1b96",
+      "experiments\\SP-004\\overlay.sql": "749777d65a228e36828e87eb4c2cb50487b1fbc6249867d1d98e05eabeeb3645",
+      "experiments\\SP-004\\run.py": "80a707c4ca9bce137df45870a320d6cae2ca583e928da245f233939c0cb9563c",
+      "experiments\\SP-004\\sessions.py": "028a5469ef357296ed0a233728934f5d3fc4a5e246b2599ebd3491e100ab377b"
+    },
+    "source_baseline": "7d1014ee41e033df06cff17318516786ce739dec",
+    "source_state": "Uncommitted helper changes; exercised source-byte hashes retained",
+    "stage": "actor metadata framing before concurrent cases"
+  },
+  "run_id": "SP-004-R04",
+  "runtime": "Windows / WSL2 / Podman, rootful connection",
+  "scope": "SP-004 serial management and bounded native authority schedules with H01/H02 history checks",
+  "source_baseline": "42389e9a23796a60cf1deab9dc99c0fa0366e6ea",
+  "source_state": "committed source; exercised file-byte hashes recorded",
+  "sources": {
+    "experiments/SP-004/concurrency.py": "f03f2db81bd9c25131b06aa2396125e309706d386b5ceb9e899bee0238bd4455",
+    "experiments/SP-004/concurrent.sql": "c0e2b99c56834b35c8ab000f4d5974546f5f2a11dc0cecc146202cf1383a3879",
+    "experiments/SP-004/history.py": "668ddc1a970dc294d9a4bc3b1c1d2add336c4028c3f9157cf38b091b2b3c25ab",
+    "experiments/SP-004/history.sql": "e5b1c6f6892f2f3ced187fce85f6e5de400e45d10a7549205f683565817e1b96",
+    "experiments/SP-004/overlay.sql": "749777d65a228e36828e87eb4c2cb50487b1fbc6249867d1d98e05eabeeb3645",
+    "experiments/SP-004/run.py": "78e20f828dea95551d761430cde82010274011f318accd4fd0dd70354f863672",
+    "experiments/SP-004/sessions.py": "643c512c31ed59cb9cc1f00ff81f15b2d26220d9e5736f0a7c03b436ff93387f",
+    "scripts/check_postgresql.py": "9545c865df9a49724edd097b4b05596af13d37676fb1a447aea6e23eb2a89913",
+    "scripts/cleanup_errors.py": "6178032fca6e56b048a34353c6ae354501c1293837618bf8ba273eceff4519c9",
+    "scripts/postgresql_snapshots.py": "f9afad7dc7ebf70cd381ad92d6ca1e5ed6577f2f508ef47cd8c60954d76b8f18",
+    "scripts/temp_work.py": "a8534163ee85bfb0682375a9c3fe4106544d432fc3db274f1693d596ccc09a84",
+    "scripts/verification_budget.py": "150a4998bb7403b3e8eddaca8c7675754cc3688f3ffbad474afe084e362e2a45",
+    "storage/postgresql/access.sql": "227ead303af2dc92ed2cf621071ad01a22b87c6400da34a65ac73ffd787002b9",
+    "storage/postgresql/install.sql": "5f75ac5b08ec2d3f1fef4c98cd68a693622c877c52328db34c6c809ce2569612",
+    "storage/postgresql/operations.sql": "49842d978f959c4def421c0829fd195a3aa99ea369b982ff74cf7bbf364f8236",
+    "storage/postgresql/project_create.sql": "0fad74af1a8ad7974b3a1ca2c5f17e6449cc0f0b6df864a4631054efebf7a830"
+  },
+  "started_at_utc": "2026-10-17T20:42:40.051266+00:00"
+}
