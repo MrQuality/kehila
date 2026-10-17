@@ -32,10 +32,11 @@ The existing M1 scope and M0–M4 delivery plan remain unchanged.
 
 ## Engineering maintenance
 
-[#55](https://github.com/MrQuality/kehila/issues/55) tracks sequential verification
-and automatic ownership/cleanup of short-lived test services. PR #56 merged into
-PR #54's branch on 2026-10-15; delivery to `main` awaits PR #54 review/merge.
-#55 remains open until that delivery, and PR #54 carries its closure reference.
+[#55](https://github.com/MrQuality/kehila/issues/55) is closed: sequential verification
+and automatic ownership/cleanup of short-lived test services reached `main` in
+[PR #54](https://github.com/MrQuality/kehila/pull/54) on 2026-10-16 at
+`7b7e78825e1b639e2a222bb1403d24b74e71665a`. PR #56 had merged into
+PR #54's branch on 2026-10-15; PR #54 completed that delivery and closed #55.
 The implementation builds before service startup, uses one compiler job, and
 runs offline tests before the VM and NATS, OpenSearch and PostgreSQL/FerretDB
 in separate required phases. Review follow-up binds machine/store routing,
@@ -48,7 +49,7 @@ SP-003 uses shared directory ownership with its five-second retry budget and
 bounded case diagnostics. Regression coverage includes expired-parent VM cleanup,
 both store connections and routing environment, timeout selection and inherited
 deadline isolation.
-The combined branch is submitted for review with service-backed evidence in the
+The merged delivery has service-backed evidence in the
 [testing guide](../TESTING.md#owned-test-services). This changes development
 resource overlap; it completes no product milestone or #49 delivery obligation.
 
@@ -142,6 +143,12 @@ defines that retained acceptance gate. No W2-W7 completion is implied.
 
 All ADR-104 ingress, actor/scope, structural snapshot and legacy isolation
 contracts remain mandatory.
+
+The next #40/W2 slice has a [bounded history/concurrency plan](../spikes/SP-004-actor-authority.md#next-bounded-slice-history-and-concurrent-authority)
+for review before implementation. It distinguishes project-grant revocation from
+creation-permission revocation, requires observed lock barriers and retains
+explicit corruption/rollback oracles. Heavy local execution requires separate
+maintainer permission. #40/#49 remain open for their unfinished acceptance.
 
 [SP-002](../spikes/SP-002-postgresql-project-create.md) and
 [SP-003/#39](../spikes/SP-003-replay-codecs.md) remain bounded experimental

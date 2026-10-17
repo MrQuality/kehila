@@ -134,11 +134,17 @@ project/task and restart/recovery acceptance criteria have not been met.
 
 W2's [#40/SP-004 contract](../spikes/SP-004-actor-authority.md) was approved and
 merged in PR #53 on 2026-10-14 at `988631a353b3086769e302943fa0d7b7fbebffd1`.
-The first serial A05 management subset passed against its declared native overlay,
-after correcting a deferred-trigger read privilege failure. Full A05 and other
+The serial A05 management subset merged in [PR #54](https://github.com/MrQuality/kehila/pull/54)
+on 2026-10-16 at `7b7e78825e1b639e2a222bb1403d24b74e71665a`.
+Its declared native overlay passed R02 after correcting a deferred-trigger read
+privilege failure; R03 added distinct-manager attribution and authority/input
+guards. Full A05 and other
 cases remain outstanding; actual credential/session/channel choices are not
 supplied by the verified-identity fixture. W2 is not complete. See the canonical
-SP-004 record for exact evidence, pending cases and the next bounded slice.
+SP-004 record for exact evidence and pending cases. Its
+[next bounded plan](../spikes/SP-004-actor-authority.md#next-bounded-slice-history-and-concurrent-authority)
+covers history audits and observed concurrent authority/revocation schedules;
+implementation awaits plan review and heavy execution requires separate permission.
 
 Plan #41/SP-005's stable target allocation and
 response-loss reconciliation against the same actor/family/target/token scope.
