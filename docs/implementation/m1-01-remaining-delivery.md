@@ -103,7 +103,8 @@ this retained plan alone is not execution evidence.
 These work packages preserve the existing acceptance scope. They establish
 ordering and review gates, not a commitment to one PR per package. Each stateful
 package needs its own bounded plan, negative/failure evidence and maintainer
-review before execution. W1 is merged; W2-W7 remain pending their separate plans and review.
+review before execution. W1 is merged and W2's #40 investigation is in progress;
+#41 and the remaining W2-W7 work retain their separate plans and review gates.
 
 | Package | Prerequisites and boundary | Required exit evidence |
 | --- | --- | --- |
@@ -138,13 +139,17 @@ The serial A05 management subset merged in [PR #54](https://github.com/MrQuality
 on 2026-10-16 at `7b7e78825e1b639e2a222bb1403d24b74e71665a`.
 Its declared native overlay passed R02 after correcting a deferred-trigger read
 privilege failure; R03 added distinct-manager attribution and authority/input
-guards. Full A05 and other
-cases remain outstanding; actual credential/session/channel choices are not
+guards. R04's bounded follow-up in PR #59 now covers history audits and selected
+database concurrency cases; actual credential/session/channel choices are not
 supplied by the verified-identity fixture. W2 is not complete. See the canonical
 SP-004 record for exact evidence and pending cases. Its
 [next bounded plan](../spikes/SP-004-actor-authority.md#next-bounded-slice-history-and-concurrent-authority)
 covers history audits and observed concurrent authority/revocation schedules;
-implementation awaits plan review and heavy execution requires separate permission.
+the plan was approved through merged PR #58 and implementation is in
+[PR #59](https://github.com/MrQuality/kehila/pull/59). Its
+[R04 evidence](../../experiments/SP-004/results.authority.json) passed at committed
+source `42389e9`; authentication, read/composite-scope and production integration
+remain separate obligations. Heavy execution requires separate permission.
 
 Plan #41/SP-005's stable target allocation and
 response-loss reconciliation against the same actor/family/target/token scope.

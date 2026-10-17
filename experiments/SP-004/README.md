@@ -1,4 +1,4 @@
-# SP-004: serial grant-management experiment
+# SP-004: grant-management and authority experiments
 
 This is the first executable A05 subset of [#40](https://github.com/MrQuality/kehila/issues/40)
 and the [SP-004 contract](../../docs/spikes/SP-004-actor-authority.md), following
@@ -100,3 +100,68 @@ The [R03 serial extension record](results.serial-guards.json) preserves the
 2026-10-16 Windows/WSL2/Podman PostgreSQL 16.15 run, exact tested source hashes,
 authority/adverse-attribution mutation detection and confirmed cleanup. R01/R02's
 [historical record](results.serial.json) and source hashes remain unchanged.
+
+## History audit extension
+
+The opt-in `--history` flag runs H01/H02 after the unchanged baseline and serial
+cases. It installs an explicit experimental full-history audit, rejects earlier
+gaps and attribution/request corruption, rolls every injection back, and checks
+an executable gap-check mutation followed by restoration. The creation origin
+is checked as the exact frozen structural fixture, not as production codec bytes.
+Management events require the experimental request/result/digest representation.
+Retired management payloads are outside this fixture's audit contract.
+
+At 10, 100 and 1,000 events, it records three actual current/latest query plans
+and a full-audit count/elapsed observation. The serving-shaped query requests one
+indexed current row and latest event; the explicit audit scans retained history.
+Timings include the host/Podman round trip where labelled; no throughput threshold
+or production capacity claim is made. Native execution and actual results remain
+separate from the lightweight evidence-framing unit tests.
+
+## Concurrent authority extension
+
+Add `--concurrency` to run C01-C04 after the native baseline and serial cases;
+combine it with `--history` for the complete bounded follow-up. Use the same
+explicit disposable-container and connection arguments shown above. The runner
+does not start a VM or create/remove a container. Obtain maintainer permission
+before heavy local execution, then repeat resource preflight after VM startup.
+
+The [additional overlay](concurrent.sql) is experimental. The manager receives
+only a restricted helper to change creation permission, with checked prior state,
+manager/subject actor locks and an attributed fixture log in the same transaction.
+It receives no direct actor UPDATE rights; serving roles cannot call that helper.
+Fixture tokens use the bounded ASCII operation-token domain. Native NULL,
+authority, missing-subject, stale/no-op and forged-log probes cover the new helper.
+The structural creation fixture uses the restricted native creator connection,
+actor fence, current creation authority and scoped stored-operation lookup. Its
+minimal seed, experimental request/result and fixed replay clocks do not qualify
+production codecs, request admission, replay expiry or a complete configurable
+model. The separate project save/replay table models permission ordering only;
+it is not WorkItem persistence. Verified actor identities remain trusted fixtures.
+
+Each participant owns one native session and at most one in-flight SQL command,
+with a 60-second lifetime and 4 KiB command/64 KiB output limits. Statements have
+20-second deadlines, lock waits 10 seconds, and idle transactions 30 seconds.
+The coordinator observes the intended `pg_blocking_pids` relation within five
+seconds before releasing commit/rollback. Sleeps and timeout errors cannot
+substitute for that evidence. Participant cleanup terminates only its uniquely
+named backend, reaps the owned local process tree and confirms backend absence.
+Body and cleanup failures remain distinct and retained.
+An owned watchdog enforces the participant deadline even while the caller is idle.
+Cleanup uses PostgreSQL's [bounded termination wait](https://www.postgresql.org/docs/16/functions-admin.html)
+before checking backend absence. A native shortened-deadline injection verifies
+rollback and backend/process cleanup; it is not a timing or throughput measurement.
+
+Creation and replay each run ten trials in both orderings. Additional cases
+roll back each first participant and retry with fresh authority, distinguish
+project-grant revocation from creation permission, retain another project's
+grant, and check operation/payload/project/revision/grant/seed counts. Multi-actor
+cases gate the later actor and probe the earlier one to observe lock order,
+including reversed manager/subject arguments, rollback, stale-version rejection
+and a fresh-version retry. Native mutations remove creation-authority admission
+and reverse management lock order; the specific outcome/barrier oracles must
+detect both, restore the original functions and rerun intact cases.
+Lock-order mutation evidence requires the later-actor barrier first. Timeout
+evidence requires the uncommitted management operation to have been reached;
+startup failures cannot qualify either probe. Scope checks execute an allowed
+control-project command and creation replay after project-grant removal.

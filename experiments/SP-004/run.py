@@ -1,4 +1,4 @@
-"""Opt-in serial A05 grant-management experiment; caller owns the disposable container."""
+"""Opt-in authority experiments; caller owns the disposable container."""
 import argparse
 import hashlib
 import json
@@ -179,6 +179,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--disposable-container', required=True)
     parser.add_argument('--podman-connection')
+    parser.add_argument('--history', action='store_true', help='Also run the approved H01/H02 native cases')
+    parser.add_argument('--concurrency', action='store_true', help='Also run the approved C01-C04 native fixtures')
     args = parser.parse_args()
     for name in (args.disposable_container, args.podman_connection):
         native.require(name is None or re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', name),
@@ -187,7 +189,27 @@ def main():
     podman = ['podman']
     if args.podman_connection:
         podman += ['--connection', args.podman_connection]
-    result = run(native.DatabaseCheck(podman, args.disposable_container))
+    database = native.DatabaseCheck(podman, args.disposable_container)
+    result = run(database)
+    if args.history:
+        sys.path.insert(0, str(SOURCE))
+        import history
+        result['history'] = history.run(database)
+        result['scope'] = 'SP-004 serial management and H01/H02 history checks'
+        result['sources'].update({path.relative_to(ROOT).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                                  for path in [SOURCE / 'history.py', SOURCE / 'history.sql']})
+    if args.concurrency:
+        sys.path.insert(0, str(SOURCE))
+        import concurrency
+        result['concurrency'] = concurrency.run(database)
+        result['scope'] = 'SP-004 serial management and bounded native authority schedules'
+        if args.history:
+            result['scope'] += ' with H01/H02 history checks'
+        result['not_qualified'] = [item for item in result['not_qualified'] if item != 'concurrent revocation schedules']
+        result['not_qualified'].append('complete A07/A08, credential/session revocation and other command scopes')
+        result['sources'].update({path.relative_to(ROOT).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                                  for path in [SOURCE / 'concurrency.py', SOURCE / 'concurrent.sql',
+                                               SOURCE / 'sessions.py', SOURCE / 'history.py']})
     print(json.dumps(result, sort_keys=True))
 
 

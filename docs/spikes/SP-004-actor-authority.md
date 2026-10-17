@@ -2,13 +2,13 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | PR #53 approved/merged; serial A05 subset passed, broader investigation incomplete |
+| Status / outcome | Contract and serial baseline merged; bounded R04 history/authority checks passed in PR #59; broader investigation incomplete |
 | Owner / assessor | Project maintainer; remaining mechanism decisions and result assessment are separate |
-| Created / last updated | 2026-10-08 / 2026-10-16 |
+| Created / last updated | 2026-10-08 / 2026-10-17 |
 | Tracking issue | [40](https://github.com/MrQuality/kehila/issues/40) |
 | Parent delivery issue | [#11](https://github.com/MrQuality/kehila/issues/11) |
 | Prior evidence | [SP-002](SP-002-postgresql-project-create.md) |
-| Effort limit / stopping condition | Proposed 90 minutes; confirm before execution. Stop on failed prerequisites or supported/bounded inconclusive conclusion. |
+| Effort limit / stopping condition | R04 continuation: approved 90-minute investigation budget, excluding setup/checks. Future mechanism-dependent runs need their own confirmed scope/budget. Stop on failed prerequisites or a supported/bounded inconclusive conclusion. |
 
 ## Question, cases and execution plan
 
@@ -253,18 +253,18 @@ Passing this experiment establishes only that declared overlay's mechanics;
 1. **Goal & Context:** Use the reviewed PR #53 contract against Q-002/Q-014 to investigate actor binding and authority/revocation ownership for #49 W2. The inventory establishes the missing boundary; this is not another database feasibility investigation.
 2. **Definition of Done:**
    - [x] Document the proposed actor/session contract and initial-owner permission mapping against B-003/B-007 for review.
-   - [x] Record the first serial A05 subset, including its failed privilege attempt and corrected native evidence; full A05 acceptance remains unchecked below.
+   - [x] Record the first serial A05 subset, including its failed privilege attempt and corrected native evidence; R01-R03 retain their serial-only limits.
    - [ ] Demonstrate denied spoofed actor input, missing/expired identity and forbidden role escalation using a declared experimental integration.
-   - [ ] Demonstrate current grant/event agreement and atomic revocation in a separately scoped management prototype; retained history alone must not authorize.
-   - [ ] Repeat selected creation/replay versus revocation orderings; preserve observed lock barriers.
+   - [x] Demonstrate current grant/event agreement and atomic revocation under the declared management fixtures; R04 adds earlier-gap audits, growing-history observations and concurrent management cases.
+   - [x] Repeat the selected database creation/replay versus revocation orderings with observed lock barriers: R04 records ten trials of each ordering plus rollback cases. Actual authentication remains unqualified.
    - [ ] Publish SP-004 recommendation and gaps; actual authentication and grant-management implementation remain open.
 3. **Dependencies & Prerequisites:** Resolve the remaining mechanism decisions before dependent cases. Serial A05 uses only the declared verified-identity fixture. Use #11/#32 requirements, B-003, ADR-104 and SP-002's source-bound locking observations. #41 receives stable actor identity; its allocation protocol is not implemented here. Check available memory before compiler/service work; request headroom if the selected workload cannot fit.
 4. **Risks & Mitigations:** Supplied identity, cached roles and database capability possession cannot establish caller authority. Actor-wide serialization is deliberately conservative and may limit concurrency; measure selected schedules rather than claiming throughput. Freeze affected-actor lock ordering and protect both the management caller and grant subject. Detect current/event mismatches and never repair them implicitly during serving.
 5. **Spikes & Open Questions:** Proposed 90-minute investigation, excluding setup and required checks, after contract/decision review. Stop on failed prerequisites, a bounded conclusion or the time limit; unresolved real authentication remains an explicit blocked case. A synthetic identity fixture must not turn that case into a pass.
-6. **High-Level Architecture / File Changes:** Keep this record canonical. A later approved experiment may add isolated `experiments/SP-004/` code, fixtures and a bounded runner using the explicit disposable overlay above. Production SQL files stay unchanged; the changed experimental guard set and role limits require their own review before execution. Such results cannot qualify a production migration; #49 retains that separate gate.
-7. **Verification & Testing Plan:** Use the cases below with independent restricted connections and explicit barriers. Record actual source, image, platform, role, state before/after, observed waits, commit/rollback and primary diagnostics. A timeout is not evidence that the intended race was reached. No experiment or service execution has occurred for this proposal.
+6. **High-Level Architecture / File Changes:** Keep this record canonical. The serial runner and approved H01/H02/C01-C04 continuation reside under `experiments/SP-004/`, with explicit disposable overlays and restricted roles. Later mechanism-dependent experiments retain their own review gates. Production migration and integration remain #49 obligations.
+7. **Verification & Testing Plan:** Use the cases below with independent restricted connections and explicit barriers. Record actual source, image, platform, role, state before/after, observed waits, commit/rollback and primary diagnostics. A timeout is not evidence that the intended race was reached. Actual observations belong in the run summaries; this plan alone supplies no successful result.
 
-Status: reviewed contract with serial A05 subset evidence; the full investigation
+Status: reviewed contract with serial and bounded history/concurrency evidence; the full investigation
 is incomplete. Completing it leaves #11/#32 responsible for production access delivery.
 
 ### Required experimental cases (full-case acceptance remains outstanding)
@@ -285,11 +285,11 @@ persistence. Their production scope serialization remains the W5/#32 gate.
 | A07: revocation schedules | Run command-first and revocation-first for both creation and replay, with actor lock barriers; roll back each side and retry. | Reach and record all four orderings, proposed ten trials each. Command-first can finish before revocation; revocation-first denies. Rollback releases the fence and retry reloads authority; no partial grant/event state. |
 | A08: session and multiple actors | Revoke a credential while work is queued; exercise two actors and management affecting both in opposite requested orders. | The declared session fence prevents stale authorization under its policy. Deterministic actor lock ordering is enforced; bounded failure rolls back before retry. Stable actor identity remains usable for #41 retry binding after reauthentication. |
 
-Before an approved run, add exact reproduction commands and pin the experimental
+For each new extension, add exact reproduction commands and pin the experimental
 identity implementation, role/schema overlay, PostgreSQL image and lock/statement/
 process deadlines. Start from fresh disposable state and retain negative-case
-diagnostics and cleanup failures. No executable command is claimed until that
-runner exists. These cases define acceptance, not successful observations.
+diagnostics and cleanup failures. Existing runner commands are linked below;
+unexecuted cases remain acceptance requirements, not successful observations.
 
 ## Environment and reproduction
 
@@ -373,16 +373,84 @@ concurrent lock ordering, full A05, real authentication or Linux-host execution.
 Earlier R01/R02 records and their exact source hashes remain historical.
 R03's exact exercised source files are preserved at `da59c69`.
 
+### Bounded history and authority continuation: SP-004-R04, 2026-10-17 UTC
+
+The approved PR #58 plan is implemented in [PR #59](https://github.com/MrQuality/kehila/pull/59).
+The [R04 evidence](../../experiments/SP-004/results.authority.json) records exact
+source `42389e9a23796a60cf1deab9dc99c0fa0366e6ea`, exercised source-byte hashes,
+PostgreSQL 16.15 on Windows/WSL2/Podman, observed blocking backend pairs and
+confirmed cleanup. The networkless fixture used one CPU, a 256 MiB memory limit
+and ephemeral storage; preflight observed 6.19 GiB available host RAM after VM
+startup. This is a point observation, not a peak-memory or production-capacity claim.
+
+H01 rejected an earlier gap while current/latest still agreed, altered earlier
+attribution and a changed retained request. Every injection rolled back. Removing
+the gap check was detected; the original audit and rejection were restored.
+H02 audited every event at each size and retained all nine actual query plans,
+including `project_grants_by_actor` and `project_grant_events_pkey` index use.
+
+| History events | Current/latest execution, three observations (ms) | Full audit host round trip (s) |
+| --- | --- | --- |
+| 10 | 0.040–0.058 | 0.422 |
+| 100 | 0.047–0.062 | 0.500 |
+| 1,000 | 0.059–0.130 | 0.500 |
+
+Query figures are PostgreSQL EXPLAIN execution times. Audit figures include
+host/Podman/client overhead. These small fixture observations define no throughput
+threshold and do not measure an application adapter.
+
+C01/C02 reached all 40 main creation/replay schedules: ten command-first and ten
+revocation-first trials for each operation. Four additional first-participant
+rollbacks required fresh authority on retry. Eight project save/replay fixtures
+tested both orderings and rollback, allowed control-project commands and creation
+replay after project-grant removal. Exact operation/payload/project/revision/grant/
+seed counts and request/result/actor attribution were checked.
+
+C04 observed both actor lock orders with reversed manager/subject arguments,
+rolled management changes back, and reached competing-writer commit/rollback
+cases. Stale expected versions were rejected; a fresh retry advanced to version
+three. The new creation-permission helper rejected NULL/invalid-token, authority,
+missing-subject, stale/no-op and forged-log inputs without changing state.
+
+Two further native mutations bypassed creation authority and reversed manager
+lock order. Typed outcome/barrier oracles detected both, restored the functions
+and reran intact cases. Lock-order evidence requires the later-actor barrier first.
+A shortened-deadline case first reached an uncommitted management operation,
+then verified backend/process removal and complete grant/event/operation rollback.
+Startup failure cannot qualify that timeout probe. Actor permissions were restored.
+
+A pre-commit attempt stopped before concurrency because PostgreSQL's composite
+JSON aggregate emitted physical newlines. Cleanup succeeded. Metadata now uses
+a compact JSONB root; the native regression retains the incompatible producer
+without relaxing strict one-record decoding. The evidence preserves that failed
+attempt's exact source hashes and diagnostic. Lightweight regressions also caught
+Windows CRLF markers and prerequisite failures that could otherwise falsely
+credit timeout/mutation evidence.
+
+All four source commit gates passed; the final Windows staged matrix ran 261
+tooling tests (258 passed, two POSIX-only skips and one unavailable Windows
+symlink privilege), Rust/Go/static/frozen-oracle checks and every required live
+phase. [Hosted verification](https://github.com/MrQuality/kehila/actions/runs/39067843956)
+passed separately at `42389e9`. Hosted checks do not execute this opt-in native run.
+
+R04 qualifies the declared database fixtures and platform. Credential/session/
+peer mechanisms, read/projection races, composite original scopes, tombstones,
+expiry and production codec/adapter adoption remain outside this evidence.
+R01-R03 and their failures remain unchanged historical records.
+
 ## Conclusion and reuse boundary
 
-Serial grant-management capability separation and transactional attribution are
-supported for the recorded overlay and fixtures. This is not production schema,
-authentication, session, peer-channel or concurrent-revocation qualification.
+Grant-management separation, explicit history audits, transactional attribution
+and the selected actor-fence schedules are supported for the recorded fixtures.
+Production schema, authentication, session, peer-channel and broader command/read
+qualification remain separate obligations.
 Reuse SP-002 only within its stated boundaries; ADR-103 remains Proposed.
 
 ## Next bounded slice: history and concurrent authority
 
-**Status: planning only, awaiting maintainer review before implementation.**
+**Status: plan approved through merged [PR #58](https://github.com/MrQuality/kehila/pull/58);
+implementation authorized on 2026-10-17 and submitted in
+[PR #59](https://github.com/MrQuality/kehila/pull/59). Bounded native R04 verification passed at `42389e9`.**
 The accepted next direction is to finish the database permission-safety checks,
 not to select authentication or expose application routes. PR #54 merged on
 2026-10-16 at `7b7e78825e1b639e2a222bb1403d24b74e71665a`; its serial results are
@@ -429,7 +497,7 @@ elapsed time or a lock timeout alone do not establish that a schedule was reache
 The coordinator may inspect lock metadata; application fixtures retain restricted
 roles. No credentials or personal data belong in recorded diagnostics.
 
-Proposed concurrent-case bounds are 10 seconds for lock waits, 20 seconds per
+Concurrent participant bounds are 10 seconds for lock waits, 20 seconds per
 statement, 30 seconds idle in transaction and 60 seconds per participant process.
 The coordinator must release each barrier within the lock budget; missed barriers
 fail the case. Keep existing serial-case bounds unchanged. On failure, cancel and
@@ -442,7 +510,7 @@ order is detected by the observed-lock/order oracle. Run each altered fixture on
 in isolated disposable state, restore it, and rerun the intact case. A deadlock or
 timeout without the expected lock evidence does not qualify mutation detection.
 
-Proposed investigation budget: 90 minutes excluding setup and mandatory checks;
+Approved continuation budget: 90 minutes excluding setup and mandatory checks;
 stop at a prerequisite failure, exhausted budget or bounded conclusion. Report
 unreached schedules and incomplete cases explicitly rather than expanding scope.
 Before implementation is executed, publish exact reproduction commands, changed
@@ -463,7 +531,7 @@ the spike register, #40/#49 and the implementation PR summary with actual result
 This slice can resolve specific A05/A07/A08 database cases only. Authentication,
 session/internal-channel choices, remaining read/composite-scope/tombstone cases,
 production schema/adapter adoption and supported-platform qualification remain
-open. #40/#49 must not close on this planning PR or on partial experimental results.
+open. #40/#49 must not close on this bounded implementation or on partial experimental results.
 
 ## Decision and follow-up
 
@@ -474,10 +542,12 @@ coverage; finishing this investigation does not close it.
 
 ## Handoff
 
-Latest work: reviewed PR #53 baseline and serial A05 prototype/evidence, including
-R03's distinct-manager and input/authority guard checks. Next
-bounded database slice is specified in [the history and concurrent-authority plan](#next-bounded-slice-history-and-concurrent-authority),
-pending review before implementation and separate permission before heavy execution.
-Actual credential/session/channel cases
-need the explicit mechanism decisions above. #40 stays open for those specific
-acceptance gaps; #11/#32 retain production access and #49 retains native integration.
+The [history and concurrent-authority plan](#next-bounded-slice-history-and-concurrent-authority)
+was approved through merged PR #58. PR #59 implements that bounded continuation;
+its [R04 evidence](../../experiments/SP-004/results.authority.json) covers the
+bounded history/concurrency cases at committed source `42389e9`.
+R01-R03 remain historical evidence.
+Actual credential/session/channel decisions, read/projection ordering and broader
+replay scopes remain #40 acceptance gaps. #11/#32 retain production access,
+#41 retains stable allocation, and #49 retains native integration. Heavy local
+execution requires separate permission and fresh resource preflight.
