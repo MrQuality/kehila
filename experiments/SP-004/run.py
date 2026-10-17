@@ -179,6 +179,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--disposable-container', required=True)
     parser.add_argument('--podman-connection')
+    parser.add_argument('--history', action='store_true', help='Also run the approved H01/H02 native cases')
     args = parser.parse_args()
     for name in (args.disposable_container, args.podman_connection):
         native.require(name is None or re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', name),
@@ -187,7 +188,14 @@ def main():
     podman = ['podman']
     if args.podman_connection:
         podman += ['--connection', args.podman_connection]
-    result = run(native.DatabaseCheck(podman, args.disposable_container))
+    database = native.DatabaseCheck(podman, args.disposable_container)
+    result = run(database)
+    if args.history:
+        sys.path.insert(0, str(SOURCE))
+        import history
+        result['history'] = history.run(database)
+        result['sources'].update({path.relative_to(ROOT).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                                  for path in [SOURCE / 'history.py', SOURCE / 'history.sql']})
     print(json.dumps(result, sort_keys=True))
 
 

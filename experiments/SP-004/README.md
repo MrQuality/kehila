@@ -100,3 +100,20 @@ The [R03 serial extension record](results.serial-guards.json) preserves the
 2026-10-16 Windows/WSL2/Podman PostgreSQL 16.15 run, exact tested source hashes,
 authority/adverse-attribution mutation detection and confirmed cleanup. R01/R02's
 [historical record](results.serial.json) and source hashes remain unchanged.
+
+## History audit extension
+
+The opt-in `--history` flag runs H01/H02 after the unchanged baseline and serial
+cases. It installs an explicit experimental full-history audit, rejects earlier
+gaps and attribution/request corruption, rolls every injection back, and checks
+an executable gap-check mutation followed by restoration. The creation origin
+is checked as the exact frozen structural fixture, not as production codec bytes.
+Management events require the experimental request/result/digest representation.
+Retired management payloads are outside this fixture's audit contract.
+
+At 10, 100 and 1,000 events, it records three actual current/latest query plans
+and a full-audit count/elapsed observation. The serving-shaped query requests one
+indexed current row and latest event; the explicit audit scans retained history.
+Timings include the host/Podman round trip where labelled; no throughput threshold
+or production capacity claim is made. Native execution and actual results remain
+separate from the lightweight evidence-framing unit tests.
