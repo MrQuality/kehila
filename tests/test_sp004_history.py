@@ -14,7 +14,8 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(history.record('SET\n {"events":10}\n(1 row)\n'), {'events': 10})
 
     def test_missing_duplicate_malformed_and_oversized_evidence_fail(self):
-        for output in ('SET\n', '{}\n{}\n', '{bad}\n', '{"x":"' + 'x' * 65536 + '"}'):
+        for output in ('SET\n', '{}\n{}\n', '{bad}\n', '{"value":[{"actor":1},\n {"actor":2}]}',
+                       '{"x":"' + 'x' * 65536 + '"}'):
             with self.subTest(output=output[:20]), self.assertRaises(ValueError):
                 history.record(output)
 
