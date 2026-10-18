@@ -49,14 +49,76 @@ class OwnershipTests(unittest.TestCase):
     def test_command_timeout_reaps_process_and_targets_only_owned_backend(self):
         database, launched = self.participant()
         with launched:
-            with self.assertRaises(TimeoutError):
+            with self.assertRaises(TimeoutError) as caught:
                 with sessions.Session(database, 'fixture') as participant:
                     participant.deadline = time.monotonic() + 0.02
                     participant.execute('SELECT fixture_hang;')
             self.assertIsNotNone(participant.process.poll())
+            self.assertFalse(getattr(caught.exception, '_cleanup_failures', ()))
         cleanup = [call.args[0] for call in database.sql.call_args_list]
         self.assertTrue(any('pg_terminate_backend' in sql and participant.name in sql for sql in cleanup))
         self.assertFalse(participant.path.exists())
+
+    def test_clean_exit_confirms_backend_absence_and_reaps_process(self):
+        database, launched = self.participant()
+        with launched:
+            with sessions.Session(database, 'fixture') as participant:
+                pass
+            self.assertIsNotNone(participant.process.poll())
+        self.assertFalse(participant.path.exists())
+        self.assertIn('SELECT count(*) FROM pg_stat_activity', database.sql.call_args.args[0])
+
+    def test_surviving_backend_after_termination_fails_cleanup(self):
+        database, launched = self.participant()
+        with launched:
+            with self.assertRaisesRegex(ValueError, 'backend remains after cleanup'):
+                with sessions.Session(database, 'fixture') as participant:
+                    database.sql.return_value = '1\n'
+            self.assertIsNotNone(participant.process.poll())
+        self.assertFalse(participant.path.exists())
+
+    def test_command_size_boundary_rejection_preserves_idle_state(self):
+        database, launched = self.participant()
+        with launched, sessions.Session(database, 'fixture') as participant:
+            # Size includes UTF-8 SQL bytes, newline, psql marker and its newline.
+            suffix = '\n\\echo sp004_done_' + str(participant.serial + 1) + '\n'
+            sql_bytes = 4096 - len(suffix.encode('utf-8'))
+            sql = 'SELECT ' + 'é' * ((sql_bytes - 7) // 2) + 'x' * ((sql_bytes - 7) % 2)
+            serial = participant.serial
+            with self.assertRaisesRegex(ValueError, 'command exceeds 4 KiB'):
+                participant.send(sql + 'x')
+            self.assertEqual(participant.serial, serial)
+            self.assertIsNone(participant.pending)
+            participant.send(sql)
+            self.assertEqual(participant.wait(), '')
+
+    def test_second_command_cannot_overwrite_pending_work(self):
+        database, launched = self.participant()
+        with launched, sessions.Session(database, 'fixture') as participant:
+            participant.send('SELECT 1;')
+            pending, serial = participant.pending, participant.serial
+            with self.assertRaisesRegex(ValueError, 'already has an in-flight command'):
+                participant.send('SELECT 2;')
+            self.assertEqual((participant.pending, participant.serial), (pending, serial))
+            self.assertEqual(participant.wait(), '')
+
+    def test_poll_requires_pending_work_and_bounds_cumulative_output(self):
+        database, launched = self.participant()
+        with launched, sessions.Session(database, 'fixture') as participant:
+            with self.assertRaisesRegex(ValueError, 'has no in-flight command'):
+                participant.poll()
+            participant.send('SELECT 1;')
+            self.assertEqual(participant.wait(), '')
+            # Completed output counts toward the lifetime limit, even when the
+            # unread result is a small, valid marker frame.
+            with participant.path.open('r+b') as output:
+                output.truncate(65536)
+            participant.offset = 65536
+            participant.send('SELECT fixture_hang;')
+            with participant.path.open('ab') as output:
+                output.write((participant.pending + '\n').encode('utf-8'))
+            with self.assertRaisesRegex(ValueError, 'output exceeds 64 KiB'):
+                participant.poll()
 
     def test_backend_cleanup_failure_preserves_body_error_and_reaps_local_process(self):
         database, launched = self.participant()
@@ -83,14 +145,16 @@ class OwnershipTests(unittest.TestCase):
         with launched, patch.object(sessions.threading, 'Timer') as timer:
             timer.return_value.ident = None
             timer.return_value.is_alive.return_value = False
-            with self.assertRaisesRegex(TimeoutError, 'exceeded 60 seconds'):
+            with self.assertRaisesRegex(TimeoutError, 'exceeded 60 seconds') as caught:
                 with sessions.Session(database, 'fixture') as participant:
                     delay, expire = timer.call_args.args
                     self.assertEqual(delay, 60)
+                    timer.return_value.start.assert_called_once_with()
                     expire()  # Trigger the supervised deadline while the caller is idle.
                     participant.process.wait(timeout=5)
                     self.assertIsNotNone(participant.process.poll())
             timer.return_value.cancel.assert_called_once()
+            self.assertFalse(getattr(caught.exception, '_cleanup_failures', ()))
 
 
 if __name__ == '__main__':

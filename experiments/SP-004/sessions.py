@@ -120,11 +120,12 @@ class Session:
     def send(self, sql):
         if self.pending is not None:
             raise ValueError('participant already has an in-flight command')
-        self.serial += 1
-        self.pending = 'sp004_done_' + str(self.serial)
-        data = (sql + '\n\\echo ' + self.pending + '\n').encode('utf-8')
+        marker = 'sp004_done_' + str(self.serial + 1)
+        data = (sql + '\n\\echo ' + marker + '\n').encode('utf-8')
         if len(data) > 4096:
             raise ValueError('participant command exceeds 4 KiB')
+        self.serial += 1
+        self.pending = marker
         self.process.stdin.write(data)
         self.process.stdin.flush()
 
