@@ -303,6 +303,11 @@ proposal, including replay/tombstones and privileges. It does not establish dail
 backup delivery, off-machine recovery, power-loss resilience or supported
 installation/upgrade orchestration. Q-020 remains open.
 
+**Sequencing:** [D-037](decisions.md#d-037) places broader disaster-recovery
+delivery after MVP under [B-024/#60](backlog.md#b-024). Current designs must account
+for recovery dependencies and restore-safe identities/replay; the existing
+durability and supported-real-data gates above remain applicable.
+
 <a id="q-021"></a>
 ## Q-021 — Cost policies beyond the two accepted choices
 

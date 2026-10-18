@@ -139,17 +139,24 @@ The serial A05 management subset merged in [PR #54](https://github.com/MrQuality
 on 2026-10-16 at `7b7e78825e1b639e2a222bb1403d24b74e71665a`.
 Its declared native overlay passed R02 after correcting a deferred-trigger read
 privilege failure; R03 added distinct-manager attribution and authority/input
-guards. R04's bounded follow-up in PR #59 now covers history audits and selected
+guards. R04/R05 in merged PR #59 cover history audits and selected
 database concurrency cases; actual credential/session/channel choices are not
 supplied by the verified-identity fixture. W2 is not complete. See the canonical
 SP-004 record for exact evidence and pending cases. Its
-[next bounded plan](../spikes/SP-004-actor-authority.md#next-bounded-slice-history-and-concurrent-authority)
+[bounded history/concurrency plan](../spikes/SP-004-actor-authority.md#next-bounded-slice-history-and-concurrent-authority)
 covers history audits and observed concurrent authority/revocation schedules;
-the plan was approved through merged PR #58 and implementation is in
-[PR #59](https://github.com/MrQuality/kehila/pull/59). Its
-[R04 evidence](../../experiments/SP-004/results.authority.json) passed at committed
-source `42389e9`; authentication, read/composite-scope and production integration
+the plan was approved through merged PR #58 and implementation merged in
+[PR #59](https://github.com/MrQuality/kehila/pull/59) on 2026-10-18. Its
+[R05 evidence](../../experiments/SP-004/results.authority-review.json) passed at committed
+source `9919460`; authentication, read/composite-scope and production integration
 remain separate obligations. Heavy execution requires separate permission.
+
+The [next #40 design review](../spikes/SP-004-actor-authority.md#next-design-slice-owner-authentication-and-trusted-caller-identity)
+addresses real owner credentials and trusted caller identity. Under
+[D-037](../product/decisions.md#d-037), MVP/runtime designs must account for
+recovery dependencies, locale-independent identities/canonical data and future
+machine-caller/attribution needs. B-024/#60 broader DR, B-030/#61 languages and
+B-031/#62 agent execution remain post-MVP delivery; current real-data gates apply.
 
 Plan #41/SP-005's stable target allocation and
 response-loss reconciliation against the same actor/family/target/token scope.

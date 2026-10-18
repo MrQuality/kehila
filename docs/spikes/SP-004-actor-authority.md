@@ -2,9 +2,9 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Contract and serial baseline merged; bounded R04/R05 history/authority checks passed in PR #59; broader investigation incomplete |
+| Status / outcome | Contract, serial baseline and bounded R04/R05 checks merged through PR #59; broader investigation incomplete |
 | Owner / assessor | Project maintainer; remaining mechanism decisions and result assessment are separate |
-| Created / last updated | 2026-10-08 / 2026-10-17 |
+| Created / last updated | 2026-10-08 / 2026-10-18 |
 | Tracking issue | [40](https://github.com/MrQuality/kehila/issues/40) |
 | Parent delivery issue | [#11](https://github.com/MrQuality/kehila/issues/11) |
 | Prior evidence | [SP-002](SP-002-postgresql-project-create.md) |
@@ -210,6 +210,10 @@ freshness and rebuild/recovery remain #49 integration obligations.
 - Review any subsequent experimental scope/time limit against the cases below.
   The first serial A05 subset uses a declared verified-identity fixture to test
   authority plumbing; it cannot qualify real authentication.
+- Apply [D-037](../product/decisions.md#d-037): review recovery dependencies,
+  localized display versus stable identity, and future machine-caller/delegation
+  assumptions under B-024/#60, B-030/#61 and B-031/#62. Their broader delivery is
+  post-MVP; the current one-owner scope and authorization contract remain.
 
 These are owned by #40 under #11/#32. #49 owns runtime integration; #41 consumes
 the reviewed stable actor identity. No extra historical-assessment issue is needed.
@@ -375,7 +379,8 @@ R03's exact exercised source files are preserved at `da59c69`.
 
 ### Bounded history and authority continuation: SP-004-R04, 2026-10-17 UTC
 
-The approved PR #58 plan is implemented in [PR #59](https://github.com/MrQuality/kehila/pull/59).
+The approved PR #58 plan merged in [PR #59](https://github.com/MrQuality/kehila/pull/59)
+on 2026-10-18 at `d168256419d247033e9648fddc61e72835f12054`.
 The [R04 evidence](../../experiments/SP-004/results.authority.json) records exact
 source `42389e9a23796a60cf1deab9dc99c0fa0366e6ea`, exercised source-byte hashes,
 PostgreSQL 16.15 on Windows/WSL2/Podman, observed blocking backend pairs and
@@ -479,13 +484,15 @@ Production schema, authentication, session, peer-channel and broader command/rea
 qualification remain separate obligations.
 Reuse SP-002 only within its stated boundaries; ADR-103 remains Proposed.
 
-## Next bounded slice: history and concurrent authority
+<a id="next-bounded-slice-history-and-concurrent-authority"></a>
+## Completed bounded slice: history and concurrent authority
 
 **Status: plan approved through merged [PR #58](https://github.com/MrQuality/kehila/pull/58);
-implementation authorized on 2026-10-17 and submitted in
-[PR #59](https://github.com/MrQuality/kehila/pull/59). Bounded native R04 verification passed at `42389e9`.**
-The accepted next direction is to finish the database permission-safety checks,
-not to select authentication or expose application routes. PR #54 merged on
+implementation authorized on 2026-10-17 and merged in
+[PR #59](https://github.com/MrQuality/kehila/pull/59) on 2026-10-18.
+Bounded native R04/R05 verification passed at the recorded sources above.**
+This approved slice covered database permission-safety checks. Authentication
+and application routes were outside that slice. PR #54 merged on
 2026-10-16 at `7b7e78825e1b639e2a222bb1403d24b74e71665a`; its serial results are
 the baseline. This plan adds no successful execution claim or architecture decision.
 The maintainer owns scope approval and result assessment under SOP-001.
@@ -573,13 +580,34 @@ Update existing decisions/questions only when the maintainer accepts a choice.
 The parent issue remains responsible for production implementation and regression
 coverage; finishing this investigation does not close it.
 
+## Next design slice: owner authentication and trusted caller identity
+
+**Status:** Design preparation under #40/#11, feeding #49 W2. Credential,
+session and internal-channel mechanisms remain open for maintainer review.
+
+Prepare a bounded proposal for owner enrollment/login, browser sessions and
+CSRF/origin handling, authenticated CLI access, expiry/logout/recovery and
+credential revocation. Compare authenticated Go-to-worker context transport
+with consolidating that boundary. Specify trust, secret storage/lifecycle,
+stable actor binding and concrete denial/recovery cases before implementation.
+Test fixtures and Host/loopback checks cannot supply caller authentication.
+
+Apply [D-037](../product/decisions.md#d-037) and the
+[design review guidance](../architecture/README.md#post-mvp-design-considerations):
+record recovery dependencies, display/locale independence and future agent
+identity/delegation/attribution compatibility. Agent enrollment or execution
+remains B-031/#62 post-MVP work. Retain the one-owner MVP contract, current-grant
+checks and existing real-data gates. Detailed mechanisms need their own reviewed
+proposal/ADR; this handoff selects none and supplies no implementation evidence.
+
 ## Handoff
 
 The [history and concurrent-authority plan](#next-bounded-slice-history-and-concurrent-authority)
-was approved through merged PR #58. PR #59 implements that bounded continuation;
-its [R04 evidence](../../experiments/SP-004/results.authority.json) covers the
-bounded history/concurrency cases at committed source `42389e9`.
-R01-R03 remain historical evidence.
+was approved through merged PR #58 and merged in PR #59 on 2026-10-18.
+Its [R05 evidence](../../experiments/SP-004/results.authority-review.json) reverified
+the bounded history/concurrency cases at `9919460`; R01-R04 remain historical.
+The [next design slice](#next-design-slice-owner-authentication-and-trusted-caller-identity)
+addresses real owner credentials and trusted caller identity with D-037 review inputs.
 Actual credential/session/channel decisions, read/projection ordering and broader
 replay scopes remain #40 acceptance gaps. #11/#32 retain production access,
 #41 retains stable allocation, and #49 retains native integration. Heavy local

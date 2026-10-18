@@ -167,8 +167,8 @@ All ADR-104 ingress, actor/scope, structural snapshot and legacy isolation
 contracts remain mandatory.
 
 The #40/W2 [history/concurrency plan](../spikes/SP-004-actor-authority.md#next-bounded-slice-history-and-concurrent-authority)
-was approved through merged PR #58; implementation is submitted in
-[PR #59](https://github.com/MrQuality/kehila/pull/59). It distinguishes project-grant
+was approved through merged PR #58; implementation merged in
+[PR #59](https://github.com/MrQuality/kehila/pull/59) on 2026-10-18. It distinguishes project-grant
 revocation from creation-permission revocation, requires observed lock barriers
 and retains explicit corruption/rollback oracles. [Native R04 evidence](../../experiments/SP-004/results.authority.json)
 at committed source `42389e9` covers H01/H02 and the selected C01-C04 fixtures,
@@ -326,11 +326,17 @@ design's accepted [bounded-transaction direction](../architecture/ADR-102-postgr
 merged in PR #53 on 2026-10-14, plus a passed serial A05 grant-management subset
 on native PostgreSQL 16.15. The serial R03 extension adds distinct-manager
 attribution/rollback and NULL/authority/missing-grant rejection evidence, with
-native mutation detection and confirmed cleanup. The failed privilege attempt
-and correction remain recorded separately. Full A05, concurrent/read/replay cases and actual authentication,
+native mutation detection and confirmed cleanup. Merged PR #59 adds R04/R05
+history audits and the selected concurrent creation/replay/management fixtures.
+The failed attempts and corrections remain recorded separately. Full A05
+acceptance, remaining read/composite-replay cases and actual authentication,
 session and internal-channel mechanisms remain outstanding. This is experimental
 evidence with explicit fixture/overlay limits, not production access delivery.
 This is the W2 prerequisite for #49; #41 owns subsequent stable target allocation.
+
+The next design review is [owner authentication and trusted caller identity](../spikes/SP-004-actor-authority.md#next-design-slice-owner-authentication-and-trusted-caller-identity).
+Apply D-037's recovery, language and future agent considerations; B-031/#62 agent
+delivery remains post-MVP and does not expand the one-owner implementation scope.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 
