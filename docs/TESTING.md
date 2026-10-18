@@ -293,9 +293,46 @@ the serial distinct-manager/guard extension executed against PostgreSQL 16.15,
 its exact source hashes and confirmed cleanup. The source files are preserved
 at `da59c69`. Removing management-authority admission and swapping manager/subject
 attribution were detected in real database transactions; both rolled back and
-state/guard restoration was checked. Full A05/concurrency/authentication and
-Linux-host native qualification remain outstanding. See the
+state/guard restoration was checked. Those serial results did not qualify
+concurrency/authentication or Linux-host native execution. See the
 [canonical scope and remaining cases](spikes/SP-004-actor-authority.md).
+
+PR #59's bounded follow-up adds explicit full-history audits and controlled
+creation/replay versus revocation schedules. After preparing the documented
+fresh disposable fixture, invoke both extensions with:
+
+```text
+python experiments/SP-004/run.py --disposable-container kehila-sp004-test --history --concurrency
+```
+
+Select `--podman-connection` explicitly when needed. The
+[runner guide](../experiments/SP-004/README.md#concurrent-authority-extension)
+defines restricted fixture roles, process/SQL/output bounds, observed lock
+barriers and negative-oracle prerequisites. Compiler and native execution need
+prior maintainer permission and a fresh memory check. Native evidence is separate
+from the shared staged/hosted matrix and does not qualify real authentication or
+Linux-host native execution.
+
+[R04](../experiments/SP-004/results.authority.json) passed the bounded H01/H02 and
+C01-C04 fixture checks on PostgreSQL 16.15/Windows/WSL2/Podman at `42389e9`, with
+52 scheduled cases, observed actor barriers, three native mutation checks and
+confirmed timeout/backend/container/VM cleanup. The record preserves a failed
+multiline metadata attempt and its regression, exact exercised hashes and all
+query plans. [The canonical summary](spikes/SP-004-actor-authority.md#bounded-history-and-authority-continuation-sp-004-r04-2026-10-17-utc)
+states resource/timing observations and retained qualification limits. R04's
+source staged verification ran 261 tooling tests (258 passed, three documented
+Windows platform/privilege skips), plus all required shared checks.
+
+The [PR #59 review follow-up](spikes/SP-004-actor-authority.md#pr-59-review-follow-up)
+adds command-state, backend-absence, watchdog lifecycle and timeout-oracle
+regressions: 36 focused tests passed and eight targeted in-memory mutations were
+detected. Both source commit gates passed; the latest ran 273 tooling tests
+(270 passed, the same three Windows skips) and the required shared/service checks.
+Those tests do not replace the separately recorded native PostgreSQL run.
+[Native R05](../experiments/SP-004/results.authority-review.json) separately passed
+the complete bounded history/authority suite at `9919460` on PostgreSQL 16.15 /
+Windows / WSL2 / Podman, including all 52 schedules and confirmed cleanup.
+R04 remains an unchanged historical record; the same qualification limits apply.
 
 Run unit tests without external services:
 

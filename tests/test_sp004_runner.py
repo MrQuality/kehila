@@ -14,6 +14,21 @@ spec.loader.exec_module(runner)
 
 
 class RunnerBoundaryTests(unittest.TestCase):
+    def test_failed_opt_in_extension_cannot_publish_serial_success_as_whole_run_success(self):
+        for name in ('history', 'concurrency'):
+            extension = Mock()
+            extension.run.side_effect = ValueError('native extension failed')
+            with self.subTest(extension=name), \
+                    patch.object(sys, 'argv', ['run.py', '--disposable-container', 'fixture', '--' + name]), \
+                    patch.object(runner.native, 'preflight'), \
+                    patch.object(runner.native, 'DatabaseCheck'), \
+                    patch.object(runner, 'run', return_value={'outcome': 'passed', 'sources': {}}), \
+                    patch.dict(sys.modules, {name: extension}), \
+                    patch('sys.stdout', new_callable=io.StringIO) as output:
+                with self.assertRaisesRegex(ValueError, 'native extension failed'):
+                    runner.main()
+                self.assertEqual(output.getvalue(), '')
+
     def test_unsafe_connection_is_rejected_before_preflight_or_database_setup(self):
         for connection in ('', '../other', '-flag', 'ssh://remote', 'bad name', 'x' * 129):
             with self.subTest(connection=connection), \

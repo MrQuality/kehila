@@ -104,7 +104,7 @@ on main. W1 [PR #51](https://github.com/MrQuality/kehila/pull/51) merged on
 2026-10-14 at 2efd444e38a4d60eaeb195a00359813174aa3d23. W1 is delivered; W2-W7 and
 the remaining M1-01 obligations are not complete.
 
-**Status: W1 merged; W2-W7 pending their bounded plans and review gates.**
+**Status: W1 merged; W2 in progress; W3-W7 retain their bounded plans and review gates.**
 [#49](https://github.com/MrQuality/kehila/issues/49) tracks the unfinished M1-01
 scope under B-005/#9. By maintainer direction, historical
 [#26](https://github.com/MrQuality/kehila/issues/26) remains closed. This successor
@@ -144,11 +144,22 @@ defines that retained acceptance gate. No W2-W7 completion is implied.
 All ADR-104 ingress, actor/scope, structural snapshot and legacy isolation
 contracts remain mandatory.
 
-The next #40/W2 slice has a [bounded history/concurrency plan](../spikes/SP-004-actor-authority.md#next-bounded-slice-history-and-concurrent-authority)
-for review before implementation. It distinguishes project-grant revocation from
-creation-permission revocation, requires observed lock barriers and retains
-explicit corruption/rollback oracles. Heavy local execution requires separate
-maintainer permission. #40/#49 remain open for their unfinished acceptance.
+The #40/W2 [history/concurrency plan](../spikes/SP-004-actor-authority.md#next-bounded-slice-history-and-concurrent-authority)
+was approved through merged PR #58; implementation is submitted in
+[PR #59](https://github.com/MrQuality/kehila/pull/59). It distinguishes project-grant
+revocation from creation-permission revocation, requires observed lock barriers
+and retains explicit corruption/rollback oracles. [Native R04 evidence](../../experiments/SP-004/results.authority.json)
+at committed source `42389e9` covers H01/H02 and the selected C01-C04 fixtures,
+including 40 main schedules, rollback/project-scope and multi-actor cases.
+Credential/session/channel, read/composite-scope and production integration work
+remain outstanding. Heavy local execution requires separate maintainer permission.
+#40/#49 remain open for their unfinished acceptance.
+
+The [PR #59 review follow-up](../spikes/SP-004-actor-authority.md#pr-59-review-follow-up)
+also tightens session bounds, deadline/error ownership and timeout evidence guards.
+[Native R05](../../experiments/SP-004/results.authority-review.json) reverified the
+bounded history/authority suite at `9919460`, including 52 schedules and cleanup.
+These harness corrections complete no additional authentication or W2-W7 obligation.
 
 [SP-002](../spikes/SP-002-postgresql-project-create.md) and
 [SP-003/#39](../spikes/SP-003-replay-codecs.md) remain bounded experimental
@@ -213,8 +224,9 @@ settings.
 <a id="b-003"></a>
 ## B-003 — Specify project/task contracts and workflow rules
 
-**Status:** Accepted typed policies and pure checks are implemented on the B-003
-branch; ready for final maintainer review.
+**Status:** Typed-contract and pure-rule baseline completed through merged
+[PR #34](https://github.com/MrQuality/kehila/pull/34); [#7](https://github.com/MrQuality/kehila/issues/7)
+is closed. Runtime integration remains in the downstream M1 issues.
 Initialization, delegated status administration, and conversion review policies
 are specified, including group lifecycle in [D-031](decisions.md#d-031).
 Operation identity, replay authorization, and expiry have typed enforcement in
