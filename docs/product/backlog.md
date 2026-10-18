@@ -155,6 +155,12 @@ Credential/session/channel, read/composite-scope and production integration work
 remain outstanding. Heavy local execution requires separate maintainer permission.
 #40/#49 remain open for their unfinished acceptance.
 
+The [PR #59 review follow-up](../spikes/SP-004-actor-authority.md#pr-59-review-follow-up)
+also tightens session bounds, deadline/error ownership and timeout evidence guards.
+[Native R05](../../experiments/SP-004/results.authority-review.json) reverified the
+bounded history/authority suite at `9919460`, including 52 schedules and cleanup.
+These harness corrections complete no additional authentication or W2-W7 obligation.
+
 [SP-002](../spikes/SP-002-postgresql-project-create.md) and
 [SP-003/#39](../spikes/SP-003-replay-codecs.md) remain bounded experimental
 records; frozen failures and missing production checks must stay visible.

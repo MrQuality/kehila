@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Contract and serial baseline merged; bounded R04 history/authority checks passed in PR #59; broader investigation incomplete |
+| Status / outcome | Contract and serial baseline merged; bounded R04/R05 history/authority checks passed in PR #59; broader investigation incomplete |
 | Owner / assessor | Project maintainer; remaining mechanism decisions and result assessment are separate |
 | Created / last updated | 2026-10-08 / 2026-10-17 |
 | Tracking issue | [40](https://github.com/MrQuality/kehila/issues/40) |
@@ -437,6 +437,39 @@ R04 qualifies the declared database fixtures and platform. Credential/session/
 peer mechanisms, read/projection races, composite original scopes, tombstones,
 expiry and production codec/adapter adoption remain outside this evidence.
 R01-R03 and their failures remain unchanged historical records.
+
+### PR #59 review follow-up
+
+Two focused source commits tighten the participant contract: `e01ef5e` validates
+encoded commands before changing pending state and covers session bounds/backend
+absence; `9919460` settles the watchdog before classifying teardown and retains
+cleanup failures under the original body error or observed timeout. Startup
+failures still release acquired files/processes. Production SQL is unchanged.
+
+All 36 focused regressions passed. Eight targeted in-memory mutations were
+detected: inverted backend absence, relaxed command size, removed in-flight and
+pending-work guards, removed cumulative output bound, omitted watchdog startup,
+omitted uncommitted-operation prerequisite and a weakened cleanup-failure oracle.
+These are harness checks, separate from native PostgreSQL evidence. Deterministic
+expiry-during-cancellation cases retain simultaneous supervisor/backend failures;
+the timeout probe rejects incomplete prerequisites and dirty cleanup.
+
+Both source commit gates passed. The latest Windows staged matrix ran 273 tooling
+tests (270 passed, two POSIX-only skips and one unavailable symlink privilege),
+plus the required Rust/Go/static/oracle and service phases. An earlier local gate
+completed its test phases but failed to remove a locked temporary directory;
+explicit VM ownership and shutdown allowed the unchanged staged retry to pass.
+
+[R05](../../experiments/SP-004/results.authority-review.json) reran the complete
+bounded native suite at `99194601c833d3aa7ee8aa58df2b6bf0e9e0361b`: PostgreSQL
+16.15 on Windows/WSL2/Podman, 52 schedules, H01/H02, three native mutations,
+role/input rejection and timeout rollback/cleanup all passed. The run took
+688.031 seconds and confirmed participant/backend/container/VM cleanup. It retains
+all nine query plans and losslessly encoded per-case state observations, with
+runtime/test source hashes. [Hosted verification](https://github.com/MrQuality/kehila/actions/runs/39093737133)
+also passed at that source; it does not execute the opt-in native suite. R04
+remains unchanged. Authentication, broader command scopes, production adoption
+and Linux-host native qualification remain outstanding under #40/#49.
 
 ## Conclusion and reuse boundary
 

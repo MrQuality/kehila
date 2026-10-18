@@ -148,6 +148,11 @@ substitute for that evidence. Participant cleanup terminates only its uniquely
 named backend, reaps the owned local process tree and confirms backend absence.
 Body and cleanup failures remain distinct and retained.
 An owned watchdog enforces the participant deadline even while the caller is idle.
+The command bound counts UTF-8 bytes including the psql completion marker; rejected
+oversized commands leave the participant idle. Cleanup cancels and joins the
+watchdog before selecting the outcome. An existing body error remains primary;
+otherwise observed expiry remains primary, with supervisor/backend cleanup errors
+retained separately. Startup failure also cleans up any resources already acquired.
 Cleanup uses PostgreSQL's [bounded termination wait](https://www.postgresql.org/docs/16/functions-admin.html)
 before checking backend absence. A native shortened-deadline injection verifies
 rollback and backend/process cleanup; it is not a timing or throughput measurement.
@@ -165,3 +170,7 @@ Lock-order mutation evidence requires the later-actor barrier first. Timeout
 evidence requires the uncommitted management operation to have been reached;
 startup failures cannot qualify either probe. Scope checks execute an allowed
 control-project command and creation replay after project-grant removal.
+
+[R05 evidence](results.authority-review.json) reverified the corrected session
+harness and complete bounded suite at `9919460`. [R04](results.authority.json)
+remains unchanged historical evidence; both records retain their exact scope.
