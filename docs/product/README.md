@@ -27,6 +27,14 @@ scheduling, authorized overrides, manual entries and timers, and the specified
 cost policies. Automatic knowledge capture is outside the first release;
 automatic resource-usage reporting remains an open scope decision.
 
+The maintainer scheduled broader disaster recovery, multilingual support and
+AI-agent task execution after MVP while requiring current and future designs to
+account for them. [D-037](decisions.md#d-037) and the
+[post-MVP backlog](backlog.md#post-mvp-commitments-and-current-design-review)
+record the scope, linked issues and design considerations. Detailed technical
+choices remain open. Existing durability/real-data gates and product milestone
+definitions retain their current meaning.
+
 ## Documents
 
 The [project procedure index](../procedures/README.md) is the entry point for

@@ -25,3 +25,28 @@ and storage upgrade decisions require further evidence and ADRs. In particular,
 [Q-019](../product/open-questions.md#q-019) remains unresolved; ADR-102 records
 the transaction direction but does not settle individual
 command isolation/locking, large-job visibility, or resource/cost protocols.
+
+## Post-MVP design considerations
+
+[D-037](../product/decisions.md#d-037) schedules broader disaster recovery,
+multilingual support and AI-agent task execution after MVP. Current MVP and
+future designs must account for these needs. For new or materially revised
+product/technical designs, record the relevant impact, assumptions and future
+compatibility/migration work, or a reason a topic does not apply:
+
+- [Recovery, B-024/#60](../product/backlog.md#b-024): authoritative versus
+  rebuildable state, retained identities/replay/tombstones, recovery dependencies,
+  stale-client reconciliation and interrupted migrations.
+- [Languages, B-030/#61](../product/backlog.md#b-030): stable IDs/canonical values
+  versus display text/locale formatting, user content, layout direction and
+  locale-sensitive search/sort assumptions.
+- [Agent execution, B-031/#62](../product/backlog.md#b-031): human-only identity
+  assumptions, future machine credentials/delegation, authority and attribution,
+  assignment/execution, approvals and uncertain outcomes.
+
+Use the ADR template's consequences section or the equivalent review section in
+a product design. Record unresolved choices and owning backlog/issue links;
+do not implement speculative infrastructure to satisfy the checklist. Existing
+durability/real-data gates and the one-owner MVP scope remain applicable. This
+review obligation accepts no detailed technical mechanism; material choices
+still require their own Proposed ADR and actual maintainer acceptance.
