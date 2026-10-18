@@ -156,6 +156,72 @@ class OwnershipTests(unittest.TestCase):
             timer.return_value.cancel.assert_called_once()
             self.assertFalse(getattr(caught.exception, '_cleanup_failures', ()))
 
+    def test_expiry_during_watchdog_stop_remains_primary_with_cleanup_failures(self):
+        for supervisor_fails, backend_fails in ((False, False), (True, False), (False, True), (True, True)):
+            database, launched = self.participant()
+            supervisor_error = OSError('watchdog cleanup failed')
+            backend_error = OSError('backend cleanup failed')
+            with self.subTest(supervisor=supervisor_fails, backend=backend_fails), launched, \
+                    patch.object(sessions.threading, 'Timer') as timer:
+                timer.return_value.ident = None
+                timer.return_value.is_alive.return_value = False
+                with self.assertRaisesRegex(TimeoutError, 'exceeded 60 seconds') as caught:
+                    with sessions.Session(database, 'fixture') as participant:
+                        # Deterministically expire between entering __exit__ and
+                        # joining the supervisor, rather than depending on timing.
+                        timer.return_value.cancel.side_effect = participant.expire
+                        if supervisor_fails:
+                            participant.watchdog_error = supervisor_error
+                        if backend_fails:
+                            database.sql.side_effect = backend_error
+                failures = [error for _, error in getattr(caught.exception, '_cleanup_failures', ())]
+                self.assertEqual(failures, [error for condition, error in
+                    ((supervisor_fails, supervisor_error), (backend_fails, backend_error)) if condition])
+                timer.return_value.cancel.assert_called_once()
+                self.assertIsNotNone(participant.process.poll())
+                self.assertFalse(participant.path.exists())
+
+    def test_body_error_remains_primary_when_watchdog_cleanup_fails(self):
+        database, launched = self.participant()
+        body_error = ValueError('body failed')
+        watchdog_error = OSError('watchdog cleanup failed')
+        with launched, patch.object(sessions.threading, 'Timer') as timer:
+            timer.return_value.ident = None
+            timer.return_value.is_alive.return_value = False
+            with self.assertRaisesRegex(ValueError, 'body failed') as caught:
+                with sessions.Session(database, 'fixture') as participant:
+                    participant.watchdog_error = watchdog_error
+                    raise body_error
+            self.assertIs(caught.exception, body_error)
+            self.assertEqual([error for _, error in body_error._cleanup_failures], [watchdog_error])
+            self.assertIsNotNone(participant.process.poll())
+
+    def test_watchdog_start_failure_still_reaps_participant(self):
+        database, launched = self.participant()
+        participant = sessions.Session(database, 'fixture')
+        with launched, patch.object(sessions.threading, 'Timer') as timer:
+            timer.return_value.ident = None
+            timer.return_value.is_alive.return_value = False
+            timer.return_value.start.side_effect = OSError('watchdog startup failed')
+            with self.assertRaisesRegex(OSError, 'watchdog startup failed') as caught:
+                with participant:
+                    self.fail('startup must fail before entering the body')
+            self.assertFalse(getattr(caught.exception, '_cleanup_failures', ()))
+            timer.return_value.cancel.assert_called_once()
+            self.assertIsNotNone(participant.process.poll())
+            self.assertFalse(participant.path.exists())
+
+    def test_process_start_failure_cleans_files_without_a_watchdog(self):
+        database, _ = self.participant()
+        participant = sessions.Session(database, 'fixture')
+        with patch.object(sessions.subprocess, 'Popen', side_effect=OSError('process startup failed')):
+            with self.assertRaisesRegex(OSError, 'process startup failed') as caught:
+                with participant:
+                    self.fail('startup must fail before entering the body')
+        self.assertFalse(getattr(caught.exception, '_cleanup_failures', ()))
+        self.assertFalse(participant.path.exists())
+        database.sql.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()

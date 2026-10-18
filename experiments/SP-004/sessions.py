@@ -12,7 +12,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from cleanup_errors import CleanupStack
+from cleanup_errors import CleanupStack, retain_cleanup_failure
 from temp_work import owned_directory
 
 
@@ -59,6 +59,9 @@ class Session:
         self.offset = 0
         self.serial = 0
         self.stack = CleanupStack()
+        self.expired = threading.Event()
+        self.watchdog = None
+        self.watchdog_error = None
 
     def __enter__(self):
         self.stack.__enter__()
@@ -79,27 +82,37 @@ class Session:
                                             stderr=output, **options)
             self.stack.callback(self.stop, resource='native participant')
             self.deadline = time.monotonic() + 60
-            self.expired = threading.Event()
-            self.watchdog_error = None
             self.watchdog = threading.Timer(60, self.expire)
-            self.stack.callback(self.stop_watchdog, resource='participant deadline')
             self.watchdog.start()
             self.pid = int(self.execute("SET statement_timeout='20s'; SET lock_timeout='10s'; "
                 "SET idle_in_transaction_session_timeout='30s'; SELECT pg_backend_pid();"))
             return self
         except BaseException:
-            self.stack.__exit__(*sys.exc_info())
+            self.__exit__(*sys.exc_info())
             raise
 
     def __exit__(self, *failure):
-        if failure[1] is None and self.expired.is_set():
+        # Join the supervisor before choosing the outcome: its callback may
+        # already be running when cancel() is called. Always finish teardown.
+        supervisor_error = None
+        try:
+            self.stop_watchdog()
+        except BaseException as error:
+            supervisor_error = error
+        kind, error, traceback = failure
+        if error is None and self.expired.is_set():
             error = TimeoutError('native participant exceeded 60 seconds')
-            self.stack.__exit__(type(error), error, None)
+            kind, traceback = type(error), None
+        if supervisor_error is not None:
+            if error is None:
+                error = supervisor_error
+                kind, traceback = type(error), error.__traceback__
+            else:
+                retain_cleanup_failure(error, supervisor_error, 'participant deadline')
+        self.stack.__exit__(kind, error, traceback)
+        if failure[1] is None and error is not None:
             raise error
-        result = self.stack.__exit__(*failure)
-        if failure[1] is None and self.expired.is_set():
-            raise TimeoutError('native participant exceeded 60 seconds')
-        return result
+        return False
 
     def expire(self):
         self.expired.set()
@@ -109,6 +122,8 @@ class Session:
             self.watchdog_error = error
 
     def stop_watchdog(self):
+        if self.watchdog is None:
+            return
         self.watchdog.cancel()
         if self.watchdog.ident is not None:
             self.watchdog.join(timeout=2)

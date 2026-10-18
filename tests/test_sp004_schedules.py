@@ -29,6 +29,43 @@ class ScheduleOracleTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'uncommitted grant change was not reached'):
                 schedules.timeout_cleanup(Mock())
 
+    def test_timeout_requires_a_reached_uncommitted_operation_and_payload(self):
+        with patch.object(schedules, 'Session') as session, \
+                patch.object(schedules, 'check_project') as checked, \
+                patch.object(schedules, 'query', side_effect=[True, 0]) as queried:
+            participant = session.return_value.__enter__.return_value
+            participant.execute.side_effect = ['2', 'f', TimeoutError('native participant exceeded 60 seconds')]
+            with self.assertRaisesRegex(ValueError, 'uncommitted management operation was not reached'):
+                schedules.timeout_cleanup(Mock())
+            checked.assert_not_called()
+            queried.assert_not_called()
+
+    def test_timeout_with_cleanup_failure_cannot_qualify_rollback(self):
+        error = TimeoutError('native participant exceeded 60 seconds')
+        error._cleanup_failures = (('native participant', OSError('backend remains')),)
+        with patch.object(schedules, 'Session') as session, \
+                patch.object(schedules, 'check_project') as checked, \
+                patch.object(schedules, 'query', side_effect=[True, 0]) as queried:
+            participant = session.return_value.__enter__.return_value
+            participant.execute.side_effect = ['2', 't', error]
+            with self.assertRaises(TimeoutError) as caught:
+                schedules.timeout_cleanup(Mock())
+            self.assertIs(caught.exception, error)
+            self.assertEqual(participant.execute.call_count, 3)
+            checked.assert_not_called()
+            queried.assert_not_called()
+
+    def test_clean_timeout_checks_rollback_before_qualifying(self):
+        database = Mock()
+        with patch.object(schedules, 'Session') as session, \
+                patch.object(schedules, 'check_project') as checked, \
+                patch.object(schedules, 'query', side_effect=[True, 0]) as queried:
+            participant = session.return_value.__enter__.return_value
+            participant.execute.side_effect = ['2', 't', TimeoutError('native participant exceeded 60 seconds')]
+            self.assertIn('grant/event/operation rolled back', schedules.timeout_cleanup(database))
+            checked.assert_called_once_with(database, 'timeout-cleanup', True)
+            self.assertEqual(queried.call_count, 2)
+
     def test_unexpected_authority_success_is_a_typed_outcome(self):
         participant = Mock()
         participant.wait.return_value = 'created'
