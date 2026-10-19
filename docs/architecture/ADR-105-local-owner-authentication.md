@@ -4,6 +4,9 @@ Status: Proposed. Owner: project maintainer. Created / reviewed: 2026-10-19.
 Acceptance: pending explicit maintainer approval; no implementation is authorized
 by this draft. The maintainer selected a separate Kehila browser password as a
 login preference on 2026-10-19, not acceptance of the architecture below.
+The maintainer has requested that the single-active-instance restriction be
+limited to the local MVP; conditional willingness to accept that restriction
+does not accept this ADR. Replicated deployment remains open under B-032/#65.
 Related: D-016/D-017/D-037; B-007/B-020/B-022; Q-002/Q-014;
 [#40](https://github.com/MrQuality/kehila/issues/40),
 [#49 W2](https://github.com/MrQuality/kehila/issues/49), #11/#32 and #41.
@@ -22,12 +25,43 @@ Their Host/origin/loopback checks do not identify an owner or authenticate a pee
 | Proposed choice | Effect and approval point |
 | --- | --- |
 | Separate owner password | Store a salted Argon2id verifier; browser and CLI authenticate with the password. No external identity provider. |
-| One Rust authority process for the future native path | Terminate HTTPS, verify identity, enforce domain authority and mediate search in one process. This is a proposed boundary change requiring approval. |
-| Opaque, server-side browser/CLI sessions | Tokens carry no permissions. Sessions expire and all end on authority-process restart; the password and actor identity persist. |
+| Rust authority boundary; one active instance for local MVP only | Terminate HTTPS, verify identity, enforce domain authority and mediate search within the Rust service. The local MVP singleton is not a final replica-count constraint; both the boundary and its implementation remain Proposed. |
+| Local-MVP opaque browser/CLI sessions | Tokens carry no permissions. This profile keeps sessions in memory and ends them on restart; it does not supply multi-replica session continuity. |
 | Local administrative enrollment/recovery | No public first-owner claim/reset endpoint. Recovery preserves the actor and history, replaces the password and revokes sessions. |
 | Separate implementation gates | Certificate trust, dependency choices, schema/capabilities and negative/native tests need evidence before support. ADR-103 remains Proposed. |
 
 ## Decision — proposed
+
+### Deployment scope and transition contract
+
+The runtime protocol below is a **local-MVP deployment profile**, not the final
+replicated architecture. A logical authority service implemented in Rust does
+not imply a single pod. The installation advisory lock, runtime generation used
+to exclude other serving instances, in-memory credential/CSRF registry, restart
+logout, literal-loopback certificate profile and installation-local budgets apply
+to this MVP profile. They cannot qualify a cluster by increasing replica count.
+Do not weaken the local singleton fence to run multiple active instances without
+a replacement protocol. Current code and actual supported deployment are unchanged.
+
+[B-032 / #65](https://github.com/MrQuality/kehila/issues/65) owns the required
+post-MVP design for multiple active replicas and secure remote deployment, before
+claiming support for that final deployment profile. Its reviewed successor or
+amendment ADR must define authoritative cross-replica sessions/CSRF/revocation,
+expiry and clock/version semantics, coordination and actor contention, aggregate
+admission/pools/hash limits, proxy/peer trust, secret/certificate rotation and
+backend failure domains. A request must not require a particular pod; losing a
+pod must not globally invalidate valid sessions. Mandatory sticky routing or a
+pod-local authoritative credential registry cannot satisfy that requirement.
+No shared store, token format, identity provider or cluster stack is selected here.
+
+Migration must preserve stable actor, operation, replay/tombstone and attribution
+contracts, independent authorization and ADR-104 edge ceilings. Specify explicit
+transition re-login if needed, fence old runtimes and keep supported restore
+credential invalidation. Replica-local runtime generations cannot silently become
+global identity or credential versions. Native adapters must keep credential
+resolution separate from domain identity and persistence; no domain contract may
+require routing back to the issuing process. Prototype legacy paths remain isolated.
+Review the new profile independently; this is no approval to implement it now.
 
 ### 1. Authority process and transport
 
@@ -395,6 +429,23 @@ responses are no-store; diagnostics/audit contain IDs/reasons, never secrets.
   do not share owner credentials or add a privileged database path for them.
 
 ## Verification and follow-up
+
+### Remaining scale and security obligations
+
+These are open design/evidence boundaries, not demonstrated runtime exploits:
+
+| Concern | Unresolved obligation and owner |
+| --- | --- |
+| Cross-replica credentials and budgets | The local registry, restart logout, singleton and per-process limits do not supply replicated continuity or cluster-wide abuse/resource control. B-032/#65 must replace these profile mechanisms with a reviewed, failure-tested contract. |
+| Actor-wide serialization | SP-004's actor fence serializes mutations/replay for the same owner, even across unrelated projects; more pods alone cannot remove that contention. B-032/#65 and B-025 require measurement and a correctness-preserving coordination decision before scale claims. The local protocol stays unchanged. |
+| Remote exposure and identity scope | Loopback HTTPS, one owner/password and a local administrative tool establish no trusted ingress/peer model, remote administration, MFA, multi-user or tenancy support. #65/B-020/B-029 must decide applicability and controls before remote/replicated support; #40 still qualifies the local profile. |
+| Unqualified local security mechanisms | Certificate trust/renewal, dependency choices, schema/function privileges, enrollment/recovery, secret storage, CSRF and actual revocation remain unexecuted A0-A5/T01-T16 gates under #40/#49. The existing unauthenticated prototype is not upgraded by this ADR. |
+| Availability, audit and recovery limits | Local traffic can deny login/self-service; failed logout audits may be lost. OS/admin compromise is outside password containment; undeclared whole-database rollback is not detected. Supported restore invalidation still needs proof. #40/#49 own local qualification; #60/#65 own broader recovery, audit and shared-backend availability decisions. Application replication alone does not qualify PostgreSQL, session infrastructure or search failover. |
+
+MVP checks cannot close #65 or qualify these remote/replicated properties. No
+general deadlock freedom, throughput, high availability or security certification
+follows from this documentation. The separate-profile acceptance matrix must
+remain visible during implementation and release review.
 
 The [verification plan](../implementation/local-owner-authentication-verification.md)
 maps the proposed mechanisms to bounded slices and failure/evidence gates under

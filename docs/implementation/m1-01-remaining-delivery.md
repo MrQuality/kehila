@@ -164,6 +164,10 @@ authentication/boundary resolution, with a separate
 Explicit ADR-105 approval and its dependency/transport/schema gates precede
 implementation; ADR-103 production adoption is still a separate decision.
 W2, stable allocation #41 and W3-W7 remain outstanding.
+ADR-105's singleton and process-local sessions are explicitly local-MVP-only;
+[B-032/#65](../product/backlog.md#b-032) owns replicated deployment and profile
+migration. Local adapters must preserve stable domain/operation identities without
+requiring requests to return to an issuing pod. No cluster work is started here.
 
 Plan #41/SP-005's stable target allocation and
 response-loss reconciliation against the same actor/family/target/token scope.

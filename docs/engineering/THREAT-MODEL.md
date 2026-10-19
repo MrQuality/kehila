@@ -77,6 +77,14 @@ CSRF retrieval exposes only the existing independent CSRF value through bounded,
 same-origin browser bootstrap, with no bearer exposure or lifetime renewal.
 Real-browser and capacity/retry qualification remain unexecuted T15/T16 gates.
 
+The single active runtime and its local session registry apply only to the
+local MVP. [B-032/#65](../product/backlog.md#b-032) owns cross-replica credentials,
+revocation/CSRF, aggregate limits, actor contention, remote proxy/peer trust,
+secret rotation and shared-backend failure domains. Multiple Rust pods alone
+would not qualify any of these controls; local proof cannot qualify remote or
+multi-user/tenant deployment. See ADR-105's
+[remaining obligations](../architecture/ADR-105-local-owner-authentication.md#remaining-scale-and-security-obligations).
+
 If accepted, OS/authority administrator compromise still permits credential reset
 or data access; encrypted per-user storage cannot contain malware controlling the
 same account. Throttle saturation can deny local login availability. Browser XSS

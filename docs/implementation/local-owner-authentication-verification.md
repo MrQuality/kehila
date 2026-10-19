@@ -8,6 +8,10 @@ Related: [ADR-105](../architecture/ADR-105-local-owner-authentication.md),
 This plan makes the proposed password/authority boundary reviewable. It supplies
 no new authentication evidence. The existing worker remains unauthenticated and
 on the provisional storage path. ADR-103 and ADR-105 remain independently Proposed.
+All A0-A5/T01-T16 work here qualifies the proposed local-MVP profile only. Its
+single active runtime and volatile session state are not a replicated deployment
+design. [B-032/#65](https://github.com/MrQuality/kehila/issues/65) owns the required
+post-MVP replicated profile and migration; no cluster experiment is authorized.
 
 ## Review choices before implementation
 
@@ -21,6 +25,9 @@ on the provisional storage path. ADR-103 and ADR-105 remain independently Propos
   unconfirmed logout audit after abandonment, expiry or process failure.
 - [ ] Select and review dependencies and native capability/schema changes before
   code. Approval of the login preference does not approve any of these choices.
+- [ ] Confirm the local-MVP-only scope of the singleton, session/restart and
+  transport/budget choices. Preserve #65's cross-replica compatibility constraints;
+  conditional acceptance of the MVP restriction is not ADR acceptance.
 
 ## Proposed slices and gates
 
@@ -139,6 +146,11 @@ trade-offs require review before acceptance. All T01–T16 cases remain unexecut
 #40/#49 stay open and no runtime/schema/dependency change follows from these edits.
 
 ## D-037 follow-through
+
+Replicated release follow-up is separately tracked as B-032/#65. Future evidence
+must cover arbitrary-replica routing, session/CSRF/revocation continuity, pod loss,
+rolling versions/partitions, same-actor contention, aggregate admission and shared
+backend failover/restore. Passing this local plan cannot satisfy those gates.
 
 Recovery (#60) receives an explicit actor-preserving re-enrollment contract,
 not portable live credentials or silently restored old passwords. Languages (#61)

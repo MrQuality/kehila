@@ -50,6 +50,11 @@ also makes residual local denial and unconfirmed logout-audit loss explicit
 acceptance choices; neither is silently treated as resolved implementation.
 Completed logout state is reclaimable for new-login capacity, and browser reload
 has an explicit CSRF retrieval contract; both still require their planned evidence.
+The single active runtime, volatile sessions and loopback transport are now
+explicitly local-MVP-only. [B-032/#65](backlog.md#b-032) owns the final replicated
+profile, remote trust/identity decisions and migration; Kubernetes support remains
+outside current MVP qualification. The maintainer's conditional willingness to
+accept a singleton for MVP does not accept ADR-105 or a final deployment mechanism.
 
 <a id="q-003"></a>
 ## Q-003 — Resource units and availability calendars

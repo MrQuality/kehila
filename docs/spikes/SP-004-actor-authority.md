@@ -588,6 +588,10 @@ are Proposed under #40/#11, feeding #49 W2. The maintainer prefers a separate
 Kehila browser password. The single future Rust authority, credential/session
 policies and recovery mechanism still need explicit approval; no code, schema
 or authentication evidence is supplied by this design.
+The single-active-runtime mechanism is a local-MVP profile only;
+[B-032/#65](../product/backlog.md#b-032) owns final replicated service/session
+design and migration. Existing actor-wide serialization needs separate contention
+measurement; replica count does not imply concurrent mutations for one actor.
 
 The [PR #64 follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up)
 defines installation-before-actor takeover fencing, bounded password/pre-session

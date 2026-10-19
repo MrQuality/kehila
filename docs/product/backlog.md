@@ -52,6 +52,12 @@ M1 child scopes retain their current meanings. Broader recovery qualification
 is post-MVP; baseline recovery obligations in D-017/#49 still apply before
 supported real-data use. Action stacks #44 remain postponed.
 
+The maintainer's 2026-10-19 deployment clarification is tracked separately in
+[B-032](#b-032) / [#65](https://github.com/MrQuality/kehila/issues/65): single active
+authority is a local-MVP restriction only; the final replicated profile requires
+its own design and evidence. This adds no cluster implementation to MVP and does
+not accept ADR-105 or any distributed mechanism.
+
 ## Engineering maintenance
 
 [#55](https://github.com/MrQuality/kehila/issues/55) is closed: sequential verification
@@ -345,8 +351,11 @@ takeover fencing, composite password admission, pre-session saturation and logou
 audit lifecycle, completed-logout capacity reclamation and browser-reload CSRF
 retrieval. The explicit availability/audit-loss trade-offs remain Proposed.
 They cover a separate owner password, one future Rust native
-authority, expiring browser/CLI sessions and actor-preserving recovery. The
-password experience is the maintainer's preference; architecture, provisional
+authority, expiring browser/CLI sessions and actor-preserving recovery. That
+authority is a logical service; the singleton and volatile-session mechanisms
+are local-MVP-only. [B-032/#65](#b-032) retains replicated operation, secure remote
+deployment and migration; #40/#49 retain local qualification.
+The password experience is the maintainer's preference; architecture, provisional
 budgets, schema/capability changes and implementation remain unapproved. No new
 authentication case is marked passed by this design.
 
@@ -733,3 +742,34 @@ accountable attribution and duplicate/uncertain-outcome safety through domain
 commands. Record actual evidence and limitations. A design-only PR does not close
 this delivery issue. Related action stacks [#44](https://github.com/MrQuality/kehila/issues/44)
 remain postponed; any integration requires its own approved contracts.
+
+
+<a id="b-032"></a>
+### B-032 - Replicated authority and secure multi-pod deployment
+
+**Status:** Post-MVP; needs design, before claiming a supported final replicated
+profile. **Issue:** [#65](https://github.com/MrQuality/kehila/issues/65).
+**Dependencies:** B-005/B-007/B-020/B-024/B-025/B-026/B-027; #40/#49,
+related B-029 enterprise applicability and B-031/#62 machine callers.
+**Direction:** A Rust authority service may have many active replicas. A single
+active instance, volatile sessions/restart logout and literal-loopback transport
+are local-MVP choices only, not the permanent deployment architecture. ADR-105
+remains Proposed; no implementation or distributed mechanism is approved here.
+**Design consideration now:** Preserve stable actor/operation/replay/tombstone
+identities and authorization independently of credential storage and pod routing.
+Keep the local singleton until a reviewed replacement protocol is qualified;
+separate service boundaries from replica count and label all local-only limits.
+**Deliverable:** Reviewed successor/amendment ADR for multi-active authority,
+cross-replica session/CSRF/expiry/revocation, coordination and same-actor contention,
+aggregate admission/pools/hash budgets, secure ingress/peers/secrets and shared
+backend availability. Compare alternatives before choosing stores, token formats
+or identity providers. No mandatory pod affinity or authoritative pod-local
+credential state; one pod loss must not globally end valid sessions.
+**Acceptance:** Approve bounded scale/availability/threat targets; prove arbitrary
+replica routing, rolling versions, pod loss, partition/stale-state denial,
+concurrent revoke/recovery/commands/replay and aggregate overload behavior. Include
+PostgreSQL/session/search failure domains and restore, not only application pods.
+Review local-to-replicated migration/re-login/rollback without anonymous fallback,
+stable identity loss or weakening accepted ingress/authority/replay contracts.
+#40/#49 retain local verification; #60 retains broader DR. A planning PR does not
+close this issue or supply Kubernetes, HA, multi-user/tenancy or security evidence.
