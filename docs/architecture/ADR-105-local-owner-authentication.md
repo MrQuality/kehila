@@ -231,7 +231,8 @@ actor fence and records an audit event. Revocation is monotonic; audit failure
 cannot resurrect an in-memory credential, and the operation reports failure.
 Retained references observe the same revocation flag, not a cloned active value.
 For current-session logout, retain bounded state `Revoked { audit_confirmed }`
-on that same entry until its original idle/absolute deadline, without renewal.
+on that same entry no later than its original idle/absolute deadline, without
+renewal. Audit-confirmed entries may be reclaimed earlier for new-login capacity.
 Only the exact retiring bearer/cookie may retry its own logout; browser retries
 still require the retained CSRF secret and exact Origin. This exception grants
 no business, read, password-change or other-session management authority.
@@ -239,6 +240,15 @@ Unknown, expired, superseded-generation or previous-runtime credentials return
 401; they cannot reconstruct a retired registry entry. Reclaim expired entries
 before session admission, with a scan bounded by the 64-entry registry. Pending
 audit state counts against that cap and cannot outlive its original deadline.
+After purging expired entries, new session admission may reclaim the oldest
+audit-confirmed revoked entry if the 64 slots are otherwise full. Order by
+monotonic revocation time, with public session ID as a deterministic tie-breaker;
+scan at most 64 entries and atomically reserve the freed slot. Never reclaim an
+active or unexpired audit-unconfirmed entry for capacity. Reclamation removes
+lookup/retry state only: captured references remain irrevocably revoked and the
+committed SQL audit is unchanged. No separate tombstone cache or token-to-audit
+lookup is introduced. If only active/pending entries remain, return 429; pending
+audit saturation retains the already-declared bounded availability trade-off.
 
 Use one server-defined audit identity `(runtime_generation, public_session_id,
 logout)` with a unique SQL constraint and fixed non-secret attributes. Retries
@@ -254,7 +264,13 @@ occurred but the audit is failed/unconfirmed; clients must present this as signe
 out with audit unconfirmed, not as an active session. A client may retry only this
 logout or discard its credential. It must never retry a business request to test
 revocation. A subsequent 401 means no usable credential, not proof of an audit.
-Response loss after commit is handled by the same stable audit identity.
+Response loss after commit is handled by the same stable audit identity while
+the entry remains retained. Capacity reclamation ends that retry window: the
+same token then receives 401, even when its audit committed. Clients treat this
+as no usable credential and an unknown audit outcome, never as evidence that
+logout or the audit failed. A reclaimed token cannot rebuild state or trigger
+an unauthenticated SQL audit query. Retry guarantees are bounded by retention,
+not a promise of 200 until the original session deadline.
 
 This proposal deliberately permits a missing logout audit after client abandonment,
 expiry, generation change or process failure before confirmation. There is no
@@ -286,7 +302,7 @@ authority or undo a revocation/generation change. Registry locks span no awaits.
 | Headers / target | 8 KiB aggregate headers; 2 KiB target; reject duplicate Authorization/CSRF fields and authentication-cookie names |
 | Password verification | One 64-MiB Argon2 job, zero waiting jobs; five attempts/minute per installation, burst five; no IP-keyed unbounded map or permanent account lock |
 | Authenticated management | Separate installation-wide five attempts/minute, burst five, for password change/revoke-other requests; login attempts cannot consume this bucket |
-| Registry / pre-sessions | 64 active browser+CLI sessions, 32 pre-sessions; pre-session TTL five minutes; reject capacity excess, never silently evict live sessions |
+| Registry / pre-sessions | 64 total active/retained browser+CLI entries, 32 pre-sessions; pre-session TTL five minutes; reclaim expired entries then oldest audit-confirmed revoked entry for login capacity; never evict active or unexpired audit-pending entries |
 | New pre-session allocations | Five/minute per installation, burst two; reuse without renewal; reclaim expired/consumed slots before atomic admission |
 | Auth request | Two-second body deadline; five-second total work deadline including pool/hash wait; reject work whose dependencies cannot fit |
 | Domain/read/search work | Retain declared SP-004/command-specific bounds; no larger budget or codec ceiling follows from this draft |
