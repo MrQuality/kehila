@@ -23,6 +23,9 @@ Record alternatives and reasons for rejection, including unresolved evidence.
 - Operations: health, degradation, telemetry, failure and recovery.
 - Migration: persisted state, clients, events and supported upgrades.
 - Reversibility: rollback conditions, irreversible changes and cost.
+- [Post-MVP considerations](README.md#post-mvp-design-considerations), D-037:
+  recovery, languages/RTL and AI-agent execution. Record relevant impact,
+  assumptions and later compatibility/migration work, or justify non-applicability.
 
 ## Verification and follow-up
 

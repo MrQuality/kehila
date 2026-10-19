@@ -12,6 +12,8 @@ Statuses used here:
 - **Ready to investigate:** useful evidence can be gathered now.
 - **Needs decisions:** a product choice must be resolved for all or part of the item.
 - **Waiting on dependencies:** implementation depends on earlier capabilities.
+- **Post-MVP:** delivery is deferred beyond MVP; relevant design considerations
+  still apply now. This status does not mean completed or abandoned.
 
 Backlog IDs are stable references, not strict execution order. The technical path must account for the compiler, schema, API, storage, event, and recovery work in [implementation status](../IMPLEMENTATION.md).
 
@@ -29,6 +31,26 @@ decision, or backlog IDs yet. Its 50 decision numbers are proposal-local.
 An explicit scoped amendment or successor to [D-012](decisions.md#d-012) and
 linked product records are required before implementation changes that scope.
 The existing M1 scope and M0–M4 delivery plan remain unchanged.
+
+## Post-MVP commitments and current design review
+
+The maintainer's 2026-10-18 instruction is recorded in [D-037](decisions.md#d-037):
+deliver these capabilities after MVP and account for them in current and future
+designs. Record relevant constraints, assumptions and compatibility/migration
+effects, or explain why a topic is not applicable. Detailed technical choices
+remain review work; this does not add their implementation to MVP.
+
+| Topic | Canonical backlog / issue | Design consideration now |
+| --- | --- | --- |
+| Disaster recovery | [B-024](#b-024), [#60](https://github.com/MrQuality/kehila/issues/60) | Identify authoritative versus rebuildable state, retained operation/tombstone identity and recovery dependencies. Preserve existing durability/real-data gates. |
+| Multilingual support | [B-030](#b-030), [#61](https://github.com/MrQuality/kehila/issues/61) | Separate display text/locale formatting from stable IDs and canonical values; review right-to-left, mixed text and search assumptions. |
+| AI-agent task execution | [B-031](#b-031), [#62](https://github.com/MrQuality/kehila/issues/62) | Keep verified identity independent of sessions; record future machine-caller, delegation and attribution needs while retaining one-owner MVP scope. |
+
+The [architecture review guidance](../architecture/README.md#post-mvp-design-considerations)
+carries this obligation into subsequent designs. Product milestones M0–M4 and
+M1 child scopes retain their current meanings. Broader recovery qualification
+is post-MVP; baseline recovery obligations in D-017/#49 still apply before
+supported real-data use. Action stacks #44 remain postponed.
 
 ## Engineering maintenance
 
@@ -145,8 +167,8 @@ All ADR-104 ingress, actor/scope, structural snapshot and legacy isolation
 contracts remain mandatory.
 
 The #40/W2 [history/concurrency plan](../spikes/SP-004-actor-authority.md#next-bounded-slice-history-and-concurrent-authority)
-was approved through merged PR #58; implementation is submitted in
-[PR #59](https://github.com/MrQuality/kehila/pull/59). It distinguishes project-grant
+was approved through merged PR #58; implementation merged in
+[PR #59](https://github.com/MrQuality/kehila/pull/59) on 2026-10-18. It distinguishes project-grant
 revocation from creation-permission revocation, requires observed lock barriers
 and retains explicit corruption/rollback oracles. [Native R04 evidence](../../experiments/SP-004/results.authority.json)
 at committed source `42389e9` covers H01/H02 and the selected C01-C04 fixtures,
@@ -304,11 +326,17 @@ design's accepted [bounded-transaction direction](../architecture/ADR-102-postgr
 merged in PR #53 on 2026-10-14, plus a passed serial A05 grant-management subset
 on native PostgreSQL 16.15. The serial R03 extension adds distinct-manager
 attribution/rollback and NULL/authority/missing-grant rejection evidence, with
-native mutation detection and confirmed cleanup. The failed privilege attempt
-and correction remain recorded separately. Full A05, concurrent/read/replay cases and actual authentication,
+native mutation detection and confirmed cleanup. Merged PR #59 adds R04/R05
+history audits and the selected concurrent creation/replay/management fixtures.
+The failed attempts and corrections remain recorded separately. Full A05
+acceptance, remaining read/composite-replay cases and actual authentication,
 session and internal-channel mechanisms remain outstanding. This is experimental
 evidence with explicit fixture/overlay limits, not production access delivery.
 This is the W2 prerequisite for #49; #41 owns subsequent stable target allocation.
+
+The next design review is [owner authentication and trusted caller identity](../spikes/SP-004-actor-authority.md#next-design-slice-owner-authentication-and-trusted-caller-identity).
+Apply D-037's recovery, language and future agent considerations; B-031/#62 agent
+delivery remains post-MVP and does not expand the one-owner implementation scope.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 
@@ -572,6 +600,12 @@ evidence, not linearizability proof. Pure B-003 rules must gain storage evidence
 ### B-024 — Durable installation, backup, restore and migrations
 
 **Status:** Needs decisions. **Dependencies:** B-005, Q-019/Q-020, B-023.
+**Sequencing / issue:** [D-037](decisions.md#d-037) places broader disaster-recovery
+delivery after MVP, tracked in [#60](https://github.com/MrQuality/kehila/issues/60).
+Current designs must identify authoritative/rebuildable state, recovery
+dependencies and restore-safe identity/replay behavior. Existing D-017 durability
+and supported-real-data backup/restore gates, including #49's obligations,
+remain applicable. Post-MVP delivery is not a waiver of those gates.
 **Traceability:** PERSIST-001, REC-001–REC-003, MIG-001, OPS-002; D-017/D-034.
 **Deliverable:** Supported restart survival, automated visible daily backup and
 off-failure-domain copy, clean-instance restore including configuration/replay/
@@ -640,3 +674,50 @@ and compliance evidence; isolation only if multi-tenancy is actually adopted.
 **Acceptance:** Customer-relevant threat/operating models and independent security,
 failure/recovery/isolation evidence. No speculative enterprise features or formal
 certification claims are introduced by the standard.
+
+## Post-MVP product extensions
+
+<a id="b-030"></a>
+### B-030 — Multilingual and right-to-left support
+
+**Status:** Post-MVP; needs decisions. **Issue:** [#61](https://github.com/MrQuality/kehila/issues/61).
+**Traceability:** [D-037](decisions.md#d-037); B-003/B-004/B-006/B-022/B-027.
+**Design consideration now:** Keep stable identifiers, operation identity and
+canonical storage/wire values independent of translated display text or locale.
+Identify system text versus user-authored/configurable content, layout direction
+and locale-sensitive format/search assumptions. Preserve exact-string codec
+contracts; document current limitations and future compatibility work.
+**Post-MVP deliverable:** Reviewed language coverage, locale preferences/fallbacks,
+translation ownership and interface/content boundaries, followed by implementation.
+Select languages, libraries, right-to-left/bidirectional behavior, plural/date/
+number/time-zone formatting and search/sort rules in that design.
+**Acceptance:** Approve detailed requirements/scenarios before implementation;
+exercise the chosen languages, fallback, locale switching and in-scope mixed/RTL
+layouts/accessibility. Verify unchanged identities, canonical values, authority
+and replay across locale changes. Record supported behavior and maintenance.
+MVP needs no speculative translation framework or automatic user-content translation.
+
+<a id="b-031"></a>
+### B-031 — AI agents as accountable task execution entities
+
+**Status:** Post-MVP; needs decisions. **Issue:** [#62](https://github.com/MrQuality/kehila/issues/62).
+**Traceability:** [D-037](decisions.md#d-037); B-007/B-020/B-022, Q-014;
+related B-008/B-010/B-012 where execution consumes resources or incurs costs.
+**Design consideration now:** Stable actor identity remains independent of
+credentials, sessions and display names. Record human-only assumptions and future
+machine-caller/delegation compatibility. Preserve verified authority, ordinary
+domain commands, operation identity and audit attribution. Distinguish potential
+performer, authenticated actor, human delegator/accountable owner and approver;
+their eventual model and grants require separate review. One-owner MVP scope stays.
+**Post-MVP deliverable:** Agent enrollment/credentials/revocation and bounded
+authority; assignment/claiming, progress/results and status transitions; human
+approvals, secret access, limits, audit and untrusted-output handling. Review
+retries, concurrency, cancellation, uncertain side effects and resource/cost
+treatment before implementing selected adapters. Agents receive no privileged
+direct-database path or authority from their output/fingerprints.
+**Acceptance:** Approve detailed requirements/scenarios and identity/assignment
+contracts; demonstrate spoofing/escalation/cross-project denial, revocation,
+accountable attribution and duplicate/uncertain-outcome safety through domain
+commands. Record actual evidence and limitations. A design-only PR does not close
+this delivery issue. Related action stacks [#44](https://github.com/MrQuality/kehila/issues/44)
+remain postponed; any integration requires its own approved contracts.

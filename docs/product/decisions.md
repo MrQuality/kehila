@@ -527,6 +527,34 @@ target; it does not certify an installation, a Linux native-database experiment,
 or a production datacenter deployment. Existing local-runtime and qualification
 limits remain in force.
 
+<a id="d-037"></a>
+## D-037 — Schedule recovery, languages and agent execution after MVP
+
+**Status: Sequencing and design-review obligation accepted by explicit maintainer
+instruction on 2026-10-18.** Address broader disaster recovery, multilingual
+support and AI agents as task execution entities after MVP. Current MVP and
+future designs must account for these needs and record relevant assumptions,
+constraints and later compatibility/migration work, or explain non-applicability.
+
+Track recovery in [B-024](backlog.md#b-024)/[#60](https://github.com/MrQuality/kehila/issues/60),
+languages in [B-030](backlog.md#b-030)/[#61](https://github.com/MrQuality/kehila/issues/61),
+and agent execution in [B-031](backlog.md#b-031)/[#62](https://github.com/MrQuality/kehila/issues/62).
+These are post-MVP delivery commitments requiring their own reviewed designs;
+this decision selects no backup technology, language set, localization framework,
+agent provider, credential scheme or delegation protocol.
+
+**Consequence:** Preserve authoritative data/replay identities for future restore,
+separate stable IDs/canonical values from localized display, and identify
+human-only assumptions in identity, authority and audit boundaries. Record the
+impact during design review without requiring speculative MVP infrastructure.
+The architecture guidance and ADR template carry this review obligation.
+
+Existing product milestone definitions remain unchanged. D-017's durability and
+real-data backup/restore gates remain applicable; deferred DR delivery does not
+certify a disposable-data MVP for real use. The one-owner MVP scope remains;
+agent identity/assignment/delegation requires later review. Action stacks #44
+remain postponed and are not resumed by this decision.
+
 ## How to change a decision
 
 Record the revised behavior and reason, identify affected requirements and acceptance scenarios, and mark the older choice superseded instead of deleting its history. Keep unresolved proposals separate from confirmed decisions.
