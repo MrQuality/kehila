@@ -182,6 +182,25 @@ and every browser state change, including logout. Reject absent/null/foreign
 Origin on those routes. Rotate pre-session state at successful login and issue
 `__Host-kehila-session` with `Secure; HttpOnly; SameSite=Strict; Path=/`, no Domain.
 Return the session's CSRF value only through same-origin, no-store responses.
+Keep the independent CSRF secret retrievable in the bounded server-side
+pre-session/browser-session entry; the digest-only rule applies to the bearer,
+not this synchronizer value. Pre-session reuse returns its existing CSRF value.
+An authenticated-page reload can retrieve the existing session CSRF value using
+its HttpOnly cookie, with fresh credential/generation validation as for a read.
+Retrieval is a dedicated read-only browser bootstrap operation: require a fixed
+non-secret custom request header and `Sec-Fetch-Site: same-origin`, reject any
+present nonmatching Origin and foreign/missing Fetch Metadata, and keep the exact
+HTTPS authority and no-CORS policy. This read needs no previous CSRF value;
+otherwise reload would create a circular dependency. Actual browser support
+and header behavior must be qualified in A3, without a silent insecure fallback.
+Return only CSRF data in a no-store response body, never a bearer or domain data.
+Do not allocate a new entry, charge pre-session issuance, rotate the secret or
+renew activity/expiry on retrieval. Concurrent tabs keep the same valid value;
+rotate only when replacing the pre-session with a new authenticated session.
+For an eligible retained revoked browser entry, retrieval returns only the CSRF
+value needed to retry that same logout, under its existing generation/retention
+checks. It cannot confer read/business authority. Unknown, expired, superseded
+or reclaimed entries deny; retrieving a CSRF value never reconstructs them.
 Do not expose the session credential to JavaScript, URL, localStorage or logs.
 SameSite/Fetch Metadata are additional checks, not identity or CSRF substitutes.
 Parse all Cookie fields according to the negotiated HTTP version; reject repeated
