@@ -342,7 +342,8 @@ delivery remains post-MVP and does not expand the one-owner implementation scope
 [verification plan](../implementation/local-owner-authentication-verification.md)
 include the [PR #64 review follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up):
 takeover fencing, composite password admission, pre-session saturation and logout
-audit lifecycle. The explicit availability/audit-loss trade-offs remain Proposed.
+audit lifecycle, completed-logout capacity reclamation and browser-reload CSRF
+retrieval. The explicit availability/audit-loss trade-offs remain Proposed.
 They cover a separate owner password, one future Rust native
 authority, expiring browser/CLI sessions and actor-preserving recovery. The
 password experience is the maintainer's preference; architecture, provisional

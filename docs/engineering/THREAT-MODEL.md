@@ -71,6 +71,11 @@ rate buckets do not prevent shared-worker/transport denial by local callers;
 expired-slot reclamation does not stop repeated allocation traffic. Failed logout
 audits can be lost after abandonment/expiry/crash while revocation remains final.
 These residual risks are Proposed acceptance choices, not qualified mitigations.
+Confirmed logout entries can be reclaimed without reactivating captured tokens;
+later retries can return 401 without contradicting a committed audit. Reload-safe
+CSRF retrieval exposes only the existing independent CSRF value through bounded,
+same-origin browser bootstrap, with no bearer exposure or lifetime renewal.
+Real-browser and capacity/retry qualification remain unexecuted T15/T16 gates.
 
 If accepted, OS/authority administrator compromise still permits credential reset
 or data access; encrypted per-user storage cannot contain malware controlling the

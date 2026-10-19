@@ -259,7 +259,7 @@ Unknown, expired, superseded-generation or previous-runtime credentials return
 401; they cannot reconstruct a retired registry entry. Reclaim expired entries
 before session admission, with a scan bounded by the 64-entry registry. Pending
 audit state counts against that cap and cannot outlive its original deadline.
-After purging expired entries, new session admission may reclaim the oldest
+After purging expired entries, new session admission must reclaim the oldest
 audit-confirmed revoked entry if the 64 slots are otherwise full. Order by
 monotonic revocation time, with public session ID as a deterministic tie-breaker;
 scan at most 64 entries and atomically reserve the freed slot. Never reclaim an

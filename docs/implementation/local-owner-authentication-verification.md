@@ -124,9 +124,18 @@ is addressed in the proposal, not qualified by execution:
 | Medium/P1: password-change admission | One composite hash permit, separate management allowance, explicit busy rejection/deadline and residual contention; T06/T10. |
 | Medium/P2: pre-session saturation | Reuse without renewal, bounded reclamation and shared issuance limit; sustained local denial remains explicit; T13. |
 | Medium/P1: logout audit failure | Same-logout-only retry, unique audit identity, finite retention and permitted unconfirmed audit loss; T07/T14. |
+| Medium/P1: completed logout capacity | Reclaim oldest audit-confirmed revoked entry under capacity pressure; retry becomes 401 after reclamation without implying audit failure; T14/T16. |
+| Low/P2: CSRF after browser reload | Return existing server-held CSRF for pre-session/active-session bootstrap and eligible same-logout retries; no rotation, renewal or cross-tab invalidation; T15. |
+
+The [second self-reminder](https://github.com/MrQuality/kehila/pull/64#issuecomment-6262224047)
+adds the last two refinements. Confirmed logout retention is best effort for
+retry convenience, not a reason to reject new login when a reclaimable slot
+exists. CSRF retrieval is an explicit read-only exception to requiring an old
+CSRF value, with same-origin/custom-header and credential checks; browser proof
+remains required. Neither refinement supplies implementation evidence.
 
 ADR-105 stays Proposed. In particular, the local availability and audit-loss
-trade-offs require review before acceptance. All T01–T14 cases remain unexecuted;
+trade-offs require review before acceptance. All T01–T16 cases remain unexecuted;
 #40/#49 stay open and no runtime/schema/dependency change follows from these edits.
 
 ## D-037 follow-through

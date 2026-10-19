@@ -48,6 +48,8 @@ retains explicit approval, certificate/dependency and actual negative/native gat
 Its [review follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up)
 also makes residual local denial and unconfirmed logout-audit loss explicit
 acceptance choices; neither is silently treated as resolved implementation.
+Completed logout state is reclaimable for new-login capacity, and browser reload
+has an explicit CSRF retrieval contract; both still require their planned evidence.
 
 <a id="q-003"></a>
 ## Q-003 — Resource units and availability calendars
