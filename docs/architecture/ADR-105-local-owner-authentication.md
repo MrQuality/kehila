@@ -59,15 +59,39 @@ before the first implementation slice; Linux qualification is separate. No
 certificate tool, package or trust-store installer is selected by this ADR.
 
 Enforce one authority instance per installation with a dedicated PostgreSQL
-session advisory lock and a persistent, checked, non-wrapping runtime generation.
-Takeover increments that generation under the same actor fence used by commands.
-Every authoritative credential/permission snapshot checks the instance generation.
-Observed loss or uncertain ownership of the lock connection stops new admission;
-reacquisition requires a fresh runtime and new sessions. Old mutations can finish
-before takeover obtains the
-actor fence; old snapshots have only SP-004's bounded read allowance. An old
-process cannot authorize against a snapshot after the takeover commit. Lock key,
-capability and startup/cleanup details require the schema/implementation review.
+session advisory lock and one durable installation-state row containing the
+immutable owner binding and checked, non-wrapping `runtime_generation`. The row
+is also the transactional takeover fence; the advisory connection alone cannot
+authorize requests. Initial enrollment creates the singleton atomically.
+
+All serving mutations, replay disclosure, session issuance/revocation and local
+credential/permission management acquire locks in this order: installation row,
+then every affected actor in `COLLATE "C"` actor-ID order, then operation/domain
+locks. Normal operations take a shared row lock (`FOR SHARE`); takeover takes an
+exclusive row lock (`FOR UPDATE`), then the owner actor fence, and advances the
+generation atomically. No participant may acquire the installation lock after
+an actor/domain lock or upgrade its shared installation lock to exclusive.
+Any additional lock classes need an explicit compatible A1/W3 review.
+
+After obtaining the installation and actor locks, a fresh READ COMMITTED
+statement checks the durable runtime generation, credential generation/revision
+and current authority before execution or replay disclosure. A snapshot taken
+before a lock wait cannot authorize the operation. The shared installation lock
+is retained through commit/rollback, so takeover waits for already-fenced work;
+later old-runtime operations observe the new generation and deny. Retry starts
+a new transaction and repeats all checks. Password hashing precedes these locks.
+Recovery uses the same shared-installation/actor ordering and atomically advances
+the owner's auth generation; it does not impersonate the serving runtime.
+
+Reads check runtime/auth generation in their fresh authorization snapshot without
+an exclusive fence. SP-004's bounded earlier-snapshot allowance also applies to
+takeover/recovery during projected search; local flags cannot detect every
+out-of-process change. Recheck local revocation/expiry and observed lock loss
+before output, but do not claim a distributed post-search atomic check.
+Observed loss or uncertain ownership of the advisory connection stops admission
+and suppresses pending output. Reacquisition requires a fresh runtime and new
+sessions. The advisory key, restricted functions/roles, statement isolation and
+startup/unknown-commit cleanup require A1 schema review and native proof.
 
 ### 2. Owner enrollment, password and recovery
 
