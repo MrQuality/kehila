@@ -65,6 +65,12 @@ and the [verification gates](../implementation/local-owner-authentication-verifi
 are pending, including certificate installation, restricted enrollment/recovery,
 password resource limits, CSRF, queued revocation, singleton takeover and restore
 re-enrollment. No mitigation in the table becomes implemented by this proposal.
+The [review follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up)
+adds installation takeover fencing and bounded admission/retry contracts. Separate
+rate buckets do not prevent shared-worker/transport denial by local callers;
+expired-slot reclamation does not stop repeated allocation traffic. Failed logout
+audits can be lost after abandonment/expiry/crash while revocation remains final.
+These residual risks are Proposed acceptance choices, not qualified mitigations.
 
 If accepted, OS/authority administrator compromise still permits credential reset
 or data access; encrypted per-user storage cannot contain malware controlling the

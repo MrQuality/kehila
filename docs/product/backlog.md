@@ -340,7 +340,10 @@ delivery remains post-MVP and does not expand the one-owner implementation scope
 
 [Proposed ADR-105](../architecture/ADR-105-local-owner-authentication.md) and its
 [verification plan](../implementation/local-owner-authentication-verification.md)
-now supply that review artifact: separate owner password, one future Rust native
+include the [PR #64 review follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up):
+takeover fencing, composite password admission, pre-session saturation and logout
+audit lifecycle. The explicit availability/audit-loss trade-offs remain Proposed.
+They cover a separate owner password, one future Rust native
 authority, expiring browser/CLI sessions and actor-preserving recovery. The
 password experience is the maintainer's preference; architecture, provisional
 budgets, schema/capability changes and implementation remain unapproved. No new

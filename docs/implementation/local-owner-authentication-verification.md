@@ -27,7 +27,7 @@ on the provisional storage path. ADR-103 and ADR-105 remain independently Propos
 | Slice | Boundary and exit evidence |
 | --- | --- |
 | A0: local transport and dependency proof | Review a bounded prototype scope first. Demonstrate actual browser/CLI certificate validation, strict origin/host binding, key protection and renewal on Windows/Podman; qualify Linux separately. Review TLS, Argon2id, NFC, randomness, digest/comparison, zeroization and protected-file/DPAPI library candidates under the dependency policy. No trust-warning bypass or raw unsafe platform implementation. Stop if no usable secure installation path is supported. |
-| A1: owner and generation management | Review the versioned auth schema/capability and startup-singleton protocol. Disposable native tests cover atomic single-owner enrollment, unknown-commit reconciliation, narrow serving versus administration rights, password/generation CAS, takeover fencing, failed startup and preserved actor/grants/history on recovery. No public enrollment/reset or provisioning secret in the server. |
+| A1: owner and generation management | Review versioned auth storage/capabilities, the singleton installation row, shared/exclusive installation-before-actor lock protocol and unique logout audit identity. Disposable native tests cover atomic single-owner enrollment, unknown-commit reconciliation, narrow serving versus administration rights, password/generation CAS, post-wait takeover fencing, audit deduplication, failed startup and preserved actor/grants/history on recovery. No public enrollment/reset or provisioning secret in the server. |
 | A2: credential and admission core | Pure policy/registry tests with fake monotonic time, followed by real randomness/adapters. Cover normalized password bounds, corrupt PHC parameter rejection, one owned hash job, bounded registries, strict credential kinds, finite expiry/revocation and no secret diagnostics. Private constructors prevent deserializing a trusted ActorContext from a client claim. |
 | A3: browser and CLI authentication | Run actual TLS/browser/HTTP and restricted PostgreSQL boundaries for pre-session/CSRF, password verification, secure cookies, CLI secret storage, logout/password change, rejection/saturation and loss of the runtime lock. Pure HTTP mocks alone do not qualify browser certificate/cookie behavior or Windows permissions. |
 | A4: authoritative command and read integration | Bind actual credentials to SP-004 fences/snapshots; prove queued revocation, original-scope replay, mixed authorized/denied search scopes and no transaction across search. Coordinate #41 stable retry targets before #49 W3 interfaces. Integrating the real native adapter/production adoption retains its own ADR-103/W3/W7 gates. |
@@ -109,6 +109,22 @@ and rerun intact cases. Finite tests do not prove general security or linearizab
   database revocation nor supported real-data use.
 - [ ] Update #40/#49, the canonical SP-004 record and PR summary with reached cases
   and remaining gates. Do not close either issue on this proposed design.
+
+## PR #64 review follow-up
+
+The [review self-reminder](https://github.com/MrQuality/kehila/pull/64#issuecomment-6261598730)
+is addressed in the proposal, not qualified by execution:
+
+| Concern | Proposed disposition / required evidence |
+| --- | --- |
+| High/P1: takeover fencing | Installation shared/exclusive fence, deterministic actor order and post-wait fresh checks; T09. |
+| Medium/P1: password-change admission | One composite hash permit, separate management allowance, explicit busy rejection/deadline and residual contention; T06/T10. |
+| Medium/P2: pre-session saturation | Reuse without renewal, bounded reclamation and shared issuance limit; sustained local denial remains explicit; T13. |
+| Medium/P1: logout audit failure | Same-logout-only retry, unique audit identity, finite retention and permitted unconfirmed audit loss; T07/T14. |
+
+ADR-105 stays Proposed. In particular, the local availability and audit-loss
+trade-offs require review before acceptance. All T01–T14 cases remain unexecuted;
+#40/#49 stay open and no runtime/schema/dependency change follows from these edits.
 
 ## D-037 follow-through
 

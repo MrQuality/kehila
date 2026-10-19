@@ -589,6 +589,11 @@ Kehila browser password. The single future Rust authority, credential/session
 policies and recovery mechanism still need explicit approval; no code, schema
 or authentication evidence is supplied by this design.
 
+The [PR #64 follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up)
+defines installation-before-actor takeover fencing, bounded password/pre-session
+admission and retryable but not guaranteed logout audit delivery. These proposed
+contracts and T01–T14 remain unexecuted; R01–R05 evidence is unchanged.
+
 Prepare a bounded proposal for owner enrollment/login, browser sessions and
 CSRF/origin handling, authenticated CLI access, expiry/logout/recovery and
 credential revocation. Compare authenticated Go-to-worker context transport

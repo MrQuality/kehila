@@ -45,6 +45,9 @@ future native authority in Rust. These mechanisms remain Proposed; no runtime or
 supported-host qualification follows from the preference. The
 [verification plan](../implementation/local-owner-authentication-verification.md)
 retains explicit approval, certificate/dependency and actual negative/native gates.
+Its [review follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up)
+also makes residual local denial and unconfirmed logout-audit loss explicit
+acceptance choices; neither is silently treated as resolved implementation.
 
 <a id="q-003"></a>
 ## Q-003 — Resource units and availability calendars

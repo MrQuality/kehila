@@ -74,7 +74,7 @@ an actor/domain lock or upgrade its shared installation lock to exclusive.
 Any additional lock classes need an explicit compatible A1/W3 review.
 
 After obtaining the installation and actor locks, a fresh READ COMMITTED
-statement checks the durable runtime generation, credential generation/revision
+statement for serving work checks the durable runtime generation, credential generation/revision
 and current authority before execution or replay disclosure. A snapshot taken
 before a lock wait cannot authorize the operation. The shared installation lock
 is retained through commit/rollback, so takeover waits for already-fenced work;
