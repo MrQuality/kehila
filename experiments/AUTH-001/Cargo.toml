@@ -1,0 +1,27 @@
+[package]
+name = "kehila_local_tls_probe"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+license = "Apache-2.0"
+publish = false
+
+# This disposable experiment does not alter the production dependency graph.
+[workspace]
+
+[dependencies]
+bytes = "=1.11.1"
+http-body-util = "=0.1.3"
+hyper = { version = "=1.11.1", default-features = false, features = ["client", "server", "http1"] }
+hyper-util = { version = "=0.1.21", default-features = false, features = ["tokio"] }
+rustls = { version = "=0.23.46", default-features = false, features = ["std", "ring"] }
+tokio = { version = "=1.53.1", default-features = false, features = ["macros", "rt", "net", "sync", "time", "io-util"] }
+tokio-rustls = { version = "=0.26.6", default-features = false, features = ["ring"] }
+
+[dev-dependencies]
+rcgen = { version = "=0.14.10", default-features = false, features = ["crypto", "ring"] }
+
+time = { version = "=0.3.55", default-features = false, features = ["std"] }
+
+[lints.rust]
+unsafe_code = "forbid"
