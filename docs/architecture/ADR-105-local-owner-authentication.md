@@ -123,9 +123,12 @@ provenance/license; never send passwords to a third party. Domain content retain
 ADR-104's exact-string rules: password normalization cannot spread to codecs.
 
 Password change requires current session, CSRF where applicable and current
-password verification. Hash outside the actor lock, then lock the actor and
+password verification. Acquire the single hash permit once for sequential
+current-password verification and replacement hashing; never release/reacquire
+between them. Hash outside database fences, releasing the permit only after
+the actual hash work ends, then acquire installation/actor locks and
 recheck the exact verifier revision/generation before changing anything. Stale
-verification fails or restarts within the bounded attempt budget. Increment
+verification fails this attempt without an automatic rehash loop. Increment
 `auth_generation`, replace the verifier and audit atomically; old sessions fail
 current-generation checks, including the requesting session. Reauthenticate.
 
@@ -236,6 +239,7 @@ authority or undo a revocation/generation change. Registry locks span no awaits.
 | Auth JSON | 4 KiB encoded; exact endpoint keys; decoded password ≤1,024 bytes; no compression |
 | Headers / target | 8 KiB aggregate headers; 2 KiB target; reject duplicate Authorization/CSRF fields and authentication-cookie names |
 | Password verification | One 64-MiB Argon2 job, zero waiting jobs; five attempts/minute per installation, burst five; no IP-keyed unbounded map or permanent account lock |
+| Authenticated management | Separate installation-wide five attempts/minute, burst five, for password change/revoke-other requests; login attempts cannot consume this bucket |
 | Registry / pre-sessions | 64 active browser+CLI sessions, 32 pre-sessions; pre-session TTL five minutes; reject capacity excess, never silently evict live sessions |
 | Auth request | Two-second body deadline; five-second total work deadline including pool/hash wait; reject work whose dependencies cannot fit |
 | Domain/read/search work | Retain declared SP-004/command-specific bounds; no larger budget or codec ceiling follows from this draft |
@@ -246,6 +250,21 @@ work. An Argon2 call cannot be assumed cancellable: retain its permit until it
 actually finishes even if the caller times out; no detached unowned work. Request
 limits, throttles and metadata survive neither a claim of anonymity nor arbitrary
 client keys; restart abuse by an OS administrator is a separate threat boundary.
+Browser and CLI password login share the unauthenticated login bucket. Validate
+current session/CSRF before charging the authenticated management bucket; final
+authority still requires post-fence checks. Current-session logout uses neither
+password bucket nor the hash permit, but retains transport/database deadlines.
+Both password login and authenticated password proof use the same one hash
+permit: a busy worker returns 429 immediately, with no priority reservation or
+waiting queue. Separate buckets prevent allowance consumption, not worker or
+transport starvation; an active local caller can still deny self-service.
+The five-second total budget includes both password-change hashes and database
+work. Do not start the second hash after deadline/cancellation, publish a change
+after expiry, or assume the first hash can be interrupted. Keep owned cleanup
+until work ends and discard secret intermediates; no early permit reuse.
+Measure complete dual-hash latency and process peak memory, not just the Argon2
+memory parameter, before qualifying this budget. Corrupt/unsupported stored PHC
+profiles are incoherent auth storage: return 503, never a wrong-password 401.
 Use generic authentication errors without verifier/account details. Sensitive
 responses are no-store; diagnostics/audit contain IDs/reasons, never secrets.
 
