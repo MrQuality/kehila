@@ -1,0 +1,285 @@
+# ADR-105 — Local-owner authentication and trusted caller identity
+
+Status: Proposed. Owner: project maintainer. Created / reviewed: 2026-10-19.
+Acceptance: pending explicit maintainer approval; no implementation is authorized
+by this draft. The maintainer selected a separate Kehila browser password as a
+login preference on 2026-10-19, not acceptance of the architecture below.
+Related: D-016/D-017/D-037; B-007/B-020/B-022; Q-002/Q-014;
+[#40](https://github.com/MrQuality/kehila/issues/40),
+[#49 W2](https://github.com/MrQuality/kehila/issues/49), #11/#32 and #41.
+
+## Context
+
+The [SP-004 contract](../spikes/SP-004-actor-authority.md) defines stable actors,
+current authority, original-scope replay and revocation/read ordering. PR #59
+verified selected database fixtures; it supplied no caller authentication.
+The current [Go API](../../go/io/task_api/server.go) proxies to an unauthenticated
+[Rust worker](../../src/io/task_worker/src/main.rs) and queries search directly.
+Their Host/origin/loopback checks do not identify an owner or authenticate a peer.
+
+### Review summary
+
+| Proposed choice | Effect and approval point |
+| --- | --- |
+| Separate owner password | Store a salted Argon2id verifier; browser and CLI authenticate with the password. No external identity provider. |
+| One Rust authority process for the future native path | Terminate HTTPS, verify identity, enforce domain authority and mediate search in one process. This is a proposed boundary change requiring approval. |
+| Opaque, server-side browser/CLI sessions | Tokens carry no permissions. Sessions expire and all end on authority-process restart; the password and actor identity persist. |
+| Local administrative enrollment/recovery | No public first-owner claim/reset endpoint. Recovery preserves the actor and history, replaces the password and revokes sessions. |
+| Separate implementation gates | Certificate trust, dependency choices, schema/capabilities and negative/native tests need evidence before support. ADR-103 remains Proposed. |
+
+## Decision — proposed
+
+### 1. Authority process and transport
+
+For new native M1 routes, consolidate the public API, authentication, domain
+command boundary and authorized read/search mediation in one Rust process.
+Internal calls carry a typed private `ActorContext`, not an HTTP actor assertion.
+Keep pure modules independent of runtime I/O. The current Go/Rust task prototype
+and its frozen evidence remain unchanged until a separately reviewed transition.
+No anonymous legacy route or direct search/worker listener may be exposed as an
+alternate supported path. This does not adopt ADR-103 or implement W3/W7.
+
+Use one configured HTTPS origin on literal loopback, initially
+`https://127.0.0.1:<configured-port>`; bind only that address. Reject other Host,
+authority, origin, port and forwarded-host assertions. No wildcard CORS, LAN
+binding, forwarded identity, automatic redirect carrying credentials or HTTP
+fallback. Do not infer owner identity from the socket address or TLS alone.
+
+The installer/operator supplies a server certificate trusted by the actual
+browser and CLI, with the exact IP SAN and protected private key. Startup rejects
+missing/expired/mismatched material. CLI verifies the configured trust and server
+identity. Do not disable verification or ask users to bypass browser warnings.
+Certificate issuance/trust/renewal and removal need a usable Windows/Podman proof
+before the first implementation slice; Linux qualification is separate. No
+certificate tool, package or trust-store installer is selected by this ADR.
+
+Enforce one authority instance per installation with a dedicated PostgreSQL
+session advisory lock and a persistent, checked, non-wrapping runtime generation.
+Takeover increments that generation under the same actor fence used by commands.
+Every authoritative credential/permission snapshot checks the instance generation.
+Loss of the lock connection stops new admission; reacquisition requires a fresh
+runtime and new sessions. Old mutations can finish before takeover obtains the
+actor fence; old snapshots have only SP-004's bounded read allowance. An old
+process cannot authorize against a snapshot after the takeover commit. Lock key,
+capability and startup/cleanup details require the schema/implementation review.
+
+### 2. Owner enrollment, password and recovery
+
+A separate local administrative command holds provisioning/recovery capability;
+the serving process never receives that capability. Initial enrollment atomically
+claims the one installation owner, creates its stable actor and initial creation
+permission, and records attributable management history. A unique installation
+claim serializes competing initializers. Retry after uncertain commit reconciles
+that claim; it must not create another owner or silently replace credentials.
+The tool reads secrets from a protected terminal, never arguments or environment.
+Password login resolves this installed owner; a client username/actor ID cannot
+select another principal.
+
+Store only a salted Argon2id verifier, its allowlisted algorithm/policy version,
+verifier revision and checked `auth_generation` linked to the durable actor.
+Passwords never enter domain operation keys, fingerprints, events, logs or saved
+results. Proposed cost: 64 MiB, three iterations, one lane, 16-byte random salt,
+32-byte output. This is a proposed resource/security setting, not a measured
+performance claim or the exact RFC 9106 recommended profile. Bound stored PHC
+parameters before verification; corrupt/unsupported profiles fail closed rather
+than allocating arbitrary memory or falling back to another algorithm.
+
+Proposed password policy: NFC-normalize password input only; require 15–128
+Unicode code points after normalization, with at most 1,024 decoded UTF-8 input
+bytes and bounded normalization/output. No trimming, case folding, composition
+rules or periodic password replacement. Permit paste/password managers. Reject
+common/compromised choices using a versioned local blocklist with reviewed
+provenance/license; never send passwords to a third party. Domain content retains
+ADR-104's exact-string rules: password normalization cannot spread to codecs.
+
+Password change requires current session, CSRF where applicable and current
+password verification. Hash outside the actor lock, then lock the actor and
+recheck the exact verifier revision/generation before changing anything. Stale
+verification fails or restarts within the bounded attempt budget. Increment
+`auth_generation`, replace the verifier and audit atomically; old sessions fail
+current-generation checks, including the requesting session. Reauthenticate.
+
+Forgotten-password recovery requires the separate local administration capability,
+not a browser flag or access to a loopback port. Preserve actor ID, grants,
+operation identity and history; replace the password, advance generation and
+record a distinct recovery event under the actor fence. It is intentional local
+administrative authority, not proof that the old password was supplied. OS
+account/administrator or authority-process compromise remains outside what this
+password boundary can contain; ordinary other local callers still need secrets.
+
+Credential changes do not use the business replay ledger or persist password
+fingerprints. Their generation/revision CAS prevents stale replacement; clients
+must not blindly retry after a lost response. Reconcile by fresh login with the
+chosen password and authenticated credential metadata; recovery is explicit.
+
+### 3. Browser and CLI credentials
+
+Issue 32 CSPRNG bytes encoded as unpadded base64url. Retain only a token digest in
+a bounded in-memory registry, with a distinct public session ID, actor ID,
+credential kind, auth/runtime generation, monotonic issue/activity/deadline ticks
+and a monotonic revocation flag. Neither the public session ID nor a digest is a
+credential. Token matches do not carry permission verdicts. Use reviewed random,
+digest and comparison primitives; no custom signature/MAC or JWT protocol.
+
+Password verification runs outside the actor fence. Before issuing a session,
+take the fence, recheck verifier revision/generation and reserve registry capacity.
+Register the unpublished entry and audit issuance; return its secret only after
+commit. Failure revokes/removes the unpublished entry. A later password change
+can invalidate a token before delivery, which then requires new login. A lost
+login response permits another bounded login, not replay of a stored secret.
+
+Browser login uses a short-lived pre-session and server-held synchronizer token.
+Generate an independent 32-byte CSRF secret; do not reuse the session credential.
+Require exact configured Origin, JSON content type and the CSRF header on login
+and every browser state change, including logout. Reject absent/null/foreign
+Origin on those routes. Rotate pre-session state at successful login and issue
+`__Host-kehila-session` with `Secure; HttpOnly; SameSite=Strict; Path=/`, no Domain.
+Return the session's CSRF value only through same-origin, no-store responses.
+Do not expose the session credential to JavaScript, URL, localStorage or logs.
+SameSite/Fetch Metadata are additional checks, not identity or CSRF substitutes.
+Serve no third-party code on the login page; use output encoding, no-sniff,
+same-origin resource policy and a CSP forbidding framing, objects and foreign
+form/script targets. HttpOnly does not contain an XSS that can act as the owner.
+
+CLI login prompts for the same owner password and uses a distinct HTTPS endpoint
+with no Cookie, Origin or browser Fetch Metadata. It returns a CLI-kind bearer
+credential; subsequent CLI calls require exactly one Authorization header.
+Browser and CLI modes have explicit route/auth contracts: reject mixed, duplicate
+or wrong-kind credentials and never downgrade an invalid browser credential to
+an anonymous/CLI path. Missing Origin alone is not CLI authentication.
+
+CLI secret storage is per OS user: DPAPI-protected content plus a restricted
+owner ACL on Windows; a mode-0600 file in a mode-0700 owned directory on Linux
+(not application-encrypted there). Verify ownership/permissions and reject
+symlinks/reparse redirection; never fall back to a shared or public file. Do not
+persist the password. These profiles require actual platform evidence; they do
+not protect against code already controlling the same OS account.
+
+Proposed lifetimes: 30-minute request inactivity and 12-hour absolute lifetime,
+using monotonic ticks from the issuing runtime for both kinds. Only successful
+authenticated business requests renew inactivity, not public health, failures or
+keepalive routes. This measures request activity, not human keyboard activity;
+background business polling can renew it. No refresh-token protocol. Restart
+invalidates browser, CLI and pre-session state; the owner signs in again.
+
+### 4. Authoritative admission, revocation and reads
+
+Before any native pool acquisition or application/authentication worker scheduling,
+validate bounded transport, original input and endpoint shape. Preserve ADR-104
+ceilings: 1 MiB encoded records, 64 KiB decoded strings/keys, depth 16 and 1,024
+collection entries, plus its existing node/duplicate rules. Auth endpoints use
+the stricter provisional bounds below. No arbitrary JSON buffering before checks.
+
+An early token lookup yields only a candidate credential reference. For mutations
+and replay, acquire SP-004's actor fence, recheck the live registry entry,
+monotonic expiry, actor/auth/runtime generation and current original-scope grants
+before domain execution/result disclosure. Sample time after waiting for the
+fence. Rollback/retry reloads authority; pre-queue checks cannot authorize work.
+No Argon2, external search or unbounded I/O while holding this fence.
+
+Individual logout/revocation marks the registry entry revoked while holding that
+actor fence and records an audit event. Revocation is monotonic; audit failure
+cannot resurrect an in-memory credential, and the operation reports failure.
+Retained references observe the same revocation flag, not a cloned active value.
+Logout success means later fence holders reject that credential. Password/global
+revocation advances the durable generation under the same fence. Already committed
+work remains committed; an uncertain response is not evidence of cancellation.
+
+Authoritative reads check actor/auth/runtime generation, current grants and data
+in one fresh consistent PostgreSQL snapshot as specified by SP-004. Check the
+live registry/revocation flag and monotonic expiry again after that query before
+releasing data; never reuse a cached successful credential verdict. A revocation
+committed before the snapshot denies; a later one may conservatively deny too.
+Projected reads authorize required scopes before search, release DB resources
+before that call and enforce scoped hits/aggregates and the response deadline.
+No exclusive actor fence or database transaction spans the search request.
+Registry activity updates may only renew a still-live entry; they cannot grant
+authority or undo a revocation/generation change. Registry locks span no awaits.
+
+### 5. Provisional resource and failure contract
+
+| Resource / operation | Proposed admission limit |
+| --- | --- |
+| Transport | 16 in-flight connections/requests; finite handshake/header deadlines; reject excess without an unbounded backlog |
+| Auth JSON | 4 KiB encoded; exact endpoint keys; decoded password ≤1,024 bytes; no compression |
+| Headers / target | 8 KiB aggregate headers; 2 KiB target; reject duplicate auth/cookie fields |
+| Password verification | One 64-MiB Argon2 job, zero waiting jobs; five attempts/minute per installation, burst five; no IP-keyed unbounded map or permanent account lock |
+| Registry / pre-sessions | 64 active browser+CLI sessions, 32 pre-sessions; pre-session TTL five minutes; reject capacity excess, never silently evict live sessions |
+| Auth request | Two-second body deadline; five-second total work deadline including pool/hash wait; reject work whose dependencies cannot fit |
+| Domain/read/search work | Retain declared SP-004/command-specific bounds; no larger budget or codec ceiling follows from this draft |
+
+These are review inputs requiring measurement and memory permission before live
+experiments, not supported operating claims. Saturation rejects before expensive
+work. An Argon2 call cannot be assumed cancellable: retain its permit until it
+actually finishes even if the caller times out; no detached unowned work. Request
+limits, throttles and metadata survive neither a claim of anonymity nor arbitrary
+client keys; restart abuse by an OS administrator is a separate threat boundary.
+Use generic authentication errors without verifier/account details. Sensitive
+responses are no-store; diagnostics/audit contain IDs/reasons, never secrets.
+
+## Alternatives
+
+| Option | Assessment for this proposal |
+| --- | --- |
+| Keep Go API + Rust authority with authenticated transport | Viable alternative: mutual TLS, authenticated peer roles, typed request/body binding and authoritative Rust credential checks. More certificate/forwarding/authorization interfaces; ordinary loopback headers are insufficient. Revisit if a demonstrated Go-edge requirement outweighs consolidation. |
+| Separate OS-launcher identity or browser passkey | Different login experience; the maintainer preferred a separate Kehila password. OS administration remains enrollment/recovery authority, not automatic browser login. |
+| External OIDC provider | Adds an issuer, availability and operating dependency for one local owner; future enterprise scope needs separate review. |
+| Persistent sessions or self-contained tokens | Would add restart/restore/revocation semantics before needed; accept reauthentication on restart and keep permissions authoritative. |
+| Anonymous local owner or client actor header | Does not meet the accepted identity/authority contract. |
+
+## Consequences and impacts
+
+- Security: removes actor-context network forwarding on the new native path;
+  concentrates trust in the Rust authority and protected administrative tool.
+  Password guessing, local throttling/availability, XSS, secret theft and OS/DB
+  administrator compromise need their stated threat boundaries and tests.
+- Performance: no password verification per business request; one bounded login
+  worker, bounded registry and indexed PostgreSQL authority checks. Values above
+  need measured supported-host evidence before adoption.
+- Operations/reversibility: HTTPS trust provisioning and restart reauthentication
+  add user-visible setup. The old prototype cannot be an automatic fallback.
+  Adopting the boundary change needs reviewed routing/dependency/migration work;
+  reverting must not reopen anonymous access. No new dependency is installed here.
+- Recovery, D-037/B-024/#60: supported restore must keep actor/operation/tombstone
+  identities but invalidate all issued credentials and remove the restored password
+  verifier until local owner recovery sets a new one. Keep the API auth-blocked
+  during restore/re-enrollment. This is a mandatory downstream restore contract,
+  not a deferred disclaimer. Automatic detection of an undeclared whole-database
+  rollback is not supplied here; supported restore tooling and real-data gates
+  must enforce the explicit workflow. Never treat a replayed old password as
+  acceptable recovery. DPAPI blobs are not portable backups of identity.
+- Languages, D-037/B-030/#61: IDs, routes and error codes remain locale independent;
+  localize display later. Version password normalization separately from domain
+  codecs. Initial UI may be English; supported languages/RTL remain post-MVP.
+- Agents, D-037/B-031/#62: `ActorContext` uses stable actor/credential kind rather
+  than assuming a browser username or OS account is every performer. CLI-kind
+  credentials still authenticate the human owner, not a separate agent principal
+  or delegated approval. Future agents need explicit enrollment/grants/attribution;
+  do not share owner credentials or add a privileged database path for them.
+
+## Verification and follow-up
+
+The [SP-004 acceptance cases](../spikes/SP-004-actor-authority.md#required-experimental-cases-full-case-acceptance-remains-outstanding)
+remain under #40/#49. A companion verification plan will map the proposed
+mechanisms to bounded slices and failure/evidence gates; all remain unexecuted.
+Approval of this ADR, ADR-103 disposition for native
+adoption and separately approved bounded implementation plans precede code changes.
+Existing R01–R05 evidence and hosted CI do not qualify the mechanisms above.
+
+## Primary design references
+
+These sources inform the proposal; no ASVS/NIST conformance is claimed.
+
+- [NIST password guidance](https://pages.nist.gov/800-63-4/sp800-63b/authenticators/):
+  length, normalization and password handling.
+- [OWASP password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+  and [RFC 9106](https://www.rfc-editor.org/rfc/rfc9106.html): Argon2id guidance;
+  the exact single-lane profile above is this proposal's choice.
+- [OWASP session management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
+  and [CSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html):
+  opaque sessions, lifecycle and browser request protections.
+- [OWASP TLS guidance](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html)
+  and [TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446): authenticated transport;
+  the local certificate deployment still needs evidence.
+- [Microsoft DPAPI](https://learn.microsoft.com/en-us/windows/win32/SecCrypto/example-c-program-using-cryptprotectdata):
+  per-user protection; no cross-machine recovery or same-account malware guarantee.
