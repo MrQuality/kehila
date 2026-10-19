@@ -4,7 +4,7 @@
 | --- | --- |
 | Status / outcome | Contract, serial baseline and bounded R04/R05 checks merged through PR #59; broader investigation incomplete |
 | Owner / assessor | Project maintainer; remaining mechanism decisions and result assessment are separate |
-| Created / last updated | 2026-10-08 / 2026-10-18 |
+| Created / last updated | 2026-10-08 / 2026-10-19 |
 | Tracking issue | [40](https://github.com/MrQuality/kehila/issues/40) |
 | Parent delivery issue | [#11](https://github.com/MrQuality/kehila/issues/11) |
 | Prior evidence | [SP-002](SP-002-postgresql-project-create.md) |
@@ -582,8 +582,19 @@ coverage; finishing this investigation does not close it.
 
 ## Next design slice: owner authentication and trusted caller identity
 
-**Status:** Design preparation under #40/#11, feeding #49 W2. Credential,
-session and internal-channel mechanisms remain open for maintainer review.
+**Status:** [ADR-105](../architecture/ADR-105-local-owner-authentication.md) and its
+[verification plan](../implementation/local-owner-authentication-verification.md)
+are Proposed under #40/#11, feeding #49 W2. The maintainer prefers a separate
+Kehila browser password. The single future Rust authority, credential/session
+policies and recovery mechanism still need explicit approval; no code, schema
+or authentication evidence is supplied by this design.
+
+The [PR #64 follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up)
+defines installation-before-actor takeover fencing, bounded password/pre-session
+admission and retryable but not guaranteed logout audit delivery. These proposed
+contracts and T01–T16 remain unexecuted; R01–R05 evidence is unchanged. Follow-up
+also defines capacity reclamation for completed logouts and reload-safe CSRF
+retrieval, without changing stable identity, revocation or existing read ordering.
 
 Prepare a bounded proposal for owner enrollment/login, browser sessions and
 CSRF/origin handling, authenticated CLI access, expiry/logout/recovery and
