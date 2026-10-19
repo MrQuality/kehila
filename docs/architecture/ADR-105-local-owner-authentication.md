@@ -38,6 +38,11 @@ Keep pure modules independent of runtime I/O. The current Go/Rust task prototype
 and its frozen evidence remain unchanged until a separately reviewed transition.
 No anonymous legacy route or direct search/worker listener may be exposed as an
 alternate supported path. This does not adopt ADR-103 or implement W3/W7.
+The supported profile must disable those legacy listeners/routes and reject a
+configuration that shares its authoritative dataset with the anonymous prototype.
+Acceptance must address the Go/Rust boundary in D-016/ADR-101 for future native
+routes explicitly, preserving their data/replay guarantees and historical evidence;
+any required product-record amendment accompanies acceptance rather than inference.
 
 Use one configured HTTPS origin on literal loopback, initially
 `https://127.0.0.1:<configured-port>`; bind only that address. Reject other Host,
@@ -57,8 +62,9 @@ Enforce one authority instance per installation with a dedicated PostgreSQL
 session advisory lock and a persistent, checked, non-wrapping runtime generation.
 Takeover increments that generation under the same actor fence used by commands.
 Every authoritative credential/permission snapshot checks the instance generation.
-Loss of the lock connection stops new admission; reacquisition requires a fresh
-runtime and new sessions. Old mutations can finish before takeover obtains the
+Observed loss or uncertain ownership of the lock connection stops new admission;
+reacquisition requires a fresh runtime and new sessions. Old mutations can finish
+before takeover obtains the
 actor fence; old snapshots have only SP-004's bounded read allowance. An old
 process cannot authorize against a snapshot after the takeover commit. Lock key,
 capability and startup/cleanup details require the schema/implementation review.
@@ -137,6 +143,8 @@ Origin on those routes. Rotate pre-session state at successful login and issue
 Return the session's CSRF value only through same-origin, no-store responses.
 Do not expose the session credential to JavaScript, URL, localStorage or logs.
 SameSite/Fetch Metadata are additional checks, not identity or CSRF substitutes.
+Parse all Cookie fields according to the negotiated HTTP version; reject repeated
+authentication-cookie names rather than selecting the first or last value.
 Serve no third-party code on the login page; use output encoding, no-sniff,
 same-origin resource policy and a CSP forbidding framing, objects and foreign
 form/script targets. HttpOnly does not contain an XSS that can act as the owner.
@@ -202,7 +210,7 @@ authority or undo a revocation/generation change. Registry locks span no awaits.
 | --- | --- |
 | Transport | 16 in-flight connections/requests; finite handshake/header deadlines; reject excess without an unbounded backlog |
 | Auth JSON | 4 KiB encoded; exact endpoint keys; decoded password ≤1,024 bytes; no compression |
-| Headers / target | 8 KiB aggregate headers; 2 KiB target; reject duplicate auth/cookie fields |
+| Headers / target | 8 KiB aggregate headers; 2 KiB target; reject duplicate Authorization/CSRF fields and authentication-cookie names |
 | Password verification | One 64-MiB Argon2 job, zero waiting jobs; five attempts/minute per installation, burst five; no IP-keyed unbounded map or permanent account lock |
 | Registry / pre-sessions | 64 active browser+CLI sessions, 32 pre-sessions; pre-session TTL five minutes; reject capacity excess, never silently evict live sessions |
 | Auth request | Two-second body deadline; five-second total work deadline including pool/hash wait; reject work whose dependencies cannot fit |
@@ -259,10 +267,9 @@ responses are no-store; diagnostics/audit contain IDs/reasons, never secrets.
 
 ## Verification and follow-up
 
-The [SP-004 acceptance cases](../spikes/SP-004-actor-authority.md#required-experimental-cases-full-case-acceptance-remains-outstanding)
-remain under #40/#49. A companion verification plan will map the proposed
-mechanisms to bounded slices and failure/evidence gates; all remain unexecuted.
-Approval of this ADR, ADR-103 disposition for native
+The [verification plan](../implementation/local-owner-authentication-verification.md)
+maps the proposed mechanisms to bounded slices and failure/evidence gates under
+#40/#49; all remain unexecuted. Approval of this ADR, ADR-103 disposition for native
 adoption and separately approved bounded implementation plans precede code changes.
 Existing R01–R05 evidence and hosted CI do not qualify the mechanisms above.
 

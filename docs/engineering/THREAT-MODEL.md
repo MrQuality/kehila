@@ -54,3 +54,20 @@ as ASVS evidence or production readiness. Tests must cover denied behavior as we
 as valid paths, and compromised-service recovery must not assume the index is
 authoritative. Security findings follow SECURITY.md; avoid publishing exploit or
 credential details in PRs or test logs.
+
+## Proposed owner-authentication boundary
+
+[ADR-105](../architecture/ADR-105-local-owner-authentication.md) proposes a separate
+owner password, one Rust authority for future native routes, HTTPS and bounded
+opaque browser/CLI sessions. It removes identity forwarding from that proposed
+path; the current Go/Rust prototype and gaps above remain unchanged. Acceptance
+and the [verification gates](../implementation/local-owner-authentication-verification.md)
+are pending, including certificate installation, restricted enrollment/recovery,
+password resource limits, CSRF, queued revocation, singleton takeover and restore
+re-enrollment. No mitigation in the table becomes implemented by this proposal.
+
+If accepted, OS/authority administrator compromise still permits credential reset
+or data access; encrypted per-user storage cannot contain malware controlling the
+same account. Throttle saturation can deny local login availability. Browser XSS
+can act with a session despite HttpOnly. Keep these residual risks and prove the
+specific controls rather than describing loopback or framework defaults as trust.

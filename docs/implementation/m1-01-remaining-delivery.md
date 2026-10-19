@@ -158,6 +158,13 @@ recovery dependencies, locale-independent identities/canonical data and future
 machine-caller/attribution needs. B-024/#60 broader DR, B-030/#61 languages and
 B-031/#62 agent execution remain post-MVP delivery; current real-data gates apply.
 
+[ADR-105](../architecture/ADR-105-local-owner-authentication.md) is now the Proposed
+authentication/boundary resolution, with a separate
+[unexecuted verification plan](local-owner-authentication-verification.md).
+Explicit ADR-105 approval and its dependency/transport/schema gates precede
+implementation; ADR-103 production adoption is still a separate decision.
+W2, stable allocation #41 and W3-W7 remain outstanding.
+
 Plan #41/SP-005's stable target allocation and
 response-loss reconciliation against the same actor/family/target/token scope.
 Use both contracts before finalizing W3 adapter interfaces. W3 still needs a

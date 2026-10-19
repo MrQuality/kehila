@@ -338,6 +338,14 @@ The next design review is [owner authentication and trusted caller identity](../
 Apply D-037's recovery, language and future agent considerations; B-031/#62 agent
 delivery remains post-MVP and does not expand the one-owner implementation scope.
 
+[Proposed ADR-105](../architecture/ADR-105-local-owner-authentication.md) and its
+[verification plan](../implementation/local-owner-authentication-verification.md)
+now supply that review artifact: separate owner password, one future Rust native
+authority, expiring browser/CLI sessions and actor-preserving recovery. The
+password experience is the maintainer's preference; architecture, provisional
+budgets, schema/capability changes and implementation remain unapproved. No new
+authentication case is marked passed by this design.
+
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 
 **Deliverable:** The agreed local identity/access model and enforceable permissions for configured operations, extended as resource and cost features arrive.
