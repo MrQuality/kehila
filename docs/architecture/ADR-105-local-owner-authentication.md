@@ -230,6 +230,38 @@ Individual logout/revocation marks the registry entry revoked while holding that
 actor fence and records an audit event. Revocation is monotonic; audit failure
 cannot resurrect an in-memory credential, and the operation reports failure.
 Retained references observe the same revocation flag, not a cloned active value.
+For current-session logout, retain bounded state `Revoked { audit_confirmed }`
+on that same entry until its original idle/absolute deadline, without renewal.
+Only the exact retiring bearer/cookie may retry its own logout; browser retries
+still require the retained CSRF secret and exact Origin. This exception grants
+no business, read, password-change or other-session management authority.
+Unknown, expired, superseded-generation or previous-runtime credentials return
+401; they cannot reconstruct a retired registry entry. Reclaim expired entries
+before session admission, with a scan bounded by the 64-entry registry. Pending
+audit state counts against that cap and cannot outlive its original deadline.
+
+Use one server-defined audit identity `(runtime_generation, public_session_id,
+logout)` with a unique SQL constraint and fixed non-secret attributes. Retries
+use the installation/actor lock order and check current generations; insert once
+or confirm the identical committed event, never duplicate it. Mismatched stored
+attributes are an integrity failure, not success. An uncertain SQL commit stays
+unconfirmed until that lookup/insert establishes its outcome. Never store the
+token, digest or CSRF secret in the audit record or business replay ledger.
+
+Return 200 only when revocation and the audit are confirmed, including repeated
+logout while that retained credential is eligible. Return 503 if local revocation
+occurred but the audit is failed/unconfirmed; clients must present this as signed
+out with audit unconfirmed, not as an active session. A client may retry only this
+logout or discard its credential. It must never retry a business request to test
+revocation. A subsequent 401 means no usable credential, not proof of an audit.
+Response loss after commit is handled by the same stable audit identity.
+
+This proposal deliberately permits a missing logout audit after client abandonment,
+expiry, generation change or process failure before confirmation. There is no
+durable retry queue or background reconciliation claim. Issuance, password change
+and recovery still require their own committed audit before success. Guaranteed
+logout-attempt auditing would require a separately reviewed durable protocol;
+this availability/audit trade-off must be reviewed before ADR acceptance.
 Logout success means later fence holders reject that credential. Password/global
 revocation advances the durable generation under the same fence. Already committed
 work remains committed; an uncertain response is not evidence of cancellation.
@@ -299,6 +331,10 @@ responses are no-store; diagnostics/audit contain IDs/reasons, never secrets.
   concentrates trust in the Rust authority and protected administrative tool.
   Password guessing, local throttling/availability, XSS, secret theft and OS/DB
   administrator compromise need their stated threat boundaries and tests.
+  Sustained local traffic can deny browser issuance or hashing; logout revokes
+  safely but its failed/unconfirmed audit may be lost under the declared lifecycle.
+  Neither separate rate buckets nor volatile retry state guarantees availability
+  or eventual audit delivery.
 - Performance: no password verification per business request; one bounded login
   worker, bounded registry and indexed PostgreSQL authority checks. Values above
   need measured supported-host evidence before adoption.

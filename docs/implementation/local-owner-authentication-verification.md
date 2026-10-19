@@ -17,6 +17,8 @@ on the provisional storage path. ADR-103 and ADR-105 remain independently Propos
   local administrative enrollment/recovery and restored-password invalidation.
 - [ ] Review HTTPS certificate trust/renewal UX and the provisional size, lifetime,
   hash-cost, registry, throttling and deadline values; do not call them measured.
+- [ ] Review residual local login/self-service denial and permitted loss of an
+  unconfirmed logout audit after abandonment, expiry or process failure.
 - [ ] Select and review dependencies and native capability/schema changes before
   code. Approval of the login preference does not approve any of these choices.
 
@@ -48,7 +50,7 @@ JSON shape and rejects duplicate/unknown fields; project codecs retain ADR-104.
 | Browser password login | Exact Origin, pre-session cookie, synchronizer header and `{password}`. Consume/rotate pre-session on success and issue a fresh browser-kind session. Failed attempts cannot fix a chosen session ID. |
 | CLI password login | Separate route, `{password}`, no Cookie/Origin/Fetch Metadata. The owner enters the password on the terminal; no arguments/environment/history. Return a CLI-kind bearer and store only that bearer in the protected per-user profile. |
 | Business reads / commands | Explicit browser-cookie or CLI-bearer adapter; reject mixed/wrong-kind/duplicate credentials. Browser state changes require current CSRF and exact Origin. Resolve authority from the server's stable actor binding and fresh SQL state. |
-| Current-session logout | Credential-specific route/mode; CSRF for browser. Mark that same registry entry revoked under the actor fence, with audit/failure semantics in ADR-105. Closing a browser is not authoritative logout. |
+| Current-session logout | Credential-specific route/mode; CSRF for browser, including restricted retries by the same revoked credential. 200 confirms revocation and one audit; 503 after local revocation means signed out with audit unconfirmed. 401 for an unknown/expired/superseded credential proves no audit outcome. Retained state never renews and only authorizes this same logout. Clients may retry it or discard credentials. Closing a browser is not authoritative logout. |
 | Password change / revoke other sessions | Current credential, browser CSRF where used, and current password proof; never a client actor assertion. Recheck verifier revision after the actor fence. Password change advances durable generation and requires new login. Public session IDs are management selectors, not credentials. |
 | Administrative enrollment / forgotten-password recovery | Local tool with separate provisioning/recovery capability, protected input, actor-preserving changes and explicit audit. No unauthenticated HTTP equivalent. |
 
@@ -83,6 +85,7 @@ integrity semantics separately; an unrelated failure cannot pass an auth oracle.
 | T11: restart / restore | Old browser/CLI/pre-session tokens fail after restart. Restore to a clean installation keeps stable owner/operation/tombstone identities, removes the restored password verifier, requires authorized fresh enrollment and exposes no authenticated data beforehand. Old passwords/tokens cannot regain access through supported restore. |
 | T12: role and secret boundaries | Restricted runtime cannot claim/change owner identity, use provisioning/recovery capability or bypass grants. Fault/redaction tests seed recognizable test secrets and prove that responses, telemetry, audit, operation fingerprints and retained artifacts exclude them. No live secrets in evidence. |
 | T13: pre-session saturation | Concurrent new allocations cannot exceed the shared bucket or 32 slots. Reuse preserves original expiry and does not charge issuance allowance; consume once on successful login. Reach exact expiry/reclamation boundaries and bound scans/limiter metadata. Under repeated allocation attempts, demonstrate both existing-browser reuse and 429 for denied new issuance; recovery after traffic stops requires bounded refill, not restart. Record residual denial under sustained traffic rather than claiming reaping fixes it. |
+| T14: logout audit lifecycle | Fail the audit after local revocation: business/read/management immediately deny and logout returns 503. Same-token/browser-CSRF retries can only finish that logout. Lose a successful response or simulate unknown SQL commit: the stable unique identity yields exactly one matching event and 200; conflicting attributes fail integrity checks. Committed retries return 200 while eligible. No retry/expiry/generation change/crash may resurrect the token or leak slots. Test bounded reclamation and explicit audit loss after abandoning pending state; no eventual-delivery claim. Restart invalidates all credentials, including pending logout retries. |
 
 Deliberately weaken specific guards in isolated fixtures and prove their intended
 oracle fails: cached pre-queue session validity, retained-reference revocation,
