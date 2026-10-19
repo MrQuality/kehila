@@ -163,6 +163,20 @@ login response permits another bounded login, not replay of a stored secret.
 
 Browser login uses a short-lived pre-session and server-held synchronizer token.
 Generate an independent 32-byte CSRF secret; do not reuse the session credential.
+Reuse a presented live pre-session for the same browser without extending its
+original five-minute deadline. Reclaim expired/consumed entries before allocating;
+use a bounded scan of at most 32 slots, not an unbounded expiry structure. New
+allocations share an installation-wide five/minute token bucket, burst two,
+separate from password login; reuse does not consume an allocation token. With
+the proposed five-minute TTL this limits new live allocations to at most 27 in
+one lifetime, below the 32-slot ceiling. Check both limits atomically; reject
+excess with 429, without evicting live entries, extending expiry or allocating
+per-client limiter state. Successful login consumes the pre-session only once.
+Origin/browser checks constrain browser attacks but cannot authenticate another
+local process. Repeated allocation traffic can exhaust the issuance allowance
+and keep a new browser from signing in; this is an explicit residual local
+denial-of-service risk, not an availability guarantee. Measure real login/retry
+behavior under saturation; no supported result follows from the arithmetic alone.
 Require exact configured Origin, JSON content type and the CSRF header on login
 and every browser state change, including logout. Reject absent/null/foreign
 Origin on those routes. Rotate pre-session state at successful login and issue
@@ -241,6 +255,7 @@ authority or undo a revocation/generation change. Registry locks span no awaits.
 | Password verification | One 64-MiB Argon2 job, zero waiting jobs; five attempts/minute per installation, burst five; no IP-keyed unbounded map or permanent account lock |
 | Authenticated management | Separate installation-wide five attempts/minute, burst five, for password change/revoke-other requests; login attempts cannot consume this bucket |
 | Registry / pre-sessions | 64 active browser+CLI sessions, 32 pre-sessions; pre-session TTL five minutes; reject capacity excess, never silently evict live sessions |
+| New pre-session allocations | Five/minute per installation, burst two; reuse without renewal; reclaim expired/consumed slots before atomic admission |
 | Auth request | Two-second body deadline; five-second total work deadline including pool/hash wait; reject work whose dependencies cannot fit |
 | Domain/read/search work | Retain declared SP-004/command-specific bounds; no larger budget or codec ceiling follows from this draft |
 
