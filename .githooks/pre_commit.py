@@ -92,7 +92,7 @@ def main():
             command.append("--pure")
         # Build cache is outside the snapshot; source still comes only from index.
         environment = os.environ.copy()
-        environment["CARGO_TARGET_DIR"] = str(ROOT / "target")
+        environment.setdefault("CARGO_TARGET_DIR", str(ROOT / "target"))
         try:
             # The staged verifier owns the 600s work deadline and bounded
             # teardown. Killing that owner here would bypass resource cleanup.

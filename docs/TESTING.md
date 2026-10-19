@@ -153,6 +153,11 @@ rejects machine-ownership settings instead of silently ignoring them. CI selects
 same lifecycle for both shared and staged verification. The staged source
 export, pure/full classification and failure checks remain required.
 
+The commit hook preserves an explicit `CARGO_TARGET_DIR`; use an absolute path
+to keep build artifacts in a caller-selected directory outside the checkout.
+Without that setting it retains the checkout's `target` cache. Either choice
+still verifies only the isolated staged source snapshot.
+
 The shared host ports must be free. Existing development containers are neither
 borrowed nor stopped by the owned mode. To keep a manually managed disposable
 development stack running, use these commands instead:

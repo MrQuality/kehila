@@ -67,6 +67,28 @@ class GitGateTests(unittest.TestCase):
         self.assertIn("full-suite-selected", result.stdout)
         self.assertIn("VERIFICATION_FAILED", result.stderr)
 
+    def test_build_cache_respects_external_directory_and_preserves_default(self):
+        with tempfile.TemporaryDirectory(prefix="kehila-external-cache-") as external:
+            self.write("scripts/verify.py", """from pathlib import Path
+import os
+cache = Path(os.environ['CARGO_TARGET_DIR'])
+cache.mkdir(parents=True, exist_ok=True)
+(cache / 'verified-cache').write_text('built from staged source')
+""")
+            self.git("add", "scripts/verify.py")
+            for configured in (Path(external), None):
+                with self.subTest(external=configured is not None):
+                    if configured is None:
+                        self.environment.pop("CARGO_TARGET_DIR", None)
+                    else:
+                        self.environment["CARGO_TARGET_DIR"] = str(configured)
+                    result = self.hook()
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    cache = configured if configured is not None else self.root / "target"
+                    self.assertEqual((cache / "verified-cache").read_text(), "built from staged source")
+                    if configured is not None:
+                        self.assertFalse((self.root / "target").exists())
+
     def test_verifier_receives_the_deadline_and_can_clean_up_after_work_timeout(self):
         self.write('scripts/verify.py', '''import subprocess, sys
 assert sys.argv[sys.argv.index('--timeout') + 1] == '600'
