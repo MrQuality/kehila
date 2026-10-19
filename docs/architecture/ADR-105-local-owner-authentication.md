@@ -441,7 +441,7 @@ These are open design/evidence boundaries, not demonstrated runtime exploits:
 | Cross-replica credentials and budgets | The local registry, restart logout, singleton and per-process limits do not supply replicated continuity or cluster-wide abuse/resource control. B-032/#65 must replace these profile mechanisms with a reviewed, failure-tested contract. |
 | Actor-wide serialization | SP-004's actor fence serializes mutations/replay for the same owner, even across unrelated projects; more pods alone cannot remove that contention. B-032/#65 and B-025 require measurement and a correctness-preserving coordination decision before scale claims. The local protocol stays unchanged. |
 | Remote exposure and identity scope | Loopback HTTPS, one owner/password and a local administrative tool establish no trusted ingress/peer model, remote administration, MFA, multi-user or tenancy support. #65/B-020/B-029 must decide applicability and controls before remote/replicated support; #40 still qualifies the local profile. |
-| Unqualified local security mechanisms | Certificate trust/renewal, dependency choices, schema/function privileges, enrollment/recovery, secret storage, CSRF and actual revocation remain unexecuted A0-A5/T01-T16 gates under #40/#49. The existing unauthenticated prototype is not upgraded by this ADR. |
+| Unqualified local security mechanisms | AUTH-001 records a host-only certificate/transport subset. Supported installation, auth dependency choices, schema/function privileges, enrollment/recovery, secret storage, CSRF and actual revocation retain A0-A5/T01-T16 gates under #40/#49. The existing unauthenticated prototype is not upgraded by this ADR. |
 | Availability, audit and recovery limits | Local traffic can deny login/self-service; failed logout audits may be lost. OS/admin compromise is outside password containment; undeclared whole-database rollback is not detected. Supported restore invalidation still needs proof. #40/#49 own local qualification; #60/#65 own broader recovery, audit and shared-backend availability decisions. Application replication alone does not qualify PostgreSQL, session infrastructure or search failover. |
 
 MVP checks cannot close #65 or qualify these remote/replicated properties. No
@@ -451,7 +451,9 @@ remain visible during implementation and release review.
 
 The [verification plan](../implementation/local-owner-authentication-verification.md)
 maps the proposed mechanisms to bounded slices and failure/evidence gates under
-#40/#49; all remain unexecuted. A0 investigation is authorized by the acceptance above; ADR-103 disposition for
+#40/#49. The [AUTH-001 experiment](../../experiments/AUTH-001/README.md) records
+transport-only observations; full authentication qualification remains outstanding.
+A0 investigation is authorized by the acceptance above; ADR-103 disposition for
 native adoption and separately approved A1-A5 implementation plans remain required.
 Existing R01–R05 evidence and hosted CI do not qualify the mechanisms above.
 

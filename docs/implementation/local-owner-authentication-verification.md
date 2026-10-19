@@ -1,6 +1,6 @@
 # Local-owner authentication: proposed verification and delivery plan
 
-Status: A0 investigation authorized; all verification remains unexecuted. Owner: project maintainer. Recorded: 2026-10-19.
+Status: A0 host transport subset recorded; authentication verification remains unexecuted. Owner: project maintainer. Recorded: 2026-10-19.
 Related: [ADR-105](../architecture/ADR-105-local-owner-authentication.md),
 [#40](https://github.com/MrQuality/kehila/issues/40),
 [#49 W2](https://github.com/MrQuality/kehila/issues/49), B-007/B-020/B-022.
@@ -27,8 +27,9 @@ adoption and supplies no authentication evidence.
 - [ ] Preserve #65's replicated-profile compatibility constraints.
 
 The [bounded A0 investigation](local-owner-authentication-a0.md) records scope,
-preliminary dependency/advisory reconnaissance, permission boundaries and exact
-transport/browser evidence gates; no native/browser execution has started.
+dependency/advisory review, permission boundaries and the observed
+[AUTH-001 host transport/browser subset](../../experiments/AUTH-001/README.md).
+No full T01-T16 authentication case is qualified by that diagnostic probe.
 
 ## Planned slices and gates
 
@@ -143,7 +144,7 @@ CSRF value, with same-origin/custom-header and credential checks; browser proof
 remains required. Neither refinement supplies implementation evidence.
 
 ADR-105 is now Accepted for local MVP, including the declared local availability
-and audit-loss trade-offs; these review refinements remain unexecuted contracts. All T01–T16 cases remain unexecuted;
+and audit-loss trade-offs; these review refinements remain unexecuted contracts. No complete T01–T16 case is qualified; AUTH-001 records only T03-related transport observations;
 #40/#49 stay open and no runtime/schema/dependency change follows from these edits.
 
 ## D-037 follow-through

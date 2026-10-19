@@ -588,7 +588,9 @@ coverage; finishing this investigation does not close it.
 record the accepted local-MVP direction under #40/#11, feeding #49 W2. The
 maintainer explicitly accepted ADR-105 and authorized A0 on 2026-10-19;
 [approval record](https://github.com/MrQuality/kehila/issues/40#issuecomment-6262900825).
-No code, schema or authentication evidence is supplied by acceptance. ADR-103
+Acceptance itself supplies no code, schema or authentication evidence.
+[AUTH-001](../../experiments/AUTH-001/README.md) separately records the A0
+Windows transport/browser subset and isolated dependency graph. ADR-103
 and separately scoped A1-A5 implementation retain their own gates.
 The single-active-runtime mechanism is a local-MVP profile only;
 [B-032/#65](../product/backlog.md#b-032) owns final replicated service/session
@@ -598,7 +600,8 @@ measurement; replica count does not imply concurrent mutations for one actor.
 The [PR #64 follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up)
 defines installation-before-actor takeover fencing, bounded password/pre-session
 admission and retryable but not guaranteed logout audit delivery. These proposed
-contracts and T01–T16 remain unexecuted; R01–R05 evidence is unchanged. Follow-up
+contracts and full T01–T16 qualification remain outstanding; AUTH-001 supplies
+transport-only observations and R01–R05 evidence is unchanged. Follow-up
 also defines capacity reclamation for completed logouts and reload-safe CSRF
 retrieval, without changing stable identity, revocation or existing read ordering.
 

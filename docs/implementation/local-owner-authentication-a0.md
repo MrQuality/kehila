@@ -1,6 +1,6 @@
 # A0 - Local HTTPS and dependency investigation
 
-Status: Authorized investigation; native/browser execution not started.
+Status: Host Windows transport/browser subset observed; broader A0 gates remain open.
 Owner: project maintainer. Recorded: 2026-10-19. Related #40/#49 W2;
 [Accepted local-MVP ADR-105](../architecture/ADR-105-local-owner-authentication.md),
 [approval](https://github.com/MrQuality/kehila/issues/40#issuecomment-6262900825),
@@ -26,8 +26,8 @@ properties demonstrated by a transport-only response.
 
 The existing lockfile contains rustls 0.21.12 / tokio-rustls 0.24.1 transitively,
 ring 0.17.14, Tokio 1.53.1, Axum 0.8.9 and Hyper 1.11.1. Their presence alone does
-not select them as new direct security dependencies. No manifest/lockfile has
-changed in this investigation. Production password/NFC/randomness/DPAPI dependencies
+not select them as production security dependencies. The isolated experiment has
+its own manifest/lockfile; the worker graph is unchanged. Production password/NFC/randomness/DPAPI dependencies
 remain review work; do not install an auth framework to prove HTTPS.
 
 | Candidate / source checked 2026-10-19 | Initial assessment and adoption condition |
@@ -62,13 +62,29 @@ claim an unavailable complete-graph scan was clean. Review every resolved adviso
 not only this example, and keep the existing worker unchanged unless a separately
 scoped fix is justified. No TLS/key/session material may enter evidence logs.
 
+## Remaining authentication dependency candidates
+
+These are API-level reconnaissance on 2026-10-19, not added dependencies or
+production selections. Their resolved graphs, actual license texts, advisories,
+maintenance and target behavior need review before the relevant A2/A3 adoption.
+They do not block review of the isolated transport result.
+
+| Boundary / primary source | Assessment and required adoption evidence |
+| --- | --- |
+| [RustCrypto argon2 0.6.0](https://docs.rs/argon2/0.6.0/argon2/) | Candidate for explicit Argon2id/v19 and PHC encoding. Upstream verification uses parameters from the parsed hash, so parsing a stored verifier is not admission: enforce approved parameter/encoded bounds before allocating or scheduling hashing. Measure the complete verify-plus-rehash operation under the one-job permit; do not use library defaults as the ADR policy. |
+| [unicode-normalization 0.1.26](https://docs.rs/unicode-normalization/0.1.26/unicode_normalization/) | Candidate for NFC iterators with a recorded Unicode data version. Bound raw input before normalization and enforce normalized bounds afterward. Stream-safe normalization can insert joiners and is not a substitute for the accepted NFC password policy. Known-answer and version-upgrade tests remain required. |
+| [getrandom 0.4.3](https://docs.rs/getrandom/0.4.3/getrandom/) | Candidate for system randomness. Retain failure as an error with no timestamp, deterministic or weak fallback. Review the actual selected Windows/Linux backend and feature graph before generating real credentials; an older transitive instance in the TLS graph is not a new direct selection. |
+| [sha2 0.11.1](https://docs.rs/sha2/0.11.1/sha2/) and [subtle 2.6.1](https://docs.rs/subtle/2.6.1/subtle/trait.ConstantTimeEq.html) | Candidates for token fingerprints and fixed-size constant-time comparisons. A digest does not authenticate a caller or establish actor/tenant authority. Credential kind, format, expiry and routing remain explicit checks; ordinary equality on secret values is not an equivalent comparison contract. |
+| [zeroize 1.9.1](https://docs.rs/zeroize/1.9.1/zeroize/) | Candidate for owned secret buffers; already present transitively in the probe. Review copies, string formatting, allocator ownership, cancellation and FFI buffers. A dependency or drop wrapper alone cannot prove that all secret copies disappear. No real credential-handling claim is made by this experiment. |
+| [windows-dpapi 0.2.0](https://docs.rs/windows-dpapi/0.2.0/windows_dpapi/) / protected files | The documented wrapper exposes User/Machine scope through a safe API, making it a candidate rather than justification for raw application FFI. User scope, UI suppression, returned-buffer ownership, error handling, maintenance/license review and actual target tests remain required. DPAPI alone does not implement owner-only file creation, no-redirection semantics or atomic replacement. No storage wrapper is selected yet; #40 owns this gate before A3. |
+
 ## Execution and evidence gates
 
 1. Resolve a disposable probe graph only after dependency provenance/features and
-   actual license texts/notices are checked; lock exact inputs. No dependency
-   download/compilation has occurred yet. Qualify with real certificate validation,
+   actual license texts/notices are checked; lock exact inputs. Dependency
+   download/compilation is recorded in the isolated experiment. Qualify with real certificate validation,
    never a permissive verifier, ignore-certificate switch or browser warning bypass.
-2. Generate unique fixture roots/leaves in an owned ignored directory with restricted
+2. Generate unique fixture roots/leaves outside the checkout with restricted
    key access. Before trust changes, show the root's identity/fingerprint, exact
    per-user store/profile, privilege scope and cleanup command for separate approval.
    Preserve existing trust material; no machine-wide root installation by default.
@@ -92,9 +108,21 @@ changes always retain their separate permission gate, even after memory approval
 
 ## Current result and next action
 
-Architecture acceptance and read-only dependency reconnaissance are complete.
-Transport, certificate trust/renewal, graph/license/advisory qualification and all
-A0 execution observations remain pending. Memory-heavy work has been requested;
-trust-store changes have not been requested or performed. Prepare the isolated
-probe only with the reviewed graph, then execute after permission. Stop before
-claiming support if secure installation/renewal/removal cannot be demonstrated.
+The [standalone AUTH-001 probe](../../experiments/AUTH-001/README.md) records the
+observed Windows subset: 17 unit/transport tests, six actual headless Chrome
+certificate cases, missing-file startup rejection, bounded resource/shutdown
+checks and a Host-admission mutation. Temporary user trust and TLS private keys
+were removed after the browser checks. No certificate-ignore mode was used.
+
+The [locked dependency review](../../experiments/AUTH-001/DEPENDENCIES.md) covers
+85 registry packages, actual selected license texts and retained notices. The
+recorded OSV query returned no findings for those package/version pairs; it is
+not a source/reachability audit or qualification of the existing worker. The
+production worker manifest and lockfile are unchanged. The standalone Linux
+CI check has been added; its actual run must pass before recording Linux evidence.
+
+This does not complete all A0 gates. Authentication-library adoption, protected
+storage/DPAPI, supported installation, browser cookie/bootstrap behavior and the
+Podman/platform profile remain unqualified. Next review those candidates and the
+bounded A1 schema/capability plan before authorizing later implementation. Do not
+infer authentication support from a closed transport diagnostic response.

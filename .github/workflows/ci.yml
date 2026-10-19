@@ -48,6 +48,14 @@ jobs:
       - name: Lint Rust workspace
         if: steps.scope.outputs.scope != 'docs'
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Check standalone A0 transport probe
+        if: steps.scope.outputs.scope != 'docs'
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/kehila-a0-target
+        run: |
+          cargo fmt --manifest-path experiments/AUTH-001/Cargo.toml --all --check
+          cargo clippy --manifest-path experiments/AUTH-001/Cargo.toml --locked --all-targets -- -D warnings
+          cargo test --manifest-path experiments/AUTH-001/Cargo.toml --locked --all-targets -- --test-threads=1
       - name: Prepare disposable host
         if: steps.scope.outputs.scope != 'docs'
         run: python scripts/ci_prepare.py

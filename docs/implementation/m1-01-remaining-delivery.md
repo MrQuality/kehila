@@ -160,9 +160,11 @@ B-031/#62 agent execution remain post-MVP delivery; current real-data gates appl
 
 [ADR-105](../architecture/ADR-105-local-owner-authentication.md) is now the Accepted local-MVP
 authentication/boundary resolution, with a separate
-[unexecuted verification plan](local-owner-authentication-verification.md).
-A0 investigation was explicitly authorized on 2026-10-19; dependency/transport/schema
-evidence and separately bounded A1-A5 implementation remain gated. ADR-103
+[verification plan](local-owner-authentication-verification.md).
+A0 investigation was explicitly authorized on 2026-10-19;
+[AUTH-001](../../experiments/AUTH-001/README.md) records the Windows host
+transport/browser subset. Remaining A0 and schema evidence plus separately
+bounded A1-A5 implementation remain gated. ADR-103
 production adoption is still a separate decision.
 W2, stable allocation #41 and W3-W7 remain outstanding.
 ADR-105's singleton and process-local sessions are explicitly local-MVP-only;
