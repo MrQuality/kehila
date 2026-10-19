@@ -158,11 +158,12 @@ recovery dependencies, locale-independent identities/canonical data and future
 machine-caller/attribution needs. B-024/#60 broader DR, B-030/#61 languages and
 B-031/#62 agent execution remain post-MVP delivery; current real-data gates apply.
 
-[ADR-105](../architecture/ADR-105-local-owner-authentication.md) is now the Proposed
+[ADR-105](../architecture/ADR-105-local-owner-authentication.md) is now the Accepted local-MVP
 authentication/boundary resolution, with a separate
 [unexecuted verification plan](local-owner-authentication-verification.md).
-Explicit ADR-105 approval and its dependency/transport/schema gates precede
-implementation; ADR-103 production adoption is still a separate decision.
+A0 investigation was explicitly authorized on 2026-10-19; dependency/transport/schema
+evidence and separately bounded A1-A5 implementation remain gated. ADR-103
+production adoption is still a separate decision.
 W2, stable allocation #41 and W3-W7 remain outstanding.
 ADR-105's singleton and process-local sessions are explicitly local-MVP-only;
 [B-032/#65](../product/backlog.md#b-032) owns replicated deployment and profile

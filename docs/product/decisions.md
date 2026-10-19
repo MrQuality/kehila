@@ -128,6 +128,15 @@ Baseline: 2026-09-23. This record explains the choices behind the [requirements]
 
 **Boundary:** Authentication, startup policy, broader runtime support, collection lifecycle, schema evolution, deletion, WAL retention, backup/restore, poison-event recovery, and cross-document consistency remain open work. Single-task version checks and event delivery do not establish consistent reservation releases or cost adjustments. References: [B-002](backlog.md#b-002), [B-005](backlog.md#b-005), [B-007](backlog.md#b-007), [Q-001](open-questions.md#q-001), [Q-002](open-questions.md#q-002), [Q-019](open-questions.md#q-019), [Q-020](open-questions.md#q-020).
 
+**Native-path boundary amendment, 2026-10-19:** The maintainer explicitly
+[accepted ADR-105 for the local MVP](https://github.com/MrQuality/kehila/issues/40#issuecomment-6262900825). New native routes
+consolidate authentication, API/domain authority and protected search mediation
+in Rust; this replaces the Go-to-Rust identity/transport boundary for that path,
+without changing D-016/D-017 save/replay/projection guarantees or rewriting
+historical evidence. Single-active deployment is local-MVP-only; B-032/#65 owns
+replicated deployment. A0 investigation is authorized; later implementation,
+ADR-103 adoption and qualification keep their separate gates.
+
 <a id="d-017"></a>
 ## D-017 — Bound the first local operation and runtime policies
 

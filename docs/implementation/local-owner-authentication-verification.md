@@ -1,33 +1,30 @@
 # Local-owner authentication: proposed verification and delivery plan
 
-Status: Proposed; unexecuted. Owner: project maintainer. Recorded: 2026-10-19.
+Status: A0 investigation authorized; all verification remains unexecuted. Owner: project maintainer. Recorded: 2026-10-19.
 Related: [ADR-105](../architecture/ADR-105-local-owner-authentication.md),
 [#40](https://github.com/MrQuality/kehila/issues/40),
 [#49 W2](https://github.com/MrQuality/kehila/issues/49), B-007/B-020/B-022.
 
 This plan makes the proposed password/authority boundary reviewable. It supplies
 no new authentication evidence. The existing worker remains unauthenticated and
-on the provisional storage path. ADR-103 and ADR-105 remain independently Proposed.
+on the provisional storage path. ADR-105 is Accepted for local MVP; ADR-103 remains independently Proposed.
 All A0-A5/T01-T16 work here qualifies the proposed local-MVP profile only. Its
 single active runtime and volatile session state are not a replicated deployment
 design. [B-032/#65](https://github.com/MrQuality/kehila/issues/65) owns the required
 post-MVP replicated profile and migration; no cluster experiment is authorized.
 
-## Review choices before implementation
+## Acceptance record and remaining implementation gates
 
-- [ ] Approve or amend consolidating the future native API/authentication/domain
-  authority in Rust; retain Go + authenticated transport as the explicit alternative.
-- [ ] Approve the separate-password profile, restart reauthentication, CLI login,
-  local administrative enrollment/recovery and restored-password invalidation.
-- [ ] Review HTTPS certificate trust/renewal UX and the provisional size, lifetime,
-  hash-cost, registry, throttling and deadline values; do not call them measured.
-- [ ] Review residual local login/self-service denial and permitted loss of an
-  unconfirmed logout audit after abandonment, expiry or process failure.
-- [ ] Select and review dependencies and native capability/schema changes before
-  code. Approval of the login preference does not approve any of these choices.
-- [ ] Confirm the local-MVP-only scope of the singleton, session/restart and
-  transport/budget choices. Preserve #65's cross-replica compatibility constraints;
-  conditional acceptance of the MVP restriction is not ADR acceptance.
+[Explicit approval, 2026-10-19](https://github.com/MrQuality/kehila/issues/40#issuecomment-6262900825) accepts ADR-105 for the
+local MVP and authorizes A0, including restart logout and documented local
+availability/audit-loss trade-offs. It accepts no replicated mechanism or ADR-103
+adoption and supplies no authentication evidence.
+
+- [ ] Complete bounded A0 dependency/transport proof before adopting runtime choices.
+- [ ] Measure provisional resource/lifetime/hash/deadline settings before support.
+- [ ] Review schema/capabilities and separately bounded A1-A5 implementation plans.
+- [ ] Obtain separate permission before heavy work or certificate trust-store changes.
+- [ ] Preserve #65's replicated-profile compatibility constraints.
 
 ## Proposed slices and gates
 
@@ -141,8 +138,8 @@ exists. CSRF retrieval is an explicit read-only exception to requiring an old
 CSRF value, with same-origin/custom-header and credential checks; browser proof
 remains required. Neither refinement supplies implementation evidence.
 
-ADR-105 stays Proposed. In particular, the local availability and audit-loss
-trade-offs require review before acceptance. All T01–T16 cases remain unexecuted;
+ADR-105 is now Accepted for local MVP, including the declared local availability
+and audit-loss trade-offs; these review refinements remain unexecuted contracts. All T01–T16 cases remain unexecuted;
 #40/#49 stay open and no runtime/schema/dependency change follows from these edits.
 
 ## D-037 follow-through

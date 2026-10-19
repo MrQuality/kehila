@@ -56,7 +56,7 @@ The maintainer's 2026-10-19 deployment clarification is tracked separately in
 [B-032](#b-032) / [#65](https://github.com/MrQuality/kehila/issues/65): single active
 authority is a local-MVP restriction only; the final replicated profile requires
 its own design and evidence. This adds no cluster implementation to MVP and does
-not accept ADR-105 or any distributed mechanism.
+not select any distributed mechanism; ADR-105 was subsequently accepted for local MVP.
 
 ## Engineering maintenance
 
@@ -344,20 +344,21 @@ The next design review is [owner authentication and trusted caller identity](../
 Apply D-037's recovery, language and future agent considerations; B-031/#62 agent
 delivery remains post-MVP and does not expand the one-owner implementation scope.
 
-[Proposed ADR-105](../architecture/ADR-105-local-owner-authentication.md) and its
+[Accepted ADR-105](../architecture/ADR-105-local-owner-authentication.md) and its
 [verification plan](../implementation/local-owner-authentication-verification.md)
 include the [PR #64 review follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up):
 takeover fencing, composite password admission, pre-session saturation and logout
 audit lifecycle, completed-logout capacity reclamation and browser-reload CSRF
-retrieval. The explicit availability/audit-loss trade-offs remain Proposed.
+retrieval. The declared availability/audit-loss trade-offs are included in local-MVP acceptance.
 They cover a separate owner password, one future Rust native
 authority, expiring browser/CLI sessions and actor-preserving recovery. That
 authority is a logical service; the singleton and volatile-session mechanisms
 are local-MVP-only. [B-032/#65](#b-032) retains replicated operation, secure remote
 deployment and migration; #40/#49 retain local qualification.
-The password experience is the maintainer's preference; architecture, provisional
-budgets, schema/capability changes and implementation remain unapproved. No new
-authentication case is marked passed by this design.
+The maintainer explicitly accepted ADR-105 for local MVP and authorized A0 on
+2026-10-19; [approval record](https://github.com/MrQuality/kehila/issues/40#issuecomment-6262900825).
+Provisional budgets require measurement; schema/capability adoption and A1-A5
+implementation retain separate gates. No authentication case is marked passed.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 
@@ -754,7 +755,7 @@ related B-029 enterprise applicability and B-031/#62 machine callers.
 **Direction:** A Rust authority service may have many active replicas. A single
 active instance, volatile sessions/restart logout and literal-loopback transport
 are local-MVP choices only, not the permanent deployment architecture. ADR-105
-remains Proposed; no implementation or distributed mechanism is approved here.
+is Accepted for local MVP only; no replicated implementation or mechanism is approved.
 **Design consideration now:** Preserve stable actor/operation/replay/tombstone
 identities and authorization independently of credential storage and pod routing.
 Keep the local singleton until a reviewed replacement protocol is qualified;

@@ -38,23 +38,17 @@ not establish LAN access, authentication, Linux CI, or supported deployment poli
 
 **Blocks:** [B-002](backlog.md#b-002), [B-005](backlog.md#b-005), [B-007](backlog.md#b-007), [B-018](backlog.md#b-018).
 
-**Proposed resolution, 2026-10-19:** The maintainer prefers a separate Kehila
-browser password. [ADR-105](../architecture/ADR-105-local-owner-authentication.md)
-proposes credential handling, HTTPS, browser/CLI sessions and consolidating the
-future native authority in Rust. These mechanisms remain Proposed; no runtime or
-supported-host qualification follows from the preference. The
-[verification plan](../implementation/local-owner-authentication-verification.md)
-retains explicit approval, certificate/dependency and actual negative/native gates.
-Its [review follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up)
-also makes residual local denial and unconfirmed logout-audit loss explicit
-acceptance choices; neither is silently treated as resolved implementation.
-Completed logout state is reclaimable for new-login capacity, and browser reload
-has an explicit CSRF retrieval contract; both still require their planned evidence.
-The single active runtime, volatile sessions and loopback transport are now
-explicitly local-MVP-only. [B-032/#65](backlog.md#b-032) owns the final replicated
-profile, remote trust/identity decisions and migration; Kubernetes support remains
-outside current MVP qualification. The maintainer's conditional willingness to
-accept a singleton for MVP does not accept ADR-105 or a final deployment mechanism.
+**Architecture accepted, 2026-10-19:** The maintainer explicitly accepted
+[ADR-105](../architecture/ADR-105-local-owner-authentication.md) for local MVP and
+[authorized A0](https://github.com/MrQuality/kehila/issues/40#issuecomment-6262900825).
+This selects the separate owner password, Rust authority boundary and declared
+session/recovery/availability/audit trade-offs; it supplies no security evidence.
+The [verification plan](../implementation/local-owner-authentication-verification.md)
+retains dependency/certificate proof, provisional-limit measurement and separately
+reviewed A1-A5 work. Heavy execution and trust-store changes need separate permission.
+The singleton, volatile sessions and loopback profile are local-MVP-only;
+[B-032/#65](backlog.md#b-032) owns replicated deployment and migration. This question
+retains supported-host/operating qualification gaps; ADR-103 remains Proposed.
 
 <a id="q-003"></a>
 ## Q-003 — Resource units and availability calendars
