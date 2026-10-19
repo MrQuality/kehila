@@ -26,7 +26,11 @@ adoption and supplies no authentication evidence.
 - [ ] Obtain separate permission before heavy work or certificate trust-store changes.
 - [ ] Preserve #65's replicated-profile compatibility constraints.
 
-## Proposed slices and gates
+The [bounded A0 investigation](local-owner-authentication-a0.md) records scope,
+preliminary dependency/advisory reconnaissance, permission boundaries and exact
+transport/browser evidence gates; no native/browser execution has started.
+
+## Planned slices and gates
 
 | Slice | Boundary and exit evidence |
 | --- | --- |

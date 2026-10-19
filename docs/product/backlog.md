@@ -357,6 +357,8 @@ are local-MVP-only. [B-032/#65](#b-032) retains replicated operation, secure rem
 deployment and migration; #40/#49 retain local qualification.
 The maintainer explicitly accepted ADR-105 for local MVP and authorized A0 on
 2026-10-19; [approval record](https://github.com/MrQuality/kehila/issues/40#issuecomment-6262900825).
+The [bounded A0 investigation](../implementation/local-owner-authentication-a0.md)
+records initial TLS/dependency reconnaissance and unexecuted transport proof.
 Provisional budgets require measurement; schema/capability adoption and A1-A5
 implementation retain separate gates. No authentication case is marked passed.
 
