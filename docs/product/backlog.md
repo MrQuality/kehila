@@ -371,6 +371,11 @@ The maintainer agreed on 2026-10-20 to the
 disposable private CA, normal validation, TLS 1.3 and a bounded initial certificate
 profile. Zero certificate fees are a project constraint. The remainder of the
 plan and execution/trust gates retain their existing status; no new evidence.
+The [Windows storage research](../implementation/windows-server-key-storage-research.md)
+compares both models and source-level library gaps. Its conditional ACL-only
+disposable-key recommendation is Proposed; next resolve protected creation,
+same-object validation and replacement through a bounded safe-adapter feasibility
+proposal. CLI DPAPI and actual platform evidence remain required under #40/#49.
 Provisional budgets require measurement; schema/capability adoption and A1-A5
 implementation retain separate gates. No authentication case is marked passed.
 

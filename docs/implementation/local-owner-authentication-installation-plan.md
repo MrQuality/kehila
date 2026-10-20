@@ -135,6 +135,12 @@ erases every storage copy or that uninstall invalidates an exported key.
 
 ## Protected storage contracts to review
 
+The [Windows storage research](windows-server-key-storage-research.md) compares
+both models and records exact [candidate source/adoption gaps](windows-server-key-storage-candidates.md).
+Its conditional ACL-only disposable-key recommendation remains Proposed; it does
+not change CLI DPAPI requirements. A complete safe file adapter is not yet
+qualified, so neither a storage model nor a dependency is selected here.
+
 Keep TLS server keys and CLI bearer files as distinct typed records with separate
 access rules and lifecycles. Do not persist a password. Do not reuse a TLS private
 key as a session secret or a CLI bearer as an installation identity.

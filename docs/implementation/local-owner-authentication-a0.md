@@ -76,7 +76,7 @@ They do not block review of the isolated transport result.
 | [getrandom 0.4.3](https://docs.rs/getrandom/0.4.3/getrandom/) | Candidate for system randomness. Retain failure as an error with no timestamp, deterministic or weak fallback. Review the actual selected Windows/Linux backend and feature graph before generating real credentials; an older transitive instance in the TLS graph is not a new direct selection. |
 | [sha2 0.11.1](https://docs.rs/sha2/0.11.1/sha2/) and [subtle 2.6.1](https://docs.rs/subtle/2.6.1/subtle/trait.ConstantTimeEq.html) | Candidates for token fingerprints and fixed-size constant-time comparisons. A digest does not authenticate a caller or establish actor/tenant authority. Credential kind, format, expiry and routing remain explicit checks; ordinary equality on secret values is not an equivalent comparison contract. |
 | [zeroize 1.9.1](https://docs.rs/zeroize/1.9.1/zeroize/) | Candidate for owned secret buffers; already present transitively in the probe. Review copies, string formatting, allocator ownership, cancellation and FFI buffers. A dependency or drop wrapper alone cannot prove that all secret copies disappear. No real credential-handling claim is made by this experiment. |
-| [windows-dpapi 0.2.0](https://docs.rs/windows-dpapi/0.2.0/windows_dpapi/) / protected files | The documented wrapper exposes User/Machine scope through a safe API, making it a candidate rather than justification for raw application FFI. User scope, UI suppression, returned-buffer ownership, error handling, maintenance/license review and actual target tests remain required. DPAPI alone does not implement owner-only file creation, no-redirection semantics or atomic replacement. No storage wrapper is selected yet; #40 owns this gate before A3. |
+| [windows-dpapi 0.2.0](https://docs.rs/windows-dpapi/0.2.0/windows_dpapi/) / protected files | User/Machine scope is exposed, but [source review](windows-server-key-storage-candidates.md#dpapi-wrapper-useful-api-unmet-application-contract) found no explicit UI-forbidden flag and a native plaintext copy freed without clearing. Do not adopt unchanged; a decryption scope parameter is not proof of the blob's protection scope. DPAPI does not supply owner-only creation, no-redirection or atomic replacement. A suitable safe wrapper, file adapter, full dependency review and target evidence remain open under #40 before A3. |
 
 ## Execution and evidence gates
 
@@ -140,3 +140,10 @@ suites, an initial ECDSA P-256/SHA-256 certificate profile and exact loopback IP
 SAN. Certificate fees are excluded. The OWASP basis and RFC 9525 naming rationale
 are recorded there. This selects PoC inputs only; tooling/storage selection,
 execution, exact trust changes and broader platform qualification remain gated.
+
+The [Windows server-key/file-operation assessment](windows-server-key-storage-research.md)
+now provides the comparison and a conditional Proposed ACL-only baseline for
+disposable server keys. DPAPI's copied-blob benefit and user/profile dependencies
+are explicit. Next resolve the safe file-adapter gaps through a bounded
+feasibility proposal; no source finding or direct-package advisory query qualifies
+the complete graph or an actual Windows installation.

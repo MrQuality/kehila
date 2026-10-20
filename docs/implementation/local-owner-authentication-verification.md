@@ -41,6 +41,10 @@ The maintainer-agreed [PoC TLS inputs](local-owner-authentication-installation-p
 select a disposable private CA and a narrow TLS 1.3/certificate profile with no
 certificate fees. They approve neither experiment execution nor the rest of the
 Proposed installation/storage plan, and supply no new T03 evidence.
+The [Windows storage/candidate assessment](windows-server-key-storage-research.md)
+records a conditional Proposed ACL-only disposable-key baseline and unresolved
+safe-adapter gates common to both options. No candidate or operating model is
+adopted; CLI DPAPI, full dependency review and actual target tests remain required.
 
 ## Planned slices and gates
 

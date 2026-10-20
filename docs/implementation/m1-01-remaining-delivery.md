@@ -165,6 +165,9 @@ A0 investigation was explicitly authorized on 2026-10-19;
 [AUTH-001](../../experiments/AUTH-001/README.md) records the Windows host
 transport/browser subset. The [remaining-A0 installation/storage plan](local-owner-authentication-installation-plan.md)
 is Proposed and supplies no new execution or implementation authorization.
+The [Windows storage assessment](windows-server-key-storage-research.md) adds a
+conditional Proposed baseline and explicit safe file-adapter gaps, without
+selecting dependencies or changing CLI DPAPI requirements.
 Remaining A0 and schema evidence plus separately
 bounded A1-A5 implementation remain gated. ADR-103
 production adoption is still a separate decision.
