@@ -132,3 +132,11 @@ consequence and interrupted-run trust reconciliation. These are planning
 requirements, not executed evidence. It authorizes no experiment or dependency adoption. A1 schema/capability
 review and A1-A5 implementation retain their separate gates. Do not infer
 authentication support from a closed transport diagnostic response.
+
+On 2026-10-20 the maintainer agreed to the plan's
+[bounded PoC TLS inputs](local-owner-authentication-installation-plan.md#agreed-poc-tls-profile):
+a disposable private CA, ordinary server validation, TLS 1.3 with reviewed AEAD
+suites, an initial ECDSA P-256/SHA-256 certificate profile and exact loopback IP
+SAN. Certificate fees are excluded. The OWASP basis and RFC 9525 naming rationale
+are recorded there. This selects PoC inputs only; tooling/storage selection,
+execution, exact trust changes and broader platform qualification remain gated.

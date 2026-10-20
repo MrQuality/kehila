@@ -1,6 +1,7 @@
 # Remaining A0: local installation and protected storage
 
-Status: Proposed; no experiment or dependency adoption authorized by this plan.
+Status: Proposed, except the agreed PoC TLS inputs below; no experiment execution
+or dependency adoption authorized by this plan.
 Owner: project maintainer. Recorded: 2026-10-20. Related: #40/#49 W2,
 [ADR-105](../architecture/ADR-105-local-owner-authentication.md),
 [A0 results](local-owner-authentication-a0.md) and
@@ -42,6 +43,46 @@ export a server key through a shared mount, or introduce a TLS proxy to make the
 host proof pass. Linux file/storage qualification remains separate.
 
 ## Certificate lifecycle contract to prove
+
+### Agreed PoC TLS profile
+
+The maintainer explicitly agreed to these bounded PoC inputs on 2026-10-20.
+This records that decision, not acceptance of the whole installation/storage plan
+or qualification of a supported installation. Zero certificate fees are a project
+constraint; the PoC requires no paid issuer or service.
+
+| Input | Agreed scope |
+| --- | --- |
+| Issuance/trust | A disposable private CA signs a separate server certificate. Browser and CLI use ordinary certificate validation with explicitly approved trust; no warning bypass or permissive verifier. Keep issuer and server keys distinct. |
+| Protocol | TLS 1.3 only; no TLS 1.2 compatibility profile or older protocol fallback. |
+| Cipher suites | The reviewed rustls/ring TLS 1.3 AEAD suites: AES-128-GCM/SHA-256, AES-256-GCM/SHA-384 and ChaCha20-Poly1305/SHA-256. Retain library negotiation rather than inventing cryptography or copying an OpenSSL cipher string. |
+| Initial certificate profile | ECDSA P-256 keys with SHA-256 certificate signatures for the disposable issuer and leaf; the leaf is a server certificate, not a CA, and has server-authentication usage. This is one test profile, not a general algorithm-support claim. |
+| Server identity | Exact `iPAddress` SAN `127.0.0.1`; no wildcard or substitution of a DNS SAN/common name. Keep the literal-loopback listener and one configured HTTPS origin. |
+| Lifecycle | Protected key storage and the renewal, expiry, interrupted-run reconciliation and removal oracles in this plan remain required. Trust changes need approval for the exact issuer/store/scope and cleanup. |
+
+The [OWASP TLS Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html)
+recommends TLS 1.3 by default, optional TLS 1.2 compatibility, AEAD suites,
+strong protected keys, SHA-256 certificate signatures, patched libraries and
+testing the deployed configuration. It permits internal CAs for internal users
+who explicitly trust them. This supports the selected approach without requiring
+paid certificates; it is not an OWASP compliance certification.
+
+OWASP's general naming guidance also advises against IP addresses in certificates.
+The private loopback profile deliberately differs on this point:
+[RFC 9525 sections 6.2 and 6.4](https://www.rfc-editor.org/rfc/rfc9525.html#section-6.2)
+specify exact matching of an IP reference identity against an `iPAddress` SAN.
+Document that scoped rationale rather than claiming literal adherence to every
+OWASP deployment recommendation. No DNS, public issuer or remote deployment
+profile is selected by this exception.
+
+The existing AUTH-001 adapter supplies a single leaf and an explicit CLI root;
+arbitrary intermediate chains, other algorithms and other trust configurations
+are outside its demonstrated coverage. Keep issuance separate from certificate
+loading so a test CA does not become a permanent issuer dependency. The concrete
+tool/library inputs, adapters, operating limits and executable experiment still
+need review; the rest of this plan remains Proposed and no new test is passed.
+
+### Lifecycle acceptance criteria
 
 Use disposable certificates and synthetic storage values only. Before execution,
 choose and review an issuance method, exact tool/library versions, licenses,
