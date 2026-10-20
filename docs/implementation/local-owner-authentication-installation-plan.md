@@ -64,6 +64,14 @@ to them. No issuer-key persistence or production CA is selected by this plan.
 | Expiry/failure | Before execution, specify the measurable validity/admission and connection-drain policy below. A failed renewal never permits HTTP fallback, certificate-ignore mode or installation of a new issuer without approval. An expired prior generation cannot be a rollback target. |
 | Remove | While the valid diagnostic server is still reachable, remove only experiment-owned browser trust and CLI roots; require specific certificate-trust failures in fresh clients. Then stop owned processes, release the listener and delete generated keys. Handle interrupted setup/renewal/removal with a bounded inventory of owned resources and repeatable cleanup. |
 
+Before setup, compare the selected stores and artifact locations with the owned
+resource inventory from any interrupted run. Record exact trust fingerprints,
+store scope and owned artifacts before mutation; display names are not ownership
+proof. Reconcile positively identified leftovers only within the approved trust
+and cleanup scope, or stop for review. Preserve unfamiliar entries and files.
+Never broaden cleanup to remove a certificate merely because its name resembles
+a fixture. Resume only with a known baseline and repeatable owned cleanup.
+
 Renewal restarts only the session-free diagnostic process in this proof. If that
 strategy is later adopted for the authenticated local-MVP runtime, ADR-105's
 restart invalidates browser, CLI and pre-session state; the owner signs in again.
