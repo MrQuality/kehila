@@ -61,8 +61,23 @@ to them. No issuer-key persistence or production CA is selected by this plan.
 | Trust | Present the disposable issuer fingerprint, exact per-user store, privilege scope, lifetime and removal command for separate approval. Browser trust and explicit CLI roots are separate inputs. Preserve unrelated entries; no machine-wide trust or warning bypass. |
 | Install/start | Load only the approved certificate/key pair through the protected adapter. Reject missing, oversized, malformed, expired, wrong-SAN or mismatched material before listening. Record readable error classes without secret values. |
 | Renew | Prepare and validate a fresh key/leaf pair as one generation. Serialize replacement, switch the pair together and restart the diagnostic process; live reload is outside scope. A failed replacement leaves a complete prior generation or a stopped service, never a mixed pair. Prove the new leaf with actual browser and CLI validation. |
-| Expiry/failure | Define a certificate validity check during service life; do not silently serve indefinitely past expiry. A failed renewal never permits HTTP fallback, certificate-ignore mode or installation of a new issuer without approval. An expired prior generation cannot be a rollback target. |
+| Expiry/failure | Before execution, specify the measurable validity/admission and connection-drain policy below. A failed renewal never permits HTTP fallback, certificate-ignore mode or installation of a new issuer without approval. An expired prior generation cannot be a rollback target. |
 | Remove | While the valid diagnostic server is still reachable, remove only experiment-owned browser trust and CLI roots; require specific certificate-trust failures in fresh clients. Then stop owned processes, release the listener and delete generated keys. Handle interrupted setup/renewal/removal with a bounded inventory of owned resources and repeatable cleanup. |
+
+Renewal restarts only the session-free diagnostic process in this proof. If that
+strategy is later adopted for the authenticated local-MVP runtime, ADR-105's
+restart invalidates browser, CLI and pre-session state; the owner signs in again.
+Diagnostic renewal success is not evidence of authenticated logout behavior or
+transparent session continuity.
+
+The executable proposal must define the certificate validity-check mechanism,
+its clock source, forward/backward clock-change behavior and a numeric maximum
+detection delay. Specify when admission stops, how handshakes in progress and
+connections established before expiry are handled, and a numeric drain deadline.
+Define assertions at expiry and at the stated detection/drain boundaries; an
+unbounded periodic check is insufficient. Server enforcement and browser/CLI
+rejection of expired certificates require separate oracles. These operating
+limits remain unselected and unqualified until reviewed and measured.
 
 An old leaf may remain browser-trusted while its issuer remains trusted; renewal
 alone is not evidence of revocation. Suspected key/issuer compromise requires a
