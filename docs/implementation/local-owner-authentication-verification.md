@@ -37,6 +37,10 @@ experiments, trust changes, dependency adoption or later implementation.
 Issuer-key ownership, server-key storage selection, numeric expiry/drain oracles,
 renewal/restart consequences and preflight trust reconciliation must be resolved
 in the executable proposal; documentation of these criteria qualifies no test.
+The maintainer-agreed [PoC TLS inputs](local-owner-authentication-installation-plan.md#agreed-poc-tls-profile)
+select a disposable private CA and a narrow TLS 1.3/certificate profile with no
+certificate fees. They approve neither experiment execution nor the rest of the
+Proposed installation/storage plan, and supply no new T03 evidence.
 
 ## Planned slices and gates
 

@@ -366,6 +366,11 @@ failure evidence before authorizing an experiment or A1 implementation.
 Review refinements cover issuer keys, server-key storage candidates, measurable
 expiry/drain behavior, restart logout and interrupted-run trust inventory. Their
 implementation and actual platform evidence remain open under #40/#49.
+The maintainer agreed on 2026-10-20 to the
+[PoC TLS inputs](../implementation/local-owner-authentication-installation-plan.md#agreed-poc-tls-profile):
+disposable private CA, normal validation, TLS 1.3 and a bounded initial certificate
+profile. Zero certificate fees are a project constraint. The remainder of the
+plan and execution/trust gates retain their existing status; no new evidence.
 Provisional budgets require measurement; schema/capability adoption and A1-A5
 implementation retain separate gates. No authentication case is marked passed.
 
