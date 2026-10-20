@@ -34,6 +34,9 @@ No full T01-T16 authentication case is qualified by that diagnostic probe.
 Next review the [Proposed remaining-A0 installation/storage plan](local-owner-authentication-installation-plan.md).
 It defines the profile and evidence to resolve before A1 without authorizing
 experiments, trust changes, dependency adoption or later implementation.
+Issuer-key ownership, server-key storage selection, numeric expiry/drain oracles,
+renewal/restart consequences and preflight trust reconciliation must be resolved
+in the executable proposal; documentation of these criteria qualifies no test.
 
 ## Planned slices and gates
 

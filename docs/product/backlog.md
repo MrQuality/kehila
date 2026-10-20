@@ -363,6 +363,9 @@ review. Broader A0 installation/storage/platform qualification remains open.
 The [next installation/storage plan](../implementation/local-owner-authentication-installation-plan.md)
 is Proposed: review runtime ownership, certificate lifecycle and protected-file
 failure evidence before authorizing an experiment or A1 implementation.
+Review refinements cover issuer keys, server-key storage candidates, measurable
+expiry/drain behavior, restart logout and interrupted-run trust inventory. Their
+implementation and actual platform evidence remain open under #40/#49.
 Provisional budgets require measurement; schema/capability adoption and A1-A5
 implementation retain separate gates. No authentication case is marked passed.
 

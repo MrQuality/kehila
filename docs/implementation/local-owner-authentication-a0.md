@@ -126,6 +126,9 @@ storage/DPAPI, supported installation, browser cookie/bootstrap behavior and the
 Podman/platform profile remain unqualified. The next step is review of the
 [Proposed installation and protected-storage plan](local-owner-authentication-installation-plan.md),
 including runtime ownership, certificate lifecycle, file replacement and failure
-oracles. It authorizes no experiment or dependency adoption. A1 schema/capability
+oracles. Its review refinements require issuer-key ownership, explicit server-key
+storage candidates, measurable expiry/drain criteria, the renewal/restart logout
+consequence and interrupted-run trust reconciliation. These are planning
+requirements, not executed evidence. It authorizes no experiment or dependency adoption. A1 schema/capability
 review and A1-A5 implementation retain their separate gates. Do not infer
 authentication support from a closed transport diagnostic response.
