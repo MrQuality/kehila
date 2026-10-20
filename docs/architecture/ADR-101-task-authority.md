@@ -68,6 +68,17 @@ this record neither rejects nor accepts a new physical protocol.
 - Reversibility: search can be reconstructed; replacing authoritative layout
   requires a verified data and replay migration, not merely a new index.
 
+## Native-path boundary amendment
+
+[Accepted ADR-105](ADR-105-local-owner-authentication.md), approved by the
+[maintainer on 2026-10-19](https://github.com/MrQuality/kehila/issues/40#issuecomment-6262900825), consolidates authentication,
+public API, domain authority and protected search mediation in Rust for the new
+local-MVP native path. This amends the Go/Rust process boundary for that future
+path only; D-016/D-017 save/replay/projection guarantees and historical task-path
+evidence remain intact. No anonymous prototype listener may become a supported
+fallback. ADR-103 adoption and actual transition evidence retain separate gates.
+Multi-active deployment/migration remains B-032/#65, not the local singleton.
+
 ## Verification and follow-up
 
 [Live worker tests](../../tests/integration/live_task_worker.py) provide finite

@@ -1,12 +1,14 @@
 # ADR-105 — Local-owner authentication and trusted caller identity
 
-Status: Proposed. Owner: project maintainer. Created / reviewed: 2026-10-19.
-Acceptance: pending explicit maintainer approval; no implementation is authorized
-by this draft. The maintainer selected a separate Kehila browser password as a
-login preference on 2026-10-19, not acceptance of the architecture below.
-The maintainer has requested that the single-active-instance restriction be
-limited to the local MVP; conditional willingness to accept that restriction
-does not accept this ADR. Replicated deployment remains open under B-032/#65.
+Status: Accepted for the local MVP. Owner: project maintainer. Created / reviewed: 2026-10-19.
+Acceptance: [explicit maintainer approval, 2026-10-19](https://github.com/MrQuality/kehila/issues/40#issuecomment-6262900825).
+The maintainer accepted this local-MVP architecture and authorized the bounded
+A0 transport/dependency investigation. A1-A5 implementation plans, dependency
+adoption and production qualification retain their separate review/evidence gates.
+Memory-heavy execution and certificate trust-store changes require separate
+permission. This acceptance does not qualify any unexecuted security mechanism.
+Single-active operation remains local-MVP-only; replicated deployment stays
+open under B-032/#65. ADR-103 production adoption is not accepted here.
 Related: D-016/D-017/D-037; B-007/B-020/B-022; Q-002/Q-014;
 [#40](https://github.com/MrQuality/kehila/issues/40),
 [#49 W2](https://github.com/MrQuality/kehila/issues/49), #11/#32 and #41.
@@ -22,10 +24,10 @@ Their Host/origin/loopback checks do not identify an owner or authenticate a pee
 
 ### Review summary
 
-| Proposed choice | Effect and approval point |
+| Accepted local-MVP choice | Effect and remaining gate |
 | --- | --- |
 | Separate owner password | Store a salted Argon2id verifier; browser and CLI authenticate with the password. No external identity provider. |
-| Rust authority boundary; one active instance for local MVP only | Terminate HTTPS, verify identity, enforce domain authority and mediate search within the Rust service. The local MVP singleton is not a final replica-count constraint; both the boundary and its implementation remain Proposed. |
+| Rust authority boundary; one active instance for local MVP only | Terminate HTTPS, verify identity, enforce domain authority and mediate search within the Rust service. The local MVP singleton is not a final replica-count constraint; the boundary is accepted and implementation remains subject to scoped gates. |
 | Local-MVP opaque browser/CLI sessions | Tokens carry no permissions. This profile keeps sessions in memory and ends them on restart; it does not supply multi-replica session continuity. |
 | Local administrative enrollment/recovery | No public first-owner claim/reset endpoint. Recovery preserves the actor and history, replaces the password and revokes sessions. |
 | Separate implementation gates | Certificate trust, dependency choices, schema/capabilities and negative/native tests need evidence before support. ADR-103 remains Proposed. |
@@ -142,13 +144,13 @@ select another principal.
 Store only a salted Argon2id verifier, its allowlisted algorithm/policy version,
 verifier revision and checked `auth_generation` linked to the durable actor.
 Passwords never enter domain operation keys, fingerprints, events, logs or saved
-results. Proposed cost: 64 MiB, three iterations, one lane, 16-byte random salt,
+results. Provisional cost: 64 MiB, three iterations, one lane, 16-byte random salt,
 32-byte output. This is a proposed resource/security setting, not a measured
 performance claim or the exact RFC 9106 recommended profile. Bound stored PHC
 parameters before verification; corrupt/unsupported profiles fail closed rather
 than allocating arbitrary memory or falling back to another algorithm.
 
-Proposed password policy: NFC-normalize password input only; require 15–128
+Accepted password policy: NFC-normalize password input only; require 15–128
 Unicode code points after normalization, with at most 1,024 decoded UTF-8 input
 bytes and bounded normalization/output. No trimming, case folding, composition
 rules or periodic password replacement. Permit paste/password managers. Reject
@@ -257,7 +259,7 @@ symlinks/reparse redirection; never fall back to a shared or public file. Do not
 persist the password. These profiles require actual platform evidence; they do
 not protect against code already controlling the same OS account.
 
-Proposed lifetimes: 30-minute request inactivity and 12-hour absolute lifetime,
+Provisional lifetimes: 30-minute request inactivity and 12-hour absolute lifetime,
 using monotonic ticks from the issuing runtime for both kinds. Only successful
 authenticated business requests renew inactivity, not public health, failures or
 keepalive routes. This measures request activity, not human keyboard activity;
@@ -330,7 +332,7 @@ expiry, generation change or process failure before confirmation. There is no
 durable retry queue or background reconciliation claim. Issuance, password change
 and recovery still require their own committed audit before success. Guaranteed
 logout-attempt auditing would require a separately reviewed durable protocol;
-this availability/audit trade-off must be reviewed before ADR acceptance.
+this availability/audit trade-off was included in the explicit local-MVP acceptance.
 Logout success means later fence holders reject that credential. Password/global
 revocation advances the durable generation under the same fence. Already committed
 work remains committed; an uncertain response is not evidence of cancellation.
@@ -348,7 +350,7 @@ authority or undo a revocation/generation change. Registry locks span no awaits.
 
 ### 5. Provisional resource and failure contract
 
-| Resource / operation | Proposed admission limit |
+| Resource / operation | Provisional admission limit |
 | --- | --- |
 | Transport | 16 in-flight connections/requests; finite handshake/header deadlines; reject excess without an unbounded backlog |
 | Auth JSON | 4 KiB encoded; exact endpoint keys; decoded password ≤1,024 bytes; no compression |
@@ -439,7 +441,7 @@ These are open design/evidence boundaries, not demonstrated runtime exploits:
 | Cross-replica credentials and budgets | The local registry, restart logout, singleton and per-process limits do not supply replicated continuity or cluster-wide abuse/resource control. B-032/#65 must replace these profile mechanisms with a reviewed, failure-tested contract. |
 | Actor-wide serialization | SP-004's actor fence serializes mutations/replay for the same owner, even across unrelated projects; more pods alone cannot remove that contention. B-032/#65 and B-025 require measurement and a correctness-preserving coordination decision before scale claims. The local protocol stays unchanged. |
 | Remote exposure and identity scope | Loopback HTTPS, one owner/password and a local administrative tool establish no trusted ingress/peer model, remote administration, MFA, multi-user or tenancy support. #65/B-020/B-029 must decide applicability and controls before remote/replicated support; #40 still qualifies the local profile. |
-| Unqualified local security mechanisms | Certificate trust/renewal, dependency choices, schema/function privileges, enrollment/recovery, secret storage, CSRF and actual revocation remain unexecuted A0-A5/T01-T16 gates under #40/#49. The existing unauthenticated prototype is not upgraded by this ADR. |
+| Unqualified local security mechanisms | AUTH-001 records a host-only certificate/transport subset. Supported installation, auth dependency choices, schema/function privileges, enrollment/recovery, secret storage, CSRF and actual revocation retain A0-A5/T01-T16 gates under #40/#49. The existing unauthenticated prototype is not upgraded by this ADR. |
 | Availability, audit and recovery limits | Local traffic can deny login/self-service; failed logout audits may be lost. OS/admin compromise is outside password containment; undeclared whole-database rollback is not detected. Supported restore invalidation still needs proof. #40/#49 own local qualification; #60/#65 own broader recovery, audit and shared-backend availability decisions. Application replication alone does not qualify PostgreSQL, session infrastructure or search failover. |
 
 MVP checks cannot close #65 or qualify these remote/replicated properties. No
@@ -449,8 +451,10 @@ remain visible during implementation and release review.
 
 The [verification plan](../implementation/local-owner-authentication-verification.md)
 maps the proposed mechanisms to bounded slices and failure/evidence gates under
-#40/#49; all remain unexecuted. Approval of this ADR, ADR-103 disposition for native
-adoption and separately approved bounded implementation plans precede code changes.
+#40/#49. The [AUTH-001 experiment](../../experiments/AUTH-001/README.md) records
+transport-only observations; full authentication qualification remains outstanding.
+A0 investigation is authorized by the acceptance above; ADR-103 disposition for
+native adoption and separately approved A1-A5 implementation plans remain required.
 Existing R01–R05 evidence and hosted CI do not qualify the mechanisms above.
 
 ## Primary design references

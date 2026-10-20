@@ -17,7 +17,8 @@
 [PR #53](https://github.com/MrQuality/kehila/pull/53) was approved and merged on
 2026-10-14 at `988631a353b3086769e302943fa0d7b7fbebffd1`. Its contract is the
 reviewed baseline for this investigation. Authentication/session/channel
-mechanisms remain unselected; approval of the contract is not their selection.
+mechanisms were unselected in those experiments; accepted ADR-105 now selects
+the local-MVP direction, with actual authentication evidence still outstanding.
 
 ## Source inventory
 
@@ -584,10 +585,13 @@ coverage; finishing this investigation does not close it.
 
 **Status:** [ADR-105](../architecture/ADR-105-local-owner-authentication.md) and its
 [verification plan](../implementation/local-owner-authentication-verification.md)
-are Proposed under #40/#11, feeding #49 W2. The maintainer prefers a separate
-Kehila browser password. The single future Rust authority, credential/session
-policies and recovery mechanism still need explicit approval; no code, schema
-or authentication evidence is supplied by this design.
+record the accepted local-MVP direction under #40/#11, feeding #49 W2. The
+maintainer explicitly accepted ADR-105 and authorized A0 on 2026-10-19;
+[approval record](https://github.com/MrQuality/kehila/issues/40#issuecomment-6262900825).
+Acceptance itself supplies no code, schema or authentication evidence.
+[AUTH-001](../../experiments/AUTH-001/README.md) separately records the A0
+Windows transport/browser subset and isolated dependency graph. ADR-103
+and separately scoped A1-A5 implementation retain their own gates.
 The single-active-runtime mechanism is a local-MVP profile only;
 [B-032/#65](../product/backlog.md#b-032) owns final replicated service/session
 design and migration. Existing actor-wide serialization needs separate contention
@@ -596,7 +600,8 @@ measurement; replica count does not imply concurrent mutations for one actor.
 The [PR #64 follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up)
 defines installation-before-actor takeover fencing, bounded password/pre-session
 admission and retryable but not guaranteed logout audit delivery. These proposed
-contracts and T01–T16 remain unexecuted; R01–R05 evidence is unchanged. Follow-up
+contracts and full T01–T16 qualification remain outstanding; AUTH-001 supplies
+transport-only observations and R01–R05 evidence is unchanged. Follow-up
 also defines capacity reclamation for completed logouts and reload-safe CSRF
 retrieval, without changing stable identity, revocation or existing read ordering.
 

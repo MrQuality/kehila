@@ -55,13 +55,14 @@ as valid paths, and compromised-service recovery must not assume the index is
 authoritative. Security findings follow SECURITY.md; avoid publishing exploit or
 credential details in PRs or test logs.
 
-## Proposed owner-authentication boundary
+## Accepted local-MVP authentication design; controls unqualified
 
-[ADR-105](../architecture/ADR-105-local-owner-authentication.md) proposes a separate
+[ADR-105](../architecture/ADR-105-local-owner-authentication.md) selects a separate
 owner password, one Rust authority for future native routes, HTTPS and bounded
 opaque browser/CLI sessions. It removes identity forwarding from that proposed
-path; the current Go/Rust prototype and gaps above remain unchanged. Acceptance
-and the [verification gates](../implementation/local-owner-authentication-verification.md)
+path; the current Go/Rust prototype and gaps above remain unchanged. Architecture
+acceptance is recorded in ADR-105; the
+[verification gates](../implementation/local-owner-authentication-verification.md)
 are pending, including certificate installation, restricted enrollment/recovery,
 password resource limits, CSRF, queued revocation, singleton takeover and restore
 re-enrollment. No mitigation in the table becomes implemented by this proposal.
@@ -70,7 +71,7 @@ adds installation takeover fencing and bounded admission/retry contracts. Separa
 rate buckets do not prevent shared-worker/transport denial by local callers;
 expired-slot reclamation does not stop repeated allocation traffic. Failed logout
 audits can be lost after abandonment/expiry/crash while revocation remains final.
-These residual risks are Proposed acceptance choices, not qualified mitigations.
+These declared residual risks were included in local-MVP acceptance; controls remain unqualified.
 Confirmed logout entries can be reclaimed without reactivating captured tokens;
 later retries can return 401 without contradicting a committed audit. Reload-safe
 CSRF retrieval exposes only the existing independent CSRF value through bounded,
@@ -85,7 +86,7 @@ would not qualify any of these controls; local proof cannot qualify remote or
 multi-user/tenant deployment. See ADR-105's
 [remaining obligations](../architecture/ADR-105-local-owner-authentication.md#remaining-scale-and-security-obligations).
 
-If accepted, OS/authority administrator compromise still permits credential reset
+Under this accepted design, OS/authority administrator compromise still permits credential reset
 or data access; encrypted per-user storage cannot contain malware controlling the
 same account. Throttle saturation can deny local login availability. Browser XSS
 can act with a session despite HttpOnly. Keep these residual risks and prove the
