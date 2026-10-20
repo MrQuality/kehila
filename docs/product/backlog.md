@@ -360,6 +360,9 @@ The maintainer explicitly accepted ADR-105 for local MVP and authorized A0 on
 The [bounded A0 investigation](../implementation/local-owner-authentication-a0.md)
 records the Windows-only AUTH-001 transport/browser subset and locked dependency
 review. Broader A0 installation/storage/platform qualification remains open.
+The [next installation/storage plan](../implementation/local-owner-authentication-installation-plan.md)
+is Proposed: review runtime ownership, certificate lifecycle and protected-file
+failure evidence before authorizing an experiment or A1 implementation.
 Provisional budgets require measurement; schema/capability adoption and A1-A5
 implementation retain separate gates. No authentication case is marked passed.
 

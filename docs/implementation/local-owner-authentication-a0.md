@@ -123,6 +123,9 @@ CI check has been added; its actual run must pass before recording Linux evidenc
 
 This does not complete all A0 gates. Authentication-library adoption, protected
 storage/DPAPI, supported installation, browser cookie/bootstrap behavior and the
-Podman/platform profile remain unqualified. Next review those candidates and the
-bounded A1 schema/capability plan before authorizing later implementation. Do not
-infer authentication support from a closed transport diagnostic response.
+Podman/platform profile remain unqualified. The next step is review of the
+[Proposed installation and protected-storage plan](local-owner-authentication-installation-plan.md),
+including runtime ownership, certificate lifecycle, file replacement and failure
+oracles. It authorizes no experiment or dependency adoption. A1 schema/capability
+review and A1-A5 implementation retain their separate gates. Do not infer
+authentication support from a closed transport diagnostic response.
