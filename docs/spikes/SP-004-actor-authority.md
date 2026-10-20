@@ -592,6 +592,8 @@ Acceptance itself supplies no code, schema or authentication evidence.
 [AUTH-001](../../experiments/AUTH-001/README.md) separately records the A0
 Windows transport/browser subset and isolated dependency graph. ADR-103
 and separately scoped A1-A5 implementation retain their own gates.
+Next review the [Proposed remaining-A0 installation/storage plan](../implementation/local-owner-authentication-installation-plan.md)
+before an experiment or A1 implementation; it supplies no new qualification.
 The single-active-runtime mechanism is a local-MVP profile only;
 [B-032/#65](../product/backlog.md#b-032) owns final replicated service/session
 design and migration. Existing actor-wide serialization needs separate contention

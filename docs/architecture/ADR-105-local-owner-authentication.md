@@ -32,7 +32,7 @@ Their Host/origin/loopback checks do not identify an owner or authenticate a pee
 | Local administrative enrollment/recovery | No public first-owner claim/reset endpoint. Recovery preserves the actor and history, replaces the password and revokes sessions. |
 | Separate implementation gates | Certificate trust, dependency choices, schema/capabilities and negative/native tests need evidence before support. ADR-103 remains Proposed. |
 
-## Decision — proposed
+## Decision — accepted for the local MVP
 
 ### Deployment scope and transition contract
 
