@@ -48,6 +48,13 @@ choose and review an issuance method, exact tool/library versions, licenses,
 features, key format and protected storage adapter. AUTH-001's fixture generator
 is not an installer. No production issuer or storage wrapper is selected here.
 
+Distinguish operator-supplied certificates, where issuance stays outside the
+runtime, from local issuance. If the selected experiment generates or retains an
+issuer signing key, record its owner, permitted readers, storage protection,
+renewal access and retention/destruction policy. Include issuer keys in setup,
+interruption and cleanup evidence; the serving process must not require access
+to them. No issuer-key persistence or production CA is selected by this plan.
+
 | Stage | Required behavior and failure evidence |
 | --- | --- |
 | Prepare | Identify the runtime OS user, installation identity, exact origin, file owners and trust consumers. Create a dedicated protected directory before writing a key. Refuse an existing incompatible owner, permissive access or redirected path. |
@@ -70,9 +77,21 @@ key as a session secret or a CLI bearer as an installation identity.
 
 | Record | Proposed contract |
 | --- | --- |
-| Windows server key | Restricted owner ACL; explicit runtime-user access, no shared/public file fallback. Determine whether the chosen TLS key loader needs plaintext key bytes on disk. Review any encryption/decryption adapter separately; CLI DPAPI evidence does not qualify server-key handling. |
+| Windows server key | Compare the two candidate models below; both require a restricted owner ACL, explicit runtime-user access and no shared/public file fallback. Review the selected key loader and any decryption adapter; CLI DPAPI evidence does not qualify server-key handling. |
 | Windows CLI bearer | User-scoped DPAPI plus restricted owner ACL, as required by ADR-105. Verify user scope and UI suppression; reject Machine scope. Use synthetic values for the adapter proof; no login endpoint or real bearer is needed. |
 | Linux CLI bearer | Preserve ADR-105's owned mode-0700 directory and mode-0600 file contract. Ownership, symlink refusal and replacement need real Linux evidence before qualification. Windows success does not qualify this path. |
+
+For the Windows server key, evaluate these candidates before selecting an adapter:
+
+| Candidate | Required evaluation |
+| --- | --- |
+| ACL-restricted plaintext key file | Verify the opened object's owner/access rules and redirection refusal. Account for readable on-disk key material, temporary generations, replacement and cleanup. |
+| User-scoped DPAPI key file, decrypted at startup | Verify the runtime identity can decrypt without UI, reject Machine scope, and review plaintext buffers, loader/provider copies and FFI allocation/free ownership. Account for decryption failure, replacement and recovery without a plaintext fallback. |
+
+For both, record startup identity, unattended operation, plaintext copies,
+replacement, recovery and failure behavior against the actual library and
+filesystem. A zeroizing input buffer does not prove erasure of library-owned
+key copies. Selection remains subject to dependency review and actual evidence.
 
 For each adapter, review creation, opening, reading, replacement and cleanup as
 one resource-ownership contract. Require bounded reads before parsing/decryption,
