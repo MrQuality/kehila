@@ -20,27 +20,27 @@ recovery, languages and agent execution remain post-MVP; replicated authority
 and remote deployment remain B-032/#65. Stable actor/domain identities must not
 depend on an OS account, file path, DPAPI blob or issuing process.
 
-## Proposed installation profile
+## Deployment clarification and remaining design
 
-Start with the browser, CLI and Rust diagnostic process on Windows, running as
-the same explicitly identified non-administrative OS user. Keep the Rust listener
-on literal `127.0.0.1`; use one configured HTTPS origin and explicit CLI trust.
-This is a proposal for proof scope, not a newly supported deployment.
+On 2026-10-21 the maintainer clarified that the intended backend runs in a Linux
+container. Windows is a development/client host, not evidence of native Windows
+backend placement. The former host-first diagnostic profile did not establish
+the intended backend architecture; its reuse for server-key research is addressed
+in the [post-mortem](../postmortems/2026-10-21-platform-assumption.md).
 
-Treat Podman as the backend-service environment for this proposed profile.
-The first certificate/storage proof needs no backend services or VM. Before
-claiming Windows/Podman support, review the exact service topology and separately
-prove the required host-to-backend connections without exposing anonymous
-application, worker or search endpoints as an alternate supported route.
-Backend connectivity/role evidence belongs to the relevant A1/A3 integration gate;
-this experiment alone cannot qualify that installation.
+AUTH-001's actual Windows-host diagnostic evidence remains a bounded transport
+subset. It does not qualify container key storage or installation. Windows CLI
+credential protection and browser trust remain distinct host concerns. A Windows
+key-provisioning component is not assumed merely because the host is Windows.
 
-A Rust authority inside a Linux container is a different profile. Windows DPAPI,
-Windows ACLs and host loopback cannot be assumed to carry across that boundary.
-Record its key owner, mount access, container listener and host forwarding policy
-in a separate reviewed proposal if required. Do not change to wildcard binding,
-export a server key through a shared mount, or introduce a TLS proxy to make the
-host proof pass. Linux file/storage qualification remains separate.
+Before backend-specific adapter work, validate the container boundary, TLS
+termination/listener exposure, runtime identity and secret provisioning/mounts.
+Reconcile container listener/forwarding with ADR-105's literal-loopback constraint
+in a reviewed design; this correction grants no wildcard binding, proxy, shared
+key mount or HTTP fallback. No container implementation or installation support
+is claimed. Use the [framing pilot](../procedures/work-framing.md) before selecting
+platform-specific mechanisms; do not defer the intended container target as a
+later unrelated profile.
 
 ## Certificate lifecycle contract to prove
 
@@ -141,11 +141,14 @@ key as a session secret or a CLI bearer as an installation identity.
 
 | Record | Proposed contract |
 | --- | --- |
-| Windows server key | Compare the two candidate models below; both require a restricted owner ACL, explicit runtime-user access and no shared/public file fallback. Review the selected key loader and any decryption adapter; CLI DPAPI evidence does not qualify server-key handling. |
+| Backend server key | Intended runtime is a Linux container. Ownership, permissions, safe file operations and secret provisioning must be designed for that boundary; no Windows storage model is selected for it. |
 | Windows CLI bearer | User-scoped DPAPI plus restricted owner ACL, as required by ADR-105. Verify user scope and UI suppression; reject Machine scope. Use synthetic values for the adapter proof; no login endpoint or real bearer is needed. |
 | Linux CLI bearer | Preserve ADR-105's owned mode-0700 directory and mode-0600 file contract. Ownership, symlink refusal and replacement need real Linux evidence before qualification. Windows success does not qualify this path. |
 
-For the Windows server key, evaluate these candidates before selecting an adapter:
+The following Windows-host candidates are retained as historical proposal context,
+not the current backend selection task. Reuse requires a separately justified
+host component and fresh framing validation; Linux-container guarantees cannot
+be inferred from these APIs:
 
 | Candidate | Required evaluation |
 | --- | --- |
@@ -182,7 +185,14 @@ or public evidence. DPAPI and ACLs do not contain code controlling the same OS
 account; a DPAPI blob is not a portable identity backup. Restored CLI credentials
 must not bypass ADR-105's restart/restore invalidation contract.
 
-## Bounded execution proposal and exit criteria
+## Retained Windows diagnostic proposal: not backend qualification
+
+The following execution outline and exit criteria are retained historical
+Windows-host diagnostic planning. They are not the next backend installation
+proof and cannot qualify Linux-container key storage or deployment. Replace the
+backend scope with a reviewed container-specific proposal before execution;
+justify any separate Windows CLI or provisioning proof on its own requirements.
+The permission and evidence limits below remain applicable to any reuse.
 
 1. Review this profile, unresolved adapter/issuance choices and failure oracles.
    Complete primary-source API and dependency/license/advisory review before

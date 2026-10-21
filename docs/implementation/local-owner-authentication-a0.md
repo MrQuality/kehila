@@ -108,6 +108,13 @@ changes always retain their separate permission gate, even after memory approval
 
 ## Current result and next action
 
+Deployment correction, 2026-10-21: the backend target is a Linux container.
+Windows-host transport evidence does not establish native Windows backend
+placement. Next reconcile the actual container/TLS/secret boundary before further
+platform-specific server-key work; see the [post-mortem](../postmortems/2026-10-21-platform-assumption.md).
+Windows CLI DPAPI and browser trust are separate concerns. The agreed PoC TLS
+inputs and prior evidence remain unchanged; no Linux storage qualification follows.
+
 The [standalone AUTH-001 probe](../../experiments/AUTH-001/README.md) records the
 observed Windows subset: 17 unit/transport tests, six actual headless Chrome
 certificate cases, missing-file startup rejection, bounded resource/shutdown
