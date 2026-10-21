@@ -28,6 +28,11 @@ backend placement. The former host-first diagnostic profile did not establish
 the intended backend architecture; its reuse for server-key research is addressed
 in the [post-mortem](../postmortems/2026-10-21-platform-assumption.md).
 
+Client platforms are a separate scope: the client may target Windows and Linux,
+with Windows the MVP priority. This does not select a Windows-only long-term
+client or qualify a Linux client. Host-specific CLI credential storage and browser
+trust must follow the client's actual OS, independently of the container backend.
+
 AUTH-001's actual Windows-host diagnostic evidence remains a bounded transport
 subset. It does not qualify container key storage or installation. Windows CLI
 credential protection and browser trust remain distinct host concerns. A Windows

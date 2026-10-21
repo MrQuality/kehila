@@ -26,6 +26,12 @@ qualification. No product vulnerability, production deployment or data exposure
 is established by this incident. Effort and opportunity cost were not measured;
 no invented hours, money or prevention rate are reported.
 
+The maintainer separately clarified client scope on 2026-10-21: clients may target
+Windows and Linux, with Windows prioritized for MVP. The correction concerns
+backend placement; it does not establish a permanently Windows-only client.
+Client-platform support and its evidence remain distinct from container backend
+placement and host-specific credential storage.
+
 ## Evidence and chronology
 
 Times below are public GitHub event times in UTC; the report date follows the
