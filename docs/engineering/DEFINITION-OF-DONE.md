@@ -14,6 +14,10 @@ reason** for criteria unrelated to the change. A checkbox alone is not evidence.
   is not implementation evidence for a complete feature.
 - Relevant decisions/questions are resolved or explicitly bound outside this scope;
   material technical choices have an ADR.
+- For material work in the [authorized framing pilot](../procedures/work-framing.md),
+  early consequential-premise/relevance validation and final-revision revalidation
+  are recorded with source-backed dispositions. Unsupported material premises
+  block dependent work only; routine reversible work uses a justified N/A.
 - New/materially changed code meets the applicable [coding rules](CODING-STANDARD.md);
   the PR identifies scope, evidence, existing gaps and justified narrow exceptions.
 - Unit, negative/boundary, integration and critical-path tests appropriate to the

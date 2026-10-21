@@ -8,6 +8,11 @@ Related requirement / D-* / B-* / Q-* / SP-* / PR / evidence: supply links.
 
 Describe problem, invariants, current implementation and evidence limits.
 
+For material work in the [framing pilot](../procedures/work-framing.md), link the
+original request, consequential premises and their authority/status, independent
+relevance findings and dispositions. An inferred or Proposed premise is not an
+accepted constraint; resolve material conflicts before dependent design work.
+
 ## Decision
 
 State the chosen behavior and its scope. Distinguish proposals from acceptance.
