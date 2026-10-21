@@ -10,6 +10,7 @@ GitHub enforces it.
 | ID | Procedure | Version / status | Owner | Approval | Enforcement |
 | --- | --- | --- | --- | --- | --- |
 | SOP-001 | [Technical spikes](../spikes/README.md) | 1 / Approved | [Project maintainer](../../CONTRIBUTING.md#repository-roles) | Maintainer approval recorded 2026-09-25 | Manual use in effect; spike validator and runner preflight not implemented |
+| SOP-002 | [Evidence and relevance checkpoints](work-framing.md) | 1 / Proposed codification | Project maintainer | Controls/pilot authorized 2026-10-21; exact version acceptance pending | Manual brief, separate-context validation and revalidation pilot; no semantic CI gate |
 
 SOP IDs describe procedures; SP IDs describe individual spikes. Use a new SOP ID
 for a new procedure and a new version for a revision of the same procedure.
