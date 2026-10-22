@@ -386,6 +386,10 @@ adds pause-inclusive expiry/resume barriers, canonical network arguments, exact
 bundle grammar and effective WSL-state evidence; all runtime cases remain unexecuted.
 Listener amendment, storage residual risk and exact
 execution prerequisites require review; no A0 completion or A1 permission follows.
+On 2026-10-22 the maintainer selected same-host Podman/WSL 2 for the first proof
+(Windows client, Linux-container backend). [Read-only feasibility](../implementation/local-owner-authentication-podman-feasibility.md)
+records installed/stopped-state limits and unresolved resume readiness; no provider
+qualification, listener-amendment acceptance or storage adoption follows.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 

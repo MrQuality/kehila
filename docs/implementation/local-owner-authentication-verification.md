@@ -56,7 +56,9 @@ unexecuted path/lifecycle matrix. Explicit ADR-106 acceptance and applicable
 execution/trust permissions precede that proof; no T01-T16 result changes here.
 The [review readiness checklist](local-owner-authentication-container-plan.md#review-follow-up-and-executable-readiness)
 separates the specified clock/resume, configuration, bundle and WSL-state contracts
-from API/method review and actual provider qualification.
+from API/method review and actual provider qualification. The maintainer selected
+same-host Podman/WSL 2 for the first proof; [read-only feasibility](local-owner-authentication-podman-feasibility.md)
+leaves resume readiness unresolved and supplies no new runtime or T01-T16 evidence.
 
 ## Planned slices and gates
 

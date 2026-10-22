@@ -167,7 +167,9 @@ transport/browser subset. The [remaining-A0 installation/storage plan](local-own
 is Proposed and supplies no new execution or implementation authorization. The
 [container boundary and probe proposal](local-owner-authentication-container-plan.md)
 makes the next review concrete; its ADR-106 amendment and storage trade-offs
-remain Proposed, with no new A0 qualification.
+remain Proposed, with no new A0 qualification. The maintainer selected same-host
+Podman/WSL 2 for the first proof; [read-only feasibility](local-owner-authentication-podman-feasibility.md)
+leaves resume readiness unresolved, without authorizing dependent execution.
 Remaining A0 and schema evidence plus separately
 bounded A1-A5 implementation remain gated. ADR-103
 production adoption is still a separate decision.
