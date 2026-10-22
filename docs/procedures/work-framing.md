@@ -40,6 +40,26 @@ Keep the record in the existing task, issue or PR:
 
 The sections below define the evidence and review requirements for these steps.
 
+## Explain the process to the user
+
+Assume the user has not read this procedure. On first applying it, briefly explain:
+we check that the work answers their intended problem, a separate reviewer checks
+consequential assumptions, and we ask only for decisions the available evidence
+cannot settle. The author and reviewer maintain the detailed records.
+
+When user input is needed, present a few sentences or short bullets covering:
+
+- The intended outcome and the specific unresolved choice, in plain language.
+- What is established, what is uncertain and why the choice changes the work.
+- The recommendation, the decision requested and what approving it would cover.
+
+Keep supporting sources and detailed reasoning available through links or a
+separate detail section. Do not require the user to read validator transcripts,
+learn procedure labels or repeat an established decision. Keep material risks
+and alternatives visible; brevity must not hide information needed to decide.
+Explain again when the process or decision boundary changes, rather than repeating
+the full introduction at every checkpoint.
+
 ## 1. Early framing gate
 
 The author records the [framing brief](work-framing-template.md) before dependent
@@ -93,26 +113,36 @@ remaining unresolved choices, actual evidence limits and the disposition of
 material findings in the PR. Do not promote proposals into facts in summaries or
 issue updates. Keep the maintainer's final assessment and acceptance separate.
 
-## 4. Pilot, evidence and adoption
+## 4. Approval, use and evaluation
 
-Run a retrospective replay of the initiating failure, an unrelated consequential
-assumption and a sufficient-evidence control. Fix expected decisions before the
-run; withhold them and the candidate during Phase A. Record actual responses,
-deviations and dispositions, including false positives and missed assumptions.
-Do not tune a case and report the rerun as the original result.
+First review the proposed version for clarity, feasibility, consistency with
+accepted requirements and a usable explanation for the user. The maintainer then
+explicitly approves a specific version for use. Future effectiveness measurements
+are not a prerequisite to this initial approval, and approval does not establish
+effectiveness. Until that decision, exact codification remains Proposed; the
+previously authorized controls and bounded pilot retain their recorded scope.
 
 The initial [pilot record](../postmortems/2026-10-21-framing-validation-pilot.md)
-reports only those bounded observations. It cannot establish a detection rate or
-prove early prevention in future work. Review the first three subsequent material
-tasks for missed premises, unnecessary questions, time to discovery and review
-effort; the maintainer owns that follow-up. No fixed percentage target is invented.
+is a retrospective rehearsal of the initiating failure, an unrelated assumption
+and a sufficient-evidence control. For such rehearsals, fix expected decisions
+before the run, withhold them and the candidate during Phase A, and retain actual
+responses, deviations and dispositions. Do not tune a case and report its rerun as
+the original result. These observations check execution of the proposed steps;
+they cannot establish a detection rate or early prevention in future work.
+
+After version approval, review its first three material tasks for missed premises,
+unnecessary questions, user understanding, time to discovery and review effort.
+The maintainer owns that follow-up and decides whether evidence warrants revision.
+Keep the approved version and observations identifiable; material revisions return
+to Proposed under the register's approval rules. No fixed percentage target is
+invented, and evaluation must not become a condition for the initial approval.
 
 | Control | Evidence / implementation |
 | --- | --- |
 | Early question/premise check | Manual brief and source/disposition record |
 | Independent relevance challenge | Separate-context Phase A/B records, not a GitHub approving review |
 | Boundary/publication check | Final-source relevance assessment and issue/PR consistency review |
-| Process effectiveness | Initial controlled pilot; prospective observations remain open |
+| Process effectiveness | Unqualified; review the first three material tasks after version approval |
 | Automated enforcement | Not implemented; presence/link checks cannot establish semantic truth |
 
 Contributor, spike, ADR and PR entry points link this pilot. SOP-001's approved

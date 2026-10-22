@@ -16,6 +16,9 @@ records; link sanitized public requirements where available.
 - Early validator input/version, Phase A evidence, Phase B findings and verdict:
 - Findings disposition: source, user decision or dependent work still paused:
 - Independent work that can proceed; smallest necessary clarification, if any:
+- If user input is needed: brief plain-language context, known/unknown facts,
+  consequence, recommendation and exact decision/scope; link supporting detail
+  (see [user explanation](work-framing.md#explain-the-process-to-the-user)):
 - Revalidation triggers and next action:
 
 Before publication, add:
