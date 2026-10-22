@@ -171,7 +171,8 @@ reordered/duplicate/extra blocks, encrypted or algorithm-specific key labels,
 trailing DER bytes and any non-whitespace tail. API selection must demonstrate
 this exact grammar (including overflow-before-parse and DER consumption) rather
 than rely on a general PEM parser's defaults. Positive LF/CRLF and boundary cases,
-plus each rejection class, are required parser tests before executable approval.
+plus each rejection class, need reviewed test cases/oracles before executable
+approval and actual passing parser tests before qualification.
 
 The operator owns issuer generation/signing and confidential staging outside the
 checkout, and verifies the secret-import channel and absence of echo/logging.
@@ -227,8 +228,10 @@ does not guarantee whether suspension counts. Linux
 [timekeeping](https://docs.kernel.org/core-api/timekeeping.html) distinguishes
 `CLOCK_MONOTONIC`, which stops during system suspend, from `CLOCK_BOOTTIME`, which
 includes it. Neither name alone proves the selected VM/host pause behavior.
-A provider-qualified elapsed-time/resume adapter and an admission barrier are
-required before executable approval: after a resume, the barrier must latch stop
+A provider-specific elapsed-time/resume adapter and admission barrier need
+independently reviewed API guarantees and a qualification method before executable
+approval. Actual separately authorized tests must prove that, after a resume,
+the barrier latches stop
 before application work can admit a request or continue owned pending responses.
 Abort pending work; bytes already handed to the kernel/client cannot be retracted.
 If dependable detection/barrier semantics cannot be established, this profile
@@ -263,8 +266,8 @@ suspend test, new host service or trust change is authorized by this document.
 Before executable work: maintainer decides ADR-106 and disposable-storage risk;
 review exact images/digests, issuer tooling, APIs, versioned dependencies/notices/
 advisories, intent-file and clock/resume adapters, admission barrier and failure
-oracles. Unproven resume semantics block executable approval, even if ordinary
-clock-injection tests pass. #40 retains the independent
+oracles. Missing dependable resume API semantics block executable approval;
+actual provider evidence gates qualification even if clock-injection tests pass. #40 retains the independent
 production dependency disposition and 2026-11-18 review deadline.
 Obtain fresh permission for heavy work/VM/services and exact trust mutations.
 Check actual RAM before VM start, after start and before compilation; retain the
