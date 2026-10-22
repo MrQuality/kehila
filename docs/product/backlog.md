@@ -374,6 +374,11 @@ plan and execution/trust gates retain their existing status; no new evidence.
 Provisional budgets require measurement; schema/capability adoption and A1-A5
 implementation retain separate gates. No authentication case is marked passed.
 
+The 2026-10-21 [platform-assumption post-mortem](../postmortems/2026-10-21-platform-assumption.md)
+corrects the intended backend target to a Linux container. Do not reuse the former
+Windows-host profile or PR #70's server-key recommendation as backend direction.
+Reconcile container TLS/provisioning before adapter selection; #40/#49 remain open.
+
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 
 **Deliverable:** The agreed local identity/access model and enforceable permissions for configured operations, extended as resource and cost features arrive.
@@ -567,6 +572,24 @@ not activate an initiative or move it ahead of product delivery.
 **Traceability:** GOV-001/GOV-002, ARC-001, TEST-001, DOC-001, CODE-001.
 **Deliverable:** Standards/register, ADR boundary, Definition of Done, shared
 metadata validation and useful language checks.
+The maintainer-authorized [framing/relevance pilot](../procedures/work-framing.md)
+adds manual early and publication gates, separate-context challenge and bounded
+[pilot observations](../postmortems/2026-10-21-framing-validation-pilot.md),
+including R01's protocol limitation and R02's known-case replay. The
+exact SOP codification remains Proposed; no semantic CI gate or general prevention
+claim is established. Approve the procedure version for use first, then observe
+its first three material tasks to assess effectiveness and inform revisions;
+future observations are not prerequisites to initial approval. Track these in the [post-mortem](../postmortems/2026-10-21-platform-assumption.md).
+[Issue #71](https://github.com/MrQuality/kehila/issues/71) owns those prospective
+observations and the exact procedure-version decision; this work remains open.
+The [Codex feasibility and guidance assessment](../procedures/work-framing-support.md)
+supports a manual stage announcement and revision-linked brief with resumption
+checks, with selected practices carried into the brief/validator: separate need
+from solution, give consequential unknowns a resolver/next action, inspect decisive
+sources directly, distinguish relevance from correctness, and preserve concise
+user decisions and explicit decision authority. The brief is the canonical field
+list, with decision rules in the SOP and a short linked operating path. No new
+runtime gate or standards conformance is claimed.
 The [coding standard](../engineering/CODING-STANDARD.md) applies to new/materially
 changed code and inventories current gaps. Qualify boundary checks, Python static
 tooling and declared Rust compiler support incrementally; use B-022 for TypeScript/

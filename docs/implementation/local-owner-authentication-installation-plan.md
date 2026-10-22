@@ -20,27 +20,32 @@ recovery, languages and agent execution remain post-MVP; replicated authority
 and remote deployment remain B-032/#65. Stable actor/domain identities must not
 depend on an OS account, file path, DPAPI blob or issuing process.
 
-## Proposed installation profile
+## Deployment clarification and remaining design
 
-Start with the browser, CLI and Rust diagnostic process on Windows, running as
-the same explicitly identified non-administrative OS user. Keep the Rust listener
-on literal `127.0.0.1`; use one configured HTTPS origin and explicit CLI trust.
-This is a proposal for proof scope, not a newly supported deployment.
+On 2026-10-21 the maintainer clarified that the intended backend runs in a Linux
+container. Windows is a development/client host, not evidence of native Windows
+backend placement. The former host-first diagnostic profile did not establish
+the intended backend architecture; its reuse for server-key research is addressed
+in the [post-mortem](../postmortems/2026-10-21-platform-assumption.md).
 
-Treat Podman as the backend-service environment for this proposed profile.
-The first certificate/storage proof needs no backend services or VM. Before
-claiming Windows/Podman support, review the exact service topology and separately
-prove the required host-to-backend connections without exposing anonymous
-application, worker or search endpoints as an alternate supported route.
-Backend connectivity/role evidence belongs to the relevant A1/A3 integration gate;
-this experiment alone cannot qualify that installation.
+Client platforms are a separate scope: the client may target Windows and Linux,
+with Windows the MVP priority. This does not select a Windows-only long-term
+client or qualify a Linux client. Host-specific CLI credential storage and browser
+trust must follow the client's actual OS, independently of the container backend.
 
-A Rust authority inside a Linux container is a different profile. Windows DPAPI,
-Windows ACLs and host loopback cannot be assumed to carry across that boundary.
-Record its key owner, mount access, container listener and host forwarding policy
-in a separate reviewed proposal if required. Do not change to wildcard binding,
-export a server key through a shared mount, or introduce a TLS proxy to make the
-host proof pass. Linux file/storage qualification remains separate.
+AUTH-001's actual Windows-host diagnostic evidence remains a bounded transport
+subset. It does not qualify container key storage or installation. Windows CLI
+credential protection and browser trust remain distinct host concerns. A Windows
+key-provisioning component is not assumed merely because the host is Windows.
+
+Before backend-specific adapter work, validate the container boundary, TLS
+termination/listener exposure, runtime identity and secret provisioning/mounts.
+Reconcile container listener/forwarding with ADR-105's literal-loopback constraint
+in a reviewed design; this correction grants no wildcard binding, proxy, shared
+key mount or HTTP fallback. No container implementation or installation support
+is claimed. Use the [framing pilot](../procedures/work-framing.md) before selecting
+platform-specific mechanisms; do not defer the intended container target as a
+later unrelated profile.
 
 ## Certificate lifecycle contract to prove
 
@@ -141,21 +146,9 @@ key as a session secret or a CLI bearer as an installation identity.
 
 | Record | Proposed contract |
 | --- | --- |
-| Windows server key | Compare the two candidate models below; both require a restricted owner ACL, explicit runtime-user access and no shared/public file fallback. Review the selected key loader and any decryption adapter; CLI DPAPI evidence does not qualify server-key handling. |
+| Backend server key | Intended runtime is a Linux container. Ownership, permissions, safe file operations and secret provisioning must be designed for that boundary; no Windows storage model is selected for it. |
 | Windows CLI bearer | User-scoped DPAPI plus restricted owner ACL, as required by ADR-105. Verify user scope and UI suppression; reject Machine scope. Use synthetic values for the adapter proof; no login endpoint or real bearer is needed. |
 | Linux CLI bearer | Preserve ADR-105's owned mode-0700 directory and mode-0600 file contract. Ownership, symlink refusal and replacement need real Linux evidence before qualification. Windows success does not qualify this path. |
-
-For the Windows server key, evaluate these candidates before selecting an adapter:
-
-| Candidate | Required evaluation |
-| --- | --- |
-| ACL-restricted plaintext key file | Verify the opened object's owner/access rules and redirection refusal. Account for readable on-disk key material, temporary generations, replacement and cleanup. |
-| User-scoped DPAPI key file, decrypted at startup | Verify the runtime identity can decrypt without UI, reject Machine scope, and review plaintext buffers, loader/provider copies and FFI allocation/free ownership. Account for decryption failure, replacement and recovery without a plaintext fallback. |
-
-For both, record startup identity, unattended operation, plaintext copies,
-replacement, recovery and failure behavior against the actual library and
-filesystem. A zeroizing input buffer does not prove erasure of library-owned
-key copies. Selection remains subject to dependency review and actual evidence.
 
 For each adapter, review creation, opening, reading, replacement and cleanup as
 one resource-ownership contract. Require bounded reads before parsing/decryption,
@@ -177,46 +170,50 @@ must see a complete old or new record. Wrong user, tampering, broad inherited AC
 redirection and concurrent replacement must deny or reconcile explicitly.
 
 Review plaintext buffer copies, cancellation, FFI allocation/free ownership and
-diagnostics. No password, bearer, key or decrypted blob may enter logs, telemetry
+diagnostics. A zeroizing input buffer does not prove erasure of library-owned
+key copies. No password, bearer, key or decrypted blob may enter logs, telemetry
 or public evidence. DPAPI and ACLs do not contain code controlling the same OS
 account; a DPAPI blob is not a portable identity backup. Restored CLI credentials
 must not bypass ADR-105's restart/restore invalidation contract.
 
-## Bounded execution proposal and exit criteria
+## Next proposal and execution gates
 
-1. Review this profile, unresolved adapter/issuance choices and failure oracles.
-   Complete primary-source API and dependency/license/advisory review before
-   adding even experimental dependencies. Retain #40's existing production
-   dependency disposition and 2026-11-18 review deadline independently.
-2. Submit a concrete isolated experiment scope and selected inputs for review.
-   Propose a 90-minute active investigation budget excluding fetch/build,
-   required verification and permission waits. Stop at the budget or an
-   inconclusive ownership/atomicity/trust prerequisite; record the unresolved
-   result rather than widening the profile.
-3. Obtain separate permission for memory-heavy work and check available RAM;
-   serialize builds and use one Cargo job. Obtain separate approval for the exact
-   trust change. No new VM, backend service, account, security-setting change or
-   certificate trust is authorized by approving this document.
-4. Exercise real Windows files and actual browser/CLI validation: clean setup,
-   all startup refusals, successful renewal, failed/interrupted renewal,
-   expiry behavior, hostile storage cases, concurrent replacement and removal.
-   For another-user denial, use a separately approved test identity or record
-   the case unqualified; do not create accounts implicitly. Give each negative
-   case a specific diagnostic oracle; unrelated startup/network failure cannot pass.
-5. Retain confidential evidence, generated secrets and build/debug outputs outside
-   the checkout. Record source, platform/filesystem/browser/tool versions,
-   reached cases, failures and cleanup. Publish only reviewed, sanitized results.
+Before execution, submit a container-specific proposal defining the backend
+boundary, TLS listener exposure/termination, runtime identity, key provisioning
+and mounts. Justify any Windows CLI or host provisioning proof separately.
+The retired Windows backend candidates and execution outline remain available
+in the [historical plan](https://github.com/MrQuality/kehila/blob/708f8ab18f574dd07a4400cc24ef3b48935d376a/docs/implementation/local-owner-authentication-installation-plan.md#retained-windows-diagnostic-proposal-not-backend-qualification);
+they are not the next backend qualification path.
 
-Exit only when the selected profile and exact adapters are reviewed, the matrix
-has actual results, failures preserve the stated storage invariants and cleanup
-is confirmed. A failed or unexecuted case stays open. Report host installation,
-Podman integration and Linux qualification separately. This proof cannot mark a
-complete T01-T16 authentication case passed.
+The proposal must select adapters and issuance inputs after primary-source API,
+dependency, license and advisory review. Preserve #40's separate production
+dependency disposition and 2026-11-18 review deadline. Define numerical limits,
+specific positive/negative oracles, failure recovery and owned cleanup for the
+actual platform: clean setup, startup refusals, successful and interrupted renewal,
+expiry, hostile storage, concurrent replacement and removal. An unrelated startup
+or network failure cannot satisfy a negative oracle. Stop at an inconclusive
+ownership, atomicity or trust prerequisite rather than widening the profile.
+The earlier 90-minute active-investigation budget is a proposal,
+not authorization for a new experiment; review its suitability with the scope.
 
-Update #40/#49 and the linked backlog/delivery records with the reached subset
-and remaining gates after the experiment. A1 still requires a separately reviewed
-schema/capability plan and applicable A0 prerequisites; this document authorizes
-neither implementation nor release qualification.
+Execution still requires separate permission for memory-heavy work, an available
+RAM check, serialized builds and one Cargo job. Any trust change needs approval
+for its exact scope. No new VM, backend service, account, security-setting change
+or certificate trust is authorized by this document. Another-user tests require
+an approved test identity or remain unqualified.
+
+Keep confidential evidence, generated secrets and build/debug outputs outside the
+checkout. Record actual source, platform/filesystem/tool versions, reached cases,
+failures and cleanup; publish only reviewed, sanitized results. Exit only when the
+selected adapters and matrix have actual evidence, storage failures preserve the
+stated invariants and cleanup is confirmed. Unexecuted or inconclusive cases stay
+open. Report host, Podman integration and Linux qualification separately; this
+proof cannot mark a complete T01-T16 authentication case passed.
+
+Update #40/#49 and linked backlog/delivery records with the reached subset and
+remaining gates. A1 still requires a separately reviewed schema/capability plan
+and applicable A0 prerequisites; this document authorizes neither implementation
+nor release qualification.
 
 ## Primary references for adapter review
 

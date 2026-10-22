@@ -2,6 +2,12 @@
 
 What problem does this solve, and what behavior changes?
 
+For material work in the [framing pilot](../docs/procedures/work-framing.md), link
+the original requested outcome, consequential premises/sources, early relevance
+verdict and dispositions. State N/A with a reason for routine reversible work.
+Before publication, link final-revision revalidation and any changed premises.
+Agent assessment is not maintainer approval or acceptance of Proposed choices.
+
 For a partial delivery, use reference-only links to continuing umbrella issues.
 State that the issue remains open; do not put a closing keyword directly before
 its issue reference, including inside a negated sentence. Confirm GitHub's closing

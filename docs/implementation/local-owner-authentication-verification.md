@@ -15,6 +15,14 @@ post-MVP replicated profile and migration; no cluster experiment is authorized.
 
 ## Acceptance record and remaining implementation gates
 
+The maintainer clarified on 2026-10-21 that the backend is intended to run in a
+Linux container. The [corrected installation framing](local-owner-authentication-installation-plan.md#deployment-clarification-and-remaining-design)
+must guide subsequent proposals; a Windows development host does not select
+Windows-native server-key storage. Container exposure/provisioning design remains
+unqualified, and no execution or accepted TLS constraint is weakened here.
+Clients may target Windows and Linux; Windows is the MVP priority. Linux-client
+qualification remains separate, and this priority does not change backend placement.
+
 [Explicit approval, 2026-10-19](https://github.com/MrQuality/kehila/issues/40#issuecomment-6262900825) accepts ADR-105 for the
 local MVP and authorizes A0, including restart logout and documented local
 availability/audit-loss trade-offs. It accepts no replicated mechanism or ADR-103

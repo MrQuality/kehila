@@ -17,6 +17,11 @@ Keep unknowns explicit; do not turn planned checks into claimed results.
 What uncertainty are we resolving, and which decision depends on it?
 State included work, excluded work, assumptions, and alternatives.
 
+For the [framing pilot](../procedures/work-framing.md), link or embed the
+[brief](../procedures/work-framing-template.md): consequential premises, evidence
+status, consequence if false, separate-context Phase A/B verdict and dispositions.
+Record revalidation when the question/boundary changes and before publication.
+
 ## Cases
 
 | Case | Variable / condition | Fixed controls | Expected observation / threshold | Claim this would support |

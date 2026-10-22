@@ -8,6 +8,14 @@ The [project procedure index](docs/procedures/README.md) lists SOPs, their scope
 approval status, and enforcement coverage. Follow approved procedures applicable
 to your change. Proposed procedures remain proposals until explicitly approved.
 
+The maintainer authorized an [evidence/relevance checkpoint pilot](docs/procedures/work-framing.md)
+on 2026-10-21. For material work in that pilot, validate consequential premises
+before dependent effort, obtain a separate-context relevance assessment, and
+revalidate at changed boundaries and before publication. Record source-backed
+findings and dispositions in the existing task/PR; routine reversible choices
+need no extra approval. The exact SOP-002 codification remains Proposed. This is
+manual pilot execution, not new CI enforcement or an independent GitHub approval.
+
 ## Setup and testing
 
 Follow the [development setup](README.md#development-setup), then run:

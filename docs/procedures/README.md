@@ -10,6 +10,7 @@ GitHub enforces it.
 | ID | Procedure | Version / status | Owner | Approval | Enforcement |
 | --- | --- | --- | --- | --- | --- |
 | SOP-001 | [Technical spikes](../spikes/README.md) | 1 / Approved | [Project maintainer](../../CONTRIBUTING.md#repository-roles) | Maintainer approval recorded 2026-09-25 | Manual use in effect; spike validator and runner preflight not implemented |
+| SOP-002 | [Evidence and relevance checkpoints](work-framing.md) | 1 / Proposed codification | Project maintainer | Controls/pilot authorized 2026-10-21; exact version acceptance pending | Manual brief, separate-context validation and revalidation pilot; no semantic CI gate |
 
 SOP IDs describe procedures; SP IDs describe individual spikes. Use a new SOP ID
 for a new procedure and a new version for a revision of the same procedure.
@@ -48,7 +49,14 @@ Before seeking approval, make the version ready to use:
 - Provide the template or commands people need, with unimplemented parts marked.
 - Map requirements to automated checks, human assessment, or a documented gap.
 - Resolve contradictions with other guides and identify the first application.
-- State whether a trial is needed, its limits, and what prompts a revision.
+- State how use will be evaluated after approval, any authorized trial scope and
+  limits, and what prompts a revision.
+
+Initial approval authorizes use of the specified procedure; it does not certify
+its effectiveness. Do not require results from future use before that approval.
+Evaluate actual work after approval and use the observations to decide revisions.
+A separately authorized rehearsal can check whether proposed steps can be followed,
+but must not be presented as proof of future effectiveness.
 
 SOP-001 version 1 was approved by the project maintainer on 2026-09-25 for
 initial use with manual checks. Its first application is SP-001/B-002. The
