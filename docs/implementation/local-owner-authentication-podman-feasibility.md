@@ -1,6 +1,6 @@
 # A0: Podman/WSL 2 resume feasibility
 
-Status: Research result; executable readiness unresolved. Recorded: 2026-10-22.
+Status: Research result; executable readiness unresolved. Recorded / updated: 2026-10-22.
 Owner: project maintainer. Related #40/#49;
 [container plan](local-owner-authentication-container-plan.md),
 [Proposed ADR-106](../architecture/ADR-106-local-container-transport.md).
@@ -73,6 +73,86 @@ Elapsed-time accounting and detecting every pause are separate obligations.
 Even a pause-inclusive clock may account for a short pause without distinguishing
 it from ordinary descheduling. The existing plan requires suspension to end the
 instance, not just shutdown after the total lifetime eventually expires.
+
+## Pinned provider-source follow-up
+
+After PR #74 merged, the maintainer requested continuation. This follow-up uses
+baseline `34d5f23d2be850e31075e77ad1f6b6d579127f03` and inspects implementation
+paths without starting the provider or authorizing dependent implementation.
+The source revisions are candidates matching the earlier reported versions,
+not verified provenance of the installed binaries or active guest configuration:
+
+| Component/tag | Resolved commit | Reviewed path scope |
+| --- | --- | --- |
+| WSL `3.0.3` | `15ea3b3846c5f18318722d1381186b2ff6ed72eb` | Ordinary WslCoreVm/LxssUserSession lifecycle, service entry point, guest init and service interface; targeted symbols/call sites, not whole-program verification. |
+| WSL kernel `linux-msft-wsl-6.18.54.1` | `d504d40ab83839cb61942a812a99d183c42227b9` | Hyper-V utilities/time-sync/PTP, Hyper-V clocksource and generic timekeeping suspend/resume paths. |
+| Podman `v5.8.3` | `93dbfd0d86ee57f8f91801f61ce57dd880a4725f` | WSL provider start/stop, distribution termination and command construction. |
+
+The annotated Podman tag was dereferenced to its commit. No downloaded code was
+executed, built or added to Kehila. The review is bounded; missing symbols or a
+missing hook in these paths do not prove that no other provider mechanism exists.
+WSLC-specific virtual-machine code is a distinct path and is not evidence that
+the selected ordinary Podman WSL distribution executes that code.
+
+### Concrete findings
+
+- **Clock correction is queued work.** In
+  [Hyper-V utilities](https://github.com/microsoft/WSL2-Linux-Kernel/blob/d504d40ab83839cb61942a812a99d183c42227b9/drivers/hv/hv_util.c#L337),
+  `adj_guesttime` schedules work that later invokes `do_settimeofday64`.
+  The optional implicit-sync branch checks for at least five seconds of lag; its
+  configured value was not measured. This correction path provides no application
+  resume generation or pending-response barrier. The threshold is not a measured
+  correction delay or an observed local failure.
+- **Hyper-V PTP is not a fresh host challenge.** In the
+  [same driver](https://github.com/microsoft/WSL2-Linux-Kernel/blob/d504d40ab83839cb61942a812a99d183c42227b9/drivers/hv/hv_util.c#L308),
+  the PTP get-time path uses a cached host sample plus reference-counter delta.
+  Its 600-second stale-sample check measures reference-counter age; it is not a
+  wall-time freshness guarantee across a stopped counter. A readable PTP device
+  alone therefore does not establish independent host-time freshness or a pause
+  marker. No device passthrough, permission change or PTP dependency is selected.
+- **Guest hibernation does have ordering in a specific path.** The
+  [utility suspend/resume code](https://github.com/microsoft/WSL2-Linux-Kernel/blob/d504d40ab83839cb61942a812a99d183c42227b9/drivers/hv/hv_util.c#L643)
+  documents user-space freezing before its suspend callback and thawing after
+  resume completes. This is positive evidence for that guest lifecycle, not a
+  mapping of every Windows host sleep or VM freeze into it. It also does not
+  itself latch the Kehila diagnostic instance stopped.
+- **Sleep accounting is separate from a pause marker.**
+  [Generic timekeeping](https://github.com/microsoft/WSL2-Linux-Kernel/blob/d504d40ab83839cb61942a812a99d183c42227b9/kernel/time/timekeeping.c#L1938)
+  can inject sleep time using the resumed clock or persistent-clock fallback.
+  [Hyper-V clocksource selection](https://github.com/microsoft/WSL2-Linux-Kernel/blob/d504d40ab83839cb61942a812a99d183c42227b9/drivers/clocksource/hyperv_timer.c#L556)
+  is feature-dependent. These paths do not establish an application-visible
+  generation that distinguishes every short pause from ordinary descheduling.
+- **Explicit lifecycle control is not automatic resume fencing.** Podman's
+  [WSL provider](https://github.com/podman-container-tools/podman/blob/93dbfd0d86ee57f8f91801f61ce57dd880a4725f/pkg/machine/wsl/stubber.go#L211)
+  starts through a bootstrap command; its stop path reaches
+  [distribution termination](https://github.com/podman-container-tools/podman/blob/93dbfd0d86ee57f8f91801f61ce57dd880a4725f/pkg/machine/wsl/machine.go#L626).
+  This is not evidence of a completed stop before every host pause. The
+  [HCS pause API](https://learn.microsoft.com/en-us/virtualization/api/hcs/reference/hcspausecomputesystem)
+  separately distinguishes starting an operation from its completed result.
+  Neither explicit control nor an operation callback establishes an automatic
+  pre-continuation interlock. No HCS handle or additional host authority is adopted.
+
+**Result:** this source follow-up does not establish a dependable adapter for the
+full existing contract. It rules out treating these specific correction, PTP and
+lifecycle facilities alone as that adapter; it does not rule out Podman/WSL 2.
+No new guest state or runtime qualification was observed. Keep the existing gate.
+
+### Next decision boundary
+
+Do not build the integrated probe around a correction timer, PTP read, lifecycle
+notification or cached heartbeat as if it solved this requirement. Repeating clock
+samples would not establish the missing ordering contract. Characterization is
+useful only when attached to a concrete mechanism and a falsifiable hypothesis.
+
+Retain the current criterion without requiring renewed acceptance. Further
+dependent work needs a documented provider interlock; this review has not supplied
+one. If an alternative suspend/resume contract is proposed, its supported behavior
+and security consequences need an explicit maintainer decision. No revision is
+necessary merely to publish this result, and none is adopted here. A later
+proposal must cover both new
+requests and owned pending responses, short pauses, stale time/permission, crash
+and reconnect behavior. Changing the host, adding a Windows authority component,
+or increasing privileges is not a routine test-harness choice.
 
 ## Disposition and next evidence
 
