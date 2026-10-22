@@ -1,6 +1,6 @@
 # Remaining A0: proposed Linux-container boundary and disposable proof
 
-Status: Proposed design and probe plan; no implementation/execution permission.
+Status: Proposed design/probe; first-proof topology selected, no execution permission.
 Owner: project maintainer. Recorded: 2026-10-22. Related #40/#49 W2;
 [ADR-106 proposal](../architecture/ADR-106-local-container-transport.md),
 [Accepted ADR-105](../architecture/ADR-105-local-owner-authentication.md),
@@ -19,13 +19,19 @@ the PR records candidate/final reviewed revisions, actual findings and checks.
 | Backend in a Linux container; Windows MVP clients | Established by maintainer clarification and the installation plan. Linux clients remain a separate target. | Design those boundaries; do not resume native Windows server-key research. |
 | Literal-loopback origin AND Rust listener | Established: ADR-105 section 1. | Direct container binding conflicts; maintainer must explicitly decide Proposed ADR-106 before dependent implementation. |
 | Runtime/transport investigation is full authentication qualification | Contradicted: AUTH-001 and A0-A5 plan. | Keep identity, schema, cookies/CSRF, actor and real-data claims gated. |
-| Windows/WSL rootless bridge is the first proof target | Proposed, not a universal Windows/Podman guarantee. | Maintainer reviews scope; executor verifies actual provider, mappings and prerequisites before execution. Stop on mismatch. |
+| Same-host Podman/WSL 2 is the first-proof topology | Selected by the maintainer on 2026-10-22; Windows client, Linux-container backend. Rootless bridge/isolation details remain Proposed. | Verify actual provider, mappings and prerequisites before execution; selection supplies no networking or resume guarantee. |
 | Restricted file secret meets copied-key protection | Unsupported: Podman documents read-protection, not encryption. | Maintainer explicitly accepts disposable-only residual risk or requests a different storage contract. |
 | Documentation proves host/VM/container isolation or safe file operations | Unsupported. | Executor needs the path/ownership/crash matrix below; reviewers cannot substitute a verdict for actual evidence. |
 
 The proposed path and alternatives are in ADR-106. Independent relevance review
 receives original requirements before this candidate; record its sources, gaps
 and dispositions in the PR. Exact SOP-002 version approval remains separate.
+
+The maintainer selected Podman with WSL 2 on the Windows client host for the first
+proof on 2026-10-22. WSL is infrastructure for the Linux-container backend, not
+frontend code. The [read-only feasibility result](local-owner-authentication-podman-feasibility.md)
+records stopped-state observations and an unresolved resume mechanism. This
+selection does not accept ADR-106, storage risk or executable work.
 
 ## Review follow-up and executable readiness
 
@@ -34,7 +40,7 @@ the runtime or accept ADR-106. #40/#49 retain the unexecuted evidence gates.
 
 | Item | Design disposition | Evidence still required before executable approval |
 | --- | --- | --- |
-| CR-01, Medium / P2 | Pause-inclusive expiry/lifetime; suspension ends the instance, with a barrier before application continuation. | Review a dependable elapsed-time/resume adapter and independent actual-provider qualification method. Missing semantics block approval; injected clocks alone are insufficient. |
+| CR-01, Medium / P2 | Pause-inclusive expiry/lifetime; suspension ends the instance, with a barrier before application continuation. | [Read-only feasibility remains unresolved](local-owner-authentication-podman-feasibility.md#disposition-and-next-evidence). Review a dependable adapter and actual-provider qualification method; missing semantics block approval, and injected clocks alone are insufficient. |
 | CR-02, Low / P2 | One required argv interface with canonical address/origin grammar and no fallback sources. | Review launcher/process validation APIs and negative-test oracles; later execution must prove actual publication. |
 | CR-03, Low / P2 | Version-1 certificate-then-PKCS#8 PEM grammar, explicit whitespace and complete DER consumption. | Select/review parser APIs and rejection-test oracles; later execution must prove strict admission. |
 | WSL clarification, Low / P3 | Capture effective mode/options/versions separately from configured values; qualify by ingress evidence. | Review read-only preflight method; later execution must establish effective state and full allowed/denied paths. |

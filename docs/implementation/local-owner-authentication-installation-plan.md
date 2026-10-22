@@ -57,6 +57,12 @@ neither proposal authorizes implementation, VM startup or trust changes. The
 also gates clock/resume feasibility, canonical configuration and exact bundle
 parsing; effective WSL state and real ingress/pause results remain unqualified.
 
+The first-proof topology is now selected: same-host Podman with WSL 2, a Windows
+client and Linux-container backend (maintainer clarification, 2026-10-22).
+[Read-only feasibility](local-owner-authentication-podman-feasibility.md) found no
+established full resume mechanism; active engine/network/clock behavior remains
+unqualified. This is not a native Windows server or a separate Linux-host choice.
+
 ## Certificate lifecycle contract to prove
 
 ### Agreed PoC TLS profile

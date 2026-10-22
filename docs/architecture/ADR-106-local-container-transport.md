@@ -15,6 +15,12 @@ The [framing record](../implementation/local-owner-authentication-container-plan
 separates that authorization from these proposed choices and execution permission.
 The accepted source baseline is `8b13fd34625b799824a8422b5c24db799955243c`.
 
+On 2026-10-22 the maintainer selected same-host Podman with WSL 2 as the first-proof
+topology: Windows client, Linux-container backend, WSL infrastructure. This selects
+the research/proof target, not this listener amendment or storage risk. The
+[read-only feasibility result](../implementation/local-owner-authentication-podman-feasibility.md)
+leaves resume readiness unresolved; no executable proof is authorized.
+
 ADR-105 requires HTTPS termination and authority in one Rust process, and says
 both the client origin and listener are literal `127.0.0.1`. Host and container
 loopback are different boundaries. A host port declaration alone does not prove
