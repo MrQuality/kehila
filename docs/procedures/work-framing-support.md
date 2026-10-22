@@ -63,6 +63,17 @@ for presentation, and NIST for human/AI responsibility boundaries. NASA supplies
 accessible checklists. Keep the existing brief and review record; do not create
 parallel compliance forms or require a second approval for routine authorized work.
 
+The selected practices are operational in the proposed procedure, not a separate
+compliance checklist: [early framing](work-framing.md#1-early-framing-gate) separates
+the need from the solution and gives unresolved consequential premises a resolver
+and next action; [validation](work-framing.md#2-independent-relevance-validation)
+requires direct inspection of decisive sources and distinguishes author, reviewer
+and maintainer authority; [publication review](work-framing.md#3-revalidation-and-publication-gate)
+assesses relevance separately from correctness. The existing
+[user explanation](work-framing.md#explain-the-process-to-the-user) keeps decisions
+brief and supporting detail available. The [brief](work-framing-template.md) and
+[validator assignment](work-framing-validator.md) carry these practices into work.
+
 Initial version approval authorizes use; it does not establish effectiveness.
 After approval, observe the first three material tasks under [#71](https://github.com/MrQuality/kehila/issues/71)
 and decide revisions from actual results. Standards and reviewer agreement do not
