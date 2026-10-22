@@ -28,9 +28,10 @@ task permits; a closed-evidence pilot must disclose that limitation.
 Supply the author's approach, premise brief and any changed evidence.
 
 > Compare the candidate with your Phase A framing and the actual requirements.
-> Which premises are supported, unresolved or contradicted? Which approval is
-> being stretched? Could a plausible alternative interpretation make the work
-> unnecessary? Cite evidence and consequences; do not score by polish or test count.
+> Which premises are supported, unresolved or contradicted? Does the candidate
+> exceed its authorization? If so, cite the evidence. Could a plausible alternative
+> interpretation make the work unnecessary? Cite evidence and consequences; do not
+> score by polish or test count.
 > List material findings, their disposition needs, independent work that can
 > proceed and the smallest necessary user question. Give a bounded gate verdict:
 > proceed, proceed on independent work only, or clarification required for

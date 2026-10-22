@@ -22,6 +22,24 @@ external commitments. Routine reversible implementation choices do not require
 another approval or a second agent. Small work can use a few sentences in the
 existing task/issue/PR; do not create a parallel decision registry.
 
+## Operating path
+
+Keep the record in the existing task, issue or PR:
+
+1. Record the original outcome, authority and consequential premises in the
+   [brief](work-framing-template.md), with sources/status and consequences if false.
+2. Send the request and authoritative evidence to a separate context for
+   [Phase A](work-framing-validator.md#phase-a-request-and-authority-first).
+   Preserve its framing before sending the candidate.
+3. Send the candidate for [Phase B](work-framing-validator.md#phase-b-challenge-the-candidate).
+   Record findings and dispositions; pause only dependent work with material
+   unsupported premises, asking the smallest necessary question when needed.
+4. At a changed boundary and before publication, update the brief and review the
+   delta and final revision. Record actual evidence, limits and unresolved choices;
+   leave acceptance to the maintainer.
+
+The sections below define the evidence and review requirements for these steps.
+
 ## 1. Early framing gate
 
 The author records the [framing brief](work-framing-template.md) before dependent
@@ -47,8 +65,7 @@ For material work in the pilot, use a separate validation agent/context and the
 [two-stage prompt](work-framing-validator.md). First provide the original request
 and authoritative evidence, with source identities and relevant omissions; ask
 the validator to frame the problem before supplying the author's candidate.
-Then provide the candidate and ask it to challenge relevance, conflicts,
-unsupported premises and approval scope. Preserve the first response.
+Phase B challenges relevance, conflicts, unsupported premises and approval scope.
 
 Do not supply the author's rationale as the sole evidence or hide contrary
 requirements. Record what the validator actually received. A context already

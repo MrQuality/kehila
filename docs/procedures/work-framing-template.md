@@ -1,7 +1,7 @@
 # Work-framing brief
 
 Use inside the existing task/issue/plan; omit irrelevant rows with a reason.
-See [SOP-002's pilot](work-framing.md). Keep confidential evidence out of public
+Follow the [operating path](work-framing.md#operating-path). Keep confidential evidence out of public
 records; link sanitized public requirements where available.
 
 - Original requested outcome and source:
