@@ -10,7 +10,10 @@ Related: [SOP-002](../procedures/work-framing.md) and
 The original task is to implement the accepted relevance controls and write an
 honest post-mortem. It is not Linux backend implementation, new CI enforcement,
 architectural acceptance or changing PR #70's status. Source: maintainer direction
-on 2026-10-21, recorded by this change; the public PR will retain this boundary.
+on 2026-10-21, recorded by this change. A subsequent separate maintainer
+instruction closed PR #70 without merging; see the
+[disposition record](2026-10-21-platform-assumption.md#corrective-controls-ownership-and-remaining-work).
+That closure does not expand this process change into backend implementation.
 
 | Consequential premise | Evidence / status | Work boundary |
 | --- | --- | --- |

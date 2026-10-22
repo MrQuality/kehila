@@ -87,7 +87,7 @@ agent is assumed immune to the same unsupported framing.
 | Boundary/publication revalidation | Author and validator; maintainer decides intent | [SOP-002](../procedures/work-framing.md) requires delta review and final-source consistency. An agent verdict is not architectural acceptance. |
 | Pilot and future evaluation | Project maintainer | [Pilot record](2026-10-21-framing-validation-pilot.md) retains failed protocol attempts and bounded results; first three subsequent material-task observations remain open. |
 | Stop reuse of host-first placement as backend direction | Project maintainer / #40/#49 | Current plan correction distinguishes intended container backend, historical host evidence and unresolved container-specific design. No implementation or trust change is authorized here. |
-| PR #70 disposition | Project maintainer | This report supersedes its backend relevance as a next-step recommendation; the PR's status is left unchanged. Any rewrite/closure/merge remains a separate explicit decision. |
+| PR #70 disposition | Project maintainer | Closed without merging on 2026-10-21 under a separate explicit maintainer instruction; see the [closure record](https://github.com/MrQuality/kehila/pull/70#issuecomment-6307732761). Its research remains historical, not an adopted backend direction. |
 
 Contributor, spike, ADR and PR entry points are updated for the pilot. The exact
 new procedure text remains Proposed under the existing procedure approval rules.

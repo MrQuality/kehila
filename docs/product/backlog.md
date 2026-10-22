@@ -574,7 +574,8 @@ not activate an initiative or move it ahead of product delivery.
 metadata validation and useful language checks.
 The maintainer-authorized [framing/relevance pilot](../procedures/work-framing.md)
 adds manual early and publication gates, separate-context challenge and bounded
-[pilot observations](../postmortems/2026-10-21-framing-validation-pilot.md). The
+[pilot observations](../postmortems/2026-10-21-framing-validation-pilot.md),
+including R01's protocol limitation and R02's known-case replay. The
 exact SOP codification remains Proposed; no semantic CI gate or general prevention
 claim is established. Observe the first three subsequent material tasks before
 assessing effectiveness, as tracked by the [post-mortem](../postmortems/2026-10-21-platform-assumption.md).
