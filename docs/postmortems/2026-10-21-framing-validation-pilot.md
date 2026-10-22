@@ -1,6 +1,6 @@
 # Framing validation pilot, 2026-10-21
 
-Status: R02 controlled run complete; publication candidate reviewed and prospective
+Status: R02 known-case replay complete; publication candidate reviewed and prospective
 effectiveness unqualified. Owner: project maintainer.
 Related: [SOP-002](../procedures/work-framing.md) and
 [incident report](2026-10-21-platform-assumption.md).
@@ -59,9 +59,12 @@ exploratory observation, not counted as a protocol-complete pass. No Phase B
 result is claimed for R01. R02 uses the same evidence/candidates and records the
 expectations above before a new context starts; this does not erase R01.
 
-## Attempt R02: preregistered two-stage run
+## Attempt R02: known-case two-stage replay
 
-Expected decisions are fixed above before invoking the new context. Results:
+The author had already seen R01's Phase A outputs for these same cases. The
+expectations above were recorded before R02 began, and withheld from its new
+validator context. R02 therefore rehearses protocol execution on known cases; it
+is not a fresh independent benchmark or evidence of general prevention. Results:
 
 | Case | Phase A observation | Phase B decision / actual necessary question | Outcome against fixed expectation |
 | --- | --- | --- | --- |
@@ -74,7 +77,8 @@ order, without access to these expected outcomes or the author's rationale. The
 same model configuration was used; no different-model or independent-human
 approval is claimed. Phase B's nuanced partial-proceed decisions matter: a material
 unsupported dependency stops, not all useful investigation. R02 is one controlled
-three-case observation, not three independent real-world interventions.
+three-case replay with prior author exposure to R01, not three independent
+real-world interventions.
 
 ## Publication gate and prospective follow-up
 
