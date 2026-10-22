@@ -1,8 +1,10 @@
 # Work-framing brief
 
-Use inside the existing task/issue/plan; omit irrelevant rows with a reason.
-Follow the [operating path](work-framing.md#operating-path). Keep confidential evidence out of public
-records; link sanitized public requirements where available.
+This is the canonical field list for [SOP-002](work-framing.md). Use it inside the
+existing task/issue/PR; omit irrelevant rows with a reason. Follow the
+[operating path](work-framing.md#operating-path) for order and the procedure for
+decision rules. Keep confidential evidence out of public records; link sanitized
+public requirements where available.
 
 - Current stage and one-sentence explanation of authorized work:
 - Intended need and authoritative source, stated independently of the solution:
@@ -27,7 +29,7 @@ records; link sanitized public requirements where available.
 
 Before publication, add:
 
-- Final revision and changed premises since the early check:
+- Final revision and revision actually reviewed; changed premises since the early check:
 - Relevance: does the result address the intended need? Evidence and limits:
 - Technical correctness: does it meet specified requirements? Evidence and limits:
 - Publication validator findings/disposition and remaining decisions:

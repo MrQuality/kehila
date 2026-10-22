@@ -26,17 +26,15 @@ existing task/issue/PR; do not create a parallel decision registry.
 
 Keep the record in the existing task, issue or PR:
 
-1. Record the original outcome, authority and consequential premises in the
-   [brief](work-framing-template.md), with sources/status and consequences if false.
-2. Send the request and authoritative evidence to a separate context for
-   [Phase A](work-framing-validator.md#phase-a-request-and-authority-first).
-   Preserve its framing before sending the candidate.
-3. Send the candidate for [Phase B](work-framing-validator.md#phase-b-challenge-the-candidate).
-   Record findings and dispositions; pause only dependent work with material
-   unsupported premises, asking the smallest necessary question when needed.
-4. At a changed boundary and before publication, update the brief and review the
-   delta and final revision. Record actual evidence, limits and unresolved choices;
-   leave acceptance to the maintainer.
+1. Complete the [brief](work-framing-template.md) under the
+   [early framing gate](#1-early-framing-gate).
+2. Send the request and authoritative evidence for
+   [Phase A](work-framing-validator.md#phase-a-request-and-authority-first);
+   preserve the response before sending the candidate.
+3. Send the candidate for [Phase B](work-framing-validator.md#phase-b-challenge-the-candidate)
+   and resolve findings under the [validation rules](#2-independent-relevance-validation).
+4. Apply the [revalidation and publication gate](#3-revalidation-and-publication-gate)
+   at material changes and before publication.
 
 The sections below define the evidence and review requirements for these steps.
 
@@ -69,11 +67,9 @@ Implementation carries out agreed work; Verification checks the result against
 requirements. These are communication labels, not Codex permission modes or new
 approval gates. Do not repeat them on every tool call or routine update.
 
-Keep the decision brief in the existing task, issue or PR. Identify the candidate
-revision, source of authorization and its scope, consequential premises and
-unresolved choices, then the revision actually reviewed. A material change to
-scope or a premise reopens only the affected decision/dependent work; routine
-changes within authorization do not require whole-plan reapproval.
+Use the [brief](work-framing-template.md) as the canonical field list for the
+existing task, issue or PR, including its decision and revision record. Apply the
+[revalidation rules](#3-revalidation-and-publication-gate) when meaning changes.
 
 After resuming work or losing context, reload that brief, check it against the
 current source and latest user direction, and reconcile material differences
@@ -84,9 +80,7 @@ observed/manual boundary and sources; no new automation is installed by this SOP
 
 ## 1. Early framing gate
 
-The author records the [framing brief](work-framing-template.md) before dependent
-work: original requested outcome and authority, non-goals, consequential premises,
-source and status for each, consequence if false, and proposed work boundary.
+The author completes the [brief](work-framing-template.md) before dependent work.
 State the need independently of the proposed solution. Distinguish confirmed
 requirements from inferred requirements and proposed mechanisms. Use accepted
 requirements, explicit user decisions and actual observations; an author's summary
@@ -95,9 +89,7 @@ or a Proposed document is not its own acceptance evidence.
 Distinguish **established**, **inferred**, **proposed**, **unresolved** and
 **contradicted** premises. An established fact needs evidence; conflicting sources
 need reconciliation. A new user direction can replace an earlier decision, but
-record what changed and preserve historical evidence. For an unresolved
-consequential premise, identify who can resolve it and the next action, alongside
-the consequence if false and dependent work. User intent cannot be
+record what changed and preserve historical evidence. User intent cannot be
 resolved by an agent vote. A merged proposal is not acceptance of every premise.
 
 Pause only work dependent on a material unsupported premise. Continue independently
@@ -142,16 +134,18 @@ check and escalate that checkpoint; do not label self-review independent.
 
 Revalidate when the question, premises or consequences change: investigation to
 adoption, prototype to supported behavior, changed component/actor/data boundary,
-or new contradictory evidence. Update the existing brief and review the delta;
-unchanged work does not need a fresh full process for every commit.
+or new contradictory evidence. Update the existing brief and review the delta.
+A material change to scope or a premise reopens only the affected decision and
+dependent work; routine changes within authorization do not require whole-plan
+reapproval or a fresh full process for every commit.
 
 Before publishing, the author and relevance validator compare the final result
 against the validated question and changed premises. Assess relevance (does the
 result still address the intended need?) separately from technical correctness
 (does it meet the specified requirements?). Passing one does not establish the
-other. Record the reviewed revision, remaining unresolved choices, actual evidence
-limits and the disposition of material findings in the PR. Do not promote proposals into facts in summaries or
-issue updates. Keep the maintainer's final assessment and acceptance separate.
+other. Complete the [brief's publication fields](work-framing-template.md) in the
+PR or link its existing record. Do not promote proposals into facts in summaries
+or issue updates. Keep the maintainer's final assessment and acceptance separate.
 
 ## 4. Approval, use and evaluation
 
