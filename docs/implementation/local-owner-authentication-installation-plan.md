@@ -150,21 +150,6 @@ key as a session secret or a CLI bearer as an installation identity.
 | Windows CLI bearer | User-scoped DPAPI plus restricted owner ACL, as required by ADR-105. Verify user scope and UI suppression; reject Machine scope. Use synthetic values for the adapter proof; no login endpoint or real bearer is needed. |
 | Linux CLI bearer | Preserve ADR-105's owned mode-0700 directory and mode-0600 file contract. Ownership, symlink refusal and replacement need real Linux evidence before qualification. Windows success does not qualify this path. |
 
-The following Windows-host candidates are retained as historical proposal context,
-not the current backend selection task. Reuse requires a separately justified
-host component and fresh framing validation; Linux-container guarantees cannot
-be inferred from these APIs:
-
-| Candidate | Required evaluation |
-| --- | --- |
-| ACL-restricted plaintext key file | Verify the opened object's owner/access rules and redirection refusal. Account for readable on-disk key material, temporary generations, replacement and cleanup. |
-| User-scoped DPAPI key file, decrypted at startup | Verify the runtime identity can decrypt without UI, reject Machine scope, and review plaintext buffers, loader/provider copies and FFI allocation/free ownership. Account for decryption failure, replacement and recovery without a plaintext fallback. |
-
-For both, record startup identity, unattended operation, plaintext copies,
-replacement, recovery and failure behavior against the actual library and
-filesystem. A zeroizing input buffer does not prove erasure of library-owned
-key copies. Selection remains subject to dependency review and actual evidence.
-
 For each adapter, review creation, opening, reading, replacement and cleanup as
 one resource-ownership contract. Require bounded reads before parsing/decryption,
 checked record kind/version and installation/origin binding. Propose a 64 KiB
@@ -185,53 +170,50 @@ must see a complete old or new record. Wrong user, tampering, broad inherited AC
 redirection and concurrent replacement must deny or reconcile explicitly.
 
 Review plaintext buffer copies, cancellation, FFI allocation/free ownership and
-diagnostics. No password, bearer, key or decrypted blob may enter logs, telemetry
+diagnostics. A zeroizing input buffer does not prove erasure of library-owned
+key copies. No password, bearer, key or decrypted blob may enter logs, telemetry
 or public evidence. DPAPI and ACLs do not contain code controlling the same OS
 account; a DPAPI blob is not a portable identity backup. Restored CLI credentials
 must not bypass ADR-105's restart/restore invalidation contract.
 
-## Retained Windows diagnostic proposal: not backend qualification
+## Next proposal and execution gates
 
-The following execution outline and exit criteria are retained historical
-Windows-host diagnostic planning. They are not the next backend installation
-proof and cannot qualify Linux-container key storage or deployment. Replace the
-backend scope with a reviewed container-specific proposal before execution;
-justify any separate Windows CLI or provisioning proof on its own requirements.
-The permission and evidence limits below remain applicable to any reuse.
+Before execution, submit a container-specific proposal defining the backend
+boundary, TLS listener exposure/termination, runtime identity, key provisioning
+and mounts. Justify any Windows CLI or host provisioning proof separately.
+The retired Windows backend candidates and execution outline remain available
+in the [historical plan](https://github.com/MrQuality/kehila/blob/708f8ab18f574dd07a4400cc24ef3b48935d376a/docs/implementation/local-owner-authentication-installation-plan.md#retained-windows-diagnostic-proposal-not-backend-qualification);
+they are not the next backend qualification path.
 
-1. Review this profile, unresolved adapter/issuance choices and failure oracles.
-   Complete primary-source API and dependency/license/advisory review before
-   adding even experimental dependencies. Retain #40's existing production
-   dependency disposition and 2026-11-18 review deadline independently.
-2. Submit a concrete isolated experiment scope and selected inputs for review.
-   Propose a 90-minute active investigation budget excluding fetch/build,
-   required verification and permission waits. Stop at the budget or an
-   inconclusive ownership/atomicity/trust prerequisite; record the unresolved
-   result rather than widening the profile.
-3. Obtain separate permission for memory-heavy work and check available RAM;
-   serialize builds and use one Cargo job. Obtain separate approval for the exact
-   trust change. No new VM, backend service, account, security-setting change or
-   certificate trust is authorized by approving this document.
-4. Exercise real Windows files and actual browser/CLI validation: clean setup,
-   all startup refusals, successful renewal, failed/interrupted renewal,
-   expiry behavior, hostile storage cases, concurrent replacement and removal.
-   For another-user denial, use a separately approved test identity or record
-   the case unqualified; do not create accounts implicitly. Give each negative
-   case a specific diagnostic oracle; unrelated startup/network failure cannot pass.
-5. Retain confidential evidence, generated secrets and build/debug outputs outside
-   the checkout. Record source, platform/filesystem/browser/tool versions,
-   reached cases, failures and cleanup. Publish only reviewed, sanitized results.
+The proposal must select adapters and issuance inputs after primary-source API,
+dependency, license and advisory review. Preserve #40's separate production
+dependency disposition and 2026-11-18 review deadline. Define numerical limits,
+specific positive/negative oracles, failure recovery and owned cleanup for the
+actual platform: clean setup, startup refusals, successful and interrupted renewal,
+expiry, hostile storage, concurrent replacement and removal. An unrelated startup
+or network failure cannot satisfy a negative oracle. Stop at an inconclusive
+ownership, atomicity or trust prerequisite rather than widening the profile.
+The earlier 90-minute active-investigation budget is a proposal,
+not authorization for a new experiment; review its suitability with the scope.
 
-Exit only when the selected profile and exact adapters are reviewed, the matrix
-has actual results, failures preserve the stated storage invariants and cleanup
-is confirmed. A failed or unexecuted case stays open. Report host installation,
-Podman integration and Linux qualification separately. This proof cannot mark a
-complete T01-T16 authentication case passed.
+Execution still requires separate permission for memory-heavy work, an available
+RAM check, serialized builds and one Cargo job. Any trust change needs approval
+for its exact scope. No new VM, backend service, account, security-setting change
+or certificate trust is authorized by this document. Another-user tests require
+an approved test identity or remain unqualified.
 
-Update #40/#49 and the linked backlog/delivery records with the reached subset
-and remaining gates after the experiment. A1 still requires a separately reviewed
-schema/capability plan and applicable A0 prerequisites; this document authorizes
-neither implementation nor release qualification.
+Keep confidential evidence, generated secrets and build/debug outputs outside the
+checkout. Record actual source, platform/filesystem/tool versions, reached cases,
+failures and cleanup; publish only reviewed, sanitized results. Exit only when the
+selected adapters and matrix have actual evidence, storage failures preserve the
+stated invariants and cleanup is confirmed. Unexecuted or inconclusive cases stay
+open. Report host, Podman integration and Linux qualification separately; this
+proof cannot mark a complete T01-T16 authentication case passed.
+
+Update #40/#49 and linked backlog/delivery records with the reached subset and
+remaining gates. A1 still requires a separately reviewed schema/capability plan
+and applicable A0 prerequisites; this document authorizes neither implementation
+nor release qualification.
 
 ## Primary references for adapter review
 

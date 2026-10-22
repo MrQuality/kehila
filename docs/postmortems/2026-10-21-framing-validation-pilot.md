@@ -80,10 +80,12 @@ three-case observation, not three independent real-world interventions.
 
 The separate-context publication reviewer found a medium consistency issue: the
 corrected installation plan still presented its Windows execution section as
-current. The section is now explicitly retained historical planning, not a backend
-qualification path. This is a recorded finding and correction, not an initially
-clean verdict. The reviewer otherwise supported the bounded process/report scope
-and approval/evidence limits. Final committed revision and actual documentation
+current. The initial correction labeled that section historical, rather than a
+backend qualification path. On 2026-10-22, follow-up review moved the retired
+backend candidates and execution outline out of the active plan, linking their
+immutable historical version. These are recorded findings and corrections, not an
+initially clean verdict. The reviewer otherwise supported the bounded
+process/report scope and approval/evidence limits. Final committed revision and actual documentation
 check evidence are linked from the implementing PR; this review is approach-aware
 and is not maintainer approval.
 
