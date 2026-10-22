@@ -60,6 +60,28 @@ and alternatives visible; brevity must not hide information needed to decide.
 Explain again when the process or decision boundary changes, rather than repeating
 the full introduction at every checkpoint.
 
+## Visible stage and decision record
+
+At meaningful transitions, state **Assessment**, **Implementation** or
+**Verification**, with one sentence describing the current authorized work and
+any decision needed. Assessment establishes the problem and prepares a proposal;
+Implementation carries out agreed work; Verification checks the result against
+requirements. These are communication labels, not Codex permission modes or new
+approval gates. Do not repeat them on every tool call or routine update.
+
+Keep the decision brief in the existing task, issue or PR. Identify the candidate
+revision, source of authorization and its scope, consequential premises and
+unresolved choices, then the revision actually reviewed. A material change to
+scope or a premise reopens only the affected decision/dependent work; routine
+changes within authorization do not require whole-plan reapproval.
+
+After resuming work or losing context, reload that brief, check it against the
+current source and latest user direction, and reconcile material differences
+before dependent work. Keep runtime permissions separate: a stage label, reviewer
+verdict or decision record cannot grant tool access or lift a user restriction.
+See [Codex feasibility and supporting guidance](work-framing-support.md) for the
+observed/manual boundary and sources; no new automation is installed by this SOP.
+
 ## 1. Early framing gate
 
 The author records the [framing brief](work-framing-template.md) before dependent

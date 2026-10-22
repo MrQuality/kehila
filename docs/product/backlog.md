@@ -582,6 +582,9 @@ its first three material tasks to assess effectiveness and inform revisions;
 future observations are not prerequisites to initial approval. Track these in the [post-mortem](../postmortems/2026-10-21-platform-assumption.md).
 [Issue #71](https://github.com/MrQuality/kehila/issues/71) owns those prospective
 observations and the exact procedure-version decision; this work remains open.
+The [Codex feasibility and guidance assessment](../procedures/work-framing-support.md)
+supports a manual stage announcement and revision-linked brief with resumption
+checks; no new runtime gate or standards conformance is claimed.
 The [coding standard](../engineering/CODING-STANDARD.md) applies to new/materially
 changed code and inventories current gaps. Qualify boundary checks, Python static
 tooling and declared Rust compiler support incrementally; use B-022 for TypeScript/
