@@ -62,6 +62,9 @@ client and Linux-container backend (maintainer clarification, 2026-10-22).
 [Read-only feasibility](local-owner-authentication-podman-feasibility.md) found no
 established full resume mechanism; active engine/network/clock behavior remains
 unqualified. This is not a native Windows server or a separate Linux-host choice.
+The independent [Linux file API review](local-owner-authentication-linux-files.md)
+compares mounted secrets with Linux-owned generation files; it selects no storage
+or dependency and supplies no passing safe-file/installer evidence.
 
 ## Certificate lifecycle contract to prove
 

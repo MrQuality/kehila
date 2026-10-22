@@ -191,6 +191,11 @@ of an existing secret name/ID; no replace/ignore flags or in-place multi-file sw
 Safe wrapper/open semantics, strict bundle parsing and owned durable intent-record
 creation/replacement remain API/dependency-review gates before implementation;
 no safe adapter, new crate, raw unsafe code or installer is selected by this plan.
+The [Linux file-admission API review](local-owner-authentication-linux-files.md)
+compares both storage alternatives and outlines a descriptor-based reader. API
+shape is supported; topology/alias evidence, dependency adoption and actual
+file/durability behavior remain unqualified. This is independent of the unresolved
+resume gate and does not authorize executable work.
 
 | Lifecycle / interruption point | Required state and reconciliation |
 | --- | --- |
