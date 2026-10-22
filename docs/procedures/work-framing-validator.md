@@ -12,7 +12,8 @@ acceptance status, dates/revisions and relevant contrary evidence. Disclose gaps
 Do not provide the candidate solution or expected pilot verdict yet.
 
 > Independently frame the requested outcome, non-goals and established constraints.
-> Identify consequential unresolved premises and what their answers would change.
+> Identify consequential unresolved premises, what their answers would change,
+> who can resolve them and the next action.
 > Cite evidence by source; distinguish a proposal, an observation and an accepted
 > decision. Do not infer a requirement from the author's environment or a prior
 > implementation. State what is needed to assess a candidate. Return Phase A and
@@ -20,8 +21,12 @@ Do not provide the candidate solution or expected pilot verdict yet.
 
 Record that response before continuing. Source packets can still omit decisive
 information; the validator should identify inadequate evidence, not treat the
-packet as a proof of completeness. Relevant public sources may be read when the
-task permits; a closed-evidence pilot must disclose that limitation.
+packet as proof of completeness. Within authorized access, inspect decisive
+source material directly; record the sources/revisions actually checked and
+missing or contrary evidence. If access is unavailable, disclose the gap and
+leave dependent conclusions unresolved until sufficient authoritative evidence
+is available. A closed-evidence rehearsal must disclose its limitation and cannot
+settle missing requirements for real work.
 
 ## Phase B: challenge the candidate
 
@@ -46,8 +51,10 @@ Supply the final revision, original brief, actual early findings/dispositions,
 changed premises and result/evidence record. Reuse the validator when appropriate;
 this stage intentionally sees the solution and is not called approach-blind.
 
-> Does this final result still answer the validated question? Identify any new
-> unsupported premise, unresolved earlier finding, approval expansion or evidence
+> Assess separately: does the result still address the intended need, and does it
+> meet the specified requirements? Cite evidence for each; passing technical checks
+> does not establish relevance. Identify any new unsupported premise, unresolved
+> earlier finding, approval expansion or evidence
 > overclaim. Check that summaries/issues agree with decision status. Cite sources
 > and return remaining material findings and a scoped publication verdict. This
 > is not maintainer approval, architectural acceptance or a security certification.

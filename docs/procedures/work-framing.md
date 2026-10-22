@@ -87,13 +87,17 @@ observed/manual boundary and sources; no new automation is installed by this SOP
 The author records the [framing brief](work-framing-template.md) before dependent
 work: original requested outcome and authority, non-goals, consequential premises,
 source and status for each, consequence if false, and proposed work boundary.
-Use accepted requirements, explicit user decisions and actual observations;
-an author's summary or a Proposed document is not its own acceptance evidence.
+State the need independently of the proposed solution. Distinguish confirmed
+requirements from inferred requirements and proposed mechanisms. Use accepted
+requirements, explicit user decisions and actual observations; an author's summary
+or a Proposed document is not its own acceptance evidence.
 
 Distinguish **established**, **inferred**, **proposed**, **unresolved** and
 **contradicted** premises. An established fact needs evidence; conflicting sources
 need reconciliation. A new user direction can replace an earlier decision, but
-record what changed and preserve historical evidence. User intent cannot be
+record what changed and preserve historical evidence. For an unresolved
+consequential premise, identify who can resolve it and the next action, alongside
+the consequence if false and dependent work. User intent cannot be
 resolved by an agent vote. A merged proposal is not acceptance of every premise.
 
 Pause only work dependent on a material unsupported premise. Continue independently
@@ -112,8 +116,20 @@ Phase B challenges relevance, conflicts, unsupported premises and approval scope
 Do not supply the author's rationale as the sole evidence or hide contrary
 requirements. Record what the validator actually received. A context already
 exposed to the solution is an ordinary review, not an approach-blind run.
+
+Within authorized access, the validator inspects decisive source material
+directly, identifies missing or contrary evidence, and records which sources and
+revisions it actually checked. If a decisive source cannot be inspected, record
+the gap and leave dependent conclusions unresolved until sufficient authoritative
+evidence is available. A closed-evidence rehearsal discloses that restriction;
+it cannot settle missing requirements for real work.
+
 Separate contexts reduce one source of anchoring; they do not prove independence,
 eliminate shared model errors or give the reviewer architectural authority.
+
+The author owns the proposal and evidence; the validator challenges and reports;
+the maintainer decides unresolved product intent and architectural acceptance.
+These roles do not create another approval for already authorized routine work.
 
 Require evidence-backed statuses, consequences and a bounded verdict: **proceed**,
 **proceed on independent work only**, or **clarification required for dependent
@@ -130,9 +146,11 @@ or new contradictory evidence. Update the existing brief and review the delta;
 unchanged work does not need a fresh full process for every commit.
 
 Before publishing, the author and relevance validator compare the final result
-against the validated question and changed premises. Record the reviewed revision,
-remaining unresolved choices, actual evidence limits and the disposition of
-material findings in the PR. Do not promote proposals into facts in summaries or
+against the validated question and changed premises. Assess relevance (does the
+result still address the intended need?) separately from technical correctness
+(does it meet the specified requirements?). Passing one does not establish the
+other. Record the reviewed revision, remaining unresolved choices, actual evidence
+limits and the disposition of material findings in the PR. Do not promote proposals into facts in summaries or
 issue updates. Keep the maintainer's final assessment and acceptance separate.
 
 ## 4. Approval, use and evaluation
