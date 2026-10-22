@@ -30,7 +30,10 @@ and dispositions in the PR. Exact SOP-002 version approval remains separate.
 The maintainer selected Podman with WSL 2 on the Windows client host for the first
 proof on 2026-10-22. WSL is infrastructure for the Linux-container backend, not
 frontend code. The [read-only feasibility result](local-owner-authentication-podman-feasibility.md)
-records stopped-state observations and an unresolved resume mechanism. This
+records stopped-state observations and an unresolved resume mechanism. Its
+[pinned source follow-up](local-owner-authentication-podman-feasibility.md#pinned-provider-source-follow-up)
+examines queued correction, cached PTP samples and lifecycle paths without
+establishing the required adapter. This
 selection does not accept ADR-106, storage risk or executable work.
 
 ## Review follow-up and executable readiness

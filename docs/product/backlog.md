@@ -389,7 +389,11 @@ execution prerequisites require review; no A0 completion or A1 permission follow
 On 2026-10-22 the maintainer selected same-host Podman/WSL 2 for the first proof
 (Windows client, Linux-container backend). [Read-only feasibility](../implementation/local-owner-authentication-podman-feasibility.md)
 records installed/stopped-state limits and unresolved resume readiness; no provider
-qualification, listener-amendment acceptance or storage adoption follows.
+qualification, listener-amendment acceptance or storage adoption follows. The
+[pinned provider-source follow-up](../implementation/local-owner-authentication-podman-feasibility.md#pinned-provider-source-follow-up)
+adds concrete correction/PTP/lifecycle findings; none establishes the full resume
+barrier. Keep dependent execution gated and do not treat more clock samples as
+proof of a missing ordering contract.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 
