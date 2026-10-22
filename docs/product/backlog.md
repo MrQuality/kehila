@@ -587,8 +587,9 @@ supports a manual stage announcement and revision-linked brief with resumption
 checks, with selected practices carried into the brief/validator: separate need
 from solution, give consequential unknowns a resolver/next action, inspect decisive
 sources directly, distinguish relevance from correctness, and preserve concise
-user decisions and explicit decision authority. No new runtime gate or standards
-conformance is claimed.
+user decisions and explicit decision authority. The brief is the canonical field
+list, with decision rules in the SOP and a short linked operating path. No new
+runtime gate or standards conformance is claimed.
 The [coding standard](../engineering/CODING-STANDARD.md) applies to new/materially
 changed code and inventories current gaps. Qualify boundary checks, Python static
 tooling and declared Rust compiler support incrementally; use B-022 for TypeScript/

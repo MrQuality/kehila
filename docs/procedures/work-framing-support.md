@@ -60,8 +60,9 @@ were not assessed. No purchase or certification is needed for these additions.
 
 Use requirements engineering as the main conceptual basis, interaction principles
 for presentation, and NIST for human/AI responsibility boundaries. NASA supplies
-accessible checklists. Keep the existing brief and review record; do not create
-parallel compliance forms or require a second approval for routine authorized work.
+accessible checklists. The [brief](work-framing-template.md) is the canonical field
+list; the SOP holds decision rules and its quick path links the steps. Keep this
+existing record rather than parallel forms or repeated approval for routine work.
 
 The selected practices are operational in the proposed procedure, not a separate
 compliance checklist: [early framing](work-framing.md#1-early-framing-gate) separates
