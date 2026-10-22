@@ -47,6 +47,16 @@ is claimed. Use the [framing pilot](../procedures/work-framing.md) before select
 platform-specific mechanisms; do not defer the intended container target as a
 later unrelated profile.
 
+The [container design and probe proposal](local-owner-authentication-container-plan.md)
+and [Proposed ADR-106](../architecture/ADR-106-local-container-transport.md) now make
+that review concrete. They propose a specific container listener distinct from the
+unchanged client origin and disposable mounted-secret generations. ADR-105's
+current bind rule remains authoritative until explicit amendment acceptance;
+neither proposal authorizes implementation, VM startup or trust changes. The
+[review readiness checklist](local-owner-authentication-container-plan.md#review-follow-up-and-executable-readiness)
+also gates clock/resume feasibility, canonical configuration and exact bundle
+parsing; effective WSL state and real ingress/pause results remain unqualified.
+
 ## Certificate lifecycle contract to prove
 
 ### Agreed PoC TLS profile

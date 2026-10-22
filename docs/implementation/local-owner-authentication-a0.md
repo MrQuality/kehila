@@ -22,6 +22,11 @@ through cleanup. Use a reviewed HTTP library rather than a new hand-written HTTP
 parser. Existing actor/codec rules remain future integration obligations, not
 properties demonstrated by a transport-only response.
 
+The [remaining container design/probe proposal](local-owner-authentication-container-plan.md)
+addresses connection, key delivery and lifecycle prerequisites under Proposed
+ADR-106. It supplies no new execution evidence or permission; the host-only
+experiment and broader A0-A5 gates retain their scope.
+
 ## Preliminary dependency review - no adoption yet
 
 The existing lockfile contains rustls 0.21.12 / tokio-rustls 0.24.1 transitively,

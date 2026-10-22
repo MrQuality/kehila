@@ -50,6 +50,14 @@ select a disposable private CA and a narrow TLS 1.3/certificate profile with no
 certificate fees. They approve neither experiment execution nor the rest of the
 Proposed installation/storage plan, and supply no new T03 evidence.
 
+The [container boundary/probe proposal](local-owner-authentication-container-plan.md)
+defines a pending listener-binding amendment, disposable key-delivery choice and
+unexecuted path/lifecycle matrix. Explicit ADR-106 acceptance and applicable
+execution/trust permissions precede that proof; no T01-T16 result changes here.
+The [review readiness checklist](local-owner-authentication-container-plan.md#review-follow-up-and-executable-readiness)
+separates the specified clock/resume, configuration, bundle and WSL-state contracts
+from API/method review and actual provider qualification.
+
 ## Planned slices and gates
 
 | Slice | Boundary and exit evidence |
