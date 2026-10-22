@@ -58,6 +58,35 @@ other attached workload and one explicit IPv4 publication; no publish-all, wildc
 listener, host networking, shared namespaces or TLS proxy. Do not enable/change
 provider networking, firewall or security settings to make the proof pass.
 
+### Trusted network configuration
+
+For this separately selected diagnostic profile, require exactly one occurrence
+of each argv pair: `--listen-addr V:P` and
+`--public-origin https://127.0.0.1:P`. These are the sole inputs for these two
+fields: no default, environment/config-file override, alias or request-derived
+fallback. Missing, repeated, conflicting or malformed values fail before binding.
+Other profile arguments have their own reviewed interface; these names do not
+change AUTH-001's existing host-only CLI.
+
+`V` is canonical dotted-decimal IPv4: four decimal octets 0..255, no leading zeros
+except `0` itself. It must be a usable unicast address assigned to the container
+on the selected owned bridge, not unspecified, loopback, multicast or broadcast.
+`P` is canonical decimal 1024..65535, without signs, leading zeros or whitespace;
+both arguments must use the same port. Public origin is exactly the ASCII form
+shown: no credentials, DNS alias, IPv6, path (including `/`), query, fragment,
+percent encoding or surrounding whitespace. Host admission uses `127.0.0.1:P`;
+Origin admission uses the exact configured public-origin bytes, preserving the
+existing protocol's required/absent Origin rules.
+
+The operator-controlled container definition supplies these nonsecret arguments
+and the publication from one reviewed configuration. Launcher preflight validates
+owned network/address/publication agreement; the Rust process checks grammar,
+port agreement and actual local address assignment before bind. The process gets
+no engine socket and cannot prove host publication by parsing its own arguments.
+Tests reject omitted/duplicate fields, unequal ports, URI extras, noncanonical
+IPv4/ports, unassigned addresses and request-header attempts to configure either
+field; topology tests independently verify the launcher/publication contract.
+
 | Source/path | Required observation |
 | --- | --- |
 | Windows browser/CLI to configured loopback port | Positive TLS and diagnostic request; exact public Host/Origin policy. |
@@ -87,6 +116,33 @@ owner/mode, unknown/extra objects and mismatched key/SAN/validity before listeni
 Exactly one leaf and PKCS#8 key are permitted; trust roots are separate inputs.
 Do not infer safe opening from path text, mount mode or a zeroizing input buffer.
 The serving process gets no issuer key, engine socket or provisioning credentials.
+
+### Diagnostic bundle format, version 1
+
+One secret contains ASCII PEM in this order: exactly one `CERTIFICATE` block,
+then exactly one unencrypted PKCS#8 `PRIVATE KEY` block. Version 1 is selected by
+the diagnostic profile, not guessed from input; no in-file version prefix is
+permitted. Trust roots and chains are not part of this bundle. The 64 KiB limit
+covers the complete encoded file, including permitted whitespace.
+
+Require exact `-----BEGIN LABEL-----` / `-----END LABEL-----` lines with the labels
+above, and LF or CRLF line endings (no lone CR). Begin lines and base64 lines end
+with a line ending; an end line may terminate at EOF. Between/before/after blocks,
+only SP (`0x20`), HT (`0x09`), CR (`0x0d`) and LF (`0x0a`) are permitted, with CR
+only as part of CRLF. Delimiters begin at a line boundary, without indentation or
+trailing spaces. Each nonempty base64 line has 1..64 ASCII characters; concatenated
+payload must be canonical padded RFC 4648 base64, with padding only at its end
+and no internal whitespace. Decode exactly one DER object per block and consume
+all decoded bytes; require the matching certificate/key and the agreed certificate
+profile. Line wrapping may vary within that grammar; the parser must not silently
+normalize other input into acceptance.
+
+Reject BOMs, comments, headers, non-ASCII bytes, blank lines inside a block,
+reordered/duplicate/extra blocks, encrypted or algorithm-specific key labels,
+trailing DER bytes and any non-whitespace tail. API selection must demonstrate
+this exact grammar (including overflow-before-parse and DER consumption) rather
+than rely on a general PEM parser's defaults. Positive LF/CRLF and boundary cases,
+plus each rejection class, are required parser tests before executable approval.
 
 The operator owns issuer generation/signing and confidential staging outside the
 checkout, and verifies the secret-import channel and absence of echo/logging.
@@ -169,7 +225,7 @@ suspend test, new host service or trust change is authorized by this document.
 | --- | --- |
 | Topology and publication | Full allowed/denied path matrix above; strict bind/origin separation, no alternate listener, occupied port/subnet conflict fails closed. |
 | Certificate/browser/CLI | Actual Chrome and CLI success with agreed disposable issuer; typed untrusted, wrong-SAN, expired and removed-trust failures. No generic reset as certificate proof. |
-| Secret admission | Missing, 64 KiB/over-limit, malformed, extra-object, wrong-key/SAN, wrong-owner/mode and redirected inputs fail before listening; owned other-UID test cannot read. |
+| Secret admission | Missing, exact/over 64 KiB, format-v1 grammar/DER rejection classes, wrong-key/SAN, wrong-owner/mode and redirected inputs fail before listening; owned other-UID test cannot read. |
 | File/mount safety | Same-object checks, immutable mounted generation, concurrent/replacement attempts, no writable alias; parser and safe-open wrappers have source review and real failure evidence. |
 | Renewal and interruption | Interrupt at every lifecycle row; accept only complete explicit generations or stopped state, bound inventory to two, verify fresh leaf, refuse invalid rollback. |
 | Resource/expiry/shutdown | Preserve stalled TLS/header/body, task-count and listener-release assertions; exercise numeric expiry/drain, clock-jump and suspend/resume cases under container limits; injected logic and actual provider qualification are distinct. |

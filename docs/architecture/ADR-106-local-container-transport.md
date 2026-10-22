@@ -34,7 +34,9 @@ this would amend only ADR-105 section 1's listener-address rule for that profile
   binds that specific assigned address, never a wildcard. A conflicting subnet,
   unexpected interface/address or additional publication fails preflight.
 - Separate trusted `PublicOrigin` from `ListenAddress`; request headers cannot
-  configure either. Exact Host/Origin admission uses the former, not `V` or a
+  configure either. The probe plan defines required, unique `--listen-addr` and
+  `--public-origin` arguments, canonical grammar and pre-bind validation, without
+  fallback configuration sources. Exact Host/Origin admission uses the former, not `V` or a
   forwarded header. The Rust process terminates TLS; forwarding carries opaque
   TLS bytes and receives no TLS key or authority role. No HTTP or TLS-terminating
   proxy is introduced. Source IP is not caller identity.
@@ -62,7 +64,10 @@ ADR-105 remains Accepted and unchanged while this record is Proposed.
 
 Recommend a uniquely named Podman mounted secret containing one complete leaf and
 PKCS#8 key generation, read once with a 64 KiB maximum. Require exactly one leaf
-and matching key; reject extra objects, unknown material and non-whitespace tails.
+and matching key in the plan's exact version-1 ASCII PEM grammar: certificate
+first, unencrypted PKCS#8 key second, complete DER consumption. Reject extra
+objects, unknown material and non-whitespace tails; parser API selection and
+negative tests remain gates, not implemented guarantees.
 Rootless engine ownership and container UID/GID mappings must be measured.
 Propose container UID/GID `10001:10001`, secret mode `0400`, read-only root,
 all Linux capabilities dropped, no new privileges and no engine socket in the
