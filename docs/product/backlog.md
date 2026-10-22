@@ -381,7 +381,10 @@ Reconcile container TLS/provisioning before adapter selection; #40/#49 remain op
 The [container design/probe proposal](../implementation/local-owner-authentication-container-plan.md)
 and [Proposed ADR-106](../architecture/ADR-106-local-container-transport.md) specify
 a candidate direct TLS path, disposable mounted-secret generations and unexecuted
-isolation/lifecycle oracles. Listener amendment, storage residual risk and exact
+isolation/lifecycle oracles. The [review readiness checklist](../implementation/local-owner-authentication-container-plan.md#review-follow-up-and-executable-readiness)
+adds pause-inclusive expiry/resume barriers, canonical network arguments, exact
+bundle grammar and effective WSL-state evidence; all runtime cases remain unexecuted.
+Listener amendment, storage residual risk and exact
 execution prerequisites require review; no A0 completion or A1 permission follows.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).

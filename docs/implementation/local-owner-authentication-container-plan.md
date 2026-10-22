@@ -27,6 +27,22 @@ The proposed path and alternatives are in ADR-106. Independent relevance review
 receives original requirements before this candidate; record its sources, gaps
 and dispositions in the PR. Exact SOP-002 version approval remains separate.
 
+## Review follow-up and executable readiness
+
+The design review identified these requirements; specifying them does not prove
+the runtime or accept ADR-106. #40/#49 retain the unexecuted evidence gates.
+
+| Item | Design disposition | Evidence still required before executable approval |
+| --- | --- | --- |
+| CR-01, Medium / P2 | Pause-inclusive expiry/lifetime; suspension ends the instance, with a barrier before application continuation. | Review a dependable elapsed-time/resume adapter and independent actual-provider qualification method. Missing semantics block approval; injected clocks alone are insufficient. |
+| CR-02, Low / P2 | One required argv interface with canonical address/origin grammar and no fallback sources. | Review launcher/process validation APIs and negative-test oracles; later execution must prove actual publication. |
+| CR-03, Low / P2 | Version-1 certificate-then-PKCS#8 PEM grammar, explicit whitespace and complete DER consumption. | Select/review parser APIs and rejection-test oracles; later execution must prove strict admission. |
+| WSL clarification, Low / P3 | Capture effective mode/options/versions separately from configured values; qualify by ingress evidence. | Review read-only preflight method; later execution must establish effective state and full allowed/denied paths. |
+
+Executable approval requires these methods and APIs to be reviewable, not a claim
+that an unexecuted matrix already passed. Actual provider pause/ingress tests
+require their own applicable execution permissions and remain qualification gates.
+
 ## Source evidence and its limits
 
 Primary API references checked 2026-10-22, pinned to Podman 5.8.3 documentation
@@ -86,6 +102,19 @@ no engine socket and cannot prove host publication by parsing its own arguments.
 Tests reject omitted/duplicate fields, unequal ports, URI extras, noncanonical
 IPv4/ports, unassigned addresses and request-header attempts to configure either
 field; topology tests independently verify the launcher/publication contract.
+
+### Effective WSL networking preflight
+
+Record configured and effective networking mode separately, with WSL/kernel,
+Windows, Podman client/server and VM-provider versions. Capture relevant
+localhost forwarding, mode-specific host-loopback options, Windows/Hyper-V
+firewall state and any provider fallback, using read-only inspection.
+[Microsoft's WSL configuration reference](https://learn.microsoft.com/en-us/windows/wsl/wsl-config)
+documents mode-dependent options and NAT fallback behavior; configuration text
+alone is not proof of the active path. Missing effective-state evidence leaves
+the profile unqualified. Neither NAT nor mirrored mode is automatically accepted
+or rejected by its name: exercise the full ingress matrix on the exact recorded
+profile. No mode, forwarding or firewall change is authorized to obtain a pass.
 
 | Source/path | Required observation |
 | --- | --- |
@@ -225,7 +254,7 @@ suspend test, new host service or trust change is authorized by this document.
 | --- | --- |
 | Topology and publication | Full allowed/denied path matrix above; strict bind/origin separation, no alternate listener, occupied port/subnet conflict fails closed. |
 | Certificate/browser/CLI | Actual Chrome and CLI success with agreed disposable issuer; typed untrusted, wrong-SAN, expired and removed-trust failures. No generic reset as certificate proof. |
-| Secret admission | Missing, exact/over 64 KiB, format-v1 grammar/DER rejection classes, wrong-key/SAN, wrong-owner/mode and redirected inputs fail before listening; owned other-UID test cannot read. |
+| Secret admission | Accept a valid bundle exactly 64 KiB; reject larger inputs before parsing/listening. Missing, format-v1 grammar/DER errors (including boundary-sized inputs), wrong-key/SAN, wrong-owner/mode and redirected inputs fail before listening; owned other-UID test cannot read. |
 | File/mount safety | Same-object checks, immutable mounted generation, concurrent/replacement attempts, no writable alias; parser and safe-open wrappers have source review and real failure evidence. |
 | Renewal and interruption | Interrupt at every lifecycle row; accept only complete explicit generations or stopped state, bound inventory to two, verify fresh leaf, refuse invalid rollback. |
 | Resource/expiry/shutdown | Preserve stalled TLS/header/body, task-count and listener-release assertions; exercise numeric expiry/drain, clock-jump and suspend/resume cases under container limits; injected logic and actual provider qualification are distinct. |

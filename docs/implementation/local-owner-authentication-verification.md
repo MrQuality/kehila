@@ -54,6 +54,9 @@ The [container boundary/probe proposal](local-owner-authentication-container-pla
 defines a pending listener-binding amendment, disposable key-delivery choice and
 unexecuted path/lifecycle matrix. Explicit ADR-106 acceptance and applicable
 execution/trust permissions precede that proof; no T01-T16 result changes here.
+The [review readiness checklist](local-owner-authentication-container-plan.md#review-follow-up-and-executable-readiness)
+separates the specified clock/resume, configuration, bundle and WSL-state contracts
+from API/method review and actual provider qualification.
 
 ## Planned slices and gates
 
