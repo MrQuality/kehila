@@ -378,6 +378,11 @@ The 2026-10-21 [platform-assumption post-mortem](../postmortems/2026-10-21-platf
 corrects the intended backend target to a Linux container. Do not reuse the former
 Windows-host profile or PR #70's server-key recommendation as backend direction.
 Reconcile container TLS/provisioning before adapter selection; #40/#49 remain open.
+The [container design/probe proposal](../implementation/local-owner-authentication-container-plan.md)
+and [Proposed ADR-106](../architecture/ADR-106-local-container-transport.md) specify
+a candidate direct TLS path, disposable mounted-secret generations and unexecuted
+isolation/lifecycle oracles. Listener amendment, storage residual risk and exact
+execution prerequisites require review; no A0 completion or A1 permission follows.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 
