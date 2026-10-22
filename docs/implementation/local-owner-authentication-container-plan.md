@@ -128,18 +128,42 @@ Inherit 16 tasks including completed/unjoined tasks, 32 headers, 8 KiB HTTP buff
 two body bytes, 2-second TLS/header deadlines, 5-second connection lifetime and
 180-second server lifetime. These are proposed test ceilings, not capacity claims.
 
-Propose UTC validity checks before listening and each new handshake, plus a
-monotonic expiry deadline derived at startup so backward wall-clock jumps cannot
-extend validity. Poll validity at most every second; after expiry/invalid clock
-state stop admission within one second and drain/abort owned work within five
-seconds. A forward clock jump can trigger earlier shutdown; no later rewind
-reopens admission. Test exact boundaries, startup with expired/not-yet-valid
-material and forward/backward jumps; both server and client need distinct oracles.
-Use a reviewed process-local injectable clock for jump cases; no Windows/VM clock
-change is authorized. Measure real expiry/drain with short-lived fixtures and
-monotonic elapsed time independently. Client rejection of invalid leaves uses an
-isolated adversarial TLS fixture, not an override of the proposed server startup
-guard. Scheduling overruns fail rather than silently widening the bound.
+### Clock and suspend/resume contract
+
+Check UTC validity before listening and each new handshake. Derive an elapsed-time
+expiry budget at startup; backward UTC jumps must never extend that budget or the
+180-second server lifetime. Forward jumps may end service early; once stopped,
+no rewind reopens admission. Both budgets include host suspend/hibernate and VM
+suspension, freeze or restore. These events end the diagnostic instance; transparent
+continuation is unsupported. Ordinary task descheduling is not a resume event.
+
+[Rust `Instant`](https://doc.rust-lang.org/stable/std/time/struct.Instant.html)
+does not guarantee whether suspension counts. Linux
+[timekeeping](https://docs.kernel.org/core-api/timekeeping.html) distinguishes
+`CLOCK_MONOTONIC`, which stops during system suspend, from `CLOCK_BOOTTIME`, which
+includes it. Neither name alone proves the selected VM/host pause behavior.
+A provider-qualified elapsed-time/resume adapter and an admission barrier are
+required before executable approval: after a resume, the barrier must latch stop
+before application work can admit a request or continue owned pending responses.
+Abort pending work; bytes already handed to the kernel/client cannot be retracted.
+If dependable detection/barrier semantics cannot be established, this profile
+cannot execute or qualify. No host supervisor or time-sync service is selected here.
+
+While runnable, poll validity at most every second, stop admission within one
+second of expiry/invalid clock state, and drain/abort owned work within five
+seconds. Scheduling overruns fail the runnable-case oracle. No deadline execution
+is promised while the VM is paused; separately prove the resume barrier before
+application continuation. Restart requires a new instance and operator-validated
+UTC; stale or uncertain UTC fails closed.
+
+Test exact boundaries, expired/not-yet-valid startup, forward/backward jumps and
+resume with stale UTC and a paused elapsed clock. Process-local injected clocks
+exercise logic but cannot qualify a provider. Separately authorized actual host/VM
+pause tests need an independent elapsed-time observer and evidence of the barrier,
+including pending requests. Measure short-lived certificate expiry and shutdown
+with separate server/client oracles. Use an isolated adversarial TLS fixture for
+client rejection, never a bypass of server startup guards. No OS clock mutation,
+suspend test, new host service or trust change is authorized by this document.
 
 | Case group | Specific oracle; all results currently unexecuted |
 | --- | --- |
@@ -148,12 +172,14 @@ guard. Scheduling overruns fail rather than silently widening the bound.
 | Secret admission | Missing, 64 KiB/over-limit, malformed, extra-object, wrong-key/SAN, wrong-owner/mode and redirected inputs fail before listening; owned other-UID test cannot read. |
 | File/mount safety | Same-object checks, immutable mounted generation, concurrent/replacement attempts, no writable alias; parser and safe-open wrappers have source review and real failure evidence. |
 | Renewal and interruption | Interrupt at every lifecycle row; accept only complete explicit generations or stopped state, bound inventory to two, verify fresh leaf, refuse invalid rollback. |
-| Resource/expiry/shutdown | Preserve stalled TLS/header/body, task-count and listener-release assertions; exercise numeric expiry/drain and clock-jump cases under container limits. |
+| Resource/expiry/shutdown | Preserve stalled TLS/header/body, task-count and listener-release assertions; exercise numeric expiry/drain, clock-jump and suspend/resume cases under container limits; injected logic and actual provider qualification are distinct. |
 | Trust/cleanup | Exact separately approved per-user trust and explicit CLI roots; no issuer in server; remove owned trust/material and prove absence of listener/owned leftovers. |
 
 Before executable work: maintainer decides ADR-106 and disposable-storage risk;
 review exact images/digests, issuer tooling, APIs, versioned dependencies/notices/
-advisories, intent-file adapter and failure oracles. #40 retains the independent
+advisories, intent-file and clock/resume adapters, admission barrier and failure
+oracles. Unproven resume semantics block executable approval, even if ordinary
+clock-injection tests pass. #40 retains the independent
 production dependency disposition and 2026-11-18 review deadline.
 Obtain fresh permission for heavy work/VM/services and exact trust mutations.
 Check actual RAM before VM start, after start and before compilation; retain the

@@ -102,7 +102,11 @@ A direct profile avoids an extra application relay but enlarges the Rust socket'
 network scope. Accepting that trade-off requires explicit maintainer acceptance
 and actual isolation evidence. Downtime during generation replacement is allowed
 for this diagnostic proof. Later authenticated restart loses sessions under
-ADR-105; no transparent renewal/session continuity is claimed.
+ADR-105; no transparent renewal/session continuity is claimed. Host suspend or
+VM suspension/freeze/restore must end the diagnostic instance before application
+work resumes. The probe plan requires pause-inclusive lifetime/expiry accounting
+and a proven resume admission barrier; provider/API feasibility remains a gate
+before executable approval, not evidence supplied by this proposal.
 
 The proof does not qualify Linux-host clients, Windows CLI bearer storage,
 supported installation, A1-A5, the production graph, ADR-103 or replicas (#65).
