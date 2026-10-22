@@ -577,8 +577,9 @@ adds manual early and publication gates, separate-context challenge and bounded
 [pilot observations](../postmortems/2026-10-21-framing-validation-pilot.md),
 including R01's protocol limitation and R02's known-case replay. The
 exact SOP codification remains Proposed; no semantic CI gate or general prevention
-claim is established. Observe the first three subsequent material tasks before
-assessing effectiveness, as tracked by the [post-mortem](../postmortems/2026-10-21-platform-assumption.md).
+claim is established. Approve the procedure version for use first, then observe
+its first three material tasks to assess effectiveness and inform revisions;
+future observations are not prerequisites to initial approval. Track these in the [post-mortem](../postmortems/2026-10-21-platform-assumption.md).
 [Issue #71](https://github.com/MrQuality/kehila/issues/71) owns those prospective
 observations and the exact procedure-version decision; this work remains open.
 The [coding standard](../engineering/CODING-STANDARD.md) applies to new/materially

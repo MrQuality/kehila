@@ -100,9 +100,11 @@ No semantic CI or automatic agent invocation has been installed. Local standing
 agent instructions and public entry points require the manual pilot; actual
 separate agent calls and gate records establish only execution of these checks.
 
-The maintainer owns observation of the first three subsequent material tasks:
-record missed unsupported premises, unnecessary clarification, time to discovery
-and review effort, then decide whether to revise/accept the exact procedure.
+The maintainer first decides whether to approve the proposed procedure version
+for use; prospective effectiveness evidence is not a condition of that decision.
+After approval, observe the first three material tasks: record missed unsupported
+premises, unnecessary clarification, user understanding, time to discovery and
+review effort, then decide whether the evidence warrants revision.
 Track actual task records and the version decision in [#71](https://github.com/MrQuality/kehila/issues/71).
 This future observation is not completed by a retrospective replay or a green CI
 job. No detection-rate or prevention guarantee is claimed.
