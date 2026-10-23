@@ -33,11 +33,16 @@ enum AdmissionError {
     Allocation,
 }
 
+/// A profile/key-pair snapshot, not proof of issuer-signature authenticity or trust.
+/// TLS clients must independently perform ordinary certificate-path verification.
 struct ProfileCheckedGeneration {
     key: CertifiedKey,
     not_after: UnixTime,
 }
 
+/// Checks the disposable profile and key pair at the supplied time.
+/// Success does not authenticate the issuer signature or establish certificate trust;
+/// ongoing expiry and resume enforcement remain separate integration requirements.
 fn admit(
     mut bundle: super::DecodedBundle,
     now: UnixTime,

@@ -47,7 +47,7 @@ records ten passed text/base64 tests using nonsecret synthetic bytes and four
 detected mutations. Experimental direct dependencies have their scoped review.
 The subsequent [private admission result](local-owner-authentication-credential-admission.md#private-implementation-result-2026-10-23)
 records bounded certificate/key profile checks, positive key matching, 37 total
-unit and 14 transport tests, and nine detected admission mutations. The key
+unit and 14 transport tests, and ten detected admission mutations. The key
 restriction and explicit BC/EKU markers were separately accepted on 2026-10-23.
 This unconnected stage does not establish issuer trust, safe file reads, live
 startup, continuous expiry or the required resume barrier.

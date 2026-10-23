@@ -415,7 +415,7 @@ the unvalidated output; complete admission and the container proof retain their 
 The [credential-admission comparison and private implementation result](../implementation/local-owner-authentication-credential-admission.md)
 records the separately accepted key-metadata and explicit BC/EKU restrictions,
 locked 94-package adoption and bounded profile/key checks. The unconnected stage
-passed 37 unit and 14 transport tests plus nine admission mutation checks.
+passed 37 unit and 14 transport tests plus ten admission mutation checks.
 Issuer trust, Linux file admission, expiry/drain/resume and integrated container
 qualification remain open. No complete credential or container qualification is claimed.
 

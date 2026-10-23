@@ -34,9 +34,9 @@ conversion. The scoped dead-code expectation documents that deliberate boundary;
 it must be removed when qualified admission is integrated. Existing server/client
 paths retain their original separate DER inputs and host-loopback checks.
 
-The complete standalone suite now has 37 unit and 14 transport tests. Nine
-admission mutations were detected, including raw extension/default encodings and
-signature shape. See the [decoder contract](../../docs/implementation/local-owner-authentication-parser-adapter-plan.md)
+The complete standalone suite now has 37 unit and 14 transport tests. Ten
+admission mutations were detected, including raw extension/default encodings,
+signature shape and rejection of an explicitly matching inner P-256 parameter. See the [decoder contract](../../docs/implementation/local-owner-authentication-parser-adapter-plan.md)
 and [admission result and limits](../../docs/implementation/local-owner-authentication-credential-admission.md#private-implementation-result-2026-10-23).
 These checks do not establish issuer authenticity, client trust or ongoing expiry.
 Safe file admission and the container proof remain unfinished. The

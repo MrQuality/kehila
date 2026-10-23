@@ -221,3 +221,19 @@ using the [reviewed API contract](local-owner-authentication-linux-files.md),
 while retaining the resume gate before any integrated proof. A0/T01-T16, A1-A5,
 ADR-103 and #65 receive no complete qualification; #40's separate production
 dependency disposition and 2026-11-18 deadline are unchanged.
+
+## PR #81 review follow-up, 2026-10-23
+
+The existing inner-key contract test now also encodes an explicit matching
+SEC1 P-256 parameter, requires successful provider loading and checks that the
+public identity equals the original key's. Wrong-curve and missing-public-key
+rejections remain covered. A targeted mutation rejecting the present matching
+curve made this positive assertion fail; source was restored. This extends one
+existing test, so the suite remains 37 unit and 14 transport tests. The final
+standalone run passed all 51 tests, formatting and clippy with warnings denied.
+
+Local documentation on `ProfileCheckedGeneration` and `admit` now states directly
+that profile/key matching does not establish issuer-signature authenticity or
+certificate trust. TLS client path verification and ongoing expiry/resume remain
+separate requirements. This follow-up changes neither admission policy nor API
+visibility, and grants no new integration or trust permission.
