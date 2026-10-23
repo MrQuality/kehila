@@ -128,3 +128,8 @@ unvalidated; full DER/profile/key-match admission is a following stage. That
 implementation does not retroactively turn this source-only review into tests.
 The unresolved resume mechanism, actual mount/alias/ingress evidence, fresh
 container-proof execution permission, trust approval and wider A0/T01-T16 gates remain.
+
+The subsequent [credential-admission comparison](local-owner-authentication-credential-admission.md)
+traces the nested-remainder gap and compares the inspection stack with typed
+schema decoding. It recommends a research candidate and proposes a narrower key
+profile; neither dependency adoption nor complete admission is established.
