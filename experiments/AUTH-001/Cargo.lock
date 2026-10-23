@@ -244,6 +244,7 @@ name = "kehila_local_tls_probe"
 version = "0.1.0"
 dependencies = [
  "bytes",
+ "data-encoding",
  "http-body-util",
  "hyper",
  "hyper-util",
@@ -252,6 +253,7 @@ dependencies = [
  "time",
  "tokio",
  "tokio-rustls",
+ "zeroize",
 ]
 
 [[package]]

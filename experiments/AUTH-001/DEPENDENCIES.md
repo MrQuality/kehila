@@ -132,3 +132,33 @@ text are unchanged; attribution now names the patched version. The patched
 Local validation passed: three unit and 14 transport tests, formatting and
 Clippy with warnings denied. Normal shared gates remain required before publication. The 2026-10-19 clean result remains historical; #40's separate
 production rustls disposition and 2026-11-18 review deadline are unchanged.
+
+## 2026-10-23 decoder direct-use review
+
+The text-only decoder directly pins data-encoding 2.11.1 with defaults disabled
+and zeroize 1.9.1 with defaults disabled plus `alloc`. Metadata and normal/build
+feature-tree review found 85 registry packages unchanged in count, 52 to 53
+normal/build packages (data-encoding is newly reachable), and no additional
+registry version or all-target unified feature change beyond the separately
+reviewed webpki patch. Runtime-only data-encoding requests no features; zeroize
+already has default/alloc through existing TLS dependencies. Test-inclusive
+resolution additionally unifies data-encoding default/std/alloc. Defaults disabled
+on our edge do not disable features requested elsewhere. Cargo generated the
+two new root dependency edges. No production dependency is adopted.
+
+Both locked archive checksums and actual selected license texts were checked:
+MIT for data-encoding, Apache-2.0 for zeroize; their existing retained texts cover
+this use. Their published manifests add no normal dependencies under these
+requested features. Upstream path histories showed changes on 2026-10-14 for
+[data-encoding](https://github.com/ia0/data-encoding) and
+[zeroize](https://github.com/RustCrypto/utils/tree/master/zeroize); this is a
+maintenance observation, not a security guarantee. The current patched package
+query above covers these exact versions. Review monthly and on security notices.
+
+Source/API review covered base64 padding/partial-write behavior and zeroizing
+buffer ownership. Version 1.9.1's `Zeroizing` Debug is opaque, correcting the
+proposal's broader statement; the bundle still exposes no Debug/Clone/serialization
+interface. Allocator/process termination, caller copies and historical allocations
+remain outside the erasure guarantee. This is bounded API review, not a complete
+source/reachability audit. x509-parser is not promoted; full credential admission
+and provider qualification remain separate.
