@@ -406,6 +406,10 @@ The [strict bundle-parser API review](../implementation/local-owner-authenticati
 adds the independent framing/decoding/profile/key-match gate. General PEM and
 key-loading success do not establish strict admission; dependency selection,
 nested DER behavior and actual rejection tests remain pending.
+The [bounded decoding-adapter proposal](../implementation/local-owner-authentication-parser-adapter-plan.md)
+defines an independent first slice and proposed direct pins/features. It selects
+no runtime dependency and supplies no implementation evidence; complete admission
+and the container proof retain their gates.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 

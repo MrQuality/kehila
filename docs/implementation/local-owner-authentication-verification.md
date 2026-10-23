@@ -43,6 +43,9 @@ The [strict bundle-parser API review](local-owner-authentication-bundle-parser.m
 supplies candidate API composition and exact rejection oracles for the separate
 container proof. No parser tests were run; whole-payload framing, nested DER,
 profile checks, positive key matching and dependency adoption remain gates.
+The [first decoding-adapter proposal](local-owner-authentication-parser-adapter-plan.md)
+gives exact text/base64 oracles using nonsecret synthetic bytes. Those cases are
+unexecuted and do not test DER, certificates, safe file reads or live startup.
 
 Next review the [Proposed remaining-A0 installation/storage plan](local-owner-authentication-installation-plan.md).
 It defines the profile and evidence to resolve before A1 without authorizing
