@@ -1,7 +1,12 @@
 # ADR-106 - Local container transport and disposable server-key delivery
 
-Status: Proposed. Owner: project maintainer. Created / reviewed: 2026-10-22.
-Acceptance: pending; neither PR merge nor probe success accepts this amendment.
+Status: Accepted for the bounded disposable proof. Owner: project maintainer.
+Created: 2026-10-22. Explicit maintainer acceptance: 2026-10-23.
+The maintainer accepted the listener amendment and disposable-only file-secret
+residual risk by an explicit decision, separately from merging PRs #73-#76.
+This grants no live-test permission, production storage adoption or relaxation of
+the resume criterion. APIs, isolation, dependencies and runtime qualification
+remain gated. Acceptance does not turn unexecuted criteria into evidence.
 Related: [ADR-105](ADR-105-local-owner-authentication.md),
 [B-007](../product/backlog.md#b-007), [#40](https://github.com/MrQuality/kehila/issues/40),
 [#49](https://github.com/MrQuality/kehila/issues/49), D-036/D-037;
@@ -27,10 +32,11 @@ loopback are different boundaries. A host port declaration alone does not prove
 access to a container-loopback listener or confinement at the Windows/VM boundary.
 AUTH-001's existing host-only evidence and bind checks remain valid for that scope.
 
-## Proposed decision and exact amendment
+## Accepted decision and exact amendment
 
-Recommend an additional, explicitly selected container profile. If accepted,
-this would amend only ADR-105 section 1's listener-address rule for that profile:
+Use an additional, explicitly selected diagnostic container profile. This
+amends only ADR-105 section 1's listener-address rule for the bounded disposable
+proof, not production authentication or a replicated deployment:
 
 - Client origin remains exactly `https://127.0.0.1:P`, for one configured port
   above 1023. The certificate retains the agreed exact IP SAN, TLS 1.3 and normal
@@ -60,28 +66,31 @@ flowchart LR
     S[One immutable key and leaf generation] -->|Owner-restricted file mount| R
 ```
 
-This is a proposed change to reachability, not a reinterpretation that the current
-ADR already permits it. The allowed/denied path matrix in the probe plan must pass
+This is an explicitly accepted amendment to diagnostic reachability, not a
+reinterpretation of ADR-105's original host-only rule. The allowed/denied path
+matrix in the probe plan must pass
 on the selected Windows provider before any qualification. A failed direct-access
 isolation test blocks this profile; it does not authorize broader VM/LAN exposure.
-ADR-105 remains Accepted and unchanged while this record is Proposed.
+ADR-105 remains Accepted with this bounded diagnostic amendment; all other
+transport/authentication requirements and the original host-only evidence retain
+their scope.
 
-## Proposed key delivery: disposable proof only
+## Accepted key delivery: disposable proof only
 
-Recommend a uniquely named Podman mounted secret containing one complete leaf and
+Use a uniquely named Podman mounted secret containing one complete leaf and
 PKCS#8 key generation, read once with a 64 KiB maximum. Require exactly one leaf
 and matching key in the plan's exact version-1 ASCII PEM grammar: certificate
 first, unencrypted PKCS#8 key second, complete DER consumption. Reject extra
 objects, unknown material and non-whitespace tails; parser API selection and
 negative tests remain gates, not implemented guarantees.
 Rootless engine ownership and container UID/GID mappings must be measured.
-Propose container UID/GID `10001:10001`, secret mode `0400`, read-only root,
+Use container UID/GID `10001:10001`, secret mode `0400`, read-only root,
 all Linux capabilities dropped, no new privileges and no engine socket in the
 container.
 These settings are acceptance criteria, not proof of safe opening or protection.
 
-Use the file secret driver only for disposable values after explicit review of
-its residual risk: its documented read-protection is not at-rest encryption.
+The maintainer accepted the file secret driver for disposable values only, with
+this residual risk: its documented read-protection is not at-rest encryption.
 Engine owner, VM/host administrators and retained disk/backup copies can expose
 keys. No copied-record protection, secure erasure or production storage adoption
 is claimed. If that threat must be covered by this proof, stop and review an
@@ -110,8 +119,9 @@ ambiguous recovery stops for reconciliation. The plan defines each crash point.
 ## Consequences and follow-up
 
 A direct profile avoids an extra application relay but enlarges the Rust socket's
-network scope. Accepting that trade-off requires explicit maintainer acceptance
-and actual isolation evidence. Downtime during generation replacement is allowed
+network scope. The maintainer accepted that bounded trade-off; actual isolation
+evidence remains required before qualification. Downtime during generation
+replacement is allowed
 for this diagnostic proof. Later authenticated restart loses sessions under
 ADR-105; no transparent renewal/session continuity is claimed. Host suspend or
 VM suspension/freeze/restore must end the diagnostic instance before application

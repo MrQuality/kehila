@@ -3,7 +3,7 @@
 Status: Research result; executable readiness unresolved. Recorded / updated: 2026-10-22.
 Owner: project maintainer. Related #40/#49;
 [container plan](local-owner-authentication-container-plan.md),
-[Proposed ADR-106](../architecture/ADR-106-local-container-transport.md).
+[ADR-106: bounded acceptance](../architecture/ADR-106-local-container-transport.md).
 
 ## Outcome and authority
 
@@ -162,7 +162,9 @@ impossibility, a reproduced WSL bug, or a failure of the selected topology.
 The integrated transport proof is not executable-ready. Its resume gate remains
 in force; other ingress, key/file, dependency and trust gates also remain open.
 No host supervisor, new privilege, awake-only assertion or eventual-detection
-substitute is adopted. ADR-105 remains Accepted and unchanged; ADR-106 Proposed.
+substitute is adopted. On 2026-10-23 the maintainer separately accepted ADR-106
+for the bounded disposable proof; ADR-105 remains Accepted with that scoped
+diagnostic amendment. This later decision does not resolve these research gaps.
 
 A candidate needs a reviewable contract covering all three obligations:
 

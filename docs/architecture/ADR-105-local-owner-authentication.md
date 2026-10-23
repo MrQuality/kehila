@@ -86,6 +86,13 @@ authority, origin, port and forwarded-host assertions. No wildcard CORS, LAN
 binding, forwarded identity, automatic redirect carrying credentials or HTTP
 fallback. Do not infer owner identity from the socket address or TLS alone.
 
+[ADR-106](ADR-106-local-container-transport.md), explicitly accepted on 2026-10-23
+for the bounded disposable diagnostic proof only, amends the listener rule for
+one specific container IPv4 address behind Windows loopback publication. Client
+origin remains literal loopback and Rust still terminates TLS. It does not extend
+production authentication support or qualify ingress, storage or resume behavior;
+all other requirements here and execution gates retain their scope.
+
 The installer/operator supplies a server certificate trusted by the actual
 browser and CLI, with the exact IP SAN and protected private key. Startup rejects
 missing/expired/mismatched material. CLI verifies the configured trust and server

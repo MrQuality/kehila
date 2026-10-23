@@ -39,6 +39,11 @@ dependency/advisory review, permission boundaries and the observed
 [AUTH-001 host transport/browser subset](../../experiments/AUTH-001/README.md).
 No full T01-T16 authentication case is qualified by that diagnostic probe.
 
+The [strict bundle-parser API review](local-owner-authentication-bundle-parser.md)
+supplies candidate API composition and exact rejection oracles for the separate
+container proof. No parser tests were run; whole-payload framing, nested DER,
+profile checks, positive key matching and dependency adoption remain gates.
+
 Next review the [Proposed remaining-A0 installation/storage plan](local-owner-authentication-installation-plan.md).
 It defines the profile and evidence to resolve before A1 without authorizing
 experiments, trust changes, dependency adoption or later implementation.
@@ -51,9 +56,10 @@ certificate fees. They approve neither experiment execution nor the rest of the
 Proposed installation/storage plan, and supply no new T03 evidence.
 
 The [container boundary/probe proposal](local-owner-authentication-container-plan.md)
-defines a pending listener-binding amendment, disposable key-delivery choice and
-unexecuted path/lifecycle matrix. Explicit ADR-106 acceptance and applicable
-execution/trust permissions precede that proof; no T01-T16 result changes here.
+defines the listener amendment and disposable key-delivery choice explicitly
+accepted in ADR-106 on 2026-10-23, plus an unexecuted path/lifecycle matrix.
+Executable-readiness review and applicable execution/trust permissions still
+precede that proof; no T01-T16 result changes here.
 The [review readiness checklist](local-owner-authentication-container-plan.md#review-follow-up-and-executable-readiness)
 separates the specified clock/resume, configuration, bundle and WSL-state contracts
 from API/method review and actual provider qualification. The maintainer selected

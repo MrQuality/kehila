@@ -1,8 +1,9 @@
-# Remaining A0: proposed Linux-container boundary and disposable proof
+# Remaining A0: bounded Linux-container proof plan
 
-Status: Proposed design/probe; first-proof topology selected, no execution permission.
+Status: ADR-106 architecture accepted for the bounded disposable proof; executable
+proposal and API/provider qualification remain pending. No execution permission.
 Owner: project maintainer. Recorded: 2026-10-22. Related #40/#49 W2;
-[ADR-106 proposal](../architecture/ADR-106-local-container-transport.md),
+[Accepted bounded ADR-106](../architecture/ADR-106-local-container-transport.md),
 [Accepted ADR-105](../architecture/ADR-105-local-owner-authentication.md),
 [installation/lifecycle criteria](local-owner-authentication-installation-plan.md).
 
@@ -17,13 +18,13 @@ the PR records candidate/final reviewed revisions, actual findings and checks.
 | Consequential premise | Status / source | Consequence and resolver / next action |
 | --- | --- | --- |
 | Backend in a Linux container; Windows MVP clients | Established by maintainer clarification and the installation plan. Linux clients remain a separate target. | Design those boundaries; do not resume native Windows server-key research. |
-| Literal-loopback origin AND Rust listener | Established: ADR-105 section 1. | Direct container binding conflicts; maintainer must explicitly decide Proposed ADR-106 before dependent implementation. |
+| Literal-loopback origin; bounded diagnostic listener amendment | ADR-105 with explicitly Accepted ADR-106, 2026-10-23. | One specific container listener is permitted for the disposable proof; actual ingress and all executable-readiness gates remain unqualified. |
 | Runtime/transport investigation is full authentication qualification | Contradicted: AUTH-001 and A0-A5 plan. | Keep identity, schema, cookies/CSRF, actor and real-data claims gated. |
-| Same-host Podman/WSL 2 is the first-proof topology | Selected by the maintainer on 2026-10-22; Windows client, Linux-container backend. Rootless bridge/isolation details remain Proposed. | Verify actual provider, mappings and prerequisites before execution; selection supplies no networking or resume guarantee. |
-| Restricted file secret meets copied-key protection | Unsupported: Podman documents read-protection, not encryption. | Maintainer explicitly accepts disposable-only residual risk or requests a different storage contract. |
+| Same-host Podman/WSL 2 is the first-proof topology | Selected by the maintainer on 2026-10-22; Windows client, Linux-container backend. ADR-106's bounded rootless-bridge design was explicitly accepted on 2026-10-23; isolation evidence remains outstanding. | Verify actual provider, mappings and prerequisites before execution; selection supplies no networking or resume guarantee. |
+| Restricted file secret meets copied-key protection | Unsupported: Podman documents read-protection, not encryption. | Disposable-only read-protection/copy risk explicitly accepted in ADR-106 on 2026-10-23; no production storage or copied-key protection is established. |
 | Documentation proves host/VM/container isolation or safe file operations | Unsupported. | Executor needs the path/ownership/crash matrix below; reviewers cannot substitute a verdict for actual evidence. |
 
-The proposed path and alternatives are in ADR-106. Independent relevance review
+The accepted diagnostic path and alternatives are in ADR-106. Independent relevance review
 receives original requirements before this candidate; record its sources, gaps
 and dispositions in the PR. Exact SOP-002 version approval remains separate.
 
@@ -34,12 +35,13 @@ records stopped-state observations and an unresolved resume mechanism. Its
 [pinned source follow-up](local-owner-authentication-podman-feasibility.md#pinned-provider-source-follow-up)
 examines queued correction, cached PTP samples and lifecycle paths without
 establishing the required adapter. This
-selection does not accept ADR-106, storage risk or executable work.
+selection alone did not accept ADR-106 or storage risk. The maintainer separately
+accepted those bounded choices on 2026-10-23; executable work remains unapproved.
 
 ## Review follow-up and executable readiness
 
 The design review identified these requirements; specifying them does not prove
-the runtime or accept ADR-106. #40/#49 retain the unexecuted evidence gates.
+the runtime. ADR-106 now has separate explicit bounded acceptance. #40/#49 retain the unexecuted evidence gates.
 
 | Item | Design disposition | Evidence still required before executable approval |
 | --- | --- | --- |
@@ -146,7 +148,7 @@ proposal, without widening this contract if they fail.
 
 ## Key, issuer and file-operation contract
 
-Propose one non-root serving UID/GID and one mounted secret generation as ADR-106
+Use one non-root serving UID/GID and one mounted secret generation as Accepted ADR-106
 specifies. Verify guest engine ownership, UID mapping, parent/mount protections,
 opened-object owner/type/mode and no writable alias before reading. Read at most
 64 KiB plus one overflow byte before parsing; reject symlinks/redirection, wrong
@@ -182,6 +184,11 @@ this exact grammar (including overflow-before-parse and DER consumption) rather
 than rely on a general PEM parser's defaults. Positive LF/CRLF and boundary cases,
 plus each rejection class, need reviewed test cases/oracles before executable
 approval and actual passing parser tests before qualification.
+
+The [bundle-parser API review](local-owner-authentication-bundle-parser.md)
+identifies broader PEM acceptance, canonical-base64 and positive key-match checks.
+It supplies candidate composition and rejection oracles, not an adopted dependency
+or passing strict parser. Nested DER/profile behavior remains a review/test gate.
 
 The operator owns issuer generation/signing and confidential staging outside the
 checkout, and verifies the secret-import channel and absence of echo/logging.
@@ -277,8 +284,8 @@ suspend test, new host service or trust change is authorized by this document.
 | Resource/expiry/shutdown | Preserve stalled TLS/header/body, task-count and listener-release assertions; exercise numeric expiry/drain, clock-jump and suspend/resume cases under container limits; injected logic and actual provider qualification are distinct. |
 | Trust/cleanup | Exact separately approved per-user trust and explicit CLI roots; no issuer in server; remove owned trust/material and prove absence of listener/owned leftovers. |
 
-Before executable work: maintainer decides ADR-106 and disposable-storage risk;
-review exact images/digests, issuer tooling, APIs, versioned dependencies/notices/
+ADR-106 and its disposable-only storage risk were explicitly accepted on
+2026-10-23. Before executable work, review exact images/digests, issuer tooling, APIs, versioned dependencies/notices/
 advisories, intent-file and clock/resume adapters, admission barrier and failure
 oracles. Missing dependable resume API semantics block executable approval;
 actual provider evidence gates qualification even if clock-injection tests pass. #40 retains the independent

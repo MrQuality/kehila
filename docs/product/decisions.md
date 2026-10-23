@@ -137,6 +137,13 @@ historical evidence. Single-active deployment is local-MVP-only; B-032/#65 owns
 replicated deployment. A0 investigation is authorized; later implementation,
 ADR-103 adoption and qualification keep their separate gates.
 
+**Bounded container-proof amendment, 2026-10-23:** The maintainer explicitly
+accepted [ADR-106](../architecture/ADR-106-local-container-transport.md): one
+specific container listener behind Windows loopback forwarding, Rust TLS, and
+disposable-only read-protected file secrets with stated administrator/copy risks.
+This is not production storage or replicated deployment adoption, execution
+permission, or a change to the unresolved resume requirement.
+
 <a id="d-017"></a>
 ## D-017 — Bound the first local operation and runtime policies
 

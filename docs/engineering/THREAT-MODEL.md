@@ -72,6 +72,12 @@ rate buckets do not prevent shared-worker/transport denial by local callers;
 expired-slot reclamation does not stop repeated allocation traffic. Failed logout
 audits can be lost after abandonment/expiry/crash while revocation remains final.
 These declared residual risks were included in local-MVP acceptance; controls remain unqualified.
+The maintainer explicitly accepted [ADR-106](../architecture/ADR-106-local-container-transport.md)
+on 2026-10-23 for the disposable container proof only: a specific listener behind
+Windows loopback forwarding and read-protected file secrets. Trusted engine/VM
+administration and retained disk/backup copies can expose keys. Actual ingress,
+file/alias and resume controls remain unqualified; no production storage or
+execution permission follows.
 Confirmed logout entries can be reclaimed without reactivating captured tokens;
 later retries can return 401 without contradicting a committed audit. Reload-safe
 CSRF retrieval exposes only the existing independent CSRF value through bounded,

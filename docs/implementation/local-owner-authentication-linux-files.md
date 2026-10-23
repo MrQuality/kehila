@@ -1,9 +1,9 @@
 # A0: Linux server-key file-admission API review
 
-Status: Research / Proposed adapter outline; no dependency or storage adoption.
+Status: Research / Proposed adapter outline; no dependency or production storage adoption.
 Owner: project maintainer. Recorded: 2026-10-23. Related #40/#49;
 [container plan](local-owner-authentication-container-plan.md),
-[Proposed ADR-106](../architecture/ADR-106-local-container-transport.md),
+[ADR-106: bounded acceptance](../architecture/ADR-106-local-container-transport.md),
 [dependency policy](../engineering/DEPENDENCIES.md).
 
 ## Outcome, authority and boundaries
@@ -25,11 +25,11 @@ this review does not choose their process, host/guest placement or installation 
 | Linux key/file review can proceed while resume is unresolved | Independent API prerequisite in the container plan. | Do not claim executable readiness; keep the full resume gate unchanged. |
 | A path, owner/mode or read-only mount proves immutable content | Unsupported by file/mount semantics. | Require protected topology and alias/writer evidence; stop if untrusted mutation remains possible. |
 | A safe Rust signature establishes the complete security adapter | Unsupported: API shape and policy are different. | Review the whole admission sequence and actual provider failure cases before qualification. |
-| Documentation or a merged proposal selects storage/dependencies | Not authorized. | ADR-106/storage-risk and dependency decisions retain their separate review gates. |
+| Documentation or a merged proposal selects storage/dependencies | Not authorized by merging alone. | Separate explicit ADR-106 acceptance on 2026-10-23 covers disposable mounted secrets only; production storage and dependency adoption remain gated. |
 
 ## The two storage alternatives
 
-| Boundary | Proposed Podman mounted secret | Linux-owned generation files alternative |
+| Boundary | Accepted disposable Podman mounted secret | Linux-owned generation files alternative |
 | --- | --- | --- |
 | Creation and copies | Engine imports one unique generation and supplies a mounted copy; inventory staging, engine storage and container copy. | Operator creates/protects/publishes complete generations; inventory staging and mounted files. |
 | Serving reader | Validate the opened mounted object and read once. Engine labels or a mount declaration do not replace admission. | Same reader obligations, plus evidence that the selected generation cannot change through another path or writer. |
@@ -87,7 +87,7 @@ wrapper or a separately reviewed component-by-component design is unsuitable.
    Missing/denied syscalls or unsupported flags fail startup; no permissive fallback,
    flag stripping, new capability or seccomp relaxation is implied.
 3. **Inspect the returned object.** Use `fstat` on that descriptor, require a regular
-   file and the reviewed container-side owner/group and mode. For the Proposed
+   file and the reviewed container-side owner/group and mode. For the accepted diagnostic
    `0400` policy, compare all permission/special bits, not just group/other access.
    Rootless host IDs must not be equated with container IDs. No path-stat followed
    by reopen or canonicalize-then-open sequence proves same-object admission.
@@ -147,8 +147,9 @@ ambiguity-stop reconciliation; no installer or intent-record location is selecte
 
 **API shape supported; adapter and provider behavior unqualified.** rustix's
 explicit Linux resolution/descriptor APIs are a candidate for later dependency and
-adapter review. This finding does not select production storage, accept ADR-106,
-prove no writable alias, or discharge the independent unresolved resume gate.
+adapter review. The maintainer separately accepted ADR-106 for the bounded proof
+on 2026-10-23. This finding does not select production storage, prove no writable
+alias, or discharge the independent unresolved resume gate.
 
 A future bounded Linux file-admission proof needs reviewed code and actual cases:
 
