@@ -44,14 +44,13 @@ supplies candidate API composition and exact rejection oracles for the separate
 container proof. That review itself ran no parser tests. The subsequent
 [first decoding-adapter result](local-owner-authentication-parser-adapter-plan.md#first-slice-result-2026-10-23)
 records ten passed text/base64 tests using nonsecret synthetic bytes and four
-detected mutations. Experimental direct dependencies have their scoped review;
-full nested DER/profile/positive key matching and associated adoption remain
-gates. These decoder cases do not test certificates, safe file reads or live startup.
-The [credential-admission API comparison](local-owner-authentication-credential-admission.md)
-adds source-backed structural gaps and proposed policy/test oracles. Those
-admission cases remain unexecuted. The key restriction and explicit BC/EKU
-markers were separately accepted on 2026-10-23; no dependency or runtime evidence
-follows from that decision.
+detected mutations. Experimental direct dependencies have their scoped review.
+The subsequent [private admission result](local-owner-authentication-credential-admission.md#private-implementation-result-2026-10-23)
+records bounded certificate/key profile checks, positive key matching, 37 total
+unit and 14 transport tests, and nine detected admission mutations. The key
+restriction and explicit BC/EKU markers were separately accepted on 2026-10-23.
+This unconnected stage does not establish issuer trust, safe file reads, live
+startup, continuous expiry or the required resume barrier.
 
 Next review the [Proposed remaining-A0 installation/storage plan](local-owner-authentication-installation-plan.md).
 It defines the profile and evidence to resolve before A1 without authorizing

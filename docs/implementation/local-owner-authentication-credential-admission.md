@@ -1,8 +1,9 @@
 # A0 credential admission: API comparison and remaining decisions
 
-Status: API research, 2026-10-23. The first-proof key restriction and explicit
-certificate markers were accepted separately on 2026-10-23 as recorded below.
-Dependency adoption, implementation and qualification remain separately gated.
+Status: bounded private profile stage implemented, 2026-10-23; runtime and full
+credential qualification remain open. The first-proof key restriction and explicit
+certificate markers were accepted separately as recorded below. The API comparison
+below retains its research-time scope; see the implementation result at the end.
 Baseline: merged PR #79, `3fd1d28`. Related: [decoder result](local-owner-authentication-parser-adapter-plan.md#first-slice-result-2026-10-23),
 [container plan](local-owner-authentication-container-plan.md), [#40](https://github.com/MrQuality/kehila/issues/40),
 [#49](https://github.com/MrQuality/kehila/issues/49).
@@ -23,7 +24,7 @@ still requires P-256/SHA-256, a non-CA server leaf and exact loopback iPAddress 
 | Existing development packages are the smallest serving choice | Contradicted as a general inference by the graph comparison | Compare runtime reachability, not just new lock entries |
 | All extra restrictions are already part of the agreed profile | Only the key-metadata rule and explicit BC/EKU markers were accepted on 2026-10-23 | Keep other acceptance rules source-backed and unresolved choices visible |
 
-## Two routes and actual graph costs
+## Research snapshot: two routes and actual graph costs
 
 Metadata-only copies of AUTH-001 retained its current lock and added these exact
 candidate declarations. No package code was executed. Both keep the existing
@@ -124,7 +125,7 @@ and can fail. Do not describe the whole admission stage as pure text processing.
 Account separately for decoded buffers, schema-owned data, zeroizing encode scratch
 and provider copies; neither a byte ceiling nor wrappers prove total RAM/erasure.
 
-## Remaining policy and test gates
+## Research-time policy and test gates
 
 | Gate | Required resolution / oracle before complete admission |
 | --- | --- |
@@ -144,3 +145,79 @@ admission test, listener integration, VM/service start or trust change occurred.
 The actual file/mount/alias/ingress and full resume gates remain unresolved;
 A0/T01-T16, A1-A5, ADR-103 and #65 gain no qualification. #40's separate production
 dependency disposition and 2026-11-18 review deadline remain unchanged.
+
+## Private implementation result, 2026-10-23
+
+The private `bundle::admission` stage now consumes `DecodedBundle` and a supplied
+`UnixTime`, returning an unexported `ProfileCheckedGeneration`. It has no listener,
+file, system-clock or production caller. Existing examples retain their separate
+DER-input path. The accepted key/BC/EKU restrictions apply only to this bounded
+first-proof profile; implementation does not broaden their acceptance.
+
+The locked Route B adoption and actual features/licenses/advisory scope are in
+[DEPENDENCIES](../../experiments/AUTH-001/DEPENDENCIES.md). Compilation required
+`sec1/der`, which also enables its zeroization feature; the research declaration
+without that feature was insufficient. The graph remains 94 registry packages.
+
+The stage checks typed certificate/TBS completion, V3, matching inner/outer
+ECDSA-SHA256 identifiers with absent parameters, a P-256 subject key, required
+non-CA BasicConstraints and serverAuth EKU, exact loopback IP SAN, global duplicate
+extension OIDs and supplied-time validity. If KeyUsage is present it must permit
+digital signatures and forbid certificate signing. Extra supported SANs/EKUs are
+allowed. Unsupported critical extensions reject; unknown noncritical values need
+one complete library-decoded DER envelope, with their inner semantics opaque.
+
+A separate library-reader check requires exactly two nonnegative DER INTEGERs
+inside the ECDSA signature sequence, with complete inner/outer consumption. It
+does not verify scalar ranges, signature mathematics, issuer policy or trust.
+A regression deliberately accepts a syntactically shaped, unauthenticated issuer
+signature so callers cannot mistake this type for an authenticated certificate.
+
+Typed decoding alone hid explicitly encoded DEFAULT values and discarded
+undefined KeyUsage bits. Four regression cases failed before the repair:
+explicit BasicConstraints false, explicit extension critical false, undefined
+KeyUsage bits and nonminimal named-bit encoding. After typed certificate decoding,
+schema-aware library orchestration projects original extension wrappers and
+matches their presence/count/order to the typed list. Bounded re-encoding equality
+checks apply to those wrappers and interpreted BasicConstraints/KeyUsage values.
+No whole certificate/TBS re-encoding or application tag/length decoder is used.
+The projection relies on the preceding typed schema check; it is not a second TBS
+validator or a universal validator for opaque extension contents.
+
+The key stage separately checks PKCS#8 V1, EC/P-256 identifiers, inner SEC1
+completion/parameters and embedded public key. Outer-key re-encoding equality
+rejects discarded metadata as unsupported profile. The fixed ring provider loads
+a borrowed protected key; rustls positive `keys_match()` is required, rejecting
+unknown as well as mismatch. Errors are static categories without parser/provider
+Debug or secret values. Application-owned encoding scratch uses bounded fallible allocation and zeroizing
+storage; other application collections reserve fallibly. Provider/schema
+allocations and copies remain outside any universal allocation/erasure guarantee.
+
+Windows Rust/Cargo 1.93.0 verification passed formatting, clippy with warnings
+denied, **37 unit tests and 14 real transport tests**. Fixtures were generated only
+in test memory. The unit total includes ten decoder, seven key and seventeen
+certificate cases alongside the original three transport-policy cases. Nine
+behavior mutations were detected: key metadata, key curve, BC presence, IP
+identity, expiry, unknown pair consistency, raw extension wrapper, typed default
+and signature shape. Source was restored before the final passing run.
+
+Remaining limits and gates:
+
+- Validity is a supplied-time snapshot with inclusive certificate endpoints and
+  invalid-interval rejection. No clock acquisition, clock-error injection,
+  continuous expiry/drain enforcement or provider resume barrier is implemented.
+- The selected GeneralName schema does not support x400Address. This is a stated
+  compatibility limit, not an accepted general SAN restriction or evidence that
+  such certificates are invalid. Unknown noncritical contents remain opaque.
+- Issuer-key policy, ordinary client path/trust verification and full credential
+  authenticity remain separate. Real allocator/RNG failure injection and a full
+  minimum-Rust-version build were not executed.
+- Descriptor-based Linux file admission, mount/alias/ingress behavior, renewal,
+  expiry/drain/resume and integrated Windows-client/Podman-backend qualification
+  remain open. No trust-store or security-setting changes were made.
+
+The next bounded implementation proposal should address Linux file admission
+using the [reviewed API contract](local-owner-authentication-linux-files.md),
+while retaining the resume gate before any integrated proof. A0/T01-T16, A1-A5,
+ADR-103 and #65 receive no complete qualification; #40's separate production
+dependency disposition and 2026-11-18 deadline are unchanged.
