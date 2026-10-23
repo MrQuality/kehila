@@ -47,6 +47,9 @@ records ten passed text/base64 tests using nonsecret synthetic bytes and four
 detected mutations. Experimental direct dependencies have their scoped review;
 full nested DER/profile/positive key matching and associated adoption remain
 gates. These decoder cases do not test certificates, safe file reads or live startup.
+The [credential-admission API comparison](local-owner-authentication-credential-admission.md)
+adds source-backed structural gaps and proposed policy/test oracles. Those
+admission cases remain unexecuted and adopt no candidate dependency or key policy.
 
 Next review the [Proposed remaining-A0 installation/storage plan](local-owner-authentication-installation-plan.md).
 It defines the profile and evidence to resolve before A1 without authorizing

@@ -174,3 +174,9 @@ separate focused change updates experimental rustls-webpki 0.103.15 to patched
 no package/version OSV findings. This is not a full source audit, production
 remediation or a new full authentication qualification. Normal shared gate
 results and exact-source hosted evidence are recorded in the implementing PR.
+
+The next [credential-admission API comparison](local-owner-authentication-credential-admission.md)
+records concrete nested-consumption behavior, candidate graph costs and a proposed
+key-only round-trip guard. Additional key restrictions and certificate-policy
+oracles require disposition before dependent implementation. The decoder remains
+unchanged and unconnected while that stage is unresolved.

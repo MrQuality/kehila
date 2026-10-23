@@ -193,6 +193,10 @@ The [first adapter result](local-owner-authentication-parser-adapter-plan.md#fir
 records implemented pure framing/decoding and passing tests without listener
 integration. It does not satisfy this plan's complete credential-admission
 requirement; decoded payloads remain unvalidated.
+The [credential-admission comparison](local-owner-authentication-credential-admission.md)
+shows why an empty outer remainder is insufficient and outlines a schema route.
+Its additional key restriction is Proposed; no runtime dependency, admission
+implementation or readiness result follows from that research.
 
 The operator owns issuer generation/signing and confidential staging outside the
 checkout, and verifies the secret-import channel and absence of echo/logging.
