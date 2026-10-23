@@ -24,6 +24,23 @@ deadlines and a five-second total connection deadline. Shutdown drains owned wor
 the example server has a three-minute lifetime. These are experiment bounds,
 not measurements of the later authentication capacity or availability budgets.
 
+## Unconnected bundle decoder
+
+The private `bundle` module checks the container plan's bounded version-1 ASCII
+framing and canonical base64, returning explicitly unvalidated bytes. It has no
+listener caller, public conversion or certificate/key admission path. Its scoped
+dead-code expectation documents that deliberate boundary; it must be removed when
+qualified admission is integrated. Existing server/client paths still use their
+original separate DER inputs and literal host-loopback checks.
+
+Ten decoder tests use nonsecret synthetic payloads; the complete standalone set
+has 13 unit and 14 transport tests. Four targeted mutations detect overflow,
+order, terminal-padding and decoder-error regressions. See the
+[contract and result](../../docs/implementation/local-owner-authentication-parser-adapter-plan.md)
+for actual scope. DER/profile/key matching, safe file admission and the container
+proof remain unfinished. The [dependency review](DEPENDENCIES.md) records direct
+decoder dependencies and the separate rustls-webpki advisory patch.
+
 ## Run
 
 Set `CARGO_TARGET_DIR` to an external build directory before building so generated

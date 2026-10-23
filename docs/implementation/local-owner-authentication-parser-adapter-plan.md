@@ -1,6 +1,8 @@
 # A0 bundle decoding adapter: bounded implementation proposal
 
-Status: Proposed, 2026-10-23; no adapter or dependency adoption implemented.
+Status: First text/decoding slice implemented, 2026-10-23; complete credential
+admission and container integration remain pending. The contract below is the
+bounded implementation baseline; the result record states actual evidence.
 Baseline: merged PR #77, `a1ecc9d`. Related: [API review](local-owner-authentication-bundle-parser.md),
 [container plan](local-owner-authentication-container-plan.md),
 [#40](https://github.com/MrQuality/kehila/issues/40), [#49](https://github.com/MrQuality/kehila/issues/49).
@@ -15,8 +17,10 @@ Complete DER validation, certificate policy and positive key matching remain a
 following stage, with unresolved safe-library behavior kept visible below.
 
 The maintainer accepted ADR-106's bounded disposable architecture and reaffirmed
-that decision after its plain-language explanation. Continuing the investigation
-authorizes this proposal, not its implementation or live execution. No change to
+that decision after its plain-language explanation. After PR #78 merged, the
+maintainer instructed continuation into this bounded implementation step and
+separately permitted single-job builds/tests and required gates. This grants no
+container proof or trust/security change. No change to
 the agreed bundle grammar, TLS profile, production graph, trust or resume rule is
 proposed. AUTH-001's existing host-only paths and tests remain unchanged.
 
@@ -48,7 +52,9 @@ acceptance. A later stage must reject those same bytes as invalid credentials.
 Own joined payload and decoded buffers in zeroizing wrappers from allocation
 onward, including partially decoded output on failure. Keep the input borrowed;
 the caller owns its lifetime, protection and erasure. Do not derive the output's
-formatting from its wrappers: zeroizing a value does not redact its `Debug`.
+formatting from its wrappers. The selected zeroize 1.9.1 has opaque `Debug`; that
+corrects the earlier proposal's contrary generalization, without granting the
+bundle a formatting interface.
 Return only `TooLarge`, `Framing`, `Base64` or `Allocation` categories. Size wins
 over other faults; framing is validated before decoding. During subsequent
 processing, allocation failure can precede detection of bad base64. No source
@@ -87,24 +93,26 @@ caller copies and future TLS/provider copies need separate accounting. No secure
 erasure of historical reallocations, registers, swap or all provider copies is
 claimed. Process abort/termination does not promise execution of destructors.
 
-## Proposed direct dependencies and adoption gate
+## Direct dependencies and adoption review
 
-| Proposed pin / features | Purpose and source | Disposition |
+| Implemented pin / features | Purpose and source | Disposition |
 | --- | --- | --- |
-| `data-encoding = "=2.11.1"`, defaults off, no features | `BASE64.decode_len` / `decode_mut`, [versioned source](https://docs.rs/data-encoding/2.11.1/src/data_encoding/lib.rs.html) | MIT; no normal dependencies in the published manifest. Existing development-transitive entry, newly proposed direct runtime use |
-| `zeroize = "=1.9.1"`, defaults off, `alloc` | `Zeroizing<Vec<u8>>` for owned scratch/output, [versioned API](https://docs.rs/zeroize/1.9.1/zeroize/struct.Zeroizing.html) | Select Apache-2.0; alloc has no dependency edge in the published manifest. Already in the locked graph, newly proposed direct use |
+| `data-encoding = "=2.11.1"`, defaults off, no features | `BASE64.decode_len` / `decode_mut`, [versioned source](https://docs.rs/data-encoding/2.11.1/src/data_encoding/lib.rs.html) | MIT; no normal dependencies in the published manifest. Existing development-transitive entry, new direct runtime use |
+| `zeroize = "=1.9.1"`, defaults off, `alloc` | `Zeroizing<Vec<u8>>` for owned scratch/output, [versioned API](https://docs.rs/zeroize/1.9.1/zeroize/struct.Zeroizing.html) | Select Apache-2.0; alloc has no dependency edge in the published manifest. Already in the locked graph, new direct use |
 
 Selected published manifests were inspected; both archive checksums match the
 committed lock. These feature choices do not request optional derive,
 serde or a different crypto backend. Cargo feature unification may still enable
 features through existing dependencies; do not report the runtime closure as
-minimal until actual locked metadata is reviewed. No manifest or lockfile changes
-are included here. x509-parser 0.18.1 remains investigated for the following stage,
+minimal from our feature declarations alone. Actual metadata/feature-tree review
+and the two Cargo-generated root dependency edges are recorded in the
+[dependency review](../../experiments/AUTH-001/DEPENDENCIES.md#2026-10-23-decoder-direct-use-review).
+x509-parser 0.18.1 remains investigated for the following stage,
 not selected for this slice; no additional ASN.1 dependency is chosen.
 
-Before implementation, review the actual proposed direct/runtime/test feature
-graphs and any lock change, current upstream maintenance/advisories and reachable
-risks. Confirm the existing [selected licenses/notices](../../experiments/AUTH-001/DEPENDENCIES.md)
+Implementation followed review of the actual direct/runtime/test feature graphs,
+lock delta, upstream maintenance/advisories and reachable risks. The existing
+[selected licenses/notices](../../experiments/AUTH-001/DEPENDENCIES.md)
 cover the exact artifacts; retain MIT and selected Apache texts in distributions.
 The earlier point-in-time advisory query is not a current scan or qualification
 of promoted serving dependencies. Any outage or finding needs an explicit
@@ -112,8 +120,10 @@ disposition under the [dependency policy](../engineering/DEPENDENCIES.md).
 
 ## Test oracles and completion gates
 
-All cases below are proposed, not executed. Use small literal nonsecret vectors;
-no real keys, certificate generation, files, trust, VM or network are necessary.
+The text/base64 cases below were exercised using small literal nonsecret vectors;
+no real keys, certificate generation, files, trust, VM or network are necessary
+for these decoder tests. Ownership/resource invariants also require source review;
+no dynamic allocator-failure test or physical erasure proof is claimed.
 
 | Group | Exact expected outcome |
 | --- | --- |
@@ -130,7 +140,7 @@ of overflow, state/order, terminal padding and decoder-failure propagation to be
 detected, plus formatting, Clippy and applicable normal gates at the exact source.
 Dependency review and explicit bounded implementation scope come first; fresh
 permission is required for heavy compilation/gates. External build/temp storage
-and single-job Cargo remain mandatory. No tests or compilation were run here.
+and single-job Cargo remain mandatory. The actual result record follows.
 
 The next stage must establish complete DER consumption and scoped nested DER
 behavior, extension-error/duplicate handling, agreed SAN/non-CA/serverAuth/curve/
@@ -140,3 +150,27 @@ do not add application ASN.1, silently strengthen policy or weaken the contract.
 Actual file/mount/alias/ingress evidence and a dependable full resume barrier
 remain separate prerequisites to the container proof. This proposal completes no
 A0/T01-T16 authentication case and changes no A1-A5, ADR-103 or #65 gate.
+
+## First-slice result, 2026-10-23
+
+The private AUTH-001 `bundle` module implements the framing/decoding contract
+without a public interface or listener caller. Its intentional non-test dead-code
+expectation is scoped to that module and explains the missing credential-admission
+caller; integration must remove that expectation when it becomes obsolete. No
+warning blanket, runtime bypass or public conversion is introduced.
+
+The incomplete stub produced four acceptance failures before implementation.
+Final standalone verification passed 13 unit tests (ten decoder, three existing)
+and 14 existing real transport tests, formatting and Clippy with warnings denied.
+All allowed wrapping widths 1..64 and every truncated prefix of the positive
+fixture are checked. Four deliberate mutations to overflow admission, block order,
+terminal padding and decoder-failure propagation caused their intended tests to
+fail; original source was restored before the final passing run. This verifies
+text decoding, not DER/profile/key matching or secure file admission.
+
+The dependency review found a new advisory in the existing verifier graph; a
+separate focused change updates experimental rustls-webpki 0.103.15 to patched
+0.103.16. The refreshed locked graph still has 85 registry packages and returned
+no package/version OSV findings. This is not a full source audit, production
+remediation or a new full authentication qualification. Normal shared gate
+results and exact-source hosted evidence are recorded in the implementing PR.

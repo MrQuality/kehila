@@ -41,11 +41,12 @@ No full T01-T16 authentication case is qualified by that diagnostic probe.
 
 The [strict bundle-parser API review](local-owner-authentication-bundle-parser.md)
 supplies candidate API composition and exact rejection oracles for the separate
-container proof. No parser tests were run; whole-payload framing, nested DER,
-profile checks, positive key matching and dependency adoption remain gates.
-The [first decoding-adapter proposal](local-owner-authentication-parser-adapter-plan.md)
-gives exact text/base64 oracles using nonsecret synthetic bytes. Those cases are
-unexecuted and do not test DER, certificates, safe file reads or live startup.
+container proof. That review itself ran no parser tests. The subsequent
+[first decoding-adapter result](local-owner-authentication-parser-adapter-plan.md#first-slice-result-2026-10-23)
+records ten passed text/base64 tests using nonsecret synthetic bytes and four
+detected mutations. Experimental direct dependencies have their scoped review;
+full nested DER/profile/positive key matching and associated adoption remain
+gates. These decoder cases do not test certificates, safe file reads or live startup.
 
 Next review the [Proposed remaining-A0 installation/storage plan](local-owner-authentication-installation-plan.md).
 It defines the profile and evidence to resolve before A1 without authorizing

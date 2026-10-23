@@ -189,9 +189,10 @@ The [bundle-parser API review](local-owner-authentication-bundle-parser.md)
 identifies broader PEM acceptance, canonical-base64 and positive key-match checks.
 It supplies candidate composition and rejection oracles, not an adopted dependency
 or passing strict parser. Nested DER/profile behavior remains a review/test gate.
-The [first adapter proposal](local-owner-authentication-parser-adapter-plan.md)
-isolates pure framing/decoding without listener integration. Passing that future
-slice would not satisfy this plan's complete credential-admission requirement.
+The [first adapter result](local-owner-authentication-parser-adapter-plan.md#first-slice-result-2026-10-23)
+records implemented pure framing/decoding and passing tests without listener
+integration. It does not satisfy this plan's complete credential-admission
+requirement; decoded payloads remain unvalidated.
 
 The operator owns issuer generation/signing and confidential staging outside the
 checkout, and verifies the secret-import channel and absence of echo/logging.

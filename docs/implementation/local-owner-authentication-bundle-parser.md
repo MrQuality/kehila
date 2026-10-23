@@ -120,9 +120,11 @@ Before executable approval, review positive and negative cases with exact outcom
 
 No parser tests or candidate builds were run for this review. API composition is
 plausible; exact strict admission, nested DER behavior and dependency adoption
-remain open. The [bounded adapter proposal](local-owner-authentication-parser-adapter-plan.md)
-specifies a first text-framing/base64 slice, proposed direct dependencies and exact
-oracles. Its output remains unvalidated; full DER/profile/key-match admission is a
-following stage. Neither proposal nor merge adopts dependencies or implements it.
-The unresolved resume mechanism, actual mount/alias/ingress evidence, fresh heavy
-execution permission, trust approval and wider A0/T01-T16 gates remain unchanged.
+remain open for complete admission. The subsequent
+[bounded adapter implementation](local-owner-authentication-parser-adapter-plan.md#first-slice-result-2026-10-23)
+implements text framing/base64 with reviewed experimental direct dependencies,
+ten passing decoder tests and four detected mutations. Its output remains
+unvalidated; full DER/profile/key-match admission is a following stage. That
+implementation does not retroactively turn this source-only review into tests.
+The unresolved resume mechanism, actual mount/alias/ingress evidence, fresh
+container-proof execution permission, trust approval and wider A0/T01-T16 gates remain.
