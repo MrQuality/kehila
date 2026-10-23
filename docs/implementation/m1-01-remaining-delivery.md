@@ -166,8 +166,9 @@ A0 investigation was explicitly authorized on 2026-10-19;
 transport/browser subset. The [remaining-A0 installation/storage plan](local-owner-authentication-installation-plan.md)
 is Proposed and supplies no new execution or implementation authorization. The
 [container boundary and probe proposal](local-owner-authentication-container-plan.md)
-makes the next review concrete; its ADR-106 amendment and storage trade-offs
-remain Proposed, with no new A0 qualification. The maintainer selected same-host
+makes the next review concrete; its ADR-106 amendment and disposable-only storage
+trade-off were explicitly accepted on 2026-10-23. Executable review and runtime
+qualification remain outstanding. The maintainer selected same-host
 Podman/WSL 2 for the first proof; [read-only feasibility](local-owner-authentication-podman-feasibility.md)
 leaves resume readiness unresolved, without authorizing dependent execution.
 Remaining A0 and schema evidence plus separately

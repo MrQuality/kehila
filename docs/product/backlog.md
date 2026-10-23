@@ -379,17 +379,19 @@ corrects the intended backend target to a Linux container. Do not reuse the form
 Windows-host profile or PR #70's server-key recommendation as backend direction.
 Reconcile container TLS/provisioning before adapter selection; #40/#49 remain open.
 The [container design/probe proposal](../implementation/local-owner-authentication-container-plan.md)
-and [Proposed ADR-106](../architecture/ADR-106-local-container-transport.md) specify
+and [Accepted bounded ADR-106](../architecture/ADR-106-local-container-transport.md) specify
 a candidate direct TLS path, disposable mounted-secret generations and unexecuted
 isolation/lifecycle oracles. The [review readiness checklist](../implementation/local-owner-authentication-container-plan.md#review-follow-up-and-executable-readiness)
 adds pause-inclusive expiry/resume barriers, canonical network arguments, exact
 bundle grammar and effective WSL-state evidence; all runtime cases remain unexecuted.
-Listener amendment, storage residual risk and exact
-execution prerequisites require review; no A0 completion or A1 permission follows.
+The maintainer explicitly accepted ADR-106's listener amendment and disposable-only
+file-secret residual risk on 2026-10-23. Exact executable prerequisites still
+require review; no A0 completion or A1 permission follows.
 On 2026-10-22 the maintainer selected same-host Podman/WSL 2 for the first proof
 (Windows client, Linux-container backend). [Read-only feasibility](../implementation/local-owner-authentication-podman-feasibility.md)
 records installed/stopped-state limits and unresolved resume readiness; no provider
-qualification, listener-amendment acceptance or storage adoption follows. The
+qualification follows. Explicit bounded acceptance came separately on 2026-10-23;
+production storage remains unselected. The
 [pinned provider-source follow-up](../implementation/local-owner-authentication-podman-feasibility.md#pinned-provider-source-follow-up)
 adds concrete correction/PTP/lifecycle findings; none establishes the full resume
 barrier. Keep dependent execution gated and do not treat more clock samples as
@@ -397,8 +399,9 @@ proof of a missing ordering contract.
 The [Linux file-admission API review](../implementation/local-owner-authentication-linux-files.md)
 advances the independent key/file gate: an explicit descriptor/resolution API
 shape is available, while mount/alias, safe adapter, durability and dependency
-qualification remain open. Neither storage alternative nor a runtime crate is
-adopted, and the resume criterion remains unchanged.
+qualification remain open. ADR-106 selects mounted secrets for the disposable
+proof only; Linux-owned files remain an investigated alternative, and no runtime
+crate or production storage is adopted. The resume criterion remains unchanged.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 

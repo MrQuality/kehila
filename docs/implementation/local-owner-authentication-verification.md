@@ -51,9 +51,10 @@ certificate fees. They approve neither experiment execution nor the rest of the
 Proposed installation/storage plan, and supply no new T03 evidence.
 
 The [container boundary/probe proposal](local-owner-authentication-container-plan.md)
-defines a pending listener-binding amendment, disposable key-delivery choice and
-unexecuted path/lifecycle matrix. Explicit ADR-106 acceptance and applicable
-execution/trust permissions precede that proof; no T01-T16 result changes here.
+defines the listener amendment and disposable key-delivery choice explicitly
+accepted in ADR-106 on 2026-10-23, plus an unexecuted path/lifecycle matrix.
+Executable-readiness review and applicable execution/trust permissions still
+precede that proof; no T01-T16 result changes here.
 The [review readiness checklist](local-owner-authentication-container-plan.md#review-follow-up-and-executable-readiness)
 separates the specified clock/resume, configuration, bundle and WSL-state contracts
 from API/method review and actual provider qualification. The maintainer selected

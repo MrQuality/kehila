@@ -1,6 +1,7 @@
 # Remaining A0: local installation and protected storage
 
-Status: Proposed, except the agreed PoC TLS inputs below; no experiment execution
+Status: Proposed installation plan, except agreed PoC TLS inputs and Accepted
+bounded ADR-106; no experiment execution
 or dependency adoption authorized by this plan.
 Owner: project maintainer. Recorded: 2026-10-20. Related: #40/#49 W2,
 [ADR-105](../architecture/ADR-105-local-owner-authentication.md),
@@ -48,11 +49,12 @@ platform-specific mechanisms; do not defer the intended container target as a
 later unrelated profile.
 
 The [container design and probe proposal](local-owner-authentication-container-plan.md)
-and [Proposed ADR-106](../architecture/ADR-106-local-container-transport.md) now make
-that review concrete. They propose a specific container listener distinct from the
+and [Accepted bounded ADR-106](../architecture/ADR-106-local-container-transport.md) now make
+that review concrete. They specify a specific container listener distinct from the
 unchanged client origin and disposable mounted-secret generations. ADR-105's
-current bind rule remains authoritative until explicit amendment acceptance;
-neither proposal authorizes implementation, VM startup or trust changes. The
+bind rule now has the explicitly accepted bounded diagnostic amendment recorded
+in ADR-106 on 2026-10-23. Disposable file-secret risk is accepted for that proof
+only; no implementation, VM startup, trust change or production storage follows. The
 [review readiness checklist](local-owner-authentication-container-plan.md#review-follow-up-and-executable-readiness)
 also gates clock/resume feasibility, canonical configuration and exact bundle
 parsing; effective WSL state and real ingress/pause results remain unqualified.
