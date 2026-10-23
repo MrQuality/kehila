@@ -413,6 +413,11 @@ mod tests {
         let input = key();
         let info = pkcs8::PrivateKeyInfoRef::from_der(&input).unwrap();
         let mut inner = sec1::EcPrivateKey::from_der(info.private_key.as_bytes()).unwrap();
+        inner.parameters = Some(sec1::EcParameters::NamedCurve(P256));
+        let encoded = Zeroizing::new(inner.to_der().unwrap());
+        let signing = load_key(&replace_inner(&input, &encoded)).unwrap();
+        assert_eq!(signing.public_key(), load_key(&input).unwrap().public_key());
+
         inner.parameters = Some(sec1::EcParameters::NamedCurve(
             ObjectIdentifier::new_unwrap("1.3.132.0.34"),
         ));
