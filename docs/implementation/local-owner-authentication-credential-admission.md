@@ -1,7 +1,8 @@
 # A0 credential admission: API comparison and remaining decisions
 
-Status: read-only research, 2026-10-23. Schema route and key restriction below are
-Proposed; no dependency adoption, implementation or admission tests.
+Status: API research, 2026-10-23. The first-proof key restriction and explicit
+certificate markers were accepted separately on 2026-10-23 as recorded below.
+Dependency adoption, implementation and qualification remain separately gated.
 Baseline: merged PR #79, `3fd1d28`. Related: [decoder result](local-owner-authentication-parser-adapter-plan.md#first-slice-result-2026-10-23),
 [container plan](local-owner-authentication-container-plan.md), [#40](https://github.com/MrQuality/kehila/issues/40),
 [#49](https://github.com/MrQuality/kehila/issues/49).
@@ -20,7 +21,7 @@ still requires P-256/SHA-256, a non-CA server leaf and exact loopback iPAddress 
 | Empty outer parser remainder proves complete nested consumption | Contradicted by the existing sequence helper below | Do not use it as the sole structural admission check |
 | A schema decoder automatically validates all embedded data | Unsupported: some fields are opaque or explicitly discarded | Inspect each relevant nested boundary and define negative oracles |
 | Existing development packages are the smallest serving choice | Contradicted as a general inference by the graph comparison | Compare runtime reachability, not just new lock entries |
-| Extra restrictions are already part of the agreed profile | Not established | Record proposed restrictions and obtain a decision before dependent implementation |
+| All extra restrictions are already part of the agreed profile | Only the key-metadata rule and explicit BC/EKU markers were accepted on 2026-10-23 | Keep other acceptance rules source-backed and unresolved choices visible |
 
 ## Two routes and actual graph costs
 
@@ -83,7 +84,7 @@ These are scoped API behaviors, not claims that either library family is
 vulnerable. Selected published sources were inspected; no complete source audit
 or empirical malformed-DER acceptance result is claimed.
 
-## Recommended candidate and proposed key restriction
+## Recommended candidate and accepted first-proof restriction
 
 Prefer Route B for the next bounded feasibility scope: its typed completion
 checks address the known structural gap with fewer Linux normal/build graph
@@ -98,14 +99,23 @@ source-supported candidate, not a tested guarantee or universal DER validator.
 Decode the embedded SEC1 structure and algorithm parameters separately; retained
 opaque bytes can round-trip unchanged without being valid.
 
-**Decision needed before implementation:** reject keys with optional attributes
-or extra fields for this first proof. Some may be valid PKCS#8; rejecting them is
-a compatibility restriction, not evidence that they are malformed. Recommend
-this narrow profile for disposable producer-generated keys, with an explicit
-unsupported-profile result. A mismatch does not identify its exact cause.
-Also state the ring loader's V1/embedded-public-key compatibility limits; do not
-claim all unencrypted PKCS#8 variants. Neither PR merge nor this recommendation
-records acceptance of the additional restriction.
+**Explicit maintainer decision, 2026-10-23:** reject keys with optional attributes
+or extra fields for this first disposable proof. The maintainer supported this
+recommendation when directing PR #80's merge and continuation; acceptance is
+separate from the merge itself. Some rejected keys may be valid PKCS#8: report
+unsupported profile rather than asserting malformed DER. The round-trip mechanism
+still requires actual tests; a mismatch does not identify its exact cause.
+State the ring loader's V1/embedded-public-key compatibility limits; do not claim
+all unencrypted PKCS#8 variants.
+
+**Separate explicit certificate decision, 2026-10-23:** require BasicConstraints
+to be present with `ca=false` and EKU to be present and include `serverAuth`.
+The maintainer chose both explicit markers after being told that ordinary TLS
+can accept some certificates when these extensions are omitted. This applies only
+to the first disposable proof. A present BasicConstraints extension can encode
+its DEFAULT false value by omitting the inner BOOLEAN; an explicitly encoded
+false DEFAULT is not required. No exactly-one-SAN rule or noncritical-extension
+allowlist was accepted. This grants no trust or integrated-proof execution permission.
 
 Do not apply byte-equality re-encoding to certificates: schema/profile encoding
 can normalize representations and would introduce unrelated restrictions.
@@ -120,14 +130,14 @@ and provider copies; neither a byte ceiling nor wrappers prove total RAM/erasure
 | --- | --- |
 | Certificate structure | Reject outer tails, extra fields inside Certificate/TBS, invalid lengths/tags/default encodings and malformed required nested structures. Test resolved library behavior, not just API names |
 | Extensions | Reject global duplicate OIDs and malformed checked extensions. Specify handling of opaque noncritical values and unsupported critical extensions; do not invent an extension allowlist or exactly-one-SAN rule |
-| Agreed profile | Exact iPAddress match, non-CA/serverAuth and P-256/SHA-256, including inner/outer signature identifier consistency and curve parameters. Resolve absent BasicConstraints/EKU cases explicitly rather than interpreting `None` silently |
+| Agreed profile | Exact iPAddress match, non-CA/serverAuth and P-256/SHA-256, including inner/outer signature identifier consistency and curve parameters. Require the explicitly accepted BC/EKU markers; do not reinterpret an absent extension as present |
 | Time | Invalid intervals, not-yet-valid/expiry boundaries, supplied clock errors and existing expiry/drain limits need exact expected outcomes. These checks do not establish a provider resume barrier |
 | Key restriction | A producer key round-trips exactly; attributes (valid and opaque malformed contents), additional tagged fields and unsupported variants fail with the specified category. Inner SEC1 tails/unknown fields and inconsistent parameters/public components must also fail |
 | Provider/pair | Wrong curve/key, loading/RNG failure, mismatch and unknown consistency all fail before constructing a profile-checked generation. Ordinary client trust/path verification and issuer-key policy remain separate |
 | Resources/errors | Bounded fallible allocations, zeroizing scratch on encoding/error paths and sanitized categories; no raw parser/provider Debug. Do not claim physical erasure or dynamically tested allocator failures without evidence |
 
-Next settle the proposed key restriction and certificate-policy oracles, then
-review exact dependency adoption and a bounded admission implementation scope.
+Next verify the accepted restrictions and source-backed policy oracles through
+reviewed dependency adoption and bounded private admission implementation.
 If safe library guarantees remain insufficient, stop rather than add application
 ASN.1/cryptography or weaken the contract. No build, fixture/key generation,
 admission test, listener integration, VM/service start or trust change occurred.

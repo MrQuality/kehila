@@ -177,6 +177,7 @@ results and exact-source hosted evidence are recorded in the implementing PR.
 
 The next [credential-admission API comparison](local-owner-authentication-credential-admission.md)
 records concrete nested-consumption behavior, candidate graph costs and a proposed
-key-only round-trip guard. Additional key restrictions and certificate-policy
-oracles require disposition before dependent implementation. The decoder remains
+key-only round-trip guard. The maintainer separately accepted the key-metadata
+restriction and explicit BC/EKU markers on 2026-10-23. Mechanism and policy oracles
+still need verification before qualification. The decoder remains
 unchanged and unconnected while that stage is unresolved.

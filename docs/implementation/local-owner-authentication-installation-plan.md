@@ -101,6 +101,13 @@ Document that scoped rationale rather than claiming literal adherence to every
 OWASP deployment recommendation. No DNS, public issuer or remote deployment
 profile is selected by this exception.
 
+On 2026-10-23 the maintainer explicitly narrowed the first disposable admission
+proof: reject optional PKCS#8 metadata/additional fields, require a present
+BasicConstraints extension with `ca=false`, and require present EKU including
+`serverAuth`. These compatibility restrictions are separate from ordinary TLS
+validation. The [decision and API review](local-owner-authentication-credential-admission.md)
+retain the mechanism, qualification and execution gates.
+
 The existing AUTH-001 adapter supplies a single leaf and an explicit CLI root;
 arbitrary intermediate chains, other algorithms and other trust configurations
 are outside its demonstrated coverage. Keep issuance separate from certificate

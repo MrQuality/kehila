@@ -131,5 +131,6 @@ container-proof execution permission, trust approval and wider A0/T01-T16 gates 
 
 The subsequent [credential-admission comparison](local-owner-authentication-credential-admission.md)
 traces the nested-remainder gap and compares the inspection stack with typed
-schema decoding. It recommends a research candidate and proposes a narrower key
-profile; neither dependency adoption nor complete admission is established.
+schema decoding. Its narrower key profile and explicit BC/EKU markers were
+separately accepted on 2026-10-23; mechanism tests, dependency adoption and complete
+admission remain separately gated.

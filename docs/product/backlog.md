@@ -415,8 +415,9 @@ the unvalidated output; complete admission and the container proof retain their 
 The [credential-admission comparison](../implementation/local-owner-authentication-credential-admission.md)
 advances the next source/API prerequisite: outer remainder checks do not establish
 nested consumption; typed schema decoding is the leading research route. Its
-proposed key restriction, exact dependency adoption and actual admission oracles
-remain unresolved. No complete credential or container qualification is claimed.
+key-metadata restriction and explicit BC/EKU markers were separately accepted
+on 2026-10-23; exact dependency adoption and actual admission oracles remain
+gated. No complete credential or container qualification is claimed.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 
