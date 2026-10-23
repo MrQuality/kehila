@@ -70,7 +70,7 @@ The separately recorded package/version OSV query covers the 85 locked registry 
 | [rusticata-macros](https://crates.io/crates/rusticata-macros/4.1.0) | 4.1.0 | Apache-2.0 |
 | [rustls](https://crates.io/crates/rustls/0.23.46) | 0.23.46 | Apache-2.0 |
 | [rustls-pki-types](https://crates.io/crates/rustls-pki-types/1.15.1) | 1.15.1 | Apache-2.0 |
-| [rustls-webpki](https://crates.io/crates/rustls-webpki/0.103.15) | 0.103.15 | ISC |
+| [rustls-webpki](https://crates.io/crates/rustls-webpki/0.103.16) | 0.103.16 | ISC |
 | [serde](https://crates.io/crates/serde/1.0.229) | 1.0.229 | Apache-2.0 |
 | [serde_core](https://crates.io/crates/serde_core/1.0.229) | 1.0.229 | Apache-2.0 |
 | [serde_derive](https://crates.io/crates/serde_derive/1.0.229) | 1.0.229 | Apache-2.0 |
@@ -109,3 +109,56 @@ The separately recorded package/version OSV query covers the 85 locked registry 
 | [x509-parser](https://crates.io/crates/x509-parser/0.18.1) | 0.18.1 | Apache-2.0 |
 | [yasna](https://crates.io/crates/yasna/0.6.0) | 0.6.0 | Apache-2.0 |
 | [zeroize](https://crates.io/crates/zeroize/1.9.1) | 1.9.1 | Apache-2.0 |
+
+## 2026-10-23 verifier advisory follow-up
+
+The refreshed 85-package query found [RUSTSEC-2026-0382](https://rustsec.org/advisories/RUSTSEC-2026-0382.html)
+in previously locked rustls-webpki 0.103.15. Its certificate-path verifier may
+accept distrusted emSign keys if configured trust anchors permit such a path.
+The approved disposable profile uses its own explicit private root; tests start
+with an empty root store and add a generated fixture root. This narrows observed
+reachability, but is not a general absence-of-exposure proof for the configuration
+helper or other graphs. No upstream CVSS rating was supplied.
+
+The experimental lock now selects patched 0.103.16; no other registry package,
+feature declaration or production lock changed. Reviewed the exact old/new
+published archive diff and the [upstream fix](https://github.com/rustls/webpki/pull/546):
+path construction checks a fixed distrusted-public-key set, including leaf and
+anchor positions, and adds a typed rejection error. Upstream tests cover path
+positions and alternate/cross-signed paths; source review is not local execution
+of those upstream tests. Dependency declarations, Rust minimum and ISC license
+text are unchanged; attribution now names the patched version. The patched
+85-package query returned no findings, a point-in-time package check only.
+Local validation passed: three unit and 14 transport tests, formatting and
+Clippy with warnings denied. Normal shared gates remain required before publication. The 2026-10-19 clean result remains historical; #40's separate
+production rustls disposition and 2026-11-18 review deadline are unchanged.
+
+## 2026-10-23 decoder direct-use review
+
+The text-only decoder directly pins data-encoding 2.11.1 with defaults disabled
+and zeroize 1.9.1 with defaults disabled plus `alloc`. Metadata and normal/build
+feature-tree review found 85 registry packages unchanged in count, 52 to 53
+normal/build packages (data-encoding is newly reachable), and no additional
+registry version or all-target unified feature change beyond the separately
+reviewed webpki patch. Runtime-only data-encoding requests no features; zeroize
+already has default/alloc through existing TLS dependencies. Test-inclusive
+resolution additionally unifies data-encoding default/std/alloc. Defaults disabled
+on our edge do not disable features requested elsewhere. Cargo generated the
+two new root dependency edges. No production dependency is adopted.
+
+Both locked archive checksums and actual selected license texts were checked:
+MIT for data-encoding, Apache-2.0 for zeroize; their existing retained texts cover
+this use. Their published manifests add no normal dependencies under these
+requested features. Upstream path histories showed changes on 2026-10-14 for
+[data-encoding](https://github.com/ia0/data-encoding) and
+[zeroize](https://github.com/RustCrypto/utils/tree/master/zeroize); this is a
+maintenance observation, not a security guarantee. The current patched package
+query above covers these exact versions. Review monthly and on security notices.
+
+Source/API review covered base64 padding/partial-write behavior and zeroizing
+buffer ownership. Version 1.9.1's `Zeroizing` Debug is opaque, correcting the
+proposal's broader statement; the bundle still exposes no Debug/Clone/serialization
+interface. Allocator/process termination, caller copies and historical allocations
+remain outside the erasure guarantee. This is bounded API review, not a complete
+source/reachability audit. x509-parser is not promoted; full credential admission
+and provider qualification remain separate.

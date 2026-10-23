@@ -1,4 +1,13 @@
 //! Disposable A0 transport probe. No identity, database, session or trust-store access.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "No caller until complete credential admission is qualified"
+    )
+)]
+mod bundle;
+
 use std::{
     convert::Infallible,
     io,

@@ -127,6 +127,13 @@ certificate cases, missing-file startup rejection, bounded resource/shutdown
 checks and a Host-admission mutation. Temporary user trust and TLS private keys
 were removed after the browser checks. No certificate-ignore mode was used.
 
+The later [text-decoding slice](local-owner-authentication-parser-adapter-plan.md#first-slice-result-2026-10-23)
+adds ten passed decoder tests and four detected mutations. It has no listener
+caller and validates no DER, certificate policy or key match. Its current complete
+standalone set has 13 unit and 14 transport tests; it adds no new browser evidence.
+The dependency review also records the separately patched experimental verifier
+advisory; the original graph assessment remains historical.
+
 The [locked dependency review](../../experiments/AUTH-001/DEPENDENCIES.md) covers
 85 registry packages, actual selected license texts and retained notices. The
 recorded OSV query returned no findings for those package/version pairs; it is

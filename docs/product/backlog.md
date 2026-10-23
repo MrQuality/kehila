@@ -406,10 +406,12 @@ The [strict bundle-parser API review](../implementation/local-owner-authenticati
 adds the independent framing/decoding/profile/key-match gate. General PEM and
 key-loading success do not establish strict admission; dependency selection,
 nested DER behavior and actual rejection tests remain pending.
-The [bounded decoding-adapter proposal](../implementation/local-owner-authentication-parser-adapter-plan.md)
-defines an independent first slice and proposed direct pins/features. It selects
-no runtime dependency and supplies no implementation evidence; complete admission
-and the container proof retain their gates.
+The [bounded decoding-adapter result](../implementation/local-owner-authentication-parser-adapter-plan.md#first-slice-result-2026-10-23)
+records implemented private text/base64 decoding, scoped experimental direct
+dependencies, ten passed decoder tests and four detected mutations. The existing
+experimental verifier receives the separately reviewed rustls-webpki advisory
+patch; production dependency disposition remains separate. No listener consumes
+the unvalidated output; complete admission and the container proof retain their gates.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 

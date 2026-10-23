@@ -11,12 +11,14 @@ publish = false
 
 [dependencies]
 bytes = "=1.11.1"
+data-encoding = { version = "=2.11.1", default-features = false }
 http-body-util = "=0.1.3"
 hyper = { version = "=1.11.1", default-features = false, features = ["client", "server", "http1"] }
 hyper-util = { version = "=0.1.21", default-features = false, features = ["tokio"] }
 rustls = { version = "=0.23.46", default-features = false, features = ["std", "ring"] }
 tokio = { version = "=1.53.1", default-features = false, features = ["macros", "rt", "net", "sync", "time", "io-util"] }
 tokio-rustls = { version = "=0.26.6", default-features = false, features = ["ring"] }
+zeroize = { version = "=1.9.1", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 rcgen = { version = "=0.14.10", default-features = false, features = ["crypto", "ring"] }
