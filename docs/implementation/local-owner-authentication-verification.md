@@ -39,6 +39,11 @@ dependency/advisory review, permission boundaries and the observed
 [AUTH-001 host transport/browser subset](../../experiments/AUTH-001/README.md).
 No full T01-T16 authentication case is qualified by that diagnostic probe.
 
+The [strict bundle-parser API review](local-owner-authentication-bundle-parser.md)
+supplies candidate API composition and exact rejection oracles for the separate
+container proof. No parser tests were run; whole-payload framing, nested DER,
+profile checks, positive key matching and dependency adoption remain gates.
+
 Next review the [Proposed remaining-A0 installation/storage plan](local-owner-authentication-installation-plan.md).
 It defines the profile and evidence to resolve before A1 without authorizing
 experiments, trust changes, dependency adoption or later implementation.

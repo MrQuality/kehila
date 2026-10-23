@@ -402,6 +402,10 @@ shape is available, while mount/alias, safe adapter, durability and dependency
 qualification remain open. ADR-106 selects mounted secrets for the disposable
 proof only; Linux-owned files remain an investigated alternative, and no runtime
 crate or production storage is adopted. The resume criterion remains unchanged.
+The [strict bundle-parser API review](../implementation/local-owner-authentication-bundle-parser.md)
+adds the independent framing/decoding/profile/key-match gate. General PEM and
+key-loading success do not establish strict admission; dependency selection,
+nested DER behavior and actual rejection tests remain pending.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 

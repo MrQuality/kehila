@@ -185,6 +185,11 @@ than rely on a general PEM parser's defaults. Positive LF/CRLF and boundary case
 plus each rejection class, need reviewed test cases/oracles before executable
 approval and actual passing parser tests before qualification.
 
+The [bundle-parser API review](local-owner-authentication-bundle-parser.md)
+identifies broader PEM acceptance, canonical-base64 and positive key-match checks.
+It supplies candidate composition and rejection oracles, not an adopted dependency
+or passing strict parser. Nested DER/profile behavior remains a review/test gate.
+
 The operator owns issuer generation/signing and confidential staging outside the
 checkout, and verifies the secret-import channel and absence of echo/logging.
 Serving keys, staging copies, engine storage and mounted copies have a positively
