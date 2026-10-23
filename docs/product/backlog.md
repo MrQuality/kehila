@@ -394,6 +394,11 @@ qualification, listener-amendment acceptance or storage adoption follows. The
 adds concrete correction/PTP/lifecycle findings; none establishes the full resume
 barrier. Keep dependent execution gated and do not treat more clock samples as
 proof of a missing ordering contract.
+The [Linux file-admission API review](../implementation/local-owner-authentication-linux-files.md)
+advances the independent key/file gate: an explicit descriptor/resolution API
+shape is available, while mount/alias, safe adapter, durability and dependency
+qualification remain open. Neither storage alternative nor a runtime crate is
+adopted, and the resume criterion remains unchanged.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 
