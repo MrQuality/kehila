@@ -18,7 +18,7 @@ Explicit Unicode-3.0 compatibility/distribution review: unicode-ident combines a
 
 ## Advisory scope
 
-The separately recorded package/version OSV query covers the 85 locked registry packages, including platform-specific and test-only entries. It is a point-in-time package advisory query, not a complete source/reachability audit or a qualification of the existing worker. The pre-existing worker rustls 0.21.12 follow-up remains under [#40](https://github.com/MrQuality/kehila/issues/40) and the [A0 plan](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up).
+The 2026-10-19 package/version OSV query covered the then-locked 85 registry packages, including platform-specific and test-only entries. The subsequent adoption review below records the current 94-package graph. It is a point-in-time package advisory query, not a complete source/reachability audit or a qualification of the existing worker. The pre-existing worker rustls 0.21.12 follow-up remains under [#40](https://github.com/MrQuality/kehila/issues/40) and the [A0 plan](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up).
 
 ## Locked registry inventory
 
@@ -29,15 +29,20 @@ The separately recorded package/version OSV query covers the 85 locked registry 
 | [asn1-rs-impl](https://crates.io/crates/asn1-rs-impl/0.2.0) | 0.2.0 | Apache-2.0 |
 | [atomic-waker](https://crates.io/crates/atomic-waker/1.1.2) | 1.1.2 | Apache-2.0 |
 | [autocfg](https://crates.io/crates/autocfg/1.5.1) | 1.5.1 | Apache-2.0 |
+| [base64ct](https://crates.io/crates/base64ct/1.8.3) | 1.8.3 | Apache-2.0 |
 | [bit-vec](https://crates.io/crates/bit-vec/0.9.1) | 0.9.1 | Apache-2.0 |
 | [bytes](https://crates.io/crates/bytes/1.11.1) | 1.11.1 | MIT |
 | [cc](https://crates.io/crates/cc/1.9.0) | 1.9.0 | Apache-2.0 |
 | [cfg-if](https://crates.io/crates/cfg-if/1.0.5) | 1.0.5 | Apache-2.0 |
+| [const-oid](https://crates.io/crates/const-oid/0.10.2) | 0.10.2 | Apache-2.0 |
 | [data-encoding](https://crates.io/crates/data-encoding/2.11.1) | 2.11.1 | MIT |
+| [der](https://crates.io/crates/der/0.8.2) | 0.8.2 | Apache-2.0 |
 | [der-parser](https://crates.io/crates/der-parser/10.0.0) | 10.0.0 | Apache-2.0 |
+| [der_derive](https://crates.io/crates/der_derive/0.8.0) | 0.8.0 | Apache-2.0 |
 | [deranged](https://crates.io/crates/deranged/0.5.9) | 0.5.9 | Apache-2.0 |
 | [displaydoc](https://crates.io/crates/displaydoc/0.2.7) | 0.2.7 | Apache-2.0 |
 | [find-msvc-tools](https://crates.io/crates/find-msvc-tools/0.1.15) | 0.1.15 | Apache-2.0 |
+| [flagset](https://crates.io/crates/flagset/0.4.7) | 0.4.7 | Apache-2.0 |
 | [futures-channel](https://crates.io/crates/futures-channel/0.3.34) | 0.3.34 | Apache-2.0 |
 | [futures-core](https://crates.io/crates/futures-core/0.3.34) | 0.3.34 | Apache-2.0 |
 | [getrandom](https://crates.io/crates/getrandom/0.2.17) | 0.2.17 | Apache-2.0 |
@@ -62,6 +67,7 @@ The separately recorded package/version OSV query covers the 85 locked registry 
 | [oid-registry](https://crates.io/crates/oid-registry/0.8.1) | 0.8.1 | Apache-2.0 |
 | [once_cell](https://crates.io/crates/once_cell/1.21.4) | 1.21.4 | Apache-2.0 |
 | [pin-project-lite](https://crates.io/crates/pin-project-lite/0.2.17) | 0.2.17 | Apache-2.0 |
+| [pkcs8](https://crates.io/crates/pkcs8/0.11.0) | 0.11.0 | Apache-2.0 |
 | [powerfmt](https://crates.io/crates/powerfmt/0.2.1) | 0.2.1 | Apache-2.0 |
 | [proc-macro2](https://crates.io/crates/proc-macro2/1.0.107) | 1.0.107 | Apache-2.0 |
 | [quote](https://crates.io/crates/quote/1.0.47) | 1.0.47 | Apache-2.0 |
@@ -71,12 +77,14 @@ The separately recorded package/version OSV query covers the 85 locked registry 
 | [rustls](https://crates.io/crates/rustls/0.23.46) | 0.23.46 | Apache-2.0 |
 | [rustls-pki-types](https://crates.io/crates/rustls-pki-types/1.15.1) | 1.15.1 | Apache-2.0 |
 | [rustls-webpki](https://crates.io/crates/rustls-webpki/0.103.16) | 0.103.16 | ISC |
+| [sec1](https://crates.io/crates/sec1/0.8.0) | 0.8.0 | Apache-2.0 |
 | [serde](https://crates.io/crates/serde/1.0.229) | 1.0.229 | Apache-2.0 |
 | [serde_core](https://crates.io/crates/serde_core/1.0.229) | 1.0.229 | Apache-2.0 |
 | [serde_derive](https://crates.io/crates/serde_derive/1.0.229) | 1.0.229 | Apache-2.0 |
 | [shlex](https://crates.io/crates/shlex/2.0.1) | 2.0.1 | Apache-2.0 |
 | [smallvec](https://crates.io/crates/smallvec/1.16.3) | 1.16.3 | Apache-2.0 |
 | [socket2](https://crates.io/crates/socket2/0.6.5) | 0.6.5 | Apache-2.0 |
+| [spki](https://crates.io/crates/spki/0.8.1) | 0.8.1 | Apache-2.0 |
 | [subtle](https://crates.io/crates/subtle/2.6.1) | 2.6.1 | BSD-3-Clause |
 | [syn](https://crates.io/crates/syn/2.0.119) | 2.0.119 | Apache-2.0 |
 | [syn](https://crates.io/crates/syn/3.0.9) | 3.0.9 | Apache-2.0 |
@@ -106,6 +114,7 @@ The separately recorded package/version OSV query covers the 85 locked registry 
 | [windows_x86_64_gnu](https://crates.io/crates/windows_x86_64_gnu/0.52.6) | 0.52.6 | Apache-2.0 |
 | [windows_x86_64_gnullvm](https://crates.io/crates/windows_x86_64_gnullvm/0.52.6) | 0.52.6 | Apache-2.0 |
 | [windows_x86_64_msvc](https://crates.io/crates/windows_x86_64_msvc/0.52.6) | 0.52.6 | Apache-2.0 |
+| [x509-cert](https://crates.io/crates/x509-cert/0.3.0) | 0.3.0 | Apache-2.0 |
 | [x509-parser](https://crates.io/crates/x509-parser/0.18.1) | 0.18.1 | Apache-2.0 |
 | [yasna](https://crates.io/crates/yasna/0.6.0) | 0.6.0 | Apache-2.0 |
 | [zeroize](https://crates.io/crates/zeroize/1.9.1) | 1.9.1 | Apache-2.0 |
@@ -162,3 +171,36 @@ interface. Allocator/process termination, caller copies and historical allocatio
 remain outside the erasure guarantee. This is bounded API review, not a complete
 source/reachability audit. x509-parser is not promoted; full credential admission
 and provider qualification remain separate.
+
+## 2026-10-23 credential-admission schema adoption
+
+Direct pins are x509-cert 0.3.0 and pkcs8 0.11.0 with defaults disabled, plus
+sec1 0.8.0 with defaults disabled and `der`. The research-only declaration lacked
+SEC1's required decoder feature; actual compilation exposed that setup gap.
+Review of its manifest confirms `der` enables SEC1/DER zeroization, without
+point/PEM/serde support or new package versions. The actual 94-package/version
+set matches the candidate query, which returned no OSV findings on 2026-10-23.
+This remains package/version evidence, not absence of reachable source defects.
+
+Nine registry entries are new; existing package versions are unchanged. All nine
+archive hashes match Cargo's locked checksums. Actual packaged grants were
+reviewed: select Apache-2.0 for the eight dual-licensed RustCrypto packages and
+flagset's sole Apache-2.0 grant. Retained notices add package attribution and the
+exact selected text variants; none of these archives supplied a separate NOTICE.
+The graph declares no Rust requirement above the existing 1.88 floor; actual
+minimum-version execution remains unqualified. No production graph is modified.
+
+Upstream path histories show 2026 activity for x509-cert, pkcs8, sec1, der and
+base64ct. Flagset's latest inspected source change is 2025-03-02: treat it as
+a mature, low-churn dependency, not evidence of recent active support or proof
+of abandonment. It has no normal dependency graph and implements bit-flag values
+used by typed extension decoding. Review it with the rest of the graph monthly
+and on security notices; any abandonment/advisory finding needs an owned
+disposition under the dependency policy. No support guarantee is inferred.
+
+Source review covers typed nested completion, PKCS#8 discarded-field handling,
+SEC1 decoding, extension access and the fixed ring loader. Schema-owned buffers
+and provider internals can allocate/copy; no universal allocator-failure or
+physical-erasure guarantee follows. Public APIs and controlled test construction
+use library DER primitives; no application TLV decoder, crypto implementation,
+unsafe code, installer or trust-store access is introduced.

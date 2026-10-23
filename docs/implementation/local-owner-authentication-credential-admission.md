@@ -1,7 +1,9 @@
 # A0 credential admission: API comparison and remaining decisions
 
-Status: read-only research, 2026-10-23. Schema route and key restriction below are
-Proposed; no dependency adoption, implementation or admission tests.
+Status: bounded private profile stage implemented, 2026-10-23; runtime and full
+credential qualification remain open. The first-proof key restriction and explicit
+certificate markers were accepted separately as recorded below. The API comparison
+below retains its research-time scope; see the implementation result at the end.
 Baseline: merged PR #79, `3fd1d28`. Related: [decoder result](local-owner-authentication-parser-adapter-plan.md#first-slice-result-2026-10-23),
 [container plan](local-owner-authentication-container-plan.md), [#40](https://github.com/MrQuality/kehila/issues/40),
 [#49](https://github.com/MrQuality/kehila/issues/49).
@@ -20,9 +22,9 @@ still requires P-256/SHA-256, a non-CA server leaf and exact loopback iPAddress 
 | Empty outer parser remainder proves complete nested consumption | Contradicted by the existing sequence helper below | Do not use it as the sole structural admission check |
 | A schema decoder automatically validates all embedded data | Unsupported: some fields are opaque or explicitly discarded | Inspect each relevant nested boundary and define negative oracles |
 | Existing development packages are the smallest serving choice | Contradicted as a general inference by the graph comparison | Compare runtime reachability, not just new lock entries |
-| Extra restrictions are already part of the agreed profile | Not established | Record proposed restrictions and obtain a decision before dependent implementation |
+| All extra restrictions are already part of the agreed profile | Only the key-metadata rule and explicit BC/EKU markers were accepted on 2026-10-23 | Keep other acceptance rules source-backed and unresolved choices visible |
 
-## Two routes and actual graph costs
+## Research snapshot: two routes and actual graph costs
 
 Metadata-only copies of AUTH-001 retained its current lock and added these exact
 candidate declarations. No package code was executed. Both keep the existing
@@ -83,7 +85,7 @@ These are scoped API behaviors, not claims that either library family is
 vulnerable. Selected published sources were inspected; no complete source audit
 or empirical malformed-DER acceptance result is claimed.
 
-## Recommended candidate and proposed key restriction
+## Recommended candidate and accepted first-proof restriction
 
 Prefer Route B for the next bounded feasibility scope: its typed completion
 checks address the known structural gap with fewer Linux normal/build graph
@@ -98,14 +100,23 @@ source-supported candidate, not a tested guarantee or universal DER validator.
 Decode the embedded SEC1 structure and algorithm parameters separately; retained
 opaque bytes can round-trip unchanged without being valid.
 
-**Decision needed before implementation:** reject keys with optional attributes
-or extra fields for this first proof. Some may be valid PKCS#8; rejecting them is
-a compatibility restriction, not evidence that they are malformed. Recommend
-this narrow profile for disposable producer-generated keys, with an explicit
-unsupported-profile result. A mismatch does not identify its exact cause.
-Also state the ring loader's V1/embedded-public-key compatibility limits; do not
-claim all unencrypted PKCS#8 variants. Neither PR merge nor this recommendation
-records acceptance of the additional restriction.
+**Explicit maintainer decision, 2026-10-23:** reject keys with optional attributes
+or extra fields for this first disposable proof. The maintainer supported this
+recommendation when directing PR #80's merge and continuation; acceptance is
+separate from the merge itself. Some rejected keys may be valid PKCS#8: report
+unsupported profile rather than asserting malformed DER. The round-trip mechanism
+still requires actual tests; a mismatch does not identify its exact cause.
+State the ring loader's V1/embedded-public-key compatibility limits; do not claim
+all unencrypted PKCS#8 variants.
+
+**Separate explicit certificate decision, 2026-10-23:** require BasicConstraints
+to be present with `ca=false` and EKU to be present and include `serverAuth`.
+The maintainer chose both explicit markers after being told that ordinary TLS
+can accept some certificates when these extensions are omitted. This applies only
+to the first disposable proof. A present BasicConstraints extension can encode
+its DEFAULT false value by omitting the inner BOOLEAN; an explicitly encoded
+false DEFAULT is not required. No exactly-one-SAN rule or noncritical-extension
+allowlist was accepted. This grants no trust or integrated-proof execution permission.
 
 Do not apply byte-equality re-encoding to certificates: schema/profile encoding
 can normalize representations and would introduce unrelated restrictions.
@@ -114,23 +125,115 @@ and can fail. Do not describe the whole admission stage as pure text processing.
 Account separately for decoded buffers, schema-owned data, zeroizing encode scratch
 and provider copies; neither a byte ceiling nor wrappers prove total RAM/erasure.
 
-## Remaining policy and test gates
+## Research-time policy and test gates
 
 | Gate | Required resolution / oracle before complete admission |
 | --- | --- |
 | Certificate structure | Reject outer tails, extra fields inside Certificate/TBS, invalid lengths/tags/default encodings and malformed required nested structures. Test resolved library behavior, not just API names |
 | Extensions | Reject global duplicate OIDs and malformed checked extensions. Specify handling of opaque noncritical values and unsupported critical extensions; do not invent an extension allowlist or exactly-one-SAN rule |
-| Agreed profile | Exact iPAddress match, non-CA/serverAuth and P-256/SHA-256, including inner/outer signature identifier consistency and curve parameters. Resolve absent BasicConstraints/EKU cases explicitly rather than interpreting `None` silently |
+| Agreed profile | Exact iPAddress match, non-CA/serverAuth and P-256/SHA-256, including inner/outer signature identifier consistency and curve parameters. Require the explicitly accepted BC/EKU markers; do not reinterpret an absent extension as present |
 | Time | Invalid intervals, not-yet-valid/expiry boundaries, supplied clock errors and existing expiry/drain limits need exact expected outcomes. These checks do not establish a provider resume barrier |
 | Key restriction | A producer key round-trips exactly; attributes (valid and opaque malformed contents), additional tagged fields and unsupported variants fail with the specified category. Inner SEC1 tails/unknown fields and inconsistent parameters/public components must also fail |
 | Provider/pair | Wrong curve/key, loading/RNG failure, mismatch and unknown consistency all fail before constructing a profile-checked generation. Ordinary client trust/path verification and issuer-key policy remain separate |
 | Resources/errors | Bounded fallible allocations, zeroizing scratch on encoding/error paths and sanitized categories; no raw parser/provider Debug. Do not claim physical erasure or dynamically tested allocator failures without evidence |
 
-Next settle the proposed key restriction and certificate-policy oracles, then
-review exact dependency adoption and a bounded admission implementation scope.
+Next verify the accepted restrictions and source-backed policy oracles through
+reviewed dependency adoption and bounded private admission implementation.
 If safe library guarantees remain insufficient, stop rather than add application
 ASN.1/cryptography or weaken the contract. No build, fixture/key generation,
 admission test, listener integration, VM/service start or trust change occurred.
 The actual file/mount/alias/ingress and full resume gates remain unresolved;
 A0/T01-T16, A1-A5, ADR-103 and #65 gain no qualification. #40's separate production
 dependency disposition and 2026-11-18 review deadline remain unchanged.
+
+## Private implementation result, 2026-10-23
+
+The private `bundle::admission` stage now consumes `DecodedBundle` and a supplied
+`UnixTime`, returning an unexported `ProfileCheckedGeneration`. It has no listener,
+file, system-clock or production caller. Existing examples retain their separate
+DER-input path. The accepted key/BC/EKU restrictions apply only to this bounded
+first-proof profile; implementation does not broaden their acceptance.
+
+The locked Route B adoption and actual features/licenses/advisory scope are in
+[DEPENDENCIES](../../experiments/AUTH-001/DEPENDENCIES.md). Compilation required
+`sec1/der`, which also enables its zeroization feature; the research declaration
+without that feature was insufficient. The graph remains 94 registry packages.
+
+The stage checks typed certificate/TBS completion, V3, matching inner/outer
+ECDSA-SHA256 identifiers with absent parameters, a P-256 subject key, required
+non-CA BasicConstraints and serverAuth EKU, exact loopback IP SAN, global duplicate
+extension OIDs and supplied-time validity. If KeyUsage is present it must permit
+digital signatures and forbid certificate signing. Extra supported SANs/EKUs are
+allowed. Unsupported critical extensions reject; unknown noncritical values need
+one complete library-decoded DER envelope, with their inner semantics opaque.
+
+A separate library-reader check requires exactly two nonnegative DER INTEGERs
+inside the ECDSA signature sequence, with complete inner/outer consumption. It
+does not verify scalar ranges, signature mathematics, issuer policy or trust.
+A regression deliberately accepts a syntactically shaped, unauthenticated issuer
+signature so callers cannot mistake this type for an authenticated certificate.
+
+Typed decoding alone hid explicitly encoded DEFAULT values and discarded
+undefined KeyUsage bits. Four regression cases failed before the repair:
+explicit BasicConstraints false, explicit extension critical false, undefined
+KeyUsage bits and nonminimal named-bit encoding. After typed certificate decoding,
+schema-aware library orchestration projects original extension wrappers and
+matches their presence/count/order to the typed list. Bounded re-encoding equality
+checks apply to those wrappers and interpreted BasicConstraints/KeyUsage values.
+No whole certificate/TBS re-encoding or application tag/length decoder is used.
+The projection relies on the preceding typed schema check; it is not a second TBS
+validator or a universal validator for opaque extension contents.
+
+The key stage separately checks PKCS#8 V1, EC/P-256 identifiers, inner SEC1
+completion/parameters and embedded public key. Outer-key re-encoding equality
+rejects discarded metadata as unsupported profile. The fixed ring provider loads
+a borrowed protected key; rustls positive `keys_match()` is required, rejecting
+unknown as well as mismatch. Errors are static categories without parser/provider
+Debug or secret values. Application-owned encoding scratch uses bounded fallible allocation and zeroizing
+storage; other application collections reserve fallibly. Provider/schema
+allocations and copies remain outside any universal allocation/erasure guarantee.
+
+Windows Rust/Cargo 1.93.0 verification passed formatting, clippy with warnings
+denied, **37 unit tests and 14 real transport tests**. Fixtures were generated only
+in test memory. The unit total includes ten decoder, seven key and seventeen
+certificate cases alongside the original three transport-policy cases. Nine
+behavior mutations were detected: key metadata, key curve, BC presence, IP
+identity, expiry, unknown pair consistency, raw extension wrapper, typed default
+and signature shape. Source was restored before the final passing run.
+
+Remaining limits and gates:
+
+- Validity is a supplied-time snapshot with inclusive certificate endpoints and
+  invalid-interval rejection. No clock acquisition, clock-error injection,
+  continuous expiry/drain enforcement or provider resume barrier is implemented.
+- The selected GeneralName schema does not support x400Address. This is a stated
+  compatibility limit, not an accepted general SAN restriction or evidence that
+  such certificates are invalid. Unknown noncritical contents remain opaque.
+- Issuer-key policy, ordinary client path/trust verification and full credential
+  authenticity remain separate. Real allocator/RNG failure injection and a full
+  minimum-Rust-version build were not executed.
+- Descriptor-based Linux file admission, mount/alias/ingress behavior, renewal,
+  expiry/drain/resume and integrated Windows-client/Podman-backend qualification
+  remain open. No trust-store or security-setting changes were made.
+
+The next bounded implementation proposal should address Linux file admission
+using the [reviewed API contract](local-owner-authentication-linux-files.md),
+while retaining the resume gate before any integrated proof. A0/T01-T16, A1-A5,
+ADR-103 and #65 receive no complete qualification; #40's separate production
+dependency disposition and 2026-11-18 deadline are unchanged.
+
+## PR #81 review follow-up, 2026-10-23
+
+The existing inner-key contract test now also encodes an explicit matching
+SEC1 P-256 parameter, requires successful provider loading and checks that the
+public identity equals the original key's. Wrong-curve and missing-public-key
+rejections remain covered. A targeted mutation rejecting the present matching
+curve made this positive assertion fail; source was restored. This extends one
+existing test, so the suite remains 37 unit and 14 transport tests. The final
+standalone run passed all 51 tests, formatting and clippy with warnings denied.
+
+Local documentation on `ProfileCheckedGeneration` and `admit` now states directly
+that profile/key matching does not establish issuer-signature authenticity or
+certificate trust. TLS client path verification and ongoing expiry/resume remain
+separate requirements. This follow-up changes neither admission policy nor API
+visibility, and grants no new integration or trust permission.

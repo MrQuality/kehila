@@ -24,22 +24,23 @@ deadlines and a five-second total connection deadline. Shutdown drains owned wor
 the example server has a three-minute lifetime. These are experiment bounds,
 not measurements of the later authentication capacity or availability budgets.
 
-## Unconnected bundle decoder
+## Unconnected bundle decoder and profile checks
 
-The private `bundle` module checks the container plan's bounded version-1 ASCII
-framing and canonical base64, returning explicitly unvalidated bytes. It has no
-listener caller, public conversion or certificate/key admission path. Its scoped
-dead-code expectation documents that deliberate boundary; it must be removed when
-qualified admission is integrated. Existing server/client paths still use their
-original separate DER inputs and literal host-loopback checks.
+The private `bundle` module checks bounded version-1 ASCII framing and canonical
+base64, returning explicitly unvalidated bytes. Its private admission stage checks
+the accepted disposable certificate/key profile and requires positive key
+matching at a supplied time. Neither stage has a listener caller or public
+conversion. The scoped dead-code expectation documents that deliberate boundary;
+it must be removed when qualified admission is integrated. Existing server/client
+paths retain their original separate DER inputs and host-loopback checks.
 
-Ten decoder tests use nonsecret synthetic payloads; the complete standalone set
-has 13 unit and 14 transport tests. Four targeted mutations detect overflow,
-order, terminal-padding and decoder-error regressions. See the
-[contract and result](../../docs/implementation/local-owner-authentication-parser-adapter-plan.md)
-for actual scope. DER/profile/key matching, safe file admission and the container
-proof remain unfinished. The [dependency review](DEPENDENCIES.md) records direct
-decoder dependencies and the separate rustls-webpki advisory patch.
+The complete standalone suite now has 37 unit and 14 transport tests. Ten
+admission mutations were detected, including raw extension/default encodings,
+signature shape and rejection of an explicitly matching inner P-256 parameter. See the [decoder contract](../../docs/implementation/local-owner-authentication-parser-adapter-plan.md)
+and [admission result and limits](../../docs/implementation/local-owner-authentication-credential-admission.md#private-implementation-result-2026-10-23).
+These checks do not establish issuer authenticity, client trust or ongoing expiry.
+Safe file admission and the container proof remain unfinished. The
+[dependency review](DEPENDENCIES.md) records the locked adoption and advisory scope.
 
 ## Run
 
@@ -121,7 +122,7 @@ are pinned and their license/advisory scope is recorded. No handwritten HTTP
 parser or raw platform unsafe code is introduced.
 
 This evidence qualifies the observed host transport subset only. A0's broader
-auth-library selection, protected storage/DPAPI, supported installation and
+auth-library selection, Linux backend secret-file admission, supported installation and
 platform qualification remain open under #40/#49. A1-A5 and T01-T16 remain
 separate gates; no authentication case, replicated support, real-data readiness
 or ADR-103 adoption is established here.

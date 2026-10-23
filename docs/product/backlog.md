@@ -412,11 +412,12 @@ dependencies, ten passed decoder tests and four detected mutations. The existing
 experimental verifier receives the separately reviewed rustls-webpki advisory
 patch; production dependency disposition remains separate. No listener consumes
 the unvalidated output; complete admission and the container proof retain their gates.
-The [credential-admission comparison](../implementation/local-owner-authentication-credential-admission.md)
-advances the next source/API prerequisite: outer remainder checks do not establish
-nested consumption; typed schema decoding is the leading research route. Its
-proposed key restriction, exact dependency adoption and actual admission oracles
-remain unresolved. No complete credential or container qualification is claimed.
+The [credential-admission comparison and private implementation result](../implementation/local-owner-authentication-credential-admission.md)
+records the separately accepted key-metadata and explicit BC/EKU restrictions,
+locked 94-package adoption and bounded profile/key checks. The unconnected stage
+passed 37 unit and 14 transport tests plus ten admission mutation checks.
+Issuer trust, Linux file admission, expiry/drain/resume and integrated container
+qualification remain open. No complete credential or container qualification is claimed.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 

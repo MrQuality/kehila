@@ -1,7 +1,7 @@
 {
   "checked_on": "2026-10-23",
   "source": "https://api.osv.dev/v1/querybatch",
-  "registry_packages": 85,
+  "registry_packages": 94,
   "findings": [],
   "limitations": "Package/version query only; does not qualify source reachability, unrelated graphs, or future advisory changes.",
   "disposition": {

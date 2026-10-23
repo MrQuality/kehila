@@ -1,4 +1,6 @@
 //! Version-1 text decoding only. The result is not a TLS credential.
+mod admission;
+
 use data_encoding::BASE64;
 use zeroize::Zeroizing;
 
