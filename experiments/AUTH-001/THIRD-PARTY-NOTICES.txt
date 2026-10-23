@@ -1582,7 +1582,7 @@ limitations under the License.
 
 ========================================================================
 SHA-256 (upstream text, UTF-8 LF): 5b698ca13897be3afdb7174256fa1574f8c6892b8bea1a66dd6469d3fe27885a
-rustls-webpki 0.103.15 / LICENSE (https://docs.rs/crate/rustls-webpki/0.103.15/source/LICENSE)
+rustls-webpki 0.103.16 / LICENSE (https://docs.rs/crate/rustls-webpki/0.103.16/source/LICENSE)
 ------------------------------------------------------------------------
 Except as otherwise noted, this project is licensed under the following
 (ISC-style) terms:

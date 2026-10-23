@@ -1,7 +1,13 @@
 {
-  "checked_on": "2026-10-19",
+  "checked_on": "2026-10-23",
   "source": "https://api.osv.dev/v1/querybatch",
   "registry_packages": 85,
   "findings": [],
-  "limitations": "Package/version query only; does not qualify source reachability, unrelated graphs, or future advisory changes."
+  "limitations": "Package/version query only; does not qualify source reachability, unrelated graphs, or future advisory changes.",
+  "disposition": {
+    "advisory": "RUSTSEC-2026-0382",
+    "affected_locked_version": "rustls-webpki 0.103.15",
+    "patched_locked_version": "rustls-webpki 0.103.16",
+    "source": "https://rustsec.org/advisories/RUSTSEC-2026-0382.html"
+  }
 }
