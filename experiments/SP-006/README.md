@@ -2,7 +2,7 @@
 
 Status: bounded standalone prototype; four live cases passed on 2026-10-24.
 Two targeted mutations were detected and the restored source passed all four cases
-again. Final publication gates remain pending. Owner: project maintainer.
+again. Mandatory staged verification passed; hosted CI is recorded in the PR. Owner: project maintainer.
 Related: [spike plan](../../docs/spikes/SP-006-projection-rebuild.md),
 [#49](https://github.com/MrQuality/kehila/issues/49), B-005/B-023.
 No application schema, runtime dependency or production indexer is adopted.

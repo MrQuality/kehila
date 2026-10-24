@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Four bounded live cases and two mutations passed; publication gates pending |
+| Status / outcome | Four bounded live cases passed; two protocol mutations detected; staged verification passed |
 | Owner / assessor | Project maintainer; separate-context source/relevance review |
 | Created / last updated | 2026-10-24 |
 | Related work | #49 W3/W5/W7, B-005/B-023, D-016/D-017, ADR-101/102; #40/#41 prerequisites remain |
@@ -81,8 +81,11 @@ its MVCC-retention cost; AST comparison with docstrings removed found no executa
 change. Separate publication hashes bind that correction to final source.
 Separate-context final review corrected a case-description reversal and reported
 no additional actionable findings within this bounded scope; it did not execute
-the services. Mandatory publication gates remain pending. Raw logs and local
-metadata remain outside the checkout.
+the services. Both focused executable commits passed mandatory staged verification, including
+275 tooling tests (272 passed, three documented Windows skips), Rust/Go/static
+and owned live-service checks. Publication review reported no disclosure findings.
+Hosted CI is tracked in the PR. Raw logs and local metadata remain outside the
+checkout.
 
 ## Coding-standard scope
 
@@ -105,6 +108,5 @@ remain #49 W3/W5/W7 obligations; authentication and allocation remain #40/#41.
 
 ## Handoff
 
-Complete mandatory staged verification and final publication review, then
-publish the observed outcomes and limits.
+Review the PR and exact-source hosted CI, then decide the next bounded slice.
 Keep #49 open. Online native pipeline integration remains separately reviewed work.
