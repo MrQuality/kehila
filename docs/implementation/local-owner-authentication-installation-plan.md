@@ -56,8 +56,9 @@ bind rule now has the explicitly accepted bounded diagnostic amendment recorded
 in ADR-106 on 2026-10-23. Disposable file-secret risk is accepted for that proof
 only; no implementation, VM startup, trust change or production storage follows. The
 [review readiness checklist](local-owner-authentication-container-plan.md#review-follow-up-and-executable-readiness)
-also gates clock/resume feasibility, canonical configuration and exact bundle
-parsing; effective WSL state and real ingress/pause results remain unqualified.
+gates runnable clocks/shutdown, interruption accounting, canonical configuration
+and exact bundle parsing. ADR-106 now permits rerunning interrupted disposable
+tests; effective ingress and supported suspend behavior remain unqualified.
 
 The first-proof topology is now selected: same-host Podman with WSL 2, a Windows
 client and Linux-container backend (maintainer clarification, 2026-10-22).

@@ -1,6 +1,12 @@
 # A0: Podman/WSL 2 resume feasibility
 
-Status: Research result; executable readiness unresolved. Recorded / updated: 2026-10-22.
+Status: Historical research result against the original full resume contract.
+Recorded / updated: 2026-10-22; diagnostic disposition amended 2026-10-24.
+
+[ADR-106 now accepts development-test interruption and rerun](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24).
+This supersedes the original automatic barrier as a disposable-proof prerequisite.
+The source findings below remain valid within their stated scope; they establish
+no supported authentication/suspend qualification or new execution permission.
 Owner: project maintainer. Related #40/#49;
 [container plan](local-owner-authentication-container-plan.md),
 [ADR-106: bounded acceptance](../architecture/ADR-106-local-container-transport.md).
@@ -24,7 +30,7 @@ risk, select production storage, or authorize an executable transport proof.
 | --- | --- | --- |
 | Podman/WSL 2 is the first-proof target on the Windows client host | Established by the maintainer's explicit clarification and agreement, 2026-10-22. | Reframe only if the maintainer changes this target; do not infer a separate Linux host. |
 | Installed metadata establishes active guest behavior | Contradicted: the registered machine is stopped. | Keep runtime engine, clocks and effective ingress unqualified. |
-| A selected API meets pause-inclusive budgets and the resume barrier | Unresolved by the reviewed sources below. | Dependent integrated probe remains behind the existing executable-readiness gate. |
+| A selected API meets pause-inclusive budgets and the resume barrier | Unresolved by the reviewed sources below. | Original barrier was unresolved; ADR-106 now permits diagnostic interruption/rerun, while other readiness gates remain. |
 | Empirical samples establish every required ordering guarantee | Unsupported. | A counterexample can reject a mechanism; successful samples cannot replace its API contract. |
 
 ## Read-only observation and limits
@@ -144,7 +150,7 @@ notification or cached heartbeat as if it solved this requirement. Repeating clo
 samples would not establish the missing ordering contract. Characterization is
 useful only when attached to a concrete mechanism and a falsifiable hypothesis.
 
-Retain the current criterion without requiring renewed acceptance. Further
+Under the original full contract, further
 dependent work needs a documented provider interlock; this review has not supplied
 one. If an alternative suspend/resume contract is proposed, its supported behavior
 and security consequences need an explicit maintainer decision. No revision is
@@ -154,13 +160,16 @@ requests and owned pending responses, short pauses, stale time/permission, crash
 and reconnect behavior. Changing the host, adding a Windows authority component,
 or increasing privileges is not a routine test-harness choice.
 
-## Disposition and next evidence
+<a id="disposition-and-next-evidence"></a>
+
+## Historical disposition and next evidence
 
 **Unresolved:** no dependable adapter satisfying the existing full resume contract
 was established by this bounded source review. This is not a proof of universal
 impossibility, a reproduced WSL bug, or a failure of the selected topology.
-The integrated transport proof is not executable-ready. Its resume gate remains
-in force; other ingress, key/file, dependency and trust gates also remain open.
+The original full-resume proof was not executable-ready. ADR-106 now replaces
+that diagnostic barrier with interruption invalidation and rerun; other ingress,
+key/file, dependency, trust and execution gates remain open.
 No host supervisor, new privilege, awake-only assertion or eventual-detection
 substitute is adopted. On 2026-10-23 the maintainer separately accepted ADR-106
 for the bounded disposable proof; ADR-105 remains Accepted with that scoped
