@@ -1,8 +1,9 @@
 # SP-006: projection rebuild handoff proof
 
-Status: bounded standalone prototype; four live cases passed on 2026-10-24.
-Two targeted mutations were detected and the restored source passed all four cases
-again. Mandatory staged verification passed; hosted CI is recorded in the PR. Owner: project maintainer.
+Status: bounded standalone prototype; all four live cases passed in R01 and the
+reviewed R02 profile on 2026-10-24. Source/mutation evidence is recorded below;
+mandatory staged verification and hosted CI are tracked in the PR.
+Owner: project maintainer.
 Related: [spike plan](../../docs/spikes/SP-006-projection-rebuild.md),
 [#49](https://github.com/MrQuality/kehila/issues/49), B-005/B-023.
 No application schema, runtime dependency or production indexer is adopted.
@@ -62,6 +63,8 @@ The four cases exercise actual SQL locks and actual OpenSearch indexing/alias AP
   maximum-revision completeness check, and correct refreshed cutover.
 - Coordinator interruption after alias application but before metadata commit;
   subsequent writes retain both targets and recovery completes under a new owner.
+  C03 independently checks the expected post-interruption value/revision through
+  the read alias and zero pending deliveries for the promoted target.
 - Actual source-backend termination rejects an incomplete snapshot; the old alias
   survives and a fresh target can rebuild successfully.
 
@@ -89,6 +92,11 @@ no proxy and no redirect. Fixtures contain fewer than 32 documents/deliveries;
 snapshot and drain loops fail when their bound is exceeded. These are test
 bounds, not a supported operating envelope. Raw logs stay in external storage.
 
+Fixture indexes disable automatic refresh (`refresh_interval=-1`). Search
+visibility therefore depends on the protocol's explicit refresh; a recovery test
+cannot pass merely because a background refresh happened first. This deterministic
+test setting does not select a production refresh policy.
+
 Passing this proof would establish only the exercised protocol schedules on the
 recorded versions. It would not qualify full crash durability, native application
 roles, infinite load, multi-coordinator deployment, real-data readiness or the
@@ -109,7 +117,7 @@ the runner never silently strips failed flags or changes privileges/delegation.
 It does not qualify container memory-limit enforcement or a production resource
 budget. If RAM preflight fails, stop rather than overlap heavy jobs or weaken it.
 
-## Recorded result, 2026-10-24
+## Recorded R01 result, 2026-10-24
 
 All four live cases passed on Windows against the configured PostgreSQL 16.13 and
 OpenSearch 2.19.1 images. The [sanitized result](results.observed.json) records
@@ -132,3 +140,19 @@ The writer-gate omission failed the expected-wait assertion. Bypassing the
 same-version payload comparison failed the corruption-rejection assertion. Both
 mutations were restored before the successful final four-case run. These checks
 establish sensitivity to those two regressions, not a general mutation score.
+
+## Recorded R02 review follow-up, 2026-10-24
+
+All four live cases passed with pinned container ownership and automatic fixture
+refresh disabled. C03 independently confirmed the expected `aftercrash` value,
+revision and payload through the read alias, and zero pending promoted-target
+deliveries. The result manifest's `review_followup_R02` binds eight exercised
+source/test files; the earlier R01 hashes remain historical evidence.
+
+Three deliberate regressions were detected: bypassing exclusive admission,
+substituting an unrelated PostgreSQL identity, and omitting explicit refresh only
+when recovering an already-moved alias. The last failed C03's new expected-value
+assertion. Source was restored before the successful full live rerun; all owned
+resources were cleaned up. The cheap tests cover 37 service-lifecycle cases and
+four SP-006 import/admission/ownership cases. Ordinary CI runs these tests; live
+SP-006 execution remains opt-in, with production integration gates unchanged.

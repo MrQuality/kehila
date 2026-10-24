@@ -62,7 +62,8 @@ class Search:
         require(name.startswith(self.prefix + '_'), 'unowned index')
         literal(name)
         status, _ = self.request('PUT', '/' + name, {'settings': {'number_of_shards': 1,
-                                                               'number_of_replicas': 0}})
+                                                               'number_of_replicas': 0,
+                                                               'refresh_interval': '-1'}})
         require(status == 200, 'index creation failed')
 
     def read(self, name, doc_id):

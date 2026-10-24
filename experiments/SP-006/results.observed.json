@@ -10,7 +10,7 @@
     "scripts/test_services.py": "103dd7b46a5b3523af421e27179ed76fba99336761a6dfca51effcd5fe82689a",
     "experiments/SP-004/sessions.py": "3ed07094a91b7b2b0de5ac2d4885bd24be9a74652a4bcbc7070ea3f817a8c9d2"
   },
-  "source_hash_scope": "Only CRLF line endings normalized; compare these contents to the published commit.",
+  "source_hash_scope": "Historical R01 executed/publication hashes; use review_followup_R02.source_sha256_lf for the reviewed implementation.",
   "configured_services": {
     "postgresql": "16.13",
     "opensearch": "2.19.1"
@@ -88,5 +88,74 @@
     "tooling_passed": 272,
     "documented_windows_skips": 3,
     "scope": "Rust/Go/static and owned live-service checks; hosted CI tracked in PR"
+  },
+  "record_scope": "Top-level evidence/hashes describe historical R01 published at dabf805. review_followup_R02 records the later reviewed implementation; hashes normalize CRLF to LF only.",
+  "review_followup_R02": {
+    "recorded": "2026-10-24",
+    "reviewed_baseline": "dabf805e29870c2fa3b271681b7fbd918bd517f2",
+    "ownership_commit": "b15d694",
+    "source_sha256_lf": {
+      "experiments/SP-006/run.py": "c36a6a5aa59340770273a8d7cf72308cf4f5f271f19d743a36db34329362e5bf",
+      "experiments/SP-006/protocol.py": "711e9955e6c9bdd692ca42d79a9f04795e7ffc9e7423dececaad2f74c4d8f846",
+      "experiments/SP-006/schema.sql": "cf746c88625674703070f073405cab06fd8a28293999c0b7bd4297f878eb48aa",
+      "experiments/SP-006/compose.yml": "5c03644f7f016909c61d78f694ef532264e1d0dc541c8187634d8b8689128350",
+      "scripts/test_services.py": "dd0372242cf8c8d7507bd70445466ea22654a6aa57d19c4b0e7522084f723556",
+      "experiments/SP-004/sessions.py": "3ed07094a91b7b2b0de5ac2d4885bd24be9a74652a4bcbc7070ea3f817a8c9d2",
+      "tests/test_test_services.py": "71c8f9f89ff1f93ed3c68c33346f39e72eb59fa66809d125d412a3f68fdc76f7",
+      "tests/test_sp006_runner.py": "a94bc90c20078124e1093395d6223eee88614a3040f9280b30e61b3094380c0a"
+    },
+    "fixture_automatic_refresh": false,
+    "cases": [
+      {
+        "case": "sequence_is_not_commit_frontier",
+        "passed": true
+      },
+      {
+        "case": "fenced_snapshot_live_delivery_cutover",
+        "duplicate_after_missing_ack": true,
+        "max_revision_counterexample": true,
+        "passed": true,
+        "same_version_corruption_rejected": true,
+        "writer_block_observed": true
+      },
+      {
+        "case": "coordinator_loss_after_alias_before_metadata",
+        "passed": true,
+        "recovered_alias_value_verified": true,
+        "target_acknowledgments_verified": true
+      },
+      {
+        "case": "lost_snapshot_requires_fresh_epoch",
+        "passed": true
+      }
+    ],
+    "owned_cleanup_completed": true,
+    "unit_tests": {
+      "service_lifecycle": 37,
+      "sp006_import_admission_ownership": 4,
+      "passed": true
+    },
+    "mutation_checks": [
+      {
+        "change": "bypass exclusive admission",
+        "detected": true
+      },
+      {
+        "change": "substitute unrelated PostgreSQL identity",
+        "detected": true
+      },
+      {
+        "change": "omit explicit refresh only when recovering an already-moved alias",
+        "detected": true,
+        "failure": "recovered alias does not expose the expected post-crash write"
+      }
+    ],
+    "first_staged_gate": {
+      "tooling_tests": 280,
+      "tooling_passed": 277,
+      "documented_windows_skips": 3,
+      "passed": true
+    },
+    "verification_tracking": "Mandatory staged verification and exact-head hosted results are maintained in PR #82 separately from this live-run record."
   }
 }

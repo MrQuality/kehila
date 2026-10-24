@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Four bounded live cases passed; two protocol mutations detected; staged verification passed |
+| Status / outcome | Four bounded live cases passed in R01 and reviewed R02; final staged/hosted verification tracked in PR |
 | Owner / assessor | Project maintainer; separate-context source/relevance review |
 | Created / last updated | 2026-10-24 |
 | Related work | #49 W3/W5/W7, B-005/B-023, D-016/D-017, ADR-101/102; #40/#41 prerequisites remain |
@@ -44,7 +44,7 @@ and explicit refresh. Later source/evidence dispositions belong in this record.
 | --- | --- | --- |
 | C01 | Lower identity allocated by an uncommitted transaction is absent from the snapshot but commits below its visible maximum | Maximum sequence is unsafe as a generic commit frontier |
 | C02 | Observe registration blocked by the writer through pg_blocking_pids; exercise newer event before older snapshot, ACK loss boundary, same-version corruption and hidden stale document; corrected cutover reaches exact fixture state and searchable alias | Gate/snapshot/individual-ACK handoff works for these schedules |
-| C03 | Interrupt coordinator after alias application before metadata completion; later writes target both indexes; a new coordinator reconciles and completes | Alias/metadata split does not silently drop these tested updates |
+| C03 | Interrupt coordinator after alias application before metadata completion; later writes target both indexes; a new coordinator reconciles; the read alias exposes the expected post-interruption value/revision and promoted-target pending deliveries are zero | Alias/metadata split does not silently drop these tested updates or leave the tested value unsearchable |
 | C04 | Terminate the source backend, reject promotion, preserve old alias, rebuild a fresh epoch | A lost snapshot is not resumed with a fresh transaction into the same epoch |
 
 No database/search I/O mock substitutes for these assertions. Synthetic protocol
@@ -92,7 +92,7 @@ checkout.
 The changed shared operation is `service_group`: an optional fixture path is
 resolved and checked before startup, and the same Compose command/project owns
 startup, diagnostics and cleanup. Existing callers retain the default fixture;
-the regression verifies custom-file and project ownership. All 36 lifecycle
+the regression verifies custom-file and project ownership. At R01, all 36 lifecycle
 unit tests passed. Ignoring the custom file failed the new ownership assertion;
 restoring source returned all 36 tests to passing.
 
@@ -118,8 +118,33 @@ All 37 service-lifecycle tests and four cheap SP-006 import/admission/ownership
 tests passed. The new boundary regressions failed before implementation at
 premature startup and forbidden global discovery; the initial import-harness
 search-path correction is setup evidence, not a behavioral regression result.
-These tests run in ordinary discovered CI without live services. Updated live
-recovery assertions and their result will be recorded in the next focused change.
+These tests run in ordinary discovered CI without live services. The live recovery
+assertions and result are recorded below.
+
+### SP-006-R02, 2026-10-24
+
+All four real-service cases passed after the ownership and independent recovery
+assertion changes. C03 verified the known `aftercrash` revision-two payload through
+the recovered read alias, exact fixture IDs, and zero pending promoted-target
+deliveries. Fixture automatic refresh is disabled so the protocol's explicit
+refresh is observable; no production refresh policy is adopted.
+
+Three targeted regressions were detected: bypassed exclusive admission, unrelated
+container-ID substitution, and recovery-only omission of explicit refresh. The
+last failed the new expected search-value assertion. Source was restored before
+the complete successful live run. Eight LF-normalized source/test hashes match
+the exercised files in `review_followup_R02` of the result manifest. Cleanup
+removed the owned services and stopped the owned VM. R01 retains its earlier
+source hashes; it does not purport to qualify this changed implementation.
+
+The first focused follow-up commit passed mandatory staged verification: 280
+tooling tests, 277 passed and three documented Windows skips, plus Rust/Go/static
+and owned live-service checks. Final follow-up staged verification and exact-head
+hosted CI are recorded in PR #82. Separate-context source/relevance review checked
+ownership, admission, assertion independence and deterministic refresh sensitivity;
+it did not execute services. The earlier review missed the ownership race; passing
+shared gates did not supply SP-006 regression coverage. No broader production,
+crash, deletion, resource-limit or authentication qualification follows.
 
 ## Handoff
 

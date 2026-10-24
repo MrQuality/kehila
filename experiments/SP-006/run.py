@@ -21,7 +21,7 @@ from cleanup_errors import run_main
 from sessions import Session, blocked
 from test_services import managed_runtime, service_group
 from verification_budget import command_timeout, work_budget
-from protocol import Rebuild, Search, document, literal, require
+from protocol import Rebuild, Search, digest, document, literal, require
 
 
 class Database:
@@ -144,7 +144,18 @@ def alias_recovery(db, prefix):
         rebuild.fence(); rebuild.cutover(target)
         require(search.alias_target() == target and db.sql('SELECT phase FROM sp006.control;') == 'live',
                 'alias recovery failed')
-    return {'case': 'coordinator_loss_after_alias_before_metadata', 'passed': True}
+        require(int(db.sql('SELECT count(*) FROM sp006.deliveries WHERE NOT acknowledged AND target='
+                           + literal(target) + ';')) == 0, 'recovery left target delivery gaps')
+        status, result = search.request('GET', '/' + search.alias + '/_search?version=true&size=8')
+        require(status == 200 and result['hits']['total']['value'] == 2,
+                'recovered alias search count mismatch')
+        hits = {hit['_id']: hit for hit in result['hits']['hits']}
+        expected = document('a', 2, 'aftercrash')
+        require(set(hits) == {'a', 'b'} and hits['a']['_version'] == 2
+                and hits['a']['_source'] == dict(expected, payload_sha256=digest(expected)),
+                'recovered alias does not expose the expected post-crash write')
+    return {'case': 'coordinator_loss_after_alias_before_metadata', 'passed': True,
+            'recovered_alias_value_verified': True, 'target_acknowledgments_verified': True}
 
 
 def snapshot_loss(db, prefix):
