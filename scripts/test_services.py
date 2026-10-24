@@ -273,13 +273,16 @@ def _runtime(preferred, machine, environment, exclusive):
 
 
 @contextmanager
-def service_group(runtime, selected):
+def service_group(runtime, selected, *, compose_file=None):
     if not selected or len(set(selected)) != len(selected) or not set(selected) <= SERVICES:
         raise ValueError('Expected a nonempty set of known test services')
     # -p overrides the Compose file's development name. Every group owns a fresh
     # project, including partial startup; cleanup can only address that project.
     project = 'kehila-test-' + uuid.uuid4().hex
-    command = [*runtime.compose, '-p', project, '-f', str(ROOT / 'docker-compose.yml')]
+    source = ROOT / 'docker-compose.yml' if compose_file is None else Path(compose_file).resolve()
+    if not source.is_file():
+        raise ValueError('Owned services require an existing Compose file')
+    command = [*runtime.compose, '-p', project, '-f', str(source)]
     failure = None
     try:
         run([*command, 'up', '-d', *selected], timeout=300, env=runtime.environment)

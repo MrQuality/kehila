@@ -15,6 +15,20 @@ import test_services as services
 
 
 class ServiceOwnershipTests(unittest.TestCase):
+    def test_custom_fixture_is_used_for_start_and_cleanup(self):
+        with tempfile.TemporaryDirectory() as folder:
+            fixture = Path(folder) / 'compose.yml'
+            fixture.write_text('services: {}', encoding='utf-8')
+            with patch.object(services, 'run') as run, \
+                    patch.object(services, '_containers', side_effect=[['container'], []]):
+                with services.service_group(services.ComposeRuntime(['docker','compose'], {}),
+                                            ['postgres'], compose_file=fixture):
+                    pass
+            start, cleanup = [call.args[0] for call in run.call_args_list]
+            self.assertEqual(start[start.index('-f') + 1], str(fixture.resolve()))
+            self.assertEqual(cleanup[cleanup.index('-f') + 1], str(fixture.resolve()))
+            self.assertEqual(start[start.index('-p') + 1], cleanup[cleanup.index('-p') + 1])
+
     def test_failed_diagnostics_do_not_replace_the_test_failure(self):
         primary = RuntimeError('test failed')
         with patch.object(services, 'run', side_effect=[None, OSError('logs failed'), None]), \
