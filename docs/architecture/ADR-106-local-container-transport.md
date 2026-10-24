@@ -4,8 +4,9 @@ Status: Accepted for the bounded disposable proof. Owner: project maintainer.
 Created: 2026-10-22. Explicit maintainer acceptance: 2026-10-23.
 The maintainer accepted the listener amendment and disposable-only file-secret
 residual risk by an explicit decision, separately from merging PRs #73-#76.
-This grants no live-test permission, production storage adoption or relaxation of
-the resume criterion. APIs, isolation, dependencies and runtime qualification
+The 2026-10-24 development-proof interruption amendment below replaces the
+original diagnostic resume gate. Live-test permission and production storage
+adoption remain separate. APIs, isolation, dependencies and runtime qualification
 remain gated. Acceptance does not turn unexecuted criteria into evidence.
 Related: [ADR-105](ADR-105-local-owner-authentication.md),
 [B-007](../product/backlog.md#b-007), [#40](https://github.com/MrQuality/kehila/issues/40),
@@ -24,7 +25,9 @@ On 2026-10-22 the maintainer selected same-host Podman with WSL 2 as the first-p
 topology: Windows client, Linux-container backend, WSL infrastructure. This selects
 the research/proof target, not this listener amendment or storage risk. The
 [read-only feasibility result](../implementation/local-owner-authentication-podman-feasibility.md)
-leaves resume readiness unresolved; no executable proof is authorized.
+did not establish the original full resume barrier. The development-proof
+interruption amendment below changes that proof requirement; it supplies no
+provider resume qualification or integrated-test execution permission.
 
 ADR-105 requires HTTPS termination and authority in one Rust process, and says
 both the client origin and listener are literal `127.0.0.1`. Host and container
@@ -116,6 +119,35 @@ ambiguous recovery stops for reconciliation. The plan defines each crash point.
 | Linux-owned generation files on a volume | Viable storage alternative; needs protected creation, safe opened-object checks, atomic generation selection and crash/durability evidence. More application-owned file operations for this proof. |
 | Windows bind-mounted key / GPG-backed secret | Windows filesystem translation or encrypted-store unlock adds a separate contract. Neither is selected merely for convenience. |
 
+## Development-proof interruption amendment, 2026-10-24
+
+The maintainer explicitly accepted restarting development tests after a pause,
+with the aim of avoiding disproportionate development-station infrastructure.
+This amendment applies only to the disposable A0 diagnostic proof:
+
+- Execute each run as one uninterrupted host/VM/container interval. Any observed
+  or suspected sleep, hibernation, freeze, restore or interruption invalidates
+  the **whole current run**, including partial successes. Preserve prior completed
+  runs separately; do not splice evidence across the interrupted interval.
+- After interruption, stop the owned diagnostic instance, reconcile owned
+  resources, verify usable UTC and begin a fresh instance and full run. An
+  interrupted request has an unknown transport outcome; this proof executes no
+  business mutations. Do not resume the old process or continue its results.
+- This is an operator/test-evidence rule. It claims no automatic pause detection,
+  prevention, pause-inclusive guest clock guarantee, timeout-before-continuation
+  guarantee or suspend/resume qualification. Unknown interruption means rerun.
+- Keep normal runnable-case validity checks, bounded task/connection lifetimes,
+  failure diagnostics and owned shutdown. Their actual implementation and
+  provider evidence remain required. A suspected pause is not a passed timeout
+  or security case. No host watchdog, power-setting change or new privilege is
+  required by this amendment.
+
+ADR-105's supported authentication expiry, revocation, runtime-generation and
+read/command authority requirements remain unchanged. Supported operation across
+host sleep/VM suspension requires a separate reviewed contract and evidence;
+a successful uninterrupted diagnostic run does not establish it. All remaining
+key/file, ingress, dependency, trust and execution gates retain their scope.
+
 ## Consequences and follow-up
 
 A direct profile avoids an extra application relay but enlarges the Rust socket's
@@ -123,11 +155,9 @@ network scope. The maintainer accepted that bounded trade-off; actual isolation
 evidence remains required before qualification. Downtime during generation
 replacement is allowed
 for this diagnostic proof. Later authenticated restart loses sessions under
-ADR-105; no transparent renewal/session continuity is claimed. Host suspend or
-VM suspension/freeze/restore must end the diagnostic instance before application
-work resumes. The probe plan requires pause-inclusive lifetime/expiry accounting
-and a proven resume admission barrier; provider/API feasibility remains a gate
-before executable approval, not evidence supplied by this proposal.
+ADR-105; no transparent renewal/session continuity is claimed. Apply the
+development-proof interruption rule below instead of requiring an automatic
+pre-continuation barrier for this disposable diagnostic run.
 
 The proof does not qualify Linux-host clients, Windows CLI bearer storage,
 supported installation, A1-A5, the production graph, ADR-103 or replicas (#65).

@@ -50,7 +50,7 @@ records bounded certificate/key profile checks, positive key matching, 37 total
 unit and 14 transport tests, and ten detected admission mutations. The key
 restriction and explicit BC/EKU markers were separately accepted on 2026-10-23.
 This unconnected stage does not establish issuer trust, safe file reads, live
-startup, continuous expiry or the required resume barrier.
+startup, continuous expiry or supported resume behavior.
 
 Next review the [Proposed remaining-A0 installation/storage plan](local-owner-authentication-installation-plan.md).
 It defines the profile and evidence to resolve before A1 without authorizing
@@ -72,7 +72,10 @@ The [review readiness checklist](local-owner-authentication-container-plan.md#re
 separates the specified clock/resume, configuration, bundle and WSL-state contracts
 from API/method review and actual provider qualification. The maintainer selected
 same-host Podman/WSL 2 for the first proof; [read-only feasibility](local-owner-authentication-podman-feasibility.md)
-leaves resume readiness unresolved and supplies no new runtime or T01-T16 evidence.
+did not establish the original barrier. The 2026-10-24
+[development-proof amendment](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24)
+now invalidates interrupted diagnostic runs and requires fresh execution. It
+supplies no supported authentication/suspend or T01-T16 qualification.
 
 ## Planned slices and gates
 

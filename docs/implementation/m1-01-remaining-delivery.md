@@ -170,7 +170,10 @@ makes the next review concrete; its ADR-106 amendment and disposable-only storag
 trade-off were explicitly accepted on 2026-10-23. Executable review and runtime
 qualification remain outstanding. The maintainer selected same-host
 Podman/WSL 2 for the first proof; [read-only feasibility](local-owner-authentication-podman-feasibility.md)
-leaves resume readiness unresolved, without authorizing dependent execution.
+did not establish the original resume mechanism. ADR-106
+now records the 2026-10-24 disposable development-proof interruption/rerun
+concession; it does not qualify supported authentication across suspension or
+authorize an integrated runtime proof.
 Remaining A0 and schema evidence plus separately
 bounded A1-A5 implementation remain gated. ADR-103
 production adoption is still a separate decision.

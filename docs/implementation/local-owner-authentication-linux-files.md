@@ -169,3 +169,12 @@ provider evidence. Separate exact-code, dependency/license/advisory, architectur
 storage-risk and applicable execution permissions remain required. A0/T01-T16,
 A1-A5, ADR-103 and #65 retain their gates; #40's separate production-dependency
 review deadline remains 2026-11-18.
+
+## Development-proof lifecycle update, 2026-10-24
+
+[ADR-106 now records the accepted interruption/rerun concession](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24).
+Any observed or suspected host/VM pause invalidates the complete disposable run;
+stop/reconcile and rerun from a fresh instance. Earlier references in this dated
+research/result to the full diagnostic resume barrier describe the prior gate.
+This amendment supplies no automatic pause detection, safe-file evidence,
+supported authentication/suspend qualification or integrated-test permission.

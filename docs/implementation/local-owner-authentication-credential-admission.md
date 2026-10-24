@@ -237,3 +237,12 @@ that profile/key matching does not establish issuer-signature authenticity or
 certificate trust. TLS client path verification and ongoing expiry/resume remain
 separate requirements. This follow-up changes neither admission policy nor API
 visibility, and grants no new integration or trust permission.
+
+## Development-proof lifecycle update, 2026-10-24
+
+[ADR-106 now records the accepted interruption/rerun concession](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24).
+Any observed or suspected host/VM pause invalidates the complete disposable run;
+stop/reconcile and rerun from a fresh instance. Earlier references in this dated
+research/result to the full diagnostic resume barrier describe the prior gate.
+This amendment supplies no automatic pause detection, safe-file evidence,
+supported authentication/suspend qualification or integrated-test permission.

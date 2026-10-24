@@ -382,8 +382,10 @@ The [container design/probe proposal](../implementation/local-owner-authenticati
 and [Accepted bounded ADR-106](../architecture/ADR-106-local-container-transport.md) specify
 a candidate direct TLS path, disposable mounted-secret generations and unexecuted
 isolation/lifecycle oracles. The [review readiness checklist](../implementation/local-owner-authentication-container-plan.md#review-follow-up-and-executable-readiness)
-adds pause-inclusive expiry/resume barriers, canonical network arguments, exact
-bundle grammar and effective WSL-state evidence; all runtime cases remain unexecuted.
+originally required pause-inclusive expiry/resume barriers alongside canonical
+network arguments, exact bundle grammar and effective WSL-state evidence. The
+2026-10-24 diagnostic interruption/rerun amendment supersedes that barrier only;
+all applicable runtime cases remain unexecuted.
 The maintainer explicitly accepted ADR-106's listener amendment and disposable-only
 file-secret residual risk on 2026-10-23. Exact executable prerequisites still
 require review; no A0 completion or A1 permission follows.
@@ -394,14 +396,17 @@ qualification follows. Explicit bounded acceptance came separately on 2026-10-23
 production storage remains unselected. The
 [pinned provider-source follow-up](../implementation/local-owner-authentication-podman-feasibility.md#pinned-provider-source-follow-up)
 adds concrete correction/PTP/lifecycle findings; none establishes the full resume
-barrier. Keep dependent execution gated and do not treat more clock samples as
-proof of a missing ordering contract.
+barrier. Supported suspend behavior remains unqualified; diagnostic execution
+now uses interruption invalidation/rerun rather than claiming that clock samples
+prove a missing ordering contract. Remaining readiness gates still apply.
 The [Linux file-admission API review](../implementation/local-owner-authentication-linux-files.md)
 advances the independent key/file gate: an explicit descriptor/resolution API
 shape is available, while mount/alias, safe adapter, durability and dependency
 qualification remain open. ADR-106 selects mounted secrets for the disposable
 proof only; Linux-owned files remain an investigated alternative, and no runtime
-crate or production storage is adopted. The resume criterion remains unchanged.
+crate or production storage is adopted. The 2026-10-24 development-proof interruption amendment in ADR-106
+supersedes the automatic diagnostic barrier, without safe-file or supported
+authentication qualification.
 The [strict bundle-parser API review](../implementation/local-owner-authentication-bundle-parser.md)
 adds the independent framing/decoding/profile/key-match gate. General PEM and
 key-loading success do not establish strict admission; dependency selection,
@@ -416,8 +421,12 @@ The [credential-admission comparison and private implementation result](../imple
 records the separately accepted key-metadata and explicit BC/EKU restrictions,
 locked 94-package adoption and bounded profile/key checks. The unconnected stage
 passed 37 unit and 14 transport tests plus ten admission mutation checks.
-Issuer trust, Linux file admission, expiry/drain/resume and integrated container
+Issuer trust, Linux file admission, runnable expiry/drain and integrated container
 qualification remain open. No complete credential or container qualification is claimed.
+On 2026-10-24 the maintainer accepted [development-test interruption and rerun](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24):
+any observed/suspected host/VM pause invalidates the whole disposable run. This
+replaces the diagnostic automatic-barrier prerequisite, not supported authentication
+expiry/revocation or suspend qualification.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 
