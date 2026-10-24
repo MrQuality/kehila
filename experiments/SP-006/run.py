@@ -185,6 +185,7 @@ def main():
     parser.add_argument('--podman-machine', required=True)
     parser.add_argument('--exclusive-podman-machine', action='store_true')
     args = parser.parse_args()
+    require(args.exclusive_podman_machine, 'SP-006 requires exclusive disposable machine use')
     temporary = Path(tempfile.gettempdir()).resolve()
     require(not temporary.is_relative_to(ROOT), 'actual temporary root must be outside checkout')
     for name in ('TEMP', 'TMP'):
@@ -193,15 +194,11 @@ def main():
     preflight()
     with work_budget(600), managed_runtime('podman', args.podman_machine, exclusive=args.exclusive_podman_machine) as runtime:
         preflight()
-        before = set(subprocess.check_output([*runtime.engine, 'ps', '-q'], env=runtime.environment, text=True, timeout=command_timeout(15)).split())
-        with service_group(runtime, ['postgres','opensearch'], compose_file=SOURCE / 'compose.yml'):
+        with service_group(runtime, ['postgres','opensearch'], compose_file=SOURCE / 'compose.yml') as containers:
             preflight()
             subprocess.run([sys.executable, str(ROOT / 'scripts/healthcheck.py'), '--wait','120','--services','PostgreSQL','OpenSearch'],
                            check=True, env=runtime.environment, timeout=command_timeout(130))
-            current = set(subprocess.check_output([*runtime.engine, 'ps','--filter','label=com.docker.compose.service=postgres','--format','{{.ID}}'],
-                                                   env=runtime.environment, text=True, timeout=command_timeout(15)).split()) - before
-            require(len(current) == 1, 'owned PostgreSQL container is ambiguous')
-            db = Database(runtime, current.pop())
+            db = Database(runtime, containers['postgres'])
             results = [sequence_counterexample(db)]
             for case in (live_rebuild, alias_recovery, snapshot_loss):
                 preflight()

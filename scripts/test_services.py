@@ -274,6 +274,11 @@ def _runtime(preferred, machine, environment, exclusive):
 
 @contextmanager
 def service_group(runtime, selected, *, compose_file=None):
+    """Yield verified service/container identities for this owned group's lifetime.
+
+    Callers must keep these identities rather than rediscover replacements. An
+    exited container fails operations by ID; it never transfers ownership.
+    """
     if not selected or len(set(selected)) != len(selected) or not set(selected) <= SERVICES:
         raise ValueError('Expected a nonempty set of known test services')
     # -p overrides the Compose file's development name. Every group owns a fresh
@@ -286,10 +291,13 @@ def service_group(runtime, selected, *, compose_file=None):
     failure = None
     try:
         run([*command, 'up', '-d', *selected], timeout=300, env=runtime.environment)
+        containers = {}
         for service in selected:
-            if len(_containers(runtime, project, service)) != 1:
+            matching = _containers(runtime, project, service)
+            if len(matching) != 1:
                 raise RuntimeError('Expected one running owned container for ' + service)
-        yield
+            containers[service] = matching[0]
+        yield containers
     except BaseException as error:
         failure = error
         try:

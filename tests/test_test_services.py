@@ -15,6 +15,18 @@ import test_services as services
 
 
 class ServiceOwnershipTests(unittest.TestCase):
+    def test_group_yields_the_verified_container_identity_for_each_service(self):
+        with patch.object(services, 'run'), \
+                patch.object(services, '_containers',
+                             side_effect=[['owned-postgres'], ['owned-search'], []]) as inventory:
+            with services.service_group(services.ComposeRuntime(['docker', 'compose'], {}),
+                                        ['postgres', 'opensearch']) as containers:
+                self.assertEqual(containers, {'postgres': 'owned-postgres',
+                                              'opensearch': 'owned-search'})
+        inspected = inventory.call_args_list
+        self.assertEqual(inspected[0].args[1], inspected[1].args[1])
+        self.assertEqual(inspected[0].args[1], inspected[2].args[1])
+
     def test_custom_fixture_is_used_for_start_and_cleanup(self):
         with tempfile.TemporaryDirectory() as folder:
             fixture = Path(folder) / 'compose.yml'

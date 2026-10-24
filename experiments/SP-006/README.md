@@ -72,6 +72,12 @@ The runner checks the existing 3-GiB RAM/2-GiB free-disk minimum before startup,
 after VM startup, after service startup and between cases. The minimum is not a
 capacity guarantee. No unrelated machine, service or container may be stopped.
 
+The runner requires exclusive machine mode before resource preflight/startup.
+The service owner yields its verified container identities; every SQL operation
+uses that exact PostgreSQL ID. A disappeared container fails execution without
+global discovery or replacement selection. Routine CI imports both SP-006 modules
+and tests admission/ownership boundaries without starting the live experiment.
+
 ```text
 python experiments/SP-006/run.py --podman-machine NAME --exclusive-podman-machine
 ```
@@ -113,7 +119,8 @@ local metadata. They do not turn source review into production qualification.
 The manifest separates executed hashes from publication hashes: after execution,
 a Rebuild docstring was corrected to disclose the pinned read-only transaction.
 AST comparison after removing docstrings found no executable change. Publication
-hashes must match the final committed implementation.
+hashes bind the R01 publication at `dabf805`; later review changes and evidence
+are recorded separately in the spike record.
 
 All owned SQL participants, containers/networks and the exclusively owned VM
 were stopped/removed by their lifecycle owners. The test injects abandonment at

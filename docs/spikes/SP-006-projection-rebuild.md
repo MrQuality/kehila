@@ -106,6 +106,21 @@ standard-library HTTP adapter disables proxies/redirects and bounds responses.
 Production authority, schema evolution, deletion and supported operating limits
 remain #49 W3/W5/W7 obligations; authentication and allocation remain #40/#41.
 
+## PR #82 ownership and regression follow-up
+
+Review identified a conditional ownership race in global PostgreSQL discovery:
+if the owned container exited while an unrelated new one appeared, the runner
+could select the unrelated identity. The service owner now yields exactly the
+IDs it verified for its project; SP-006 retains that PostgreSQL ID and fails if
+it disappears. Exclusive machine mode is required before startup.
+
+All 37 service-lifecycle tests and four cheap SP-006 import/admission/ownership
+tests passed. The new boundary regressions failed before implementation at
+premature startup and forbidden global discovery; the initial import-harness
+search-path correction is setup evidence, not a behavioral regression result.
+These tests run in ordinary discovered CI without live services. Updated live
+recovery assertions and their result will be recorded in the next focused change.
+
 ## Handoff
 
 Review the PR and exact-source hosted CI, then decide the next bounded slice.
