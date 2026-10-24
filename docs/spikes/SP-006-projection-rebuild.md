@@ -50,6 +50,23 @@ and explicit refresh. Later source/evidence dispositions belong in this record.
 No database/search I/O mock substitutes for these assertions. Synthetic protocol
 cases do not establish production auth, grants, deletion semantics or performance.
 
+## Switching window and reader visibility
+
+After the alias changes but before the final SQL metadata commit, the read alias
+can point to the new target while `control.active` still names the old target.
+Both targets remain enrolled for durable deliveries. The fixture reads search
+through the alias; SQL active metadata is not a second search-routing decision.
+A write committed during this window is queued, and may remain absent from search
+until delivery and refresh. A missing search result does not establish absence
+from authoritative PostgreSQL state.
+
+Recovery takes the writer fence, drains the target, verifies document state and
+refreshes **before** deciding whether the alias still needs moving. These steps
+are required even when the alias already names the target. C03 checks the known
+post-interruption value after recovery completes; it does not promise continuous
+search freshness or availability during the interruption. Production routing,
+delivery ownership and availability policy remain separately reviewed #49 work.
+
 ## Environment and results
 
 ### SP-006-R01, 2026-10-24

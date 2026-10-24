@@ -28,6 +28,11 @@ server transaction.
    proposed first profile covers normal reload of the same tab. Tab closure,
    erased storage or browser data loss can still destroy a sessionStorage journal;
    they must remain explicit limits, not automatic failed-save classifications.
+   A same-origin auxiliary window can initially receive a copy of the journal;
+   the copies then have independent storage. Clearing or abandoning one copy does
+   not clear another. See the [HTML session-storage rules](https://html.spec.whatwg.org/multipage/webstorage.html#the-sessionstorage-attribute)
+   and [storage-cloning algorithm](https://storage.spec.whatwg.org/#storage-sheds).
+   This is a lifecycle case to test, not a broader persistence guarantee.
 3. On a lost response, retain an `OutcomeUnknown` state. Offer **Retry same save**
    using the exact retained request and original token. Reauthenticate as needed,
    verify the original actor/installation, then use current credentials. Never
@@ -77,3 +82,11 @@ replay after reload and reauthentication, revoked grants, replay expiry/tombston
 storage-disabled/quota failures, journal loss and supported restore. Apply native
 command/authority integration and actual browser checks at their existing gates.
 No T01-T16 case or supported UI behavior is qualified by this proposal.
+
+Include two contexts reconciling the same cloned envelope concurrently, including
+an original attempt still running, one context clearing its copy, and later
+reauthentication. Both must preserve the original request/token and actor/
+installation checks; local clearing cancels neither the other context's retries
+nor server work. Verify supported-browser tab duplication and opener/no-opener
+cases explicitly rather than assuming every browser UI operation copies storage.
+These remain planned browser cases; no journal or multi-tab UI is implemented.
