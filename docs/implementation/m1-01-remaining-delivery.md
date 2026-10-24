@@ -253,6 +253,21 @@ remain prerequisites before native routes. See the [B-003 contract](../product/B
 [Definition of Done](../engineering/DEFINITION-OF-DONE.md) for governing scope and
 evidence. Action stacks #44 remains postponed.
 
+## Projection rebuild and uncertain-save follow-up, 2026-10-24
+
+The maintainer requested a corrected projection rebuild design and a bounded
+implementation. [SP-006](../spikes/SP-006-projection-rebuild.md) owns a standalone
+PostgreSQL/OpenSearch proof: registered building targets, an established snapshot,
+individual durable delivery acknowledgments and explicit alias/metadata recovery.
+No native application outbox/indexer is adopted; W3/W5/W7 still own integration,
+capabilities, production schemas, retention/deletion and supported operating limits.
+
+The [uncertain-save proposal](m1-uncertain-save-reconciliation.md) explains the
+recommended client flow and trade-offs. It preserves the original scoped request
+and token, distinguishes unknown from rejected, and treats GET as orientation
+rather than operation-outcome proof. This is a proposal for review, not permission
+to implement a client journal or alter D-032/D-033/D-034.
+
 ## Historical issue reconciliation
 
 #26 remains closed. #47's stated codec scope landed in PR #48 and is complete;

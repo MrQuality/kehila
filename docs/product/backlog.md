@@ -302,6 +302,12 @@ Durable records and the configurable worker are not implemented here.
 
 **Deliverable:** Versioned storage representation, durable local configuration, the required command/read/update integrations, and basic backup/restore instructions.
 
+[SP-006](../spikes/SP-006-projection-rebuild.md) supplies a bounded standalone
+projection rebuild handoff proof: four real PostgreSQL/OpenSearch cases and two
+targeted mutation checks passed, followed by a restored-source rerun. It does not
+adopt native application schema/indexer code or qualify deletion, capabilities,
+full crash recovery or production resource limits; #49 W3/W5/W7 retain that work.
+
 **Proposed engineering acceptance:** Demonstrate actual task writes and reads and no acknowledged-save loss through process crash, application/container recreation, and ordinary machine restart. Test clean-instance restore of configuration and replay records followed by search reconstruction; report automatic daily backup age and failures, and keep an off-machine copy before claiming machine-loss recovery. Check stale browser versions and retry IDs after restoring an older backup. Prove relevant delivery acknowledgments/replay where used; existing connection probes are insufficient. For immutable operation records, prove concurrent next-version exclusion, non-regressing search, safe compaction of inactive tasks, index rebuild during writes, and practical project lists as history grows. Distinguish authoritative data from rebuildable projections. Use disposable test records until durability is verified. Record schema migration, backup format, and an operating budget for task count, memory, disk, startup, and save latency. See [D-017](decisions.md#d-017).
 
 Before item or project archival is exposed, specify the physical representation

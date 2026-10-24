@@ -1,0 +1,85 @@
+{
+  "status": "four live cases and two targeted mutation checks passed; publication gates pending",
+  "recorded": "2026-10-24",
+  "baseline": "18391aa28a5c2ce8baccf8db1fa057d38995b5d0",
+  "source_sha256_lf": {
+    "experiments/SP-006/run.py": "4aea3a61959f518fc6038c38a77d4f38816c19551f256858bdba56672e770f1d",
+    "experiments/SP-006/protocol.py": "db08f534856291629951939d9d8fb098a34b005c143bb66a3dadd6516960feca",
+    "experiments/SP-006/schema.sql": "cf746c88625674703070f073405cab06fd8a28293999c0b7bd4297f878eb48aa",
+    "experiments/SP-006/compose.yml": "5c03644f7f016909c61d78f694ef532264e1d0dc541c8187634d8b8689128350",
+    "scripts/test_services.py": "103dd7b46a5b3523af421e27179ed76fba99336761a6dfca51effcd5fe82689a",
+    "experiments/SP-004/sessions.py": "3ed07094a91b7b2b0de5ac2d4885bd24be9a74652a4bcbc7070ea3f817a8c9d2"
+  },
+  "source_hash_scope": "Only CRLF line endings normalized; compare these contents to the published commit.",
+  "configured_services": {
+    "postgresql": "16.13",
+    "opensearch": "2.19.1"
+  },
+  "host_platform": "Windows",
+  "resource_profile": "explicitly approved tiny workload without per-container cgroup caps; 600s budget, 512MiB JVM heap, loopback-only publication and 3GiB available-RAM preflights",
+  "cases": [
+    {
+      "id": "C01",
+      "passed": true,
+      "observation": "Lower identity allocated before a later visible commit then commits below snapshot maximum."
+    },
+    {
+      "id": "C02",
+      "passed": true,
+      "observation": "Actual writer blocker, pinned snapshot with newer live events, missing ACK duplicate, same-version corruption rejection, false MAX completeness counterexample, refreshed exact-state cutover."
+    },
+    {
+      "id": "C03",
+      "passed": true,
+      "observation": "Coordinator session abandoned after alias application before SQL completion; dual targets retained for later write and new owner reconciles."
+    },
+    {
+      "id": "C04",
+      "passed": true,
+      "observation": "Source backend terminated; incomplete epoch not promoted, old alias retained and fresh epoch succeeds."
+    }
+  ],
+  "preparation_limits": [
+    "Runner entry-point setup error corrected before services started.",
+    "Initial per-container resource-limit profile failed at service startup; no protocol case ran.",
+    "First revised-profile attempt stopped at available-RAM preflight; no protocol case ran.",
+    "Subsequent revised-profile attempt passed all four cases and owned cleanup."
+  ],
+  "limits": [
+    "Synthetic inserts and updates only; no production authentication/capability or deletion qualification.",
+    "No proof of all crash/network/provider schedules, performance or resource-limit enforcement.",
+    "Native application outbox/indexer integration remains gated."
+  ],
+  "restored_source_rerun": {
+    "passed": 4,
+    "owned_cleanup_completed": true
+  },
+  "mutation_checks": [
+    {
+      "change": "omit writer transaction shared gate",
+      "detected": true,
+      "failure": "expected actor-fence wait was not reached"
+    },
+    {
+      "change": "bypass same-version payload equality",
+      "detected": true,
+      "failure": "same-version corruption accepted"
+    }
+  ],
+  "publication_source_sha256_lf": {
+    "experiments/SP-006/run.py": "4aea3a61959f518fc6038c38a77d4f38816c19551f256858bdba56672e770f1d",
+    "experiments/SP-006/protocol.py": "1a5e69b3ad4da7dcf2e743c4e785caa29216a216e1c6908627966fbeac7e499e",
+    "experiments/SP-006/schema.sql": "cf746c88625674703070f073405cab06fd8a28293999c0b7bd4297f878eb48aa",
+    "experiments/SP-006/compose.yml": "5c03644f7f016909c61d78f694ef532264e1d0dc541c8187634d8b8689128350",
+    "scripts/test_services.py": "103dd7b46a5b3523af421e27179ed76fba99336761a6dfca51effcd5fe82689a",
+    "experiments/SP-004/sessions.py": "3ed07094a91b7b2b0de5ac2d4885bd24be9a74652a4bcbc7070ea3f817a8c9d2"
+  },
+  "post_execution_delta": "protocol.py Rebuild docstring corrected: read-only snapshot spans HTTP and pins MVCC; AST equal after removing docstrings. No executable behavior changed. Observed hashes retain executed source; publication hashes identify final source.",
+  "shared_lifecycle_regression": {
+    "tests": 36,
+    "passed": 36,
+    "mutation": "ignore selected custom Compose file",
+    "detected": true,
+    "restored_tests_passed": 36
+  }
+}
