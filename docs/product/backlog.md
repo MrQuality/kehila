@@ -311,6 +311,10 @@ full crash recovery or production resource limits; #49 W3/W5/W7 retain that work
 PR #82's review follow-up adds ordinary CI import/admission/ownership regressions,
 retains the exact verified PostgreSQL container identity, and makes the recovery
 case independently check the expected searchable value and completed target ACKs.
+R03 additionally binds each epoch to its exact registered SQL transaction and
+reconstructs recovery phase/target from durable state. Replacement/restarted
+snapshot sources were refused in actual service cases; a fresh epoch's alias
+value/revision was verified. Historical R01/R02 observations remain separate.
 
 **Proposed engineering acceptance:** Demonstrate actual task writes and reads and no acknowledged-save loss through process crash, application/container recreation, and ordinary machine restart. Test clean-instance restore of configuration and replay records followed by search reconstruction; report automatic daily backup age and failures, and keep an off-machine copy before claiming machine-loss recovery. Check stale browser versions and retry IDs after restoring an older backup. Prove relevant delivery acknowledgments/replay where used; existing connection probes are insufficient. For immutable operation records, prove concurrent next-version exclusion, non-regressing search, safe compaction of inactive tasks, index rebuild during writes, and practical project lists as history grows. Distinguish authoritative data from rebuildable projections. Use disposable test records until durability is verified. Record schema migration, backup format, and an operating budget for task count, memory, disk, startup, and save latency. See [D-017](decisions.md#d-017).
 

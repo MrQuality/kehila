@@ -141,7 +141,9 @@ def alias_recovery(db, prefix):
             'switching crash lost a delivery target')
     with Session(db, 'postgres') as coordinator:
         rebuild = Rebuild(db, coordinator, search)
-        rebuild.fence(); rebuild.cutover(target)
+        rebuild.fence()
+        recovered = rebuild.recover()
+        require(recovered == target, 'durable recovery selected the wrong target')
         require(search.alias_target() == target and db.sql('SELECT phase FROM sp006.control;') == 'live',
                 'alias recovery failed')
         require(int(db.sql('SELECT count(*) FROM sp006.deliveries WHERE NOT acknowledged AND target='
@@ -155,7 +157,8 @@ def alias_recovery(db, prefix):
                 and hits['a']['_source'] == dict(expected, payload_sha256=digest(expected)),
                 'recovered alias does not expose the expected post-crash write')
     return {'case': 'coordinator_loss_after_alias_before_metadata', 'passed': True,
-            'recovered_alias_value_verified': True, 'target_acknowledgments_verified': True}
+            'recovered_alias_value_verified': True, 'target_acknowledgments_verified': True,
+            'recovered_target_from_sql': True}
 
 
 def snapshot_loss(db, prefix):
@@ -166,13 +169,21 @@ def snapshot_loss(db, prefix):
         snapshot = stack.enter_context(Session(db, 'postgres'))
         rebuild = Rebuild(db, coordinator, search)
         rebuild.fence(); rebuild.register(target, snapshot)
-        db.sql('SELECT pg_terminate_backend(' + str(snapshot.pid) + ',3000);')
+        require(db.sql('SELECT pg_terminate_backend(' + str(snapshot.pid) + ',3000);') == 't',
+                'snapshot backend termination not confirmed')
         try:
             rebuild.snapshot(target, snapshot)
         except ValueError:
             pass
         else:
             raise ValueError('lost snapshot was reused')
+        replacement = stack.enter_context(Session(db, 'postgres'))
+        try:
+            rebuild.snapshot(target, replacement)
+        except ValueError as error:
+            require('snapshot source/epoch mismatch' in str(error), 'wrong replacement-source failure')
+        else:
+            raise ValueError('replacement snapshot source accepted for lost epoch')
         rebuild.fence()
         try:
             rebuild.cutover(target)
@@ -182,13 +193,38 @@ def snapshot_loss(db, prefix):
             raise ValueError('incomplete snapshot promoted')
         rebuild.abandon_snapshot(target)
         require(search.alias_target() == old, 'lost snapshot changed active index')
+        restarted = prefix + '_restarted'
+        rebuild.fence(); rebuild.register(restarted, replacement)
+        original_pid = replacement.pid
+        replacement.execute('ROLLBACK; BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SELECT count(*) FROM sp006.documents;')
+        require(int(replacement.execute('SELECT pg_backend_pid();')) == original_pid,
+                'restart changed backend instead of transaction')
+        try:
+            rebuild.snapshot(restarted, replacement)
+        except ValueError as error:
+            require('registered snapshot transaction changed' in str(error), 'wrong transaction-restart failure')
+        else:
+            raise ValueError('restarted snapshot transaction accepted for old epoch')
+        require(db.sql('SELECT snapshot_complete FROM sp006.control;') == 'f', 'restarted epoch marked complete')
+        replacement.execute('ROLLBACK;')
+        rebuild.fence(); rebuild.abandon_snapshot(restarted)
+        require(search.alias_target() == old, 'restarted transaction changed active index')
         db.put('c', 'fresh')
         fresh = prefix + '_fresh'
         source = stack.enter_context(Session(db, 'postgres'))
         rebuild.fence(); rebuild.register(fresh, source); rebuild.snapshot(fresh, source)
         rebuild.fence(); rebuild.cutover(fresh)
-        require(search.read(fresh, 'c')['_source']['value'] == 'fresh', 'fresh epoch missing current data')
-    return {'case': 'lost_snapshot_requires_fresh_epoch', 'passed': True}
+        require(search.alias_target() == fresh, 'fresh epoch alias not promoted')
+        status, result = search.request('GET', '/' + search.alias + '/_search?version=true&size=8')
+        require(status == 200 and result['hits']['total']['value'] == 3, 'fresh epoch alias search count mismatch')
+        hits = {hit['_id']: hit for hit in result['hits']['hits']}
+        expected = document('c', 1, 'fresh')
+        require(set(hits) == {'a', 'b', 'c'} and hits['c']['_version'] == 1
+                and hits['c']['_source'] == dict(expected, payload_sha256=digest(expected)),
+                'fresh epoch alias does not expose the expected current data')
+    return {'case': 'lost_snapshot_requires_fresh_epoch', 'passed': True,
+            'replacement_source_rejected': True, 'same_backend_restart_rejected': True,
+            'fresh_epoch_alias_verified': True}
 
 
 def main():

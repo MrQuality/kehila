@@ -10,7 +10,7 @@
     "scripts/test_services.py": "103dd7b46a5b3523af421e27179ed76fba99336761a6dfca51effcd5fe82689a",
     "experiments/SP-004/sessions.py": "3ed07094a91b7b2b0de5ac2d4885bd24be9a74652a4bcbc7070ea3f817a8c9d2"
   },
-  "source_hash_scope": "Historical R01 executed/publication hashes; use review_followup_R02.source_sha256_lf for the reviewed implementation.",
+  "source_hash_scope": "Historical R01 executed/publication hashes; current exercised source is review_followup_R03.source_sha256_lf.",
   "configured_services": {
     "postgresql": "16.13",
     "opensearch": "2.19.1"
@@ -89,7 +89,7 @@
     "documented_windows_skips": 3,
     "scope": "Rust/Go/static and owned live-service checks; hosted CI tracked in PR"
   },
-  "record_scope": "Top-level evidence/hashes describe historical R01 published at dabf805. review_followup_R02 records the later reviewed implementation; hashes normalize CRLF to LF only.",
+  "record_scope": "Top-level R01 and review_followup_R02 retain historical evidence. review_followup_R03 records the latest changed implementation; all source hashes normalize CRLF to LF only.",
   "review_followup_R02": {
     "recorded": "2026-10-24",
     "reviewed_baseline": "dabf805e29870c2fa3b271681b7fbd918bd517f2",
@@ -157,5 +157,82 @@
       "passed": true
     },
     "verification_tracking": "Mandatory staged verification and exact-head hosted results are maintained in PR #82 separately from this live-run record."
+  },
+  "review_followup_R03": {
+    "recorded": "2026-10-25",
+    "reviewed_baseline": "dfa8a13cf56aa87f6744b96080f1941d03a557b4",
+    "source_sha256_lf": {
+      "experiments/SP-006/run.py": "db4522bc98d22e810846195d613f5c3a1da4f84d6440dbd6dcf4babc6f30a65c",
+      "experiments/SP-006/protocol.py": "9f93a622c2359f92ed0f05f123b99658998f713925ff8b644806e93dbccd5354",
+      "experiments/SP-006/schema.sql": "cf746c88625674703070f073405cab06fd8a28293999c0b7bd4297f878eb48aa",
+      "experiments/SP-006/compose.yml": "5c03644f7f016909c61d78f694ef532264e1d0dc541c8187634d8b8689128350",
+      "scripts/test_services.py": "dd0372242cf8c8d7507bd70445466ea22654a6aa57d19c4b0e7522084f723556",
+      "experiments/SP-004/sessions.py": "3ed07094a91b7b2b0de5ac2d4885bd24be9a74652a4bcbc7070ea3f817a8c9d2",
+      "tests/test_test_services.py": "71f0fb7f45ee45c95c672b875e0033f5b0e84d10370fed57e8134f7468a70f56",
+      "tests/test_sp006_runner.py": "fc261de2e5df61cb86767722d8274af63e03457d3ccac949a62a3d0f6f2e47c6",
+      "tests/test_sp006_protocol.py": "019f1503d3b9a24d3aac3d36a762e772b4f8d4232ad9dc1b76d11fa4a8def71e",
+      "tests/test_sp006_snapshot.py": "79a80101f4afed3b0ac4a6eb64aec12d5f2b16ae39de72286258f51b808232d9"
+    },
+    "cases": [
+      {
+        "case": "sequence_is_not_commit_frontier",
+        "passed": true
+      },
+      {
+        "case": "fenced_snapshot_live_delivery_cutover",
+        "duplicate_after_missing_ack": true,
+        "max_revision_counterexample": true,
+        "passed": true,
+        "same_version_corruption_rejected": true,
+        "writer_block_observed": true
+      },
+      {
+        "case": "coordinator_loss_after_alias_before_metadata",
+        "passed": true,
+        "recovered_alias_value_verified": true,
+        "recovered_target_from_sql": true,
+        "target_acknowledgments_verified": true
+      },
+      {
+        "case": "lost_snapshot_requires_fresh_epoch",
+        "fresh_epoch_alias_verified": true,
+        "passed": true,
+        "replacement_source_rejected": true,
+        "same_backend_restart_rejected": true
+      }
+    ],
+    "owned_cleanup_completed": true,
+    "unit_tests": {
+      "sp006": 15,
+      "service_lifecycle": 38,
+      "passed": true
+    },
+    "mutation_checks": [
+      {
+        "change": "compare snapshot PID only instead of full transaction identity",
+        "unit_detected": true,
+        "live_detected": true,
+        "live_failure": "restarted snapshot transaction accepted for old epoch"
+      },
+      {
+        "change": "substitute guessed target for durable recovery target",
+        "unit_detected": true
+      },
+      {
+        "change": "admit multiple matching containers",
+        "unit_detected": true
+      },
+      {
+        "change": "ignore nonzero healthcheck status",
+        "unit_detected": true
+      }
+    ],
+    "prior_regression_commit_gate": {
+      "tooling_tests": 289,
+      "tooling_passed": 286,
+      "documented_windows_skips": 3,
+      "passed": true
+    },
+    "verification_tracking": "Final mandatory staged and exact-head hosted verification are tracked in PR #82 separately from this bounded live-run record."
   }
 }

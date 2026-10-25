@@ -11,6 +11,11 @@ from verification_budget import command_timeout
 GATE = 6006001
 COORDINATOR = 6006002
 LIMIT = 32
+SNAPSHOT_IDENTITY_SQL = (
+    "json_build_array(pg_backend_pid(), (SELECT virtualxid FROM pg_locks "
+    "WHERE pid=pg_backend_pid() AND locktype='virtualxid' AND mode='ExclusiveLock' AND granted), "
+    "current_setting('transaction_isolation'), current_setting('transaction_read_only'))"
+)
 
 
 def require(condition, message):
@@ -118,6 +123,7 @@ class Rebuild:
     def __init__(self, database, coordinator, search):
         self.db, self.session, self.search = database, coordinator, search
         self.fenced = False
+        self._snapshot_binding = None
         self.session.execute('SELECT pg_advisory_lock(' + str(COORDINATOR) + ');')
 
     def begin_fence(self):
@@ -143,18 +149,34 @@ class Rebuild:
                     "UPDATE sp006.control SET next_target=" + literal(target) + ", phase='building', snapshot_complete=false; COMMIT;")
         # A statement actually establishes the snapshot before releasing the gate.
         snapshot.execute('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SELECT count(*) FROM sp006.documents;')
+        identity = json.loads(snapshot.execute('SELECT ' + SNAPSHOT_IDENTITY_SQL + ';'))
+        require(isinstance(identity, list) and len(identity) == 4 and type(identity[0]) is int
+                and identity[0] > 0 and isinstance(identity[1], str)
+                and re.fullmatch(r'[0-9]+/[0-9]+', identity[1]) is not None
+                and identity[2:] == ['repeatable read', 'on'], 'registered snapshot identity unavailable')
+        self._snapshot_binding = (target, snapshot, identity)
         self.unfence()
 
     def snapshot(self, target, source):
+        require(self._snapshot_binding is not None and self._snapshot_binding[0] == target
+                and self._snapshot_binding[1] is source, 'snapshot source/epoch mismatch')
+        registered = self._snapshot_binding[2]
         cursor = ''
         for _ in range(LIMIT):
-            raw = source.execute("SELECT row_to_json(d) FROM (SELECT doc_id,revision,value FROM sp006.documents "
-                                 "WHERE doc_id > '" + cursor + "' ORDER BY doc_id LIMIT 1) d;")
-            if not raw:
+            raw = source.execute("SELECT json_build_object('identity', " + SNAPSHOT_IDENTITY_SQL
+                                 + ", 'row', (SELECT row_to_json(d) FROM (SELECT doc_id,revision,value "
+                                 "FROM sp006.documents WHERE doc_id > '" + cursor + "' ORDER BY doc_id LIMIT 1) d));")
+            page = json.loads(raw)
+            require(page['identity'] == registered, 'registered snapshot transaction changed')
+            row = page['row']
+            if row is None:
                 source.execute('COMMIT;')
-                self.session.execute('UPDATE sp006.control SET snapshot_complete=true WHERE next_target=' + literal(target) + ';')
+                require(self.session.execute('UPDATE sp006.control SET snapshot_complete=true WHERE next_target='
+                                             + literal(target) + " AND phase='building' RETURNING singleton;") == 't',
+                        'snapshot epoch no longer building')
+                self._snapshot_binding = None
                 return
-            row = json.loads(raw); cursor = row['doc_id']; literal(cursor)
+            cursor = row['doc_id']; literal(cursor)
             self.search.publish(target, document(cursor, row['revision'], row['value']))
         raise ValueError('snapshot fixture bound exceeded')
 
@@ -212,4 +234,17 @@ class Rebuild:
         require(self.fenced, 'abandon requires fence')
         self.session.execute("BEGIN; UPDATE sp006.targets SET phase='failed' WHERE name=" + literal(target)
                     + "; UPDATE sp006.control SET next_target=NULL,phase='live',snapshot_complete=false; COMMIT;")
+        self._snapshot_binding = None
         self.unfence()
+
+    def recover(self):
+        require(self.fenced, 'recovery requires fence')
+        raw = self.session.execute('SELECT row_to_json(c) FROM (SELECT phase,next_target FROM sp006.control) c;')
+        require(bool(raw), 'no switching recovery intent')
+        intent = json.loads(raw)
+        require(intent['phase'] == 'switching' and isinstance(intent['next_target'], str),
+                'no switching recovery intent')
+        target = intent['next_target']
+        literal(target)
+        self.cutover(target)
+        return target

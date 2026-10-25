@@ -2,9 +2,9 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Four bounded live cases passed in R01 and reviewed R02; final staged/hosted verification tracked in PR |
+| Status / outcome | Active; four bounded live cases passed in R01/R02 and reviewed R03; final staged/hosted verification tracked in PR |
 | Owner / assessor | Project maintainer; separate-context source/relevance review |
-| Created / last updated | 2026-10-24 |
+| Created / last updated | 2026-10-24 / 2026-10-25 |
 | Related work | #49 W3/W5/W7, B-005/B-023, D-016/D-017, ADR-101/102; #40/#41 prerequisites remain |
 | Run limit / stopping condition | 600 seconds work plus bounded owned cleanup; fail on incorrect state, unmet resources or cleanup failure |
 | Prior evidence | Existing task-path projection/version rules; no native outbox/indexer implementation |
@@ -30,7 +30,9 @@ durable delivery acknowledgments before cutover. See the
 | Maximum ID or maximum document revision proves catch-up | Rejected; actual counterexample cases are required before claiming a replacement |
 | Every writer participates in the gate | Required prototype invariant in the fixture put function; production must enforce it through capabilities |
 | Registering a target means the SQL snapshot exists | False until a statement establishes the repeatable-read snapshot while fenced |
+| A source object or backend PID proves the registered transaction survived | False; R03 binds and checks the SQL virtual transaction identity on each page, including the empty final page |
 | SQL metadata and an external alias change atomically together | False; durable switching intent, dual delivery and actual alias reconciliation are required |
+| Retaining the target in the harness proves durable recovery input | False; R03's replacement coordinator reads pending phase/target from SQL, with the harness target used only as an oracle |
 | A doc/test result establishes architectural acceptance | False; source review and real-service evidence remain bounded and adoption remains separate |
 
 Separate-context Phase A checked public requirements before the candidate. Phase B
@@ -44,8 +46,8 @@ and explicit refresh. Later source/evidence dispositions belong in this record.
 | --- | --- | --- |
 | C01 | Lower identity allocated by an uncommitted transaction is absent from the snapshot but commits below its visible maximum | Maximum sequence is unsafe as a generic commit frontier |
 | C02 | Observe registration blocked by the writer through pg_blocking_pids; exercise newer event before older snapshot, ACK loss boundary, same-version corruption and hidden stale document; corrected cutover reaches exact fixture state and searchable alias | Gate/snapshot/individual-ACK handoff works for these schedules |
-| C03 | Interrupt coordinator after alias application before metadata completion; later writes target both indexes; a new coordinator reconciles; the read alias exposes the expected post-interruption value/revision and promoted-target pending deliveries are zero | Alias/metadata split does not silently drop these tested updates or leave the tested value unsearchable |
-| C04 | Terminate the source backend, reject promotion, preserve old alias, rebuild a fresh epoch | A lost snapshot is not resumed with a fresh transaction into the same epoch |
+| C03 | Interrupt coordinator after alias application before metadata completion; later writes target both indexes; a new coordinator reads durable phase/target, reconciles, and verifies expected alias value/revision and zero pending target deliveries | Recovery input is reconstructed from durable intent and the tested updates become searchable after completion |
+| C04 | Confirm source-backend termination; refuse a replacement source and a restarted transaction with the same observed backend PID; preserve incomplete epochs/old alias; verify a fresh epoch's expected value/revision through the alias | A lost registered snapshot cannot be substituted or restarted into the same epoch |
 
 No database/search I/O mock substitutes for these assertions. Synthetic protocol
 cases do not establish production auth, grants, deletion semantics or performance.
@@ -162,6 +164,38 @@ ownership, admission, assertion independence and deterministic refresh sensitivi
 it did not execute services. The earlier review missed the ownership race; passing
 shared gates did not supply SP-006 regression coverage. No broader production,
 crash, deletion, resource-limit or authentication qualification follows.
+
+### SP-006-R03, 2026-10-25
+
+R03 closes two proof gaps in the earlier implementation: snapshot source and
+transaction continuity were not bound to registration, and C03 passed its target
+from harness memory. A local binding now captures target/source plus SQL backend,
+virtual transaction ID, isolation and read-only state after establishing the
+fenced snapshot. Every page returns identity and row atomically; a mismatch is
+rejected before publication, source COMMIT or completion marking. The empty
+final page is checked too. Recovery has no target argument and reads pending
+phase/target from SQL while fenced.
+
+All four real-service cases passed. C04 confirmed actual backend termination,
+replacement refusal, and same-backend transaction-restart refusal with incomplete
+state preserved; the fresh target exposed the expected payload/revision through
+the alias. C03 reloaded its intent and passed the independent alias/ACK assertions.
+Ten exercised source/test hashes match `review_followup_R03` in the manifest.
+R01/R02 remain historical evidence, not rewritten claims for this source.
+
+Four targeted unit mutations failed the intended regressions: PID-only identity,
+guessed recovery target, multiple matching containers and ignored healthcheck
+failure. PID-only identity was also tested against actual services and failed
+C04's restart-refusal assertion. Source was restored before the successful full
+run; owned cleanup completed. No data-corruption claim follows from that rejected
+mutation. The source/result review did not execute services independently.
+
+The earlier regression-only commit passed its mandatory full gate (289 tooling
+tests: 286 passed, three documented Windows skips, plus Rust/Go/static and owned
+live-service checks). The final source has 15 SP-006 unit tests and 38 lifecycle
+tests; all passed locally. Final staged and exact-head hosted verification are
+tracked in PR #82. This remains a bounded proof, not a production recovery service,
+availability guarantee, broad crash campaign or native adoption.
 
 ## Handoff
 

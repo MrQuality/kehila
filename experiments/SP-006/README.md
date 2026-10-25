@@ -1,7 +1,7 @@
 # SP-006: projection rebuild handoff proof
 
-Status: bounded standalone prototype; all four live cases passed in R01 and the
-reviewed R02 profile on 2026-10-24. Source/mutation evidence is recorded below;
+Status: bounded standalone prototype; all four live cases passed in R01/R02 and
+the reviewed R03 profile on 2026-10-25. Source/mutation evidence is recorded below;
 mandatory staged verification and hosted CI are tracked in the PR.
 Owner: project maintainer.
 Related: [spike plan](../../docs/spikes/SP-006-projection-rebuild.md),
@@ -23,9 +23,14 @@ One coordinator owns a separate session lock for its entire operation. It:
    and actually establishes a repeatable-read source snapshot. It then releases
    the writer gate. Later writes atomically queue durable per-target deliveries
    alongside each immutable complete outbox event, including the building target.
+   Before releasing the gate, registration binds the target/source to the SQL
+   backend, virtual transaction ID, isolation and read-only state.
 3. Bulk-copies the pinned snapshot. Strict OpenSearch external versions prevent
    an older snapshot value from replacing an already delivered newer value.
-   Snapshot loss fails the epoch; a new snapshot uses a new target.
+   Every page returns transaction identity with its data, including the empty
+   final page; replacement or restarted sources fail before that page is copied
+   or the epoch completed. Snapshot loss fails the epoch; a new snapshot uses a
+   new target. A Session object or backend PID alone cannot establish continuity.
 4. Takes the exclusive gate for cutover. This drains writers, leaving a finite
    pending set. It acknowledges every building-target delivery individually,
    verifies every fixture document, and refreshes the target for search visibility.
@@ -33,8 +38,16 @@ One coordinator owns a separate session lock for its entire operation. It:
 5. Commits switching intent, changes the read alias atomically, verifies the
    actual alias, then commits the new active target. Both targets remain enrolled
    until that confirmation. A coordinator interruption after the alias call
-   recovers from durable intent and actual alias state, fences/drains again and
+   reloads phase and pending target from SQL without a remembered target argument,
+   reconciles actual alias state, fences/drains again and
    completes the transition. The old index remains retained in this proof.
+
+During switching, the alias can already name the new target while SQL active
+metadata still names the old one. New writes remain queued for both targets and
+can lag in search until delivery and refresh. Recovery always drains, verifies
+and refreshes before checking whether the alias needs moving; an already-moved
+alias does not skip those steps. The observed postcondition is after recovery,
+not uninterrupted freshness or availability during the interruption.
 
 External HTTP work holds no writer transaction or actor lock. The read-only
 source snapshot transaction spans bulk-copy HTTP; its bounded lifetime can still
@@ -66,7 +79,8 @@ The four cases exercise actual SQL locks and actual OpenSearch indexing/alias AP
   C03 independently checks the expected post-interruption value/revision through
   the read alias and zero pending deliveries for the promoted target.
 - Actual source-backend termination rejects an incomplete snapshot; the old alias
-  survives and a fresh target can rebuild successfully.
+  survives. Replacement sources and a restarted transaction on the same backend
+  are refused, then a fresh target rebuild is checked through the search alias.
 
 Use a dedicated initially stopped disposable machine. Set TEMP/TMP outside the
 checkout; no secrets or real records are admitted. No Python dependency is added:
@@ -156,3 +170,27 @@ assertion. Source was restored before the successful full live rerun; all owned
 resources were cleaned up. The cheap tests cover 37 service-lifecycle cases and
 four SP-006 import/admission/ownership cases. Ordinary CI runs these tests; live
 SP-006 execution remains opt-in, with production integration gates unchanged.
+
+## Recorded R03 review follow-up, 2026-10-25
+
+All four live cases passed with snapshot lifetime binding and durable recovery
+input. C04 confirmed actual backend termination, rejected a replacement source,
+and rejected a restarted repeatable-read transaction while observing the same
+backend PID. Failed epochs remained incomplete; a fresh epoch exposed the known
+value/revision/payload through the alias. C03 reloaded pending target/phase from
+SQL after the old coordinator ended, then satisfied its alias and ACK assertions.
+
+The transaction identity uses PostgreSQL's own granted virtual-XID lock, whose
+lifetime follows the transaction even for read-only work. See PostgreSQL 16's
+[transaction identifiers](https://www.postgresql.org/docs/16/transaction-id.html)
+and [pg_locks](https://www.postgresql.org/docs/16/view-pg-locks.html). This local
+binding cannot resume a lost snapshot across process death; a new snapshot needs
+a fresh target. It does not qualify production privileges or a recovery service.
+
+Four targeted unit mutations were detected: PID-only identity, guessed recovery
+target, multiple-container admission and ignored healthcheck failure. The PID-only
+mutation was also detected against actual services at C04's restarted-transaction
+refusal. Source was restored before all four cases passed. Ten source/test hashes
+bind this run in `review_followup_R03`; R01/R02 remain historical. The 15 SP-006
+tests and 38 service-lifecycle tests passed; CI/mock evidence does not replace the
+live SQL/OpenSearch cases. Final mandatory/hosted checks are recorded in PR #82.
