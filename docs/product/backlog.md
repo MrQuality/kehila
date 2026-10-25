@@ -302,6 +302,11 @@ Durable records and the configurable worker are not implemented here.
 
 **Deliverable:** Versioned storage representation, durable local configuration, the required command/read/update integrations, and basic backup/restore instructions.
 
+The [backup freshness and storage-budget proposal](../implementation/m1-backup-freshness-storage-budget.md)
+defines recovery-point age separately from upload/verification completion and
+retains mechanism, destination and operating targets for review. Its acceptance
+cases are future qualification work; this does not complete backup delivery or W7.
+
 [SP-006](../spikes/SP-006-projection-rebuild.md) supplies a bounded standalone
 projection rebuild handoff proof: four real PostgreSQL/OpenSearch cases passed in
 both original and reviewed profiles, with targeted regressions detected and a

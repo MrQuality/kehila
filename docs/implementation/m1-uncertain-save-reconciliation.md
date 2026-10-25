@@ -64,6 +64,25 @@ server transaction.
    It stops local retry only. Do not automatically follow it with a replacement
    creation; show current state as information and preserve the uncertainty.
 
+### Supported restore and retained browser requests
+
+[ADR-105's accepted restore security contract](../architecture/ADR-105-local-owner-authentication.md#consequences-and-impacts)
+requires credential invalidation, removal of the restored password verifier and
+an authentication-blocked API until local owner recovery completes, while
+preserving actor/operation/tombstone identities. Signing in again alone does not
+establish that a retained request belongs to the restored history.
+
+The [backup/restore acceptance case](m1-backup-freshness-storage-budget.md#proposed-acceptance-cases)
+must distinguish retained successes/tombstones from post-backup operations lost
+from the restored ledger. Test a tab whose expected version is ahead of the
+restored server and an original or cloned journal retrying a lost-ledger token
+after reauthentication. Preserve the draft/exact request and explain the recovery
+uncertainty; do not silently change versions/tokens or execute the request as a
+fresh intention. Review the restore/reconciliation design before implementation
+and prove its fence before supported use. This outcome selects no
+restore-generation field, token format or new error code, and qualifies no
+browser/restore behavior.
+
 ## Trade-offs
 
 | Choice | Benefit | Cost / limitation |

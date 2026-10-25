@@ -268,6 +268,16 @@ and token, distinguishes unknown from rejected, and treats GET as orientation
 rather than operation-outcome proof. This is a proposal for review, not permission
 to implement a client journal or alter D-032/D-033/D-034.
 
+## Backup freshness and storage-budget follow-up, 2026-10-25
+
+The [focused design proposal](m1-backup-freshness-storage-budget.md) makes D-017's
+existing backup visibility and operating-budget obligations concrete for review.
+It separates recovery-point age from file delivery and verification, and WAL
+retention settings from whole-installation disk capacity. W7 retains actual
+backup/restore, workload and pressure/recovery qualification. No backup service,
+numerical guarantee, native adoption or broader post-MVP DR is delivered here.
+Independent W2 work can proceed within its own authorization and prerequisites.
+
 ## Historical issue reconciliation
 
 #26 remains closed. #47's stated codec scope landed in PR #48 and is complete;

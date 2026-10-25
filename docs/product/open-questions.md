@@ -309,6 +309,12 @@ creation scope does not settle archive/selection or reservation/cost protocols.
 
 **Blocks:** [B-005](backlog.md#b-005), [B-018](backlog.md#b-018). Disposable-data development can proceed without pretending to meet these gates.
 
+**Proposed clarification, 2026-10-25:** The
+[backup freshness and storage-budget proposal](../implementation/m1-backup-freshness-storage-budget.md)
+distinguishes the recoverable data point from delivery and verification times.
+It defines future checks without selecting a backup method, destination or
+numerical guarantee. Q-020 remains open.
+
 **Bounded evidence:** [SP-002](../spikes/SP-002-postgresql-project-create.md)
 demonstrates an isolated process crash and fresh-cluster logical restore of the
 proposal, including replay/tombstones and privileges. It does not establish daily
