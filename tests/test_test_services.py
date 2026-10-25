@@ -115,6 +115,14 @@ class ServiceOwnershipTests(unittest.TestCase):
                 with services.service_group(services.ComposeRuntime(['docker', 'compose'], {}), ['nats']):
                     self.fail('unowned service admitted')
 
+    def test_multiple_matching_containers_are_rejected_and_owned_group_is_cleaned(self):
+        with patch.object(services, 'run') as run, \
+                patch.object(services, '_containers', side_effect=[['first', 'second'], []]):
+            with self.assertRaisesRegex(RuntimeError, 'one running owned container'):
+                with services.service_group(services.ComposeRuntime(['docker', 'compose'], {}), ['postgres']):
+                    self.fail('ambiguous service admitted')
+        self.assertEqual(run.call_args_list[-1].args[0][-2:], ['down', '--volumes'])
+
     def test_successful_down_with_remaining_containers_still_fails(self):
         with patch.object(services, 'run'), \
                 patch.object(services, '_containers', side_effect=[['container'], ['leftover']]):

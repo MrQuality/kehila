@@ -4,20 +4,36 @@ import importlib.util
 import io
 import os
 from pathlib import Path
+import runpy
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'experiments/SP-006'))
 spec = importlib.util.spec_from_file_location('sp006_runner', ROOT / 'experiments/SP-006/run.py')
 runner = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(runner)
+with patch.object(sys, 'path', [str(ROOT / 'experiments/SP-006'), *sys.path]), \
+        patch.dict(sys.modules), patch.object(sys, 'dont_write_bytecode', True):
+    # The standalone import must not reuse another test's generic module name.
+    sys.modules.pop('protocol', None)
+    spec.loader.exec_module(runner)
 
 
 class RunnerBoundaryTests(unittest.TestCase):
+    def test_loader_restores_paths_module_bindings_and_bytecode_policy(self):
+        occupied = types.ModuleType('protocol')
+        before_path = list(sys.path)
+        before_bytecode = sys.dont_write_bytecode
+        with patch.dict(sys.modules, {'protocol': occupied}):
+            loaded = runpy.run_path(__file__, run_name='sp006_loader_probe')
+            self.assertIs(sys.modules['protocol'], occupied)
+            self.assertEqual(sys.path, before_path)
+            self.assertEqual(sys.dont_write_bytecode, before_bytecode)
+            self.assertEqual(loaded['runner'].Rebuild.__module__, 'protocol')
+
     def test_guarded_standalone_import_has_no_external_work(self):
         script = '''
 from pathlib import Path
@@ -90,6 +106,35 @@ assert callable(sys.modules['protocol'].Search.publish)
                 runner.main()
         constructor.assert_called_once_with(runtime, 'owned-postgres')
         database.reset.assert_called_once_with()
+        self.assertEqual(output.getvalue(), '')
+
+    def test_failed_healthcheck_stops_before_database_or_protocol_work(self):
+        external = str(Path(tempfile.gettempdir()).resolve())
+        runtime = Mock(environment=os.environ.copy())
+        actual_run = subprocess.run
+
+        def failed_healthcheck(command, **options):
+            self.assertIn('healthcheck.py', command[1])
+            return actual_run([sys.executable, '-c', 'raise SystemExit(3)'],
+                              check=options.get('check', False), capture_output=True, timeout=5)
+
+        with patch.object(sys, 'argv', ['run.py', '--podman-machine', 'fixture',
+                                      '--exclusive-podman-machine']), \
+                patch.dict(os.environ, {'TEMP': external, 'TMP': external}), \
+                patch.object(runner, 'preflight'), \
+                patch.object(runner, 'work_budget', return_value=nullcontext()), \
+                patch.object(runner, 'managed_runtime', return_value=nullcontext(runtime)), \
+                patch.object(runner, 'service_group', return_value=nullcontext({'postgres': 'owned-postgres'})), \
+                patch.object(runner.subprocess, 'run', side_effect=failed_healthcheck), \
+                patch.object(runner, 'Database') as database, \
+                patch.object(runner, 'sequence_counterexample', return_value={'passed': True}), \
+                patch.object(runner, 'live_rebuild', return_value={'passed': True}), \
+                patch.object(runner, 'alias_recovery', return_value={'passed': True}), \
+                patch.object(runner, 'snapshot_loss', return_value={'passed': True}), \
+                patch('sys.stdout', new_callable=io.StringIO) as output:
+            with self.assertRaises(subprocess.CalledProcessError):
+                runner.main()
+        database.assert_not_called()
         self.assertEqual(output.getvalue(), '')
 
 
