@@ -45,7 +45,7 @@ the runtime. ADR-106 now has separate explicit bounded acceptance. #40/#49 retai
 
 | Item | Design disposition | Evidence still required before executable approval |
 | --- | --- | --- |
-| CR-01, Medium / P2 | Pause-inclusive expiry/lifetime; suspension ends the instance, with a barrier before application continuation. | [Read-only feasibility remains unresolved](local-owner-authentication-podman-feasibility.md#disposition-and-next-evidence). Review a dependable adapter and actual-provider qualification method; missing semantics block approval, and injected clocks alone are insufficient. |
+| CR-01, Medium / P2 | Development-proof pause handling was amended on 2026-10-24: any observed/suspected interruption invalidates the whole current run; stop, reconcile and restart. | Review the interruption/run-accounting and runnable clock/shutdown oracles. No automatic resume barrier or supported suspend behavior is qualified; see ADR-106. |
 | CR-02, Low / P2 | One required argv interface with canonical address/origin grammar and no fallback sources. | Review launcher/process validation APIs and negative-test oracles; later execution must prove actual publication. |
 | CR-03, Low / P2 | Version-1 certificate-then-PKCS#8 PEM grammar, explicit whitespace and complete DER consumption. | Select/review parser APIs and rejection-test oracles; later execution must prove strict admission. |
 | WSL clarification, Low / P3 | Capture effective mode/options/versions separately from configured values; qualify by ingress evidence. | Review read-only preflight method; later execution must establish effective state and full allowed/denied paths. |
@@ -210,8 +210,8 @@ no safe adapter, new crate, raw unsafe code or installer is selected by this pla
 The [Linux file-admission API review](local-owner-authentication-linux-files.md)
 compares both storage alternatives and outlines a descriptor-based reader. API
 shape is supported; topology/alias evidence, dependency adoption and actual
-file/durability behavior remain unqualified. This is independent of the unresolved
-resume gate and does not authorize executable work.
+file/durability behavior remain unqualified. This remains an independent file-admission prerequisite; the development-proof
+interruption amendment supplies no safe-file evidence or executable permission.
 
 | Lifecycle / interruption point | Required state and reconciliation |
 | --- | --- |
@@ -244,44 +244,37 @@ Inherit 16 tasks including completed/unjoined tasks, 32 headers, 8 KiB HTTP buff
 two body bytes, 2-second TLS/header deadlines, 5-second connection lifetime and
 180-second server lifetime. These are proposed test ceilings, not capacity claims.
 
-### Clock and suspend/resume contract
+### Development-proof interruption and runnable-clock contract
 
-Check UTC validity before listening and each new handshake. Derive an elapsed-time
+The maintainer accepted [ADR-106's interruption amendment](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24)
+on 2026-10-24: an observed or suspected host/VM pause invalidates the whole current
+disposable run. Stop owned work, reconcile resources and rerun from a fresh
+instance with usable UTC. Do not merge pre-pause and post-pause observations into
+one pass. Automatic detection/prevention and pause-inclusive guest clock behavior
+are not established or required as claims of this development proof. Do not add
+host daemons, sleep prevention or security-setting changes for this concession.
+
+Check UTC validity before listening and each new handshake. Derive an elapsed
 expiry budget at startup; backward UTC jumps must never extend that budget or the
-180-second server lifetime. Forward jumps may end service early; once stopped,
-no rewind reopens admission. Both budgets include host suspend/hibernate and VM
-suspension, freeze or restore. These events end the diagnostic instance; transparent
-continuation is unsupported. Ordinary task descheduling is not a resume event.
+180-second runnable server lifetime. Forward jumps may end service early; once
+stopped, a rewind never reopens admission. While runnable, poll validity at most
+every second, stop admission within one second of expiry/invalid clock
+state, and drain/abort owned work within five seconds. Scheduling overruns fail
+the runnable-case oracle. The adapter and numeric boundary tests remain required;
+this plan records no new execution result.
 
-[Rust `Instant`](https://doc.rust-lang.org/stable/std/time/struct.Instant.html)
-does not guarantee whether suspension counts. Linux
-[timekeeping](https://docs.kernel.org/core-api/timekeeping.html) distinguishes
-`CLOCK_MONOTONIC`, which stops during system suspend, from `CLOCK_BOOTTIME`, which
-includes it. Neither name alone proves the selected VM/host pause behavior.
-A provider-specific elapsed-time/resume adapter and admission barrier need
-independently reviewed API guarantees and a qualification method before executable
-approval. Actual separately authorized tests must prove that, after a resume,
-the barrier latches stop
-before application work can admit a request or continue owned pending responses.
-Abort pending work; bytes already handed to the kernel/client cannot be retracted.
-If dependable detection/barrier semantics cannot be established, this profile
-cannot execute or qualify. No host supervisor or time-sync service is selected here.
+[Rust Instant](https://doc.rust-lang.org/stable/std/time/struct.Instant.html) and
+[Linux clocks](https://man7.org/linux/man-pages/man2/clock_gettime.2.html) do not
+establish all host/VM pause mappings. Timeouts are normal-operation bounds, not
+proof that a paused VM rolls back before continuation. If an interruption is
+observed or suspected, classify the run invalid and rerun instead of claiming
+that the clock or an automatic shutdown successfully handled it.
 
-While runnable, poll validity at most every second, stop admission within one
-second of expiry/invalid clock state, and drain/abort owned work within five
-seconds. Scheduling overruns fail the runnable-case oracle. No deadline execution
-is promised while the VM is paused; separately prove the resume barrier before
-application continuation. Restart requires a new instance and operator-validated
-UTC; stale or uncertain UTC fails closed.
-
-Test exact boundaries, expired/not-yet-valid startup, forward/backward jumps and
-resume with stale UTC and a paused elapsed clock. Process-local injected clocks
-exercise logic but cannot qualify a provider. Separately authorized actual host/VM
-pause tests need an independent elapsed-time observer and evidence of the barrier,
-including pending requests. Measure short-lived certificate expiry and shutdown
-with separate server/client oracles. Use an isolated adversarial TLS fixture for
-client rejection, never a bypass of server startup guards. No OS clock mutation,
-suspend test, new host service or trust change is authorized by this document.
+Test exact runnable boundaries, expired/not-yet-valid startup, forward/backward
+clock logic and owned shutdown. Injected clocks exercise logic, not provider
+sleep guarantees. Supported authentication expiry/revocation and operation across
+suspension retain ADR-105's separate review/qualification gates. No actual host
+sleep/hibernate/freeze test, OS clock mutation or trust change is authorized here.
 
 | Case group | Specific oracle; all results currently unexecuted |
 | --- | --- |
@@ -290,13 +283,13 @@ suspend test, new host service or trust change is authorized by this document.
 | Secret admission | Accept a valid bundle exactly 64 KiB; reject larger inputs before parsing/listening. Missing, format-v1 grammar/DER errors (including boundary-sized inputs), wrong-key/SAN, wrong-owner/mode and redirected inputs fail before listening; owned other-UID test cannot read. |
 | File/mount safety | Same-object checks, immutable mounted generation, concurrent/replacement attempts, no writable alias; parser and safe-open wrappers have source review and real failure evidence. |
 | Renewal and interruption | Interrupt at every lifecycle row; accept only complete explicit generations or stopped state, bound inventory to two, verify fresh leaf, refuse invalid rollback. |
-| Resource/expiry/shutdown | Preserve stalled TLS/header/body, task-count and listener-release assertions; exercise numeric expiry/drain, clock-jump and suspend/resume cases under container limits; injected logic and actual provider qualification are distinct. |
+| Resource/expiry/shutdown | Preserve stalled TLS/header/body, task-count and listener-release assertions; exercise numeric expiry/drain, runnable clock-jump cases and interruption/run invalidation under container limits; supported suspend/resume qualification remains separate. |
 | Trust/cleanup | Exact separately approved per-user trust and explicit CLI roots; no issuer in server; remove owned trust/material and prove absence of listener/owned leftovers. |
 
 ADR-106 and its disposable-only storage risk were explicitly accepted on
 2026-10-23. Before executable work, review exact images/digests, issuer tooling, APIs, versioned dependencies/notices/
-advisories, intent-file and clock/resume adapters, admission barrier and failure
-oracles. Missing dependable resume API semantics block executable approval;
+advisories, intent-file and runnable clock adapters, interruption/run-accounting and failure
+oracles. The original automatic diagnostic resume barrier is superseded by ADR-106;
 actual provider evidence gates qualification even if clock-injection tests pass. #40 retains the independent
 production dependency disposition and 2026-11-18 review deadline.
 Obtain fresh permission for heavy work/VM/services and exact trust mutations.

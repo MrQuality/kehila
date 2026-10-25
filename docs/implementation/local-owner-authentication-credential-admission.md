@@ -142,7 +142,9 @@ reviewed dependency adoption and bounded private admission implementation.
 If safe library guarantees remain insufficient, stop rather than add application
 ASN.1/cryptography or weaken the contract. No build, fixture/key generation,
 admission test, listener integration, VM/service start or trust change occurred.
-The actual file/mount/alias/ingress and full resume gates remain unresolved;
+At this research checkpoint, the file/mount/alias/ingress and full resume gates
+were unresolved. The [2026-10-24 amendment](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24)
+subsequently changed only the interrupted disposable-diagnostic requirement;
 A0/T01-T16, A1-A5, ADR-103 and #65 gain no qualification. #40's separate production
 dependency disposition and 2026-11-18 review deadline remain unchanged.
 
@@ -218,7 +220,9 @@ Remaining limits and gates:
 
 The next bounded implementation proposal should address Linux file admission
 using the [reviewed API contract](local-owner-authentication-linux-files.md),
-while retaining the resume gate before any integrated proof. A0/T01-T16, A1-A5,
+while retaining the applicable lifetime/interruption gates before integrated
+proof, including the [accepted diagnostic invalidation/rerun rule](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24).
+A0/T01-T16, A1-A5,
 ADR-103 and #65 receive no complete qualification; #40's separate production
 dependency disposition and 2026-11-18 deadline are unchanged.
 
@@ -237,3 +241,12 @@ that profile/key matching does not establish issuer-signature authenticity or
 certificate trust. TLS client path verification and ongoing expiry/resume remain
 separate requirements. This follow-up changes neither admission policy nor API
 visibility, and grants no new integration or trust permission.
+
+## Development-proof lifecycle update, 2026-10-24
+
+[ADR-106 now records the accepted interruption/rerun concession](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24).
+Any observed or suspected host/VM pause invalidates the complete disposable run;
+stop/reconcile and rerun from a fresh instance. Earlier references in this dated
+research/result to the full diagnostic resume barrier describe the prior gate.
+This amendment supplies no automatic pause detection, safe-file evidence,
+supported authentication/suspend qualification or integrated-test permission.

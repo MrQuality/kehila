@@ -1,0 +1,22 @@
+# Revised small-workload profile: provider cgroup limits are unqualified.
+# Fixed fixture/run bounds and fresh available-RAM checks remain mandatory.
+# Owned synthetic services only; loopback publication, no persistent volumes.
+services:
+  postgres:
+    image: docker.io/library/postgres:16.13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: ["127.0.0.1:5432:5432"]
+  opensearch:
+    image: docker.io/opensearchproject/opensearch:2.19.1
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    ports: ["127.0.0.1:9200:9200"]
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536

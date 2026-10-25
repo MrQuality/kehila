@@ -30,6 +30,7 @@ and [testing guide](../TESTING.md).
 | [SP-003](SP-003-replay-codecs.md) | Replay codecs and identifier representation | Completed | [#39](https://github.com/MrQuality/kehila/issues/39) completed; remaining delivery #49 | R11 is the latest frozen native run; Accepted ADR-104 and PR #48 supply the production codec disposition; broader identifier narrowing is not authorized |
 | [SP-004](SP-004-actor-authority.md) | Trusted actor binding and initial-owner authority | In progress | [#40](https://github.com/MrQuality/kehila/issues/40), parents #11/#32; #49 W2 | PR #59 merged R04/R05 bounded checks; Accepted local-MVP ADR-105 selects password/authority mechanisms; A0 is authorized with an unexecuted verification plan and D-037 inputs; authentication, read/composite-scope and production integration remain outstanding |
 | [SP-005](SP-005-project-target-allocation.md) | Stable project-target allocation across retries | Planned | [#41](https://github.com/MrQuality/kehila/issues/41), parent #27 | No execution; allocation/reconciliation protocol needed |
+| [SP-006](SP-006-projection-rebuild.md) | Projection snapshot-to-live rebuild handoff | Active | #49 / B-005/B-023 | R03 records four live cases with bound snapshot lifetime and SQL-derived recovery intent; four unit mutations detected, including PID-only identity also detected live; R01/R02 remain historical; no production adoption |
 
 Use sequential `SP-NNN` IDs, distinct from the existing acceptance scenario IDs.
 Create each record from [TEMPLATE.md](TEMPLATE.md). Keep its ID and links stable.

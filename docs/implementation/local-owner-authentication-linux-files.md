@@ -22,7 +22,7 @@ this review does not choose their process, host/guest placement or installation 
 
 | Consequential premise | Status / evidence | Consequence and resolver |
 | --- | --- | --- |
-| Linux key/file review can proceed while resume is unresolved | Independent API prerequisite in the container plan. | Do not claim executable readiness; keep the full resume gate unchanged. |
+| Linux key/file review could proceed while resume was unresolved at the 2026-10-23 review | Independent API prerequisite in the container plan. | Historical full-resume gate; the [2026-10-24 amendment](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24) now requires invalidation/rerun for interrupted disposable diagnostics. No executable or supported-authentication readiness is established. |
 | A path, owner/mode or read-only mount proves immutable content | Unsupported by file/mount semantics. | Require protected topology and alias/writer evidence; stop if untrusted mutation remains possible. |
 | A safe Rust signature establishes the complete security adapter | Unsupported: API shape and policy are different. | Review the whole admission sequence and actual provider failure cases before qualification. |
 | Documentation or a merged proposal selects storage/dependencies | Not authorized by merging alone. | Separate explicit ADR-106 acceptance on 2026-10-23 covers disposable mounted secrets only; production storage and dependency adoption remain gated. |
@@ -149,7 +149,9 @@ ambiguity-stop reconciliation; no installer or intent-record location is selecte
 explicit Linux resolution/descriptor APIs are a candidate for later dependency and
 adapter review. The maintainer separately accepted ADR-106 for the bounded proof
 on 2026-10-23. This finding does not select production storage, prove no writable
-alias, or discharge the independent unresolved resume gate.
+alias. The full resume gate was unresolved at that review date; the
+[2026-10-24 amendment](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24)
+changes only the disposable diagnostic requirement, not supported authentication.
 
 A future bounded Linux file-admission proof needs reviewed code and actual cases:
 
@@ -169,3 +171,12 @@ provider evidence. Separate exact-code, dependency/license/advisory, architectur
 storage-risk and applicable execution permissions remain required. A0/T01-T16,
 A1-A5, ADR-103 and #65 retain their gates; #40's separate production-dependency
 review deadline remains 2026-11-18.
+
+## Development-proof lifecycle update, 2026-10-24
+
+[ADR-106 now records the accepted interruption/rerun concession](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24).
+Any observed or suspected host/VM pause invalidates the complete disposable run;
+stop/reconcile and rerun from a fresh instance. Earlier references in this dated
+research/result to the full diagnostic resume barrier describe the prior gate.
+This amendment supplies no automatic pause detection, safe-file evidence,
+supported authentication/suspend qualification or integrated-test permission.

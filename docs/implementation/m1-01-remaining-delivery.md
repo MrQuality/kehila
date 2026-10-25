@@ -170,7 +170,10 @@ makes the next review concrete; its ADR-106 amendment and disposable-only storag
 trade-off were explicitly accepted on 2026-10-23. Executable review and runtime
 qualification remain outstanding. The maintainer selected same-host
 Podman/WSL 2 for the first proof; [read-only feasibility](local-owner-authentication-podman-feasibility.md)
-leaves resume readiness unresolved, without authorizing dependent execution.
+did not establish the original resume mechanism. ADR-106
+now records the 2026-10-24 disposable development-proof interruption/rerun
+concession; it does not qualify supported authentication across suspension or
+authorize an integrated runtime proof.
 Remaining A0 and schema evidence plus separately
 bounded A1-A5 implementation remain gated. ADR-103
 production adoption is still a separate decision.
@@ -249,6 +252,21 @@ remain prerequisites before native routes. See the [B-003 contract](../product/B
 [implementation status](../IMPLEMENTATION.md), [testing guide](../TESTING.md) and
 [Definition of Done](../engineering/DEFINITION-OF-DONE.md) for governing scope and
 evidence. Action stacks #44 remains postponed.
+
+## Projection rebuild and uncertain-save follow-up, 2026-10-24
+
+The maintainer requested a corrected projection rebuild design and a bounded
+implementation. [SP-006](../spikes/SP-006-projection-rebuild.md) owns a standalone
+PostgreSQL/OpenSearch proof: registered building targets, an established snapshot,
+individual durable delivery acknowledgments and explicit alias/metadata recovery.
+No native application outbox/indexer is adopted; W3/W5/W7 still own integration,
+capabilities, production schemas, retention/deletion and supported operating limits.
+
+The [uncertain-save proposal](m1-uncertain-save-reconciliation.md) explains the
+recommended client flow and trade-offs. It preserves the original scoped request
+and token, distinguishes unknown from rejected, and treats GET as orientation
+rather than operation-outcome proof. This is a proposal for review, not permission
+to implement a client journal or alter D-032/D-033/D-034.
 
 ## Historical issue reconciliation
 

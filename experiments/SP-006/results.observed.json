@@ -1,0 +1,238 @@
+{
+  "status": "four live cases passed; two protocol mutations and one lifecycle mutation detected; mandatory staged gates passed",
+  "recorded": "2026-10-24",
+  "baseline": "18391aa28a5c2ce8baccf8db1fa057d38995b5d0",
+  "source_sha256_lf": {
+    "experiments/SP-006/run.py": "4aea3a61959f518fc6038c38a77d4f38816c19551f256858bdba56672e770f1d",
+    "experiments/SP-006/protocol.py": "db08f534856291629951939d9d8fb098a34b005c143bb66a3dadd6516960feca",
+    "experiments/SP-006/schema.sql": "cf746c88625674703070f073405cab06fd8a28293999c0b7bd4297f878eb48aa",
+    "experiments/SP-006/compose.yml": "5c03644f7f016909c61d78f694ef532264e1d0dc541c8187634d8b8689128350",
+    "scripts/test_services.py": "103dd7b46a5b3523af421e27179ed76fba99336761a6dfca51effcd5fe82689a",
+    "experiments/SP-004/sessions.py": "3ed07094a91b7b2b0de5ac2d4885bd24be9a74652a4bcbc7070ea3f817a8c9d2"
+  },
+  "source_hash_scope": "Historical R01 executed/publication hashes; current exercised source is review_followup_R03.source_sha256_lf.",
+  "configured_services": {
+    "postgresql": "16.13",
+    "opensearch": "2.19.1"
+  },
+  "host_platform": "Windows",
+  "resource_profile": "explicitly approved tiny workload without per-container cgroup caps; 600s budget, 512MiB JVM heap, loopback-only publication and 3GiB available-RAM preflights",
+  "cases": [
+    {
+      "id": "C01",
+      "passed": true,
+      "observation": "Lower identity allocated before a later visible commit then commits below snapshot maximum."
+    },
+    {
+      "id": "C02",
+      "passed": true,
+      "observation": "Actual writer blocker, pinned snapshot with newer live events, missing ACK duplicate, same-version corruption rejection, false MAX completeness counterexample, refreshed exact-state cutover."
+    },
+    {
+      "id": "C03",
+      "passed": true,
+      "observation": "Coordinator session abandoned after alias application before SQL completion; dual targets retained for later write and new owner reconciles."
+    },
+    {
+      "id": "C04",
+      "passed": true,
+      "observation": "Source backend terminated; incomplete epoch not promoted, old alias retained and fresh epoch succeeds."
+    }
+  ],
+  "preparation_limits": [
+    "Runner entry-point setup error corrected before services started.",
+    "Initial per-container resource-limit profile failed at service startup; no protocol case ran.",
+    "First revised-profile attempt stopped at available-RAM preflight; no protocol case ran.",
+    "Subsequent revised-profile attempt passed all four cases and owned cleanup."
+  ],
+  "limits": [
+    "Synthetic inserts and updates only; no production authentication/capability or deletion qualification.",
+    "No proof of all crash/network/provider schedules, performance or resource-limit enforcement.",
+    "Native application outbox/indexer integration remains gated."
+  ],
+  "restored_source_rerun": {
+    "passed": 4,
+    "owned_cleanup_completed": true
+  },
+  "mutation_checks": [
+    {
+      "change": "omit writer transaction shared gate",
+      "detected": true,
+      "failure": "expected actor-fence wait was not reached"
+    },
+    {
+      "change": "bypass same-version payload equality",
+      "detected": true,
+      "failure": "same-version corruption accepted"
+    }
+  ],
+  "publication_source_sha256_lf": {
+    "experiments/SP-006/run.py": "4aea3a61959f518fc6038c38a77d4f38816c19551f256858bdba56672e770f1d",
+    "experiments/SP-006/protocol.py": "1a5e69b3ad4da7dcf2e743c4e785caa29216a216e1c6908627966fbeac7e499e",
+    "experiments/SP-006/schema.sql": "cf746c88625674703070f073405cab06fd8a28293999c0b7bd4297f878eb48aa",
+    "experiments/SP-006/compose.yml": "5c03644f7f016909c61d78f694ef532264e1d0dc541c8187634d8b8689128350",
+    "scripts/test_services.py": "103dd7b46a5b3523af421e27179ed76fba99336761a6dfca51effcd5fe82689a",
+    "experiments/SP-004/sessions.py": "3ed07094a91b7b2b0de5ac2d4885bd24be9a74652a4bcbc7070ea3f817a8c9d2"
+  },
+  "post_execution_delta": "protocol.py Rebuild docstring corrected: read-only snapshot spans HTTP and pins MVCC; AST equal after removing docstrings. No executable behavior changed. Observed hashes retain executed source; publication hashes identify final source.",
+  "shared_lifecycle_regression": {
+    "tests": 36,
+    "passed": 36,
+    "mutation": "ignore selected custom Compose file",
+    "detected": true,
+    "restored_tests_passed": 36
+  },
+  "mandatory_staged_verification": {
+    "passed": true,
+    "tooling_tests": 275,
+    "tooling_passed": 272,
+    "documented_windows_skips": 3,
+    "scope": "Rust/Go/static and owned live-service checks; hosted CI tracked in PR"
+  },
+  "record_scope": "Top-level R01 and review_followup_R02 retain historical evidence. review_followup_R03 records the latest changed implementation; all source hashes normalize CRLF to LF only.",
+  "review_followup_R02": {
+    "recorded": "2026-10-24",
+    "reviewed_baseline": "dabf805e29870c2fa3b271681b7fbd918bd517f2",
+    "ownership_commit": "b15d694",
+    "source_sha256_lf": {
+      "experiments/SP-006/run.py": "c36a6a5aa59340770273a8d7cf72308cf4f5f271f19d743a36db34329362e5bf",
+      "experiments/SP-006/protocol.py": "711e9955e6c9bdd692ca42d79a9f04795e7ffc9e7423dececaad2f74c4d8f846",
+      "experiments/SP-006/schema.sql": "cf746c88625674703070f073405cab06fd8a28293999c0b7bd4297f878eb48aa",
+      "experiments/SP-006/compose.yml": "5c03644f7f016909c61d78f694ef532264e1d0dc541c8187634d8b8689128350",
+      "scripts/test_services.py": "dd0372242cf8c8d7507bd70445466ea22654a6aa57d19c4b0e7522084f723556",
+      "experiments/SP-004/sessions.py": "3ed07094a91b7b2b0de5ac2d4885bd24be9a74652a4bcbc7070ea3f817a8c9d2",
+      "tests/test_test_services.py": "71c8f9f89ff1f93ed3c68c33346f39e72eb59fa66809d125d412a3f68fdc76f7",
+      "tests/test_sp006_runner.py": "a94bc90c20078124e1093395d6223eee88614a3040f9280b30e61b3094380c0a"
+    },
+    "fixture_automatic_refresh": false,
+    "cases": [
+      {
+        "case": "sequence_is_not_commit_frontier",
+        "passed": true
+      },
+      {
+        "case": "fenced_snapshot_live_delivery_cutover",
+        "duplicate_after_missing_ack": true,
+        "max_revision_counterexample": true,
+        "passed": true,
+        "same_version_corruption_rejected": true,
+        "writer_block_observed": true
+      },
+      {
+        "case": "coordinator_loss_after_alias_before_metadata",
+        "passed": true,
+        "recovered_alias_value_verified": true,
+        "target_acknowledgments_verified": true
+      },
+      {
+        "case": "lost_snapshot_requires_fresh_epoch",
+        "passed": true
+      }
+    ],
+    "owned_cleanup_completed": true,
+    "unit_tests": {
+      "service_lifecycle": 37,
+      "sp006_import_admission_ownership": 4,
+      "passed": true
+    },
+    "mutation_checks": [
+      {
+        "change": "bypass exclusive admission",
+        "detected": true
+      },
+      {
+        "change": "substitute unrelated PostgreSQL identity",
+        "detected": true
+      },
+      {
+        "change": "omit explicit refresh only when recovering an already-moved alias",
+        "detected": true,
+        "failure": "recovered alias does not expose the expected post-crash write"
+      }
+    ],
+    "first_staged_gate": {
+      "tooling_tests": 280,
+      "tooling_passed": 277,
+      "documented_windows_skips": 3,
+      "passed": true
+    },
+    "verification_tracking": "Mandatory staged verification and exact-head hosted results are maintained in PR #82 separately from this live-run record."
+  },
+  "review_followup_R03": {
+    "recorded": "2026-10-25",
+    "reviewed_baseline": "dfa8a13cf56aa87f6744b96080f1941d03a557b4",
+    "source_sha256_lf": {
+      "experiments/SP-006/run.py": "db4522bc98d22e810846195d613f5c3a1da4f84d6440dbd6dcf4babc6f30a65c",
+      "experiments/SP-006/protocol.py": "9f93a622c2359f92ed0f05f123b99658998f713925ff8b644806e93dbccd5354",
+      "experiments/SP-006/schema.sql": "cf746c88625674703070f073405cab06fd8a28293999c0b7bd4297f878eb48aa",
+      "experiments/SP-006/compose.yml": "5c03644f7f016909c61d78f694ef532264e1d0dc541c8187634d8b8689128350",
+      "scripts/test_services.py": "dd0372242cf8c8d7507bd70445466ea22654a6aa57d19c4b0e7522084f723556",
+      "experiments/SP-004/sessions.py": "3ed07094a91b7b2b0de5ac2d4885bd24be9a74652a4bcbc7070ea3f817a8c9d2",
+      "tests/test_test_services.py": "71f0fb7f45ee45c95c672b875e0033f5b0e84d10370fed57e8134f7468a70f56",
+      "tests/test_sp006_runner.py": "fc261de2e5df61cb86767722d8274af63e03457d3ccac949a62a3d0f6f2e47c6",
+      "tests/test_sp006_protocol.py": "019f1503d3b9a24d3aac3d36a762e772b4f8d4232ad9dc1b76d11fa4a8def71e",
+      "tests/test_sp006_snapshot.py": "79a80101f4afed3b0ac4a6eb64aec12d5f2b16ae39de72286258f51b808232d9"
+    },
+    "cases": [
+      {
+        "case": "sequence_is_not_commit_frontier",
+        "passed": true
+      },
+      {
+        "case": "fenced_snapshot_live_delivery_cutover",
+        "duplicate_after_missing_ack": true,
+        "max_revision_counterexample": true,
+        "passed": true,
+        "same_version_corruption_rejected": true,
+        "writer_block_observed": true
+      },
+      {
+        "case": "coordinator_loss_after_alias_before_metadata",
+        "passed": true,
+        "recovered_alias_value_verified": true,
+        "recovered_target_from_sql": true,
+        "target_acknowledgments_verified": true
+      },
+      {
+        "case": "lost_snapshot_requires_fresh_epoch",
+        "fresh_epoch_alias_verified": true,
+        "passed": true,
+        "replacement_source_rejected": true,
+        "same_backend_restart_rejected": true
+      }
+    ],
+    "owned_cleanup_completed": true,
+    "unit_tests": {
+      "sp006": 15,
+      "service_lifecycle": 38,
+      "passed": true
+    },
+    "mutation_checks": [
+      {
+        "change": "compare snapshot PID only instead of full transaction identity",
+        "unit_detected": true,
+        "live_detected": true,
+        "live_failure": "restarted snapshot transaction accepted for old epoch"
+      },
+      {
+        "change": "substitute guessed target for durable recovery target",
+        "unit_detected": true
+      },
+      {
+        "change": "admit multiple matching containers",
+        "unit_detected": true
+      },
+      {
+        "change": "ignore nonzero healthcheck status",
+        "unit_detected": true
+      }
+    ],
+    "prior_regression_commit_gate": {
+      "tooling_tests": 289,
+      "tooling_passed": 286,
+      "documented_windows_skips": 3,
+      "passed": true
+    },
+    "verification_tracking": "Final mandatory staged and exact-head hosted verification are tracked in PR #82 separately from this bounded live-run record."
+  }
+}
