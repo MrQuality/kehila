@@ -20,6 +20,11 @@ requires a copy outside the machine's failure boundary. Broader disaster recover
 remains post-MVP under [D-037](../product/decisions.md#d-037) and
 [B-024/#60](../product/backlog.md#b-024).
 
+[ADR-105's accepted restore contract](../architecture/ADR-105-local-owner-authentication.md#consequences-and-impacts)
+also applies: preserve actor/operation/tombstone identities, invalidate issued
+credentials, remove the restored password verifier, and keep the API
+authentication-blocked until local owner recovery sets a new password.
+
 This document proposes definitions and future acceptance cases. It supplies no
 new execution evidence, supported installation, recovery-point objective (RPO,
 acceptable data loss) or recovery-time objective (RTO, time to restore service).
@@ -144,8 +149,26 @@ These are future checks, **not passed tests**:
 3. Remove a required component or make its integrity/lineage incompatible:
    refuse eligibility; show an older valid point or unknown/unavailable status.
 4. Restore a complete set to a clean instance; check configuration, authoritative
-   data and replay identities, reconstruct search, and exercise stale browser
-   versions/retry IDs. Record the actual restored point and elapsed time.
+   data and replay identities, reconstruct search, and enforce ADR-105's restore
+   security contract above. Verify access remains blocked through restore and
+   re-enrollment, and old credentials/verifiers cannot regain authority. Exercise
+   both retained and lost-ledger browser requests:
+
+   - A retained success/tombstone follows D-032/D-033/D-034 under current original
+     mutation grants: exact retries replay or return `replay_expired`; changed
+     content conflicts, and the operation never executes again.
+   - A tab/journal newer than the recovery point may hold a version ahead of the
+     restored server or a token whose committed record is absent after rollback.
+     After reauthentication, including from a cloned journal, it must enter an
+     explicit reconciliation path rather than silently execute as a fresh
+     intention. Preserve the draft/request and communicate the rollback-related
+     uncertainty; do not silently replace its token or expected version.
+
+   Review the restore/reconciliation design before implementation and prove its
+   fence before supported use. This specifies the safety outcome without choosing
+   an installation/restore epoch or new error code. See the
+   [uncertain-save proposal](m1-uncertain-save-reconciliation.md).
+   Record the actual restored point and elapsed time.
 5. For machine-loss claims, repeat with only the off-machine set and independently
    available recovery prerequisites. A local synchronized folder or second
    container on the same machine does not establish that failure isolation.
