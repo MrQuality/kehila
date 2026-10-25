@@ -156,7 +156,7 @@ evidence remains required before qualification. Downtime during generation
 replacement is allowed
 for this diagnostic proof. Later authenticated restart loses sessions under
 ADR-105; no transparent renewal/session continuity is claimed. Apply the
-development-proof interruption rule below instead of requiring an automatic
+[development-proof interruption rule](#development-proof-interruption-amendment-2026-10-24) instead of requiring an automatic
 pre-continuation barrier for this disposable diagnostic run.
 
 The proof does not qualify Linux-host clients, Windows CLI bearer storage,
