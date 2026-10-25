@@ -302,6 +302,10 @@ Durable records and the configurable worker are not implemented here.
 
 **Deliverable:** Versioned storage representation, durable local configuration, the required command/read/update integrations, and basic backup/restore instructions.
 
+The [A0 Linux reader-slice proposal](../implementation/local-owner-authentication-linux-reader-slice.md)
+under #40/#49 W2 specifies the next private descriptor/read boundary, dependency
+review and future qualification cases. It adds no runtime or provider evidence.
+
 The [backup freshness and storage-budget proposal](../implementation/m1-backup-freshness-storage-budget.md)
 defines recovery-point age separately from upload/verification completion and
 retains mechanism, destination and operating targets for review. Its acceptance
