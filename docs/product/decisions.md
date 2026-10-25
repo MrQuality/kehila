@@ -155,6 +155,13 @@ permission, or a change to the unresolved resume requirement.
 
 **Pending search:** Keep the authoritative saved version and “Saved — search update pending”; offer “Refresh saved task” independently of index repair. Failed event delivery needs bounded retries, durable failure reporting, and a recovery path that accounts for retained PostgreSQL WAL. Define an operating budget for task count, memory, disk growth, startup, and save latency before calling the installation comfortable for daily use. References: [B-003](backlog.md#b-003), [B-005](backlog.md#b-005), [B-007](backlog.md#b-007), [Q-008](open-questions.md#q-008), [Q-020](open-questions.md#q-020), [Q-022](open-questions.md#q-022).
 
+**Proposed elaboration, 2026-10-25:** The
+[backup freshness and storage-budget design](../implementation/m1-backup-freshness-storage-budget.md)
+defines recovery-point age independently of upload time and explains WAL
+retention controls versus measured disk headroom. It proposes future acceptance
+cases; backup technology, numerical objectives and pressure actions remain open.
+This adds no accepted operating guarantee to D-017.
+
 <a id="d-018"></a>
 ## D-018 — Establish configuration consistency and work-item contract boundaries
 
