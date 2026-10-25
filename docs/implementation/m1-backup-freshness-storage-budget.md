@@ -115,7 +115,11 @@ candidate tolerated consumer outage, plus measured bursts/overshoot and reserve.
 It is workload-dependent, not a guaranteed outage duration or a formula for
 total disk capacity. A paused consumer, long transaction, checkpoint boundary or
 failing archive can change the result. Measure retained tuples/catalog pressure
-as well as WAL if slots are used.
+where slots are used, and retained tuples/database growth from long-lived SQL
+snapshots even without slots. [SP-006's snapshot rebuild](../spikes/SP-006-projection-rebuild.md)
+holds a read-only snapshot across bulk-copy HTTP and can delay MVCC reclamation
+during concurrent writes. Include that overlap in qualification when a
+snapshot-based rebuild is selected; this does not adopt SP-006 into the product.
 
 Proposed monitoring combines actual volume use/free space and growth with
 checkpoint/archive health, oldest required WAL, consumer lag and delivery
