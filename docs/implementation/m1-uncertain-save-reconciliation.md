@@ -76,10 +76,13 @@ The [backup/restore acceptance case](m1-backup-freshness-storage-budget.md#propo
 must distinguish retained successes/tombstones from post-backup operations lost
 from the restored ledger. Test a tab whose expected version is ahead of the
 restored server and an original or cloned journal retrying a lost-ledger token
-after reauthentication. Preserve the draft/exact request and explain the recovery
-uncertainty; do not silently change versions/tokens or execute the request as a
-fresh intention. Review the restore/reconciliation design before implementation
-and prove its fence before supported use. This outcome selects no
+after reauthentication. Also test a creation with no existing-item version
+precondition and an edit whose expected base version matches the restored state,
+but whose later success record was lost. Version comparison alone cannot detect
+every request crossing the restore boundary. Preserve the draft/exact request and
+explain the recovery uncertainty; do not silently change versions/tokens or
+execute the request as a fresh intention. Review the restore/reconciliation
+design before implementation and prove its fence before supported use. This outcome selects no
 restore-generation field, token format or new error code, and qualifies no
 browser/restore behavior.
 
