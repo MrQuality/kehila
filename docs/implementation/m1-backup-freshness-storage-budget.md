@@ -192,7 +192,12 @@ These are future checks, **not passed tests**:
    available recovery prerequisites. A local synchronized folder or second
    container on the same machine does not establish that failure isolation.
 6. Exercise missing timestamps and clock changes; never turn an uncertain or
-   negative age into a fresh/healthy status.
+   negative age into a fresh/healthy status. Include a backward wall-clock change
+   that leaves the calculated age positive: a 20-hour-old recovery point may
+   appear only 18 hours old after a two-hour rollback. Negative-age detection
+   alone cannot establish clock sanity. The reviewed clock-error policy must
+   handle such uncertainty without falsely asserting freshness; this example
+   selects no persisted high-water timestamp or other detection mechanism.
 7. Measure a declared workload through normal writes, paused delivery, catch-up,
    checkpoint activity, rebuild overlap and backup staging. Include archive
    failure only if archiving is selected. Record peak WAL, disk growth, reserve,
