@@ -389,7 +389,11 @@ completes T01-T16 or a supported installation.
 **Active blockers and next work:**
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
-  including Tokio triage/compatible patch review and the separate rustls deadline.
+  including final-source hosted checks/review of the Tokio 1.53.3 patch and the
+  separate rustls deadline.
+  Diagnose the Windows HTTP connection failures reproduced on both baseline and
+  patched Tokio (Medium/P2 reliability follow-up under #40); unchanged passing
+  reruns do not qualify Windows transport reliability.
 - Review/adopt the [Linux reader slice](../implementation/local-owner-authentication-linux-reader-slice.md)
   and its [candidate dependency research](../implementation/local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
   separately from implementation/execution; qualify descriptor reads, protected
