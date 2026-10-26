@@ -68,6 +68,28 @@ claim an unavailable complete-graph scan was clean. Review every resolved adviso
 not only this example, and keep the existing worker unchanged unless a separately
 scoped fix is justified. No TLS/key/session material may enter evidence logs.
 
+#### Root TLS advisory triage, 2026-10-26
+
+A targeted OSV package/version query of three entries in the root lock confirmed
+these additional findings. This is not a complete scan of its 228 registry
+entries, a fresh AUTH-001 scan or proof of application exploitability.
+
+| Root locked package | Confirmed advisory / condition to assess | Open disposition work |
+| --- | --- | --- |
+| rustls-webpki 0.101.7 | [0382](https://rustsec.org/advisories/RUSTSEC-2026-0382.html): distrusted intermediate paths; [0098](https://rustsec.org/advisories/RUSTSEC-2026-0098.html) / [0099](https://rustsec.org/advisories/RUSTSEC-2026-0099.html): URI/wildcard name constraints; [0104](https://rustsec.org/advisories/RUSTSEC-2026-0104.html): malformed CRL parsing. | Trace the selected verifier, trust anchors, name constraints and CRL use; assess a compatible driver/library upgrade and retain per-advisory exposure conclusions. The CRL advisory does not affect applications that do not use CRLs. |
+| webpki-roots 0.25.4 | [0381](https://rustsec.org/advisories/RUSTSEC-2026-0381.html): bundled emSign trust anchor can permit distrusted intermediate paths. | Trace built-in versus configured trust roots and select a reviewed compatible replacement/update. Package presence alone does not establish the deployed trust path. |
+| rustls-pemfile 1.0.4 | [2025-0134](https://rustsec.org/advisories/RUSTSEC-2025-0134.html): unmaintained package, with no patched version. | Trace driver PEM-loading use and assess maintained parsing/driver alternatives. This is a maintenance notice, not a demonstrated exploitable vulnerability. |
+
+The maintainer owns all three package dispositions under [#40](https://github.com/MrQuality/kehila/issues/40)
+and [B-021](../product/backlog.md#b-021), with **P1 triage** and next review
+**2026-11-02**. Application vulnerability severity and deployment exposure remain
+unclassified. The Medium assessment-gap rating concerns missing dispositions;
+it does not rate each vulnerability or downgrade upstream findings. No risk
+acceptance, scanner suppression or dependency remediation is introduced here.
+The separate rustls 0.21.12 / 0346 review deadline remains **2026-11-18**.
+
+#### Tokio patch and verification, 2026-10-26
+
 **New finding, 2026-10-26:** the
 [Linux reader dependency research](local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
 queried all 98 registry entries in its metadata-only candidate and matched

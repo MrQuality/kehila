@@ -649,6 +649,10 @@ source, hosted availability and maintainable fixtures before adding CI jobs.
 **Deliverable:** Direct/transitive/image/tool inventory, license/notices review,
 advisory scanning/update cadence and owned expiring exceptions; read-only scheduled
 Scorecard where practical.
+**Current root TLS triage:** the [package-specific record](../implementation/local-owner-authentication-a0.md#root-tls-advisory-triage-2026-10-26)
+tracks six confirmed RustSec IDs across three root packages under #40. The
+maintainer owns P1 triage, next review 2026-11-02; runtime severity/exposure and
+complete-graph assessment remain open. This is not risk acceptance.
 **Acceptance:** Validate cargo audit/govulncheck (and future JS dependency) coverage,
 pin scanner/tool inputs, distinguish advisory/network failure from clean findings,
 and demonstrate detection/expiry. Qualify GitHub dependency review availability
