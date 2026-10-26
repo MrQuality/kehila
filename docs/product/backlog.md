@@ -448,6 +448,10 @@ qualification remain open. No complete credential or container qualification is 
 The [A0 Linux reader-slice proposal](../implementation/local-owner-authentication-linux-reader-slice.md)
 under #40/#49 W2 specifies the next private descriptor/read boundary, dependency
 review and future qualification cases. It adds no runtime or provider evidence.
+The [candidate dependency research](../implementation/local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
+records graph, grants/source exception and review insights; its new existing-Tokio
+advisory is tracked in the [A0 follow-up](../implementation/local-owner-authentication-a0.md#advisory-follow-up).
+No dependency is adopted or security finding waived by that research.
 On 2026-10-24 the maintainer accepted [development-test interruption and rerun](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24):
 any observed/suspected host/VM pause invalidates the whole disposable run. This
 replaces the diagnostic automatic-barrier prerequisite, not supported authentication

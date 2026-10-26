@@ -68,6 +68,22 @@ claim an unavailable complete-graph scan was clean. Review every resolved adviso
 not only this example, and keep the existing worker unchanged unless a separately
 scoped fix is justified. No TLS/key/session material may enter evidence logs.
 
+**New finding, 2026-10-26:** the
+[Linux reader dependency research](local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
+queried all 98 registry entries in its metadata-only candidate and matched
+[RUSTSEC-2026-0386](https://rustsec.org/advisories/RUSTSEC-2026-0386.html) against
+existing Tokio 1.53.1 in both committed locks. The advisory concerns AsyncFd
+constructor I/O unsoundness with potential memory corruption and provides no
+CVSS/severity rating. Direct `src/`/AUTH-001 searches found no AsyncFd caller;
+that is not transitive reachability evidence or an accepted risk disposition.
+The maintainer/#40 owns priority-P1 triage, with a proposed next-review target of
+**2026-11-02**, and a focused compatible patch proposal (the advisory lists
+>=1.53.3 patched on this line),
+with separate review and required verification before adoption. No patch,
+suppression or risk acceptance is introduced here. The rustls 0.21.12 follow-up
+and its 2026-11-18 deadline remain unchanged; the earlier point-in-time clean
+package observations do not supersede this newer finding.
+
 ## Remaining authentication dependency candidates
 
 These are API-level reconnaissance on 2026-10-19, not added dependencies or
