@@ -87,6 +87,11 @@ These source contracts are not observations of the actual provider/kernel policy
    Rust floor. The prior 1.1.5 wrapper review is a candidate, not a completed
    package/graph audit or a minimum-version build. Prefer the smallest applicable
    target-specific feature surface; retain application `unsafe_code = "forbid"`.
+   The [2026-10-26 dependency research](local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
+   now records a resolved candidate, actual grants/source exception and an advisory
+   finding with remaining disposition gates. It recommends Linux-only exact 1.1.5
+   with `fs`/`std`, without
+   changing the runtime graph or qualifying a minimum-version build.
 2. Add the private reader and negative/boundary tests in a focused implementation
    commit after review. Reuse the decoder's 64-KiB ceiling rather than maintain
    an independent policy constant. Do not hand-edit the lockfile or production

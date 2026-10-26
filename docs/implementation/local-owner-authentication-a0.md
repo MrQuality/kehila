@@ -68,6 +68,25 @@ claim an unavailable complete-graph scan was clean. Review every resolved adviso
 not only this example, and keep the existing worker unchanged unless a separately
 scoped fix is justified. No TLS/key/session material may enter evidence logs.
 
+**New finding, 2026-10-26:** the
+[Linux reader dependency research](local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
+queried all 98 registry entries in its metadata-only candidate and matched
+[RUSTSEC-2026-0386](https://rustsec.org/advisories/RUSTSEC-2026-0386.html) against
+existing Tokio 1.53.1 in both committed locks. The advisory concerns AsyncFd
+constructor I/O unsoundness with potential memory corruption and provides no
+CVSS/severity rating. Direct `src/`/AUTH-001 searches found no AsyncFd caller;
+that is not transitive reachability evidence or an accepted risk disposition.
+The [four/ten immediate-consumer inventory](local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
+bounds the initial triage scope. Unix `tokio/net` enables the relevant API; neither
+that availability nor a lockfile edge proves an affected constructor is reached.
+The maintainer/#40 owns priority-P1 triage, with a proposed next-review target of
+**2026-11-02**, and a focused compatible patch proposal (the advisory lists
+>=1.53.3 patched on this line),
+with separate review and required verification before adoption. No patch,
+suppression or risk acceptance is introduced here. The rustls 0.21.12 follow-up
+and its 2026-11-18 deadline remain unchanged; the earlier point-in-time clean
+package observations do not supersede this newer finding.
+
 ## Remaining authentication dependency candidates
 
 These are API-level reconnaissance on 2026-10-19, not added dependencies or
@@ -114,44 +133,55 @@ changes always retain their separate permission gate, even after memory approval
 
 ## Current result and next action
 
-Deployment correction, 2026-10-21: the backend target is a Linux container.
-Windows-host transport evidence does not establish native Windows backend
-placement. Next reconcile the actual container/TLS/secret boundary before further
-platform-specific server-key work; see the [post-mortem](../postmortems/2026-10-21-platform-assumption.md).
-Windows CLI DPAPI and browser trust are separate concerns. The agreed PoC TLS
-inputs and prior evidence remain unchanged; no Linux storage qualification follows.
+**Status reconciled 2026-10-26:** the backend target is a Linux container, with
+Windows prioritized for the MVP client. ADR-106 accepts only the bounded
+disposable Podman proof; Windows-host transport evidence supplies no Linux file
+or supported-installation qualification. Windows CLI and browser trust remain
+separate concerns; the [platform post-mortem](../postmortems/2026-10-21-platform-assumption.md)
+retains the earlier correction and evidence limits.
 
-The [standalone AUTH-001 probe](../../experiments/AUTH-001/README.md) records the
-observed Windows subset: 17 unit/transport tests, six actual headless Chrome
-certificate cases, missing-file startup rejection, bounded resource/shutdown
-checks and a Host-admission mutation. Temporary user trust and TLS private keys
-were removed after the browser checks. No certificate-ignore mode was used.
+The latest recorded [standalone AUTH-001 suite](../../experiments/AUTH-001/README.md)
+has **37 unit and 14 transport tests**. The
+[private credential-admission result](local-owner-authentication-credential-admission.md#private-implementation-result-2026-10-23)
+adds strict certificate/key profile checks and positive pair matching at supplied
+time; it has no listener caller and does not establish issuer trust or ongoing
+validity. Ten admission mutations were detected. The earlier host-only result
+had 17 unit/transport tests and six actual Chrome certificate cases; the
+[decoding-only milestone](local-owner-authentication-parser-adapter-plan.md#first-slice-result-2026-10-23)
+then reached 13 unit/14 transport tests. Those are dated intermediate results,
+not alternative current totals. No new browser/trust experiment occurred in the
+later parser/profile slices. The browser fixtures' temporary trust and keys were
+removed; no certificate-ignore mode was used.
 
-The later [text-decoding slice](local-owner-authentication-parser-adapter-plan.md#first-slice-result-2026-10-23)
-adds ten passed decoder tests and four detected mutations. It has no listener
-caller and validates no DER, certificate policy or key match. Its current complete
-standalone set has 13 unit and 14 transport tests; it adds no new browser evidence.
-The dependency review also records the separately patched experimental verifier
-advisory; the original graph assessment remains historical.
+The [locked dependency review](../../experiments/AUTH-001/DEPENDENCIES.md) records
+**94 committed registry entries** and their scoped adoption review. Its clean
+85-entry (2026-10-19) and 94-entry (2026-10-23) OSV observations are historical.
+The [advisory JSON](../../experiments/AUTH-001/advisories.json) remains the dated
+2026-10-23 snapshot, with its explicit future-advisory limitation; it is not a
+current clean-graph claim. The newer
+[2026-10-26 finding](#advisory-follow-up) affects Tokio 1.53.1 in both committed
+locks and remains open. The separate
+[98-entry reader candidate](local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
+is metadata-only and has not changed either project manifest or lockfile.
 
-The [locked dependency review](../../experiments/AUTH-001/DEPENDENCIES.md) covers
-85 registry packages, actual selected license texts and retained notices. The
-recorded OSV query returned no findings for those package/version pairs; it is
-not a source/reachability audit or qualification of the existing worker. The
-production worker manifest and lockfile are unchanged. The standalone Linux
-CI check has been added; its actual run must pass before recording Linux evidence.
+[Hosted CI at source 42722c0](https://github.com/MrQuality/kehila/actions/runs/39961255336)
+passed the standalone Linux checks alongside shared verification. This is actual
+recorded CI evidence, not new execution in this documentation revision, and does
+not qualify browser trust, Podman file admission or complete authentication.
 
-This does not complete all A0 gates. Authentication-library adoption, protected
-storage/DPAPI, supported installation, browser cookie/bootstrap behavior and the
-Podman/platform profile remain unqualified. The next step is review of the
-[Proposed installation and protected-storage plan](local-owner-authentication-installation-plan.md),
-including runtime ownership, certificate lifecycle, file replacement and failure
-oracles. Its review refinements require issuer-key ownership, explicit server-key
-storage candidates, measurable expiry/drain criteria, the renewal/restart logout
-consequence and interrupted-run trust reconciliation. These are planning
-requirements, not executed evidence. It authorizes no experiment or dependency adoption. A1 schema/capability
-review and A1-A5 implementation retain their separate gates. Do not infer
-authentication support from a closed transport diagnostic response.
+**Next action:** triage the Tokio advisory and prepare its separately reviewed
+compatible patch under #40; the proposed next-review target is 2026-11-02. The
+[Linux reader-slice proposal](local-owner-authentication-linux-reader-slice.md)
+and candidate dependency research make the subsequent private reader review
+concrete. Runtime adoption, actual Linux/provider tests and heavy executable
+verification still require their own acceptance/evidence and resource permission.
+
+Supported installation, issuer-key/credential storage, renewal, expiry/drain,
+ingress and browser cookie/bootstrap qualification remain open under the
+[installation/lifecycle plan](local-owner-authentication-installation-plan.md).
+The diagnostic interruption rule is invalidation and a fresh rerun, not supported
+authentication suspend handling. A0/T01-T16, A1 schema/capabilities and A1-A5
+implementation retain their gates; a transport response is not authentication.
 
 On 2026-10-20 the maintainer agreed to the plan's
 [bounded PoC TLS inputs](local-owner-authentication-installation-plan.md#agreed-poc-tls-profile):
