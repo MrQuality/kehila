@@ -153,6 +153,11 @@ alias. The full resume gate was unresolved at that review date; the
 [2026-10-24 amendment](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24)
 changes only the disposable diagnostic requirement, not supported authentication.
 
+The [focused reader-slice proposal](local-owner-authentication-linux-reader-slice.md)
+makes the next private implementation boundary and test oracles concrete. It
+retains separate dependency/execution review and does not implement the reader
+or select the Linux-owned-file provisioning alternative.
+
 A future bounded Linux file-admission proof needs reviewed code and actual cases:
 
 | Case | Required oracle |

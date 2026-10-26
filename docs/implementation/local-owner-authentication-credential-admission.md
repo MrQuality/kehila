@@ -220,6 +220,8 @@ Remaining limits and gates:
 
 The next bounded implementation proposal should address Linux file admission
 using the [reviewed API contract](local-owner-authentication-linux-files.md),
+with the [focused reader-slice proposal](local-owner-authentication-linux-reader-slice.md)
+defining ownership, composition, dependency gates and unexecuted test oracles,
 while retaining the applicable lifetime/interruption gates before integrated
 proof, including the [accepted diagnostic invalidation/rerun rule](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24).
 A0/T01-T16, A1-A5,

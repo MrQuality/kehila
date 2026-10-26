@@ -155,8 +155,19 @@ These are future checks, **not passed tests**:
 4. Restore a complete set to a clean instance; check configuration, authoritative
    data and replay identities, reconstruct search, and enforce ADR-105's restore
    security contract above. Verify access remains blocked through restore and
-   re-enrollment, and old credentials/verifiers cannot regain authority. Exercise
-   both retained and lost-ledger browser requests:
+   re-enrollment, and old credentials/verifiers cannot regain authority. For a
+   logical restore, identify whether loading starts with an empty database or a
+   preinstalled schema, and carry forward the
+   [owner-controlled tombstone loading requirement](../architecture/M1-project-create-storage.md).
+   Normal serving INSERT guards reject newly inserted retired operations; do not
+   weaken them for restoration. Validate restored tombstones and their payload
+   invariants, expected trigger definitions/enabled state, ownership/privileges
+   and sequence advancement before serving. SP-002 already checks trigger
+   activation and subsequent sequence allocation and records its load ordering;
+   that [bounded evidence](../spikes/SP-002-postgresql-project-create.md) does not
+   qualify a supported native restore procedure.
+
+   Exercise both retained and lost-ledger browser requests:
 
    - A retained success/tombstone follows D-032/D-033/D-034 under current original
      mutation grants: exact retries replay or return `replay_expired`; changed
@@ -167,6 +178,10 @@ These are future checks, **not passed tests**:
      explicit reconciliation path rather than silently execute as a fresh
      intention. Preserve the draft/request and communicate the rollback-related
      uncertainty; do not silently replace its token or expected version.
+     Include a creation without an existing-item version precondition and an edit
+     whose expected base version still matches the restored state, while the
+     operation committed after the backup point and its success record was lost.
+     Version comparison alone cannot detect those restore-crossing requests.
 
    Review the restore/reconciliation design before implementation and prove its
    fence before supported use. This specifies the safety outcome without choosing
@@ -177,7 +192,12 @@ These are future checks, **not passed tests**:
    available recovery prerequisites. A local synchronized folder or second
    container on the same machine does not establish that failure isolation.
 6. Exercise missing timestamps and clock changes; never turn an uncertain or
-   negative age into a fresh/healthy status.
+   negative age into a fresh/healthy status. Include a backward wall-clock change
+   that leaves the calculated age positive: a 20-hour-old recovery point may
+   appear only 18 hours old after a two-hour rollback. Negative-age detection
+   alone cannot establish clock sanity. The reviewed clock-error policy must
+   handle such uncertainty without falsely asserting freshness; this example
+   selects no persisted high-water timestamp or other detection mechanism.
 7. Measure a declared workload through normal writes, paused delivery, catch-up,
    checkpoint activity, rebuild overlap and backup staging. Include archive
    failure only if archiving is selected. Record peak WAL, disk growth, reserve,
