@@ -389,7 +389,14 @@ completes T01-T16 or a supported installation.
 **Active blockers and next work:**
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
-  including Tokio triage/compatible patch review and the separate rustls deadline.
+  including final-source hosted checks/review of the Tokio 1.53.3 patch and the
+  separate rustls deadline.
+  Diagnose the Windows HTTP connection failures reproduced on both baseline and
+  patched Tokio (Medium/P2 reliability follow-up under #40); preserve bounded,
+  sanitized exchange/driver outcomes before changing teardown. The actual Windows
+  default-harness runs differ from README/CI's serial profile; unchanged passing
+  reruns do not qualify the matching serial Windows result. Include pre-mutex
+  fixture setup as a Low/P3 investigation observation; contention is not established.
 - Review/adopt the [Linux reader slice](../implementation/local-owner-authentication-linux-reader-slice.md)
   and its [candidate dependency research](../implementation/local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
   separately from implementation/execution; qualify descriptor reads, protected
@@ -619,6 +626,12 @@ changed code and inventories current gaps. Qualify boundary checks, Python stati
 tooling and declared Rust compiler support incrementally; use B-022 for TypeScript/
 Go contract work and B-023 for failure-diagnostic retention. Do not require an
 unrelated legacy-code sweep to complete a scoped change.
+
+**Standalone verification follow-up:** [AUTH-001 is omitted from the shared
+staged verifier](../TESTING.md#standalone-a0-verification-boundary). The maintainer/
+#40 owns Medium/P2 entry-point alignment and staged-failure evidence; existing
+root gate results do not verify that standalone experiment.
+
 **Acceptance:** Regression tests reject invalid IDs/links/gaps; final full CI
 evidence is linked; remote protection/required checks and bypass restrictions are
 inspected; maintainer records final PR assessment. Preserve sole-contributor policy.
@@ -645,6 +658,10 @@ source, hosted availability and maintainable fixtures before adding CI jobs.
 **Deliverable:** Direct/transitive/image/tool inventory, license/notices review,
 advisory scanning/update cadence and owned expiring exceptions; read-only scheduled
 Scorecard where practical.
+**Current root TLS triage:** the [package-specific record](../implementation/local-owner-authentication-a0.md#root-tls-advisory-triage-2026-10-26)
+tracks six confirmed RustSec IDs across three root packages under #40. The
+maintainer owns P1 triage, next review 2026-11-02; runtime severity/exposure and
+complete-graph assessment remain open. This is not risk acceptance.
 **Acceptance:** Validate cargo audit/govulncheck (and future JS dependency) coverage,
 pin scanner/tool inputs, distinguish advisory/network failure from clean findings,
 and demonstrate detection/expiry. Qualify GitHub dependency review availability

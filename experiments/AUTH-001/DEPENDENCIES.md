@@ -1,6 +1,8 @@
 # Standalone probe dependency review
 
-Owner: project maintainer. Reviewed 2026-10-19. Scope: the locked AUTH-001 experiment only; no production graph upgrade.
+Owner: project maintainer. Initial review 2026-10-19; Tokio patch review 2026-10-26.
+Scope: the locked AUTH-001 experiment. The matching root-workspace Tokio patch is
+recorded in the canonical A0 disposition below.
 
 ## Purpose and selection
 
@@ -18,13 +20,23 @@ Explicit Unicode-3.0 compatibility/distribution review: unicode-ident combines a
 
 ## Advisory scope
 
-**Current advisory follow-up, 2026-10-26:** the locked Tokio 1.53.1 matches
-[RUSTSEC-2026-0386](https://rustsec.org/advisories/RUSTSEC-2026-0386.html), which
-remains open under [#40](https://github.com/MrQuality/kehila/issues/40). See the
-[canonical A0 triage record](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up)
-for scope, owner and pending disposition. The dated clean queries below and
-`advisories.json` are historical observations, not a current clean-graph claim.
-This note changes no dependency or risk acceptance.
+**Tokio patch, 2026-10-26:** the experiment now pins Tokio 1.53.3, a patched
+release for [RUSTSEC-2026-0386](https://rustsec.org/advisories/RUSTSEC-2026-0386.html).
+The separate root lock is patched in the same focused change. See the
+[canonical A0 disposition](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up)
+for source review, verification and remaining limits. The 2026-10-23 query in
+`advisories.json` remains historical; its new `tokio_patch` record covers only
+Tokio 1.53.3, not a fresh whole-graph scan.
+
+The [1.53.2/1.53.3 release notes](https://github.com/tokio-rs/tokio/blob/tokio-1.53.3/tokio/CHANGELOG.md)
+were reviewed: AsyncFd constructor deprecation/new unsafe registration APIs,
+shutdown and Windows handle lifetime fixes, synchronization/waker fixes, and
+paused-time behavior are relevant compatibility review areas. No project API or
+feature change is required. The downloaded archive SHA-256 matches both locks
+(`ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e`);
+the MIT license text is byte-identical to 1.53.1 after LF normalization, so only
+the notice's version/source attribution changes. Existing monthly and immediate
+security-notice review remains the update policy.
 
 The 2026-10-19 package/version OSV query covered the then-locked 85 registry packages, including platform-specific and test-only entries. The subsequent adoption review below records the current 94-package graph. It is a point-in-time package advisory query, not a complete source/reachability audit or a qualification of the existing worker. The pre-existing worker rustls 0.21.12 follow-up remains under [#40](https://github.com/MrQuality/kehila/issues/40) and the [A0 plan](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up).
 
@@ -102,7 +114,7 @@ The 2026-10-19 package/version OSV query covered the then-locked 85 registry pac
 | [time](https://crates.io/crates/time/0.3.55) | 0.3.55 | Apache-2.0 |
 | [time-core](https://crates.io/crates/time-core/0.1.9) | 0.1.9 | Apache-2.0 |
 | [time-macros](https://crates.io/crates/time-macros/0.2.32) | 0.2.32 | Apache-2.0 |
-| [tokio](https://crates.io/crates/tokio/1.53.1) | 1.53.1 | MIT |
+| [tokio](https://crates.io/crates/tokio/1.53.3) | 1.53.3 | MIT |
 | [tokio-macros](https://crates.io/crates/tokio-macros/2.7.2) | 2.7.2 | MIT |
 | [tokio-rustls](https://crates.io/crates/tokio-rustls/0.26.6) | 0.26.6 | Apache-2.0 |
 | [try-lock](https://crates.io/crates/try-lock/0.2.5) | 0.2.5 | MIT |

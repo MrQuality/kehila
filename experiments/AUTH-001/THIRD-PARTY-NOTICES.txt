@@ -831,7 +831,7 @@ DEALINGS IN THE SOFTWARE.
 
 ========================================================================
 SHA-256 (upstream text, UTF-8 LF): 253cd04c6714889df2d32f3f64d669179a1c95c76ac43c40882c52eb06bc3552
-tokio 1.53.1 / LICENSE (https://docs.rs/crate/tokio/1.53.1/source/LICENSE)
+tokio 1.53.3 / LICENSE (https://docs.rs/crate/tokio/1.53.3/source/LICENSE)
 ------------------------------------------------------------------------
 MIT License
 

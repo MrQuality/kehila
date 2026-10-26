@@ -188,6 +188,10 @@ supported authentication/suspend qualification or integrated-test permission.
 
 ## Dependency research, 2026-10-26
 
+Historical research baseline: the candidate below retains Tokio 1.53.1. The
+subsequent [focused Tokio patch](local-owner-authentication-a0.md#advisory-follow-up)
+updates both project locks to 1.53.3; it does not adopt this reader candidate.
+
 **Recommendation for review:** use exact `rustix = "=1.1.5"`, defaults disabled,
 features `fs` and `std`, as a Linux-target-only dependency of AUTH-001. This is a
 source/metadata recommendation, not a manifest change or permission to implement,

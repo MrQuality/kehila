@@ -30,10 +30,10 @@ experiment and broader A0-A5 gates retain their scope.
 
 ## Preliminary dependency review - no adoption yet
 
-The existing lockfile contains rustls 0.21.12 / tokio-rustls 0.24.1 transitively,
+At the preliminary 2026-10-19 review, the existing lockfile contained rustls 0.21.12 / tokio-rustls 0.24.1 transitively,
 ring 0.17.14, Tokio 1.53.1, Axum 0.8.9 and Hyper 1.11.1. Their presence alone does
 not select them as production security dependencies. The isolated experiment has
-its own manifest/lockfile; the worker graph is unchanged. Production password/NFC/randomness/DPAPI dependencies
+its own manifest/lockfile; that investigation did not change the worker graph. Production password/NFC/randomness/DPAPI dependencies
 remain review work; do not install an auth framework to prove HTTPS.
 
 | Candidate / source checked 2026-10-19 | Initial assessment and adoption condition |
@@ -68,6 +68,28 @@ claim an unavailable complete-graph scan was clean. Review every resolved adviso
 not only this example, and keep the existing worker unchanged unless a separately
 scoped fix is justified. No TLS/key/session material may enter evidence logs.
 
+#### Root TLS advisory triage, 2026-10-26
+
+A targeted OSV package/version query of three entries in the root lock confirmed
+these additional findings. This is not a complete scan of its 228 registry
+entries, a fresh AUTH-001 scan or proof of application exploitability.
+
+| Root locked package | Confirmed advisory / condition to assess | Open disposition work |
+| --- | --- | --- |
+| rustls-webpki 0.101.7 | [0382](https://rustsec.org/advisories/RUSTSEC-2026-0382.html): distrusted intermediate paths; [0098](https://rustsec.org/advisories/RUSTSEC-2026-0098.html) / [0099](https://rustsec.org/advisories/RUSTSEC-2026-0099.html): URI/wildcard name constraints; [0104](https://rustsec.org/advisories/RUSTSEC-2026-0104.html): malformed CRL parsing. | Trace the selected verifier, trust anchors, name constraints and CRL use; assess a compatible driver/library upgrade and retain per-advisory exposure conclusions. The CRL advisory does not affect applications that do not use CRLs. |
+| webpki-roots 0.25.4 | [0381](https://rustsec.org/advisories/RUSTSEC-2026-0381.html): bundled emSign trust anchor can permit distrusted intermediate paths. | Trace built-in versus configured trust roots and select a reviewed compatible replacement/update. Package presence alone does not establish the deployed trust path. |
+| rustls-pemfile 1.0.4 | [2025-0134](https://rustsec.org/advisories/RUSTSEC-2025-0134.html): unmaintained package, with no patched version. | Trace driver PEM-loading use and assess maintained parsing/driver alternatives. This is a maintenance notice, not a demonstrated exploitable vulnerability. |
+
+The maintainer owns all three package dispositions under [#40](https://github.com/MrQuality/kehila/issues/40)
+and [B-021](../product/backlog.md#b-021), with **P1 triage** and next review
+**2026-11-02**. Application vulnerability severity and deployment exposure remain
+unclassified. The Medium assessment-gap rating concerns missing dispositions;
+it does not rate each vulnerability or downgrade upstream findings. No risk
+acceptance, scanner suppression or dependency remediation is introduced here.
+The separate rustls 0.21.12 / 0346 review deadline remains **2026-11-18**.
+
+#### Tokio patch and verification, 2026-10-26
+
 **New finding, 2026-10-26:** the
 [Linux reader dependency research](local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
 queried all 98 registry entries in its metadata-only candidate and matched
@@ -79,13 +101,76 @@ that is not transitive reachability evidence or an accepted risk disposition.
 The [four/ten immediate-consumer inventory](local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
 bounds the initial triage scope. Unix `tokio/net` enables the relevant API; neither
 that availability nor a lockfile edge proves an affected constructor is reached.
-The maintainer/#40 owns priority-P1 triage, with a proposed next-review target of
-**2026-11-02**, and a focused compatible patch proposal (the advisory lists
->=1.53.3 patched on this line),
-with separate review and required verification before adoption. No patch,
-suppression or risk acceptance is introduced here. The rustls 0.21.12 follow-up
-and its 2026-11-18 deadline remain unchanged; the earlier point-in-time clean
-package observations do not supersede this newer finding.
+**Focused patch, 2026-10-26:** both committed locks now select Tokio 1.53.3,
+which the advisory lists as patched. AUTH-001 updates its exact direct pin;
+the root retains its existing major-version requirement and uses the reviewed
+lock. Cargo regenerated both locks without other package, dependency-edge or
+feature changes. This disposition applies to these committed locked graphs,
+not arbitrary downstream resolutions.
+
+Source inspection found no AsyncFd reference in project sources or the `src/`
+trees of the four experiment and ten root immediate consumers listed in the
+research record (including their shared packages). This bounds observed exposure;
+it is not a complete call-graph or runtime proof. The upstream remedy deprecates
+the old safe constructors and adds unsafe registration APIs; it does not make
+arbitrary descriptor ownership safe. No unsafe registration workaround is added.
+The package-version update is the mitigation, rather than a reachability-based
+suppression or claim that the vulnerable constructor contract is repaired for
+existing callers. The new OSV query for Tokio 1.53.3 returned no findings; it
+covers that package/version only, not either complete graph.
+
+**Windows verification, 2026-10-26:** formatting and clippy with warnings denied
+passed. All 37 unit tests passed in each full-suite execution. The initial
+transport run passed
+13/14, with an HTTP connection error in the oversized-body case; the unchanged
+immediate rerun passed 14/14. A bounded three-run full-suite comparison on each
+of baseline 1.53.1 and patched 1.53.3 produced two complete passes and one 12/14
+transport result per version. The oversized-body case failed on both; the other
+failures were renewal on the baseline and origin/Host rejection on the patch.
+Twelve isolated oversized-body runs per version passed.
+
+Those full Windows runs used
+`cargo test --manifest-path experiments/AUTH-001/Cargo.toml --locked`, with the
+default target selection and test harness; the isolated runs selected the
+transport test and exact case. The [documented command](../../experiments/AUTH-001/README.md#run)
+and Linux CI instead use `--all-targets -- --test-threads=1`. No matching serial
+Windows run was performed for this patch. The network cases already hold a
+shared mutex during network ownership; default harness scheduling does not imply
+simultaneous network cases. Callers create their CA before invoking
+[`Running::start`](../../experiments/AUTH-001/tests/transport.rs), which generates
+the leaf and server TLS configuration before `Network::bind()` acquires the
+mutex. Under a concurrent harness that
+fixture work may overlap an active network case. Include this **Low/P3**
+observation in #40's existing investigation; contention has not been measured,
+and it establishes neither a failure cause nor a required code change.
+The observed baseline failures predate this patch,
+but neither the operating system nor the harness difference is a proven cause,
+and an additional regression is not excluded. No assertion or error handling was
+weakened. The client helper's
+generic connection error does not distinguish an unsuccessful HTTP exchange
+from a teardown failure after a collected response; further diagnosis is open
+under #40, **Medium/P2 engineering reliability**, separate from advisory severity.
+Do not describe Windows transport reliability as qualified. Follow-up acceptance
+under #40 is bounded, sanitized stage/error information that preserves both the
+HTTP exchange and connection-driver outcomes. A collected response must not
+silently erase a connection failure, and a generic driver error must not hide
+whether the exchange completed. Investigate their cause before changing teardown
+or relaxing any response/closure assertion.
+
+The [shared-verifier scope gap](../TESTING.md#standalone-a0-verification-boundary)
+is a separate **Medium/P2** follow-up under #40 / B-019. It omits AUTH-001; the
+standalone local and hosted results must remain distinct from the root staged
+gate until the entry points are aligned.
+
+Mandatory full staged verification passed on dependency commit `9bd2d62`:
+292 tooling tests (289 passed, three documented Windows skips), Rust/Go/static
+checks, and owned live-service tests including 48 competing worker pairs,
+stalled-body/database recovery and save/replay/read with search unavailable.
+Hosted Linux evidence must be checked at the patch PR's final source; this local
+result does not replace it. The maintainer/#40 retains final patch review and the
+Windows reliability follow-up, with next review **2026-11-02**. The separate rustls 0.21.12 follow-up and its
+2026-11-18 deadline remain unchanged. No risk acceptance or authentication
+qualification is implied.
 
 ## Remaining authentication dependency candidates
 
@@ -159,20 +244,23 @@ The [locked dependency review](../../experiments/AUTH-001/DEPENDENCIES.md) recor
 The [advisory JSON](../../experiments/AUTH-001/advisories.json) remains the dated
 2026-10-23 snapshot, with its explicit future-advisory limitation; it is not a
 current clean-graph claim. The newer
-[2026-10-26 finding](#advisory-follow-up) affects Tokio 1.53.1 in both committed
-locks and remains open. The separate
+[2026-10-26 finding and patch](#advisory-follow-up) records the affected Tokio
+1.53.1 baseline and its replacement by 1.53.3 in both locks, the passing local
+full gate, and the unresolved Windows transport instability. Final-source hosted
+checks and maintainer patch review remain required. The separate
 [98-entry reader candidate](local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
 is metadata-only and has not changed either project manifest or lockfile.
 
 [Hosted CI at source 42722c0](https://github.com/MrQuality/kehila/actions/runs/39961255336)
 passed the standalone Linux checks alongside shared verification. This is actual
-recorded CI evidence, not new execution in this documentation revision, and does
-not qualify browser trust, Podman file admission or complete authentication.
+historical CI evidence; the newer patch verification is recorded above. Neither
+qualifies browser trust, Podman file admission or complete authentication.
 
-**Next action:** triage the Tokio advisory and prepare its separately reviewed
-compatible patch under #40; the proposed next-review target is 2026-11-02. The
+**Next action:** review the focused Tokio 1.53.3 patch and its exact-source hosted
+checks under #40; retain the Windows reliability investigation and the
+2026-11-02 follow-up. The
 [Linux reader-slice proposal](local-owner-authentication-linux-reader-slice.md)
-and candidate dependency research make the subsequent private reader review
+and candidate dependency research make the subsequent descriptor-based reader review
 concrete. Runtime adoption, actual Linux/provider tests and heavy executable
 verification still require their own acceptance/evidence and resource permission.
 

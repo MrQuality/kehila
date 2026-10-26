@@ -18,7 +18,7 @@ hyper-util = { version = "=0.1.21", default-features = false, features = ["tokio
 pkcs8 = { version = "=0.11.0", default-features = false }
 rustls = { version = "=0.23.46", default-features = false, features = ["std", "ring"] }
 sec1 = { version = "=0.8.0", default-features = false, features = ["der"] }
-tokio = { version = "=1.53.1", default-features = false, features = ["macros", "rt", "net", "sync", "time", "io-util"] }
+tokio = { version = "=1.53.3", default-features = false, features = ["macros", "rt", "net", "sync", "time", "io-util"] }
 tokio-rustls = { version = "=0.26.6", default-features = false, features = ["ring"] }
 x509-cert = { version = "=0.3.0", default-features = false }
 zeroize = { version = "=1.9.1", default-features = false, features = ["alloc"] }
