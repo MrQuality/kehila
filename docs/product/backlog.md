@@ -302,9 +302,8 @@ Durable records and the configurable worker are not implemented here.
 
 **Deliverable:** Versioned storage representation, durable local configuration, the required command/read/update integrations, and basic backup/restore instructions.
 
-The [A0 Linux reader-slice proposal](../implementation/local-owner-authentication-linux-reader-slice.md)
-under #40/#49 W2 specifies the next private descriptor/read boundary, dependency
-review and future qualification cases. It adds no runtime or provider evidence.
+The [B-007 Linux reader proposal](#b-007) retains #40/#49 W2's authentication
+prerequisite before native storage integration.
 
 The [backup freshness and storage-budget proposal](../implementation/m1-backup-freshness-storage-budget.md)
 defines recovery-point age separately from upload/verification completion and
@@ -446,6 +445,9 @@ locked 94-package adoption and bounded profile/key checks. The unconnected stage
 passed 37 unit and 14 transport tests plus ten admission mutation checks.
 Issuer trust, Linux file admission, runnable expiry/drain and integrated container
 qualification remain open. No complete credential or container qualification is claimed.
+The [A0 Linux reader-slice proposal](../implementation/local-owner-authentication-linux-reader-slice.md)
+under #40/#49 W2 specifies the next private descriptor/read boundary, dependency
+review and future qualification cases. It adds no runtime or provider evidence.
 On 2026-10-24 the maintainer accepted [development-test interruption and rerun](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24):
 any observed/suspected host/VM pause invalidates the whole disposable run. This
 replaces the diagnostic automatic-barrier prerequisite, not supported authentication
