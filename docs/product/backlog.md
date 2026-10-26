@@ -348,114 +348,60 @@ design's accepted [bounded-transaction direction](../architecture/ADR-102-postgr
 <a id="b-007"></a>
 ## B-007 — Establish identity and permission boundaries
 
-**Status:** One authenticated local owner accepted; onboarding, session expiry/recovery, browser CSRF, CLI access, and enforcement remain to design and implement. **Dependencies:** B-002, B-003.
+**Status:** One authenticated local owner and local-MVP authority direction
+accepted; application authentication and permission enforcement remain incomplete.
+**Dependencies:** B-002, B-003.
+This is #40/#49 W2's prerequisite before native routes; #41 owns stable target
+allocation. The [current A0 result and next action](../implementation/local-owner-authentication-a0.md#current-result-and-next-action)
+is the canonical progress summary; detailed dated evidence remains in its linked
+SP-004, decoder, admission and platform records.
 
-[SP-004/#40](../spikes/SP-004-actor-authority.md) records the contract approved and
-merged in PR #53 on 2026-10-14, plus a passed serial A05 grant-management subset
-on native PostgreSQL 16.15. The serial R03 extension adds distinct-manager
-attribution/rollback and NULL/authority/missing-grant rejection evidence, with
-native mutation detection and confirmed cleanup. Merged PR #59 adds R04/R05
-history audits and the selected concurrent creation/replay/management fixtures.
-The failed attempts and corrections remain recorded separately. Full A05
-acceptance, remaining read/composite-replay cases and actual authentication,
-session and internal-channel mechanisms remain outstanding. This is experimental
-evidence with explicit fixture/overlay limits, not production access delivery.
-This is the W2 prerequisite for #49; #41 owns subsequent stable target allocation.
+**Accepted constraints:**
 
-The next design review is [owner authentication and trusted caller identity](../spikes/SP-004-actor-authority.md#next-design-slice-owner-authentication-and-trusted-caller-identity).
-Apply D-037's recovery, language and future agent considerations; B-031/#62 agent
-delivery remains post-MVP and does not expand the one-owner implementation scope.
+- [ADR-105](../architecture/ADR-105-local-owner-authentication.md) selects a separate
+  owner password, one local-MVP Rust authority, expiring browser/CLI sessions and
+  actor-preserving recovery, with its declared availability/audit-loss trade-offs.
+  Takeover fences, password admission, CSRF/reload and logout-audit rules remain
+  governed by the ADR and [verification plan](../implementation/local-owner-authentication-verification.md).
+  Singleton/volatile-session mechanics are local-MVP-only; [B-032/#65](#b-032)
+  retains replicated/remote deployment and migration.
+- [ADR-106](../architecture/ADR-106-local-container-transport.md) accepts only the
+  bounded disposable Podman/WSL 2 Linux-backend proof, with Windows MVP clients,
+  direct TLS and disposable mounted-secret risks. The agreed
+  [PoC TLS profile](../implementation/local-owner-authentication-installation-plan.md#agreed-poc-tls-profile)
+  uses a disposable private CA, normal validation and no certificate fees.
+  Observed/suspected diagnostic pause requires whole-run invalidation and a fresh
+  rerun; this does not qualify supported authentication suspend handling.
+- Apply D-037 recovery, language and agent compatibility constraints now; broader
+  recovery, multilingual and agent delivery remain post-MVP. The
+  [platform post-mortem](../postmortems/2026-10-21-platform-assumption.md) preserves
+  why native Windows server-key research does not establish backend direction.
 
-[Accepted ADR-105](../architecture/ADR-105-local-owner-authentication.md) and its
-[verification plan](../implementation/local-owner-authentication-verification.md)
-include the [PR #64 review follow-up](../implementation/local-owner-authentication-verification.md#pr-64-review-follow-up):
-takeover fencing, composite password admission, pre-session saturation and logout
-audit lifecycle, completed-logout capacity reclamation and browser-reload CSRF
-retrieval. The declared availability/audit-loss trade-offs are included in local-MVP acceptance.
-They cover a separate owner password, one future Rust native
-authority, expiring browser/CLI sessions and actor-preserving recovery. That
-authority is a logical service; the singleton and volatile-session mechanisms
-are local-MVP-only. [B-032/#65](#b-032) retains replicated operation, secure remote
-deployment and migration; #40/#49 retain local qualification.
-The maintainer explicitly accepted ADR-105 for local MVP and authorized A0 on
-2026-10-19; [approval record](https://github.com/MrQuality/kehila/issues/40#issuecomment-6262900825).
-The [bounded A0 investigation](../implementation/local-owner-authentication-a0.md)
-records the Windows-only AUTH-001 transport/browser subset and locked dependency
-review. Broader A0 installation/storage/platform qualification remains open.
-The [next installation/storage plan](../implementation/local-owner-authentication-installation-plan.md)
-is Proposed: review runtime ownership, certificate lifecycle and protected-file
-failure evidence before authorizing an experiment or A1 implementation.
-Review refinements cover issuer keys, server-key storage candidates, measurable
-expiry/drain behavior, restart logout and interrupted-run trust inventory. Their
-implementation and actual platform evidence remain open under #40/#49.
-The maintainer agreed on 2026-10-20 to the
-[PoC TLS inputs](../implementation/local-owner-authentication-installation-plan.md#agreed-poc-tls-profile):
-disposable private CA, normal validation, TLS 1.3 and a bounded initial certificate
-profile. Zero certificate fees are a project constraint. The remainder of the
-plan and execution/trust gates retain their existing status; no new evidence.
-Provisional budgets require measurement; schema/capability adoption and A1-A5
-implementation retain separate gates. No authentication case is marked passed.
+**Bounded evidence:** [SP-004](../spikes/SP-004-actor-authority.md) records the
+approved authority contract and selected serial/concurrent grant, replay and
+history fixtures, including their failures/corrections and overlay limits. It
+is not full A05 or production access delivery. The
+[private decoder/profile result](../implementation/local-owner-authentication-credential-admission.md)
+records 37 unit/14 transport tests and detected mutations. Historical browser,
+CI, package/advisory and provider observations remain separately dated; none
+completes T01-T16 or a supported installation.
 
-The 2026-10-21 [platform-assumption post-mortem](../postmortems/2026-10-21-platform-assumption.md)
-corrects the intended backend target to a Linux container. Do not reuse the former
-Windows-host profile or PR #70's server-key recommendation as backend direction.
-Reconcile container TLS/provisioning before adapter selection; #40/#49 remain open.
-The [container design/probe proposal](../implementation/local-owner-authentication-container-plan.md)
-and [Accepted bounded ADR-106](../architecture/ADR-106-local-container-transport.md) specify
-a candidate direct TLS path, disposable mounted-secret generations and unexecuted
-isolation/lifecycle oracles. The [review readiness checklist](../implementation/local-owner-authentication-container-plan.md#review-follow-up-and-executable-readiness)
-originally required pause-inclusive expiry/resume barriers alongside canonical
-network arguments, exact bundle grammar and effective WSL-state evidence. The
-2026-10-24 diagnostic interruption/rerun amendment supersedes that barrier only;
-all applicable runtime cases remain unexecuted.
-The maintainer explicitly accepted ADR-106's listener amendment and disposable-only
-file-secret residual risk on 2026-10-23. Exact executable prerequisites still
-require review; no A0 completion or A1 permission follows.
-On 2026-10-22 the maintainer selected same-host Podman/WSL 2 for the first proof
-(Windows client, Linux-container backend). [Read-only feasibility](../implementation/local-owner-authentication-podman-feasibility.md)
-records installed/stopped-state limits and unresolved resume readiness; no provider
-qualification follows. Explicit bounded acceptance came separately on 2026-10-23;
-production storage remains unselected. The
-[pinned provider-source follow-up](../implementation/local-owner-authentication-podman-feasibility.md#pinned-provider-source-follow-up)
-adds concrete correction/PTP/lifecycle findings; none establishes the full resume
-barrier. Supported suspend behavior remains unqualified; diagnostic execution
-now uses interruption invalidation/rerun rather than claiming that clock samples
-prove a missing ordering contract. Remaining readiness gates still apply.
-The [Linux file-admission API review](../implementation/local-owner-authentication-linux-files.md)
-advances the independent key/file gate: an explicit descriptor/resolution API
-shape is available, while mount/alias, safe adapter, durability and dependency
-qualification remain open. ADR-106 selects mounted secrets for the disposable
-proof only; Linux-owned files remain an investigated alternative, and no runtime
-crate or production storage is adopted. The 2026-10-24 development-proof interruption amendment in ADR-106
-supersedes the automatic diagnostic barrier, without safe-file or supported
-authentication qualification.
-The [strict bundle-parser API review](../implementation/local-owner-authentication-bundle-parser.md)
-adds the independent framing/decoding/profile/key-match gate. General PEM and
-key-loading success do not establish strict admission; dependency selection,
-nested DER behavior and actual rejection tests remain pending.
-The [bounded decoding-adapter result](../implementation/local-owner-authentication-parser-adapter-plan.md#first-slice-result-2026-10-23)
-records implemented private text/base64 decoding, scoped experimental direct
-dependencies, ten passed decoder tests and four detected mutations. The existing
-experimental verifier receives the separately reviewed rustls-webpki advisory
-patch; production dependency disposition remains separate. No listener consumes
-the unvalidated output; complete admission and the container proof retain their gates.
-The [credential-admission comparison and private implementation result](../implementation/local-owner-authentication-credential-admission.md)
-records the separately accepted key-metadata and explicit BC/EKU restrictions,
-locked 94-package adoption and bounded profile/key checks. The unconnected stage
-passed 37 unit and 14 transport tests plus ten admission mutation checks.
-Issuer trust, Linux file admission, runnable expiry/drain and integrated container
-qualification remain open. No complete credential or container qualification is claimed.
-The [A0 Linux reader-slice proposal](../implementation/local-owner-authentication-linux-reader-slice.md)
-under #40/#49 W2 specifies the next private descriptor/read boundary, dependency
-review and future qualification cases. It adds no runtime or provider evidence.
-The [candidate dependency research](../implementation/local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
-records graph, grants/source exception and review insights; its new existing-Tokio
-advisory is tracked in the [A0 follow-up](../implementation/local-owner-authentication-a0.md#advisory-follow-up).
-No dependency is adopted or security finding waived by that research.
-On 2026-10-24 the maintainer accepted [development-test interruption and rerun](../architecture/ADR-106-local-container-transport.md#development-proof-interruption-amendment-2026-10-24):
-any observed/suspected host/VM pause invalidates the whole disposable run. This
-replaces the diagnostic automatic-barrier prerequisite, not supported authentication
-expiry/revocation or suspend qualification.
+**Active blockers and next work:**
+
+- Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
+  including Tokio triage/compatible patch review and the separate rustls deadline.
+- Review/adopt the [Linux reader slice](../implementation/local-owner-authentication-linux-reader-slice.md)
+  and its [candidate dependency research](../implementation/local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
+  separately from implementation/execution; qualify descriptor reads, protected
+  topology, owner/mount mapping and writable-alias exclusion.
+- Complete issuer trust, credential storage/provisioning, renewal, expiry/drain,
+  ingress and integrated Windows-client/Linux-backend evidence under the
+  [container](../implementation/local-owner-authentication-container-plan.md) and
+  [installation/lifecycle](../implementation/local-owner-authentication-installation-plan.md)
+  plans. Production storage remains unselected; budgets require measurement.
+- Keep full A05, remaining authorized reads/composite replay, schema/capability
+  review and separately bounded A1-A5 implementation gated. No authentication
+  support, automatic trust installation or heavy-execution permission is implied.
 
 **Traceability:** [R-006](requirements.md#r-006), [R-021](requirements.md#r-021). **Questions:** [Q-002](open-questions.md#q-002), [Q-014](open-questions.md#q-014).
 
