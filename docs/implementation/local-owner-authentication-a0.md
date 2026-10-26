@@ -76,6 +76,9 @@ existing Tokio 1.53.1 in both committed locks. The advisory concerns AsyncFd
 constructor I/O unsoundness with potential memory corruption and provides no
 CVSS/severity rating. Direct `src/`/AUTH-001 searches found no AsyncFd caller;
 that is not transitive reachability evidence or an accepted risk disposition.
+The [four/ten immediate-consumer inventory](local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
+bounds the initial triage scope. Unix `tokio/net` enables the relevant API; neither
+that availability nor a lockfile edge proves an affected constructor is reached.
 The maintainer/#40 owns priority-P1 triage, with a proposed next-review target of
 **2026-11-02**, and a focused compatible patch proposal (the advisory lists
 >=1.53.3 patched on this line),

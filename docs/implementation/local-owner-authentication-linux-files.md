@@ -283,6 +283,23 @@ owned regular-file reader with AsyncFd registration. The
 ownership contract and is not an incidental workaround under application
 `unsafe_code = "forbid"`. The pre-existing rustls follow-up remains separate.
 
+Bounded triage scope at the research baseline: the experiment enables Tokio's
+`net` feature. In Tokio 1.53.1's ordinary Unix configuration, that makes the
+AsyncFd API available; API availability is not evidence of calling an affected
+constructor. Immediate reverse dependency edges in the committed lockfiles are:
+
+- **AUTH-001 (4):** kehila_local_tls_probe 0.1.0, hyper 1.11.1, hyper-util 0.1.21
+  and tokio-rustls 0.26.6.
+- **Root workspace (10):** task_worker 0.1.0, axum 0.8.9, hyper 1.11.1,
+  hyper-util 0.1.21, mongodb 2.8.2, tokio-rustls 0.24.1, tokio-util 0.7.19,
+  tower 0.5.3, trust-dns-proto 0.21.2 and trust-dns-resolver 0.21.2.
+
+These counts include the local packages and describe lockfile adjacency, not an
+executed or target-filtered transitive call graph. Use them to scope #40's source/
+feature review and separately verified patch. Constructor invocation, descriptor
+ownership/lifetime and exposure still require assessment; P1 remains triage
+priority, with upstream severity unrated and project severity pending triage.
+
 The four upstream repositories were not archived/disabled. Latest inspected
 default-branch commits were rustix 2026-10-15, bitflags 2026-10-17,
 linux-raw-sys 2026-03-30 and errno 2026-08-06. These are bounded maintenance
