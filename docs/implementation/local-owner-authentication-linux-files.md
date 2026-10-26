@@ -226,12 +226,16 @@ source together, not every metadata node as proof of compiled reachability.
 Do not enable `all-apis`, `time`, `thread`, `net` or experimental/runtime features
 for the reader without another feature, license and reachability review.
 
-| New registry package | Declared Rust floor | Archive SHA-256 |
+| New to the AUTH-001 candidate lock | Declared Rust floor | Archive SHA-256 |
 | --- | --- | --- |
 | rustix 1.1.5 | 1.65 | `891efababe418670775f199f0d233d84843c227a0949a883ce15b37c78d6629d` |
 | bitflags 2.13.2 | 1.56.0 | `3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06` |
 | linux-raw-sys 0.12.1 | 1.63 | `32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53` |
 | errno 0.3.14 | 1.56 | `39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb` |
+
+These additions are relative to AUTH-001's committed 94-entry inventory, not the
+whole repository. The root lock already contains bitflags 2.13.2 and errno 0.3.14
+at the same versions and checksums.
 
 All four archive hashes matched their registry records. The inspected candidate
 metadata declares no package floor above AUTH-001's Rust 1.88, but some packages
