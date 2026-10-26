@@ -9,5 +9,16 @@
     "affected_locked_version": "rustls-webpki 0.103.15",
     "patched_locked_version": "rustls-webpki 0.103.16",
     "source": "https://rustsec.org/advisories/RUSTSEC-2026-0382.html"
+  },
+  "tokio_patch": {
+    "checked_on": "2026-10-26",
+    "source": "https://api.osv.dev/v1/query",
+    "query_scope": "tokio 1.53.3 only; not a refreshed whole-graph query",
+    "findings": [],
+    "advisory": "RUSTSEC-2026-0386",
+    "affected_locked_version": "1.53.1",
+    "patched_locked_version": "1.53.3",
+    "advisory_source": "https://rustsec.org/advisories/RUSTSEC-2026-0386.html",
+    "limitations": "Package/version observation only; deprecated constructors still require descriptor-lifetime correctness. Runtime verification is recorded in the A0 plan."
   }
 }

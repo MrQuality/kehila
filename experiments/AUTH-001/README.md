@@ -104,12 +104,13 @@ Chrome assertion incorrectly required a rendered error page; Chrome emitted the
 specific certificate error on stderr. These harness corrections do not bypass
 certificate verification or reinterpret a generic network failure as success.
 
-The [dependency review](DEPENDENCIES.md), [notices](THIRD-PARTY-NOTICES.txt) and
-[point-in-time advisory query](advisories.json) apply only to this locked graph.
-**Current advisory follow-up, 2026-10-26:** Tokio 1.53.1 has the open
-[RUSTSEC-2026-0386 finding](DEPENDENCIES.md#advisory-scope). Follow the
-[canonical A0 triage record](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up)
-for its pending disposition; the dated query remains historical evidence.
+The [dependency review](DEPENDENCIES.md) and [notices](THIRD-PARTY-NOTICES.txt)
+cover this experiment. The [dated advisory observations](advisories.json) apply
+only to the versions and query scopes they record.
+**Tokio patch, 2026-10-26:** Tokio 1.53.3 replaces the affected 1.53.1 pin for
+[RUSTSEC-2026-0386](DEPENDENCIES.md#advisory-scope). Follow the
+[canonical A0 disposition](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up)
+for verification and limits; the older whole-graph query remains historical evidence.
 Linux CI runs the standalone formatter, linter and transport suite separately from
 the existing shared verifier. A configured CI check is not a recorded Linux pass;
 inspect its result before claiming qualification. No browser, trust installation,
