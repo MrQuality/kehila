@@ -287,10 +287,15 @@ owned regular-file reader with AsyncFd registration. The
 ownership contract and is not an incidental workaround under application
 `unsafe_code = "forbid"`. The pre-existing rustls follow-up remains separate.
 
-Bounded triage scope at the research baseline: the experiment enables Tokio's
+Bounded triage scope at the research baseline: both the experiment and
+[`task_worker`](../../src/io/task_worker/Cargo.toml) explicitly enable Tokio's
 `net` feature. In Tokio 1.53.1's ordinary Unix configuration, that makes the
 AsyncFd API available; API availability is not evidence of calling an affected
-constructor. Immediate reverse dependency edges in the committed lockfiles are:
+constructor. Source-audit searches must use the exact affected symbols:
+`tokio::io::unix::AsyncFd::new`, `AsyncFd::try_new`, `AsyncFd::with_interest` and
+`AsyncFd::try_with_interest` (including imported/aliased call sites). These are
+audit inputs, not a claim that literal-name searches establish reachability.
+Immediate reverse dependency edges in the committed lockfiles are:
 
 - **AUTH-001 (4):** kehila_local_tls_probe 0.1.0, hyper 1.11.1, hyper-util 0.1.21
   and tokio-rustls 0.26.6.
