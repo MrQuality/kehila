@@ -112,6 +112,15 @@ All cases below are **unexecuted**; they define the next implementation's checks
 Targeted mutations should remove a resolution restriction, weaken exact mode
 checking, bypass the overflow byte and substitute a reopened path. Each needs
 an independent behavior oracle, followed by a restored-source passing rerun.
+Select mutations that actually permit a previously forbidden behavior. Linux
+[documents that NO_SYMLINKS implies NO_MAGICLINKS](https://man7.org/linux/man-pages/man2/openat2.2.html);
+removing only NO_MAGICLINKS while retaining NO_SYMLINKS need not change behavior
+and does not by itself establish a missing test. For example, remove all-component
+symlink protection while retaining final-component NOFOLLOW, then require a
+fixture with an ordinary parent symlink whose target stays beneath the trusted
+root. The unchanged rejection assertion must detect that the mutant admits it.
+Record the expected behavior and assertion for each mutation; these remain
+unexecuted test plans.
 
 ## Execution boundary and remaining decisions
 
