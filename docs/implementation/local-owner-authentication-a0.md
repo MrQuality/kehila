@@ -120,19 +120,40 @@ existing callers. The new OSV query for Tokio 1.53.3 returned no findings; it
 covers that package/version only, not either complete graph.
 
 **Windows verification, 2026-10-26:** formatting and clippy with warnings denied
-passed. All 37 unit tests passed in every run. The initial transport run passed
+passed. All 37 unit tests passed in each full-suite execution. The initial
+transport run passed
 13/14, with an HTTP connection error in the oversized-body case; the unchanged
 immediate rerun passed 14/14. A bounded three-run full-suite comparison on each
 of baseline 1.53.1 and patched 1.53.3 produced two complete passes and one 12/14
 transport result per version. The oversized-body case failed on both; the other
 failures were renewal on the baseline and origin/Host rejection on the patch.
-Twelve isolated oversized-body runs per version passed. These results establish
-pre-existing Windows instability, not a proven common cause or absence of any
-regression. No assertion or error handling was weakened. The client helper's
+Twelve isolated oversized-body runs per version passed.
+
+Those full Windows runs used
+`cargo test --manifest-path experiments/AUTH-001/Cargo.toml --locked`, with the
+default target selection and test harness; the isolated runs selected the
+transport test and exact case. The [documented command](../../experiments/AUTH-001/README.md#run)
+and Linux CI instead use `--all-targets -- --test-threads=1`. No matching serial
+Windows run was performed for this patch. The network cases already hold a
+shared mutex during network ownership; default harness scheduling does not imply
+simultaneous network cases. The observed baseline failures predate this patch,
+but neither the operating system nor the harness difference is a proven cause,
+and an additional regression is not excluded. No assertion or error handling was
+weakened. The client helper's
 generic connection error does not distinguish an unsuccessful HTTP exchange
 from a teardown failure after a collected response; further diagnosis is open
 under #40, **Medium/P2 engineering reliability**, separate from advisory severity.
-Do not describe Windows transport reliability as qualified.
+Do not describe Windows transport reliability as qualified. Follow-up acceptance
+under #40 is bounded, sanitized stage/error information that preserves both the
+HTTP exchange and connection-driver outcomes. A collected response must not
+silently erase a connection failure, and a generic driver error must not hide
+whether the exchange completed. Investigate their cause before changing teardown
+or relaxing any response/closure assertion.
+
+The [shared-verifier scope gap](../TESTING.md#standalone-a0-verification-boundary)
+is a separate **Medium/P2** follow-up under #40 / B-019. It omits AUTH-001; the
+standalone local and hosted results must remain distinct from the root staged
+gate until the entry points are aligned.
 
 Mandatory full staged verification passed on dependency commit `9bd2d62`:
 292 tooling tests (289 passed, three documented Windows skips), Rust/Go/static

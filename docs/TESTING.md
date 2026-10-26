@@ -42,6 +42,27 @@ python scripts/setup_env.py --hooks-only
 python scripts/verify.py
 ```
 
+### Standalone A0 verification boundary
+
+AUTH-001 is a separate Cargo workspace. `scripts/verify.py` and the staged
+pre-commit verifier currently run the root workspace and do not invoke the
+experiment's manifest. CI runs its formatting, clippy and tests in a separate
+step. A successful shared staged gate therefore does not establish AUTH-001
+verification; retain the separately executed, source-bound results.
+
+The [documented standalone command](../experiments/AUTH-001/README.md#run) and
+CI use `--all-targets -- --test-threads=1`. Record actual target/harness selection
+when comparing results; a pass under one profile does not qualify another.
+The [2026-10-26 patch record](implementation/local-owner-authentication-a0.md#advisory-follow-up)
+distinguishes default-harness Windows runs from serial Linux CI and leaves
+matching serial Windows verification unqualified.
+
+The maintainer/#40 owns a **Medium/P2** follow-up under B-019: use one standalone
+check from the staged local and CI paths. Acceptance requires evidence that a
+failing staged AUTH-001 case fails the local check, both paths run its manifest,
+and external build outputs, bounded execution and cleanup remain preserved.
+This records the gap; no verifier or test behavior is changed here.
+
 ### Owned test services
 
 Full verification first runs tooling/static checks, precompiles the complete
