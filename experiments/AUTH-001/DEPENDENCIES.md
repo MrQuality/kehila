@@ -18,6 +18,14 @@ Explicit Unicode-3.0 compatibility/distribution review: unicode-ident combines a
 
 ## Advisory scope
 
+**Current advisory follow-up, 2026-10-26:** the locked Tokio 1.53.1 matches
+[RUSTSEC-2026-0386](https://rustsec.org/advisories/RUSTSEC-2026-0386.html), which
+remains open under [#40](https://github.com/MrQuality/kehila/issues/40). See the
+[canonical A0 triage record](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up)
+for scope, owner and pending disposition. The dated clean queries below and
+`advisories.json` are historical observations, not a current clean-graph claim.
+This note changes no dependency or risk acceptance.
+
 The 2026-10-19 package/version OSV query covered the then-locked 85 registry packages, including platform-specific and test-only entries. The subsequent adoption review below records the current 94-package graph. It is a point-in-time package advisory query, not a complete source/reachability audit or a qualification of the existing worker. The pre-existing worker rustls 0.21.12 follow-up remains under [#40](https://github.com/MrQuality/kehila/issues/40) and the [A0 plan](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up).
 
 ## Locked registry inventory
