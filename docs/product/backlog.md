@@ -395,7 +395,8 @@ completes T01-T16 or a supported installation.
   patched Tokio (Medium/P2 reliability follow-up under #40); preserve bounded,
   sanitized exchange/driver outcomes before changing teardown. The actual Windows
   default-harness runs differ from README/CI's serial profile; unchanged passing
-  reruns do not qualify the matching serial Windows result.
+  reruns do not qualify the matching serial Windows result. Include pre-mutex
+  fixture setup as a Low/P3 investigation observation; contention is not established.
 - Review/adopt the [Linux reader slice](../implementation/local-owner-authentication-linux-reader-slice.md)
   and its [candidate dependency research](../implementation/local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
   separately from implementation/execution; qualify descriptor reads, protected

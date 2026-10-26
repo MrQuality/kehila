@@ -136,7 +136,14 @@ transport test and exact case. The [documented command](../../experiments/AUTH-0
 and Linux CI instead use `--all-targets -- --test-threads=1`. No matching serial
 Windows run was performed for this patch. The network cases already hold a
 shared mutex during network ownership; default harness scheduling does not imply
-simultaneous network cases. The observed baseline failures predate this patch,
+simultaneous network cases. Callers create their CA before invoking
+[`Running::start`](../../experiments/AUTH-001/tests/transport.rs), which generates
+the leaf and server TLS configuration before `Network::bind()` acquires the
+mutex. Under a concurrent harness that
+fixture work may overlap an active network case. Include this **Low/P3**
+observation in #40's existing investigation; contention has not been measured,
+and it establishes neither a failure cause nor a required code change.
+The observed baseline failures predate this patch,
 but neither the operating system nor the harness difference is a proven cause,
 and an additional regression is not excluded. No assertion or error handling was
 weakened. The client helper's
