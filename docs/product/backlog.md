@@ -397,15 +397,17 @@ completes T01-T16 or a supported installation.
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the
   separate rustls deadline.
-  Diagnose the Windows HTTP connection failures reproduced on both baseline and
-  patched Tokio (Medium/P2 reliability follow-up under #40); preserve bounded,
-  sanitized exchange/driver outcomes before changing teardown. The actual Windows
-  default-harness runs differ from README/CI's serial profile; unchanged passing
-  reruns do not qualify the matching serial Windows result. Include pre-mutex
-  fixture setup as a Low/P3 investigation observation; contention is not established.
-  This follow-up requires an evidence-backed disposition before A3 Windows
-  browser/CLI authentication qualification; it does not block independent reader
-  or schema design. See the [delivery review follow-up](https://github.com/MrQuality/kehila/pull/87#issuecomment-6433529952).
+  The Medium/P2 Windows component reliability follow-up under #40 now has a
+  [classified post-response shutdown failure and bounded remedy](../implementation/local-owner-authentication-a0.md#controlled-windows-shutdown-investigation-2026-10-27),
+  supported by a failing original regression, a controlled comparison and
+  Windows/Linux tests. Retain earlier failures and their actual harness profiles;
+  their old generic errors cannot all be attributed to this class. Pre-mutex
+  fixture overlap remains a Low/P3 observation, not established contention.
+  Final-source checks/review and the scoped disposition belong to
+  [PR #87](https://github.com/MrQuality/kehila/pull/87).
+  A3 still requires actual Windows-client/Linux-container path qualification;
+  host-only fixtures and passing reruns cannot supply it. Independent reader or
+  schema design does not depend on that qualification.
 - Review/adopt the [Linux reader slice](../implementation/local-owner-authentication-linux-reader-slice.md)
   and its [candidate dependency research](../implementation/local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
   separately from implementation/execution; qualify descriptor reads, protected

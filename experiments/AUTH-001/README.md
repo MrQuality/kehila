@@ -126,10 +126,18 @@ record actual test/mutation results, corrected fixture failures and unqualified
 oracles; this unconnected reader does not qualify Podman mounts, a listener or login.
 
 The client preserves both exchange and connection-driver outcomes in bounded
-diagnostics without response content or raw error chains. Historical Windows
-failures remain unexplained; see the
-[bounded diagnostic observations](../../docs/implementation/local-owner-authentication-a0.md#windows-diagnostic-follow-up-2026-10-27).
-Passing reruns do not establish a repair.
+diagnostics without response content or raw error chains. Earlier generic failures
+cannot all be attributed to one cause. The
+[initial diagnostic observations](../../docs/implementation/local-owner-authentication-a0.md#windows-diagnostic-follow-up-2026-10-27)
+are historical; passing reruns alone did not establish a repair.
+
+The [controlled Windows shutdown investigation](../../docs/implementation/local-owner-authentication-a0.md#controlled-windows-shutdown-investigation-2026-10-27)
+records a reproduced post-response shutdown failure and a bounded close-lifetime
+remedy. After sending TLS closure, the server waits for peer closure under the
+same total deadline and connection slot. Silent peers time out; extra application
+data or missing TLS closure fails. Stage counters and test diagnostics contain no
+message content or raw error chains. Historical browser results do not qualify
+this changed close path; remaining verification gates are recorded explicitly.
 
 ## Coding-standard scope and remaining gates
 
