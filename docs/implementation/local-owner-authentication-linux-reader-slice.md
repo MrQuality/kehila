@@ -1,9 +1,12 @@
 # A0: proposed Linux credential-reader implementation slice
 
-Status: **Proposed for maintainer review**, 2026-10-25. Related #40/#49 W2.
+Status: design proposed 2026-10-25; private implementation and partial Linux
+observations recorded below on 2026-10-27. Related #40/#49 W2.
 This makes the next step in the [credential-admission handoff](local-owner-authentication-credential-admission.md)
 concrete using the [Linux file API review](local-owner-authentication-linux-files.md).
-No code, dependency, production storage or execution permission is adopted here.
+The original proposal did not grant implementation or execution permission.
+The [owner-login delivery](local-owner-authentication-delivery.md) now owns the
+independent reader increment; provider and authenticated integration remain gated.
 
 ## Outcome and scope
 
@@ -103,7 +106,8 @@ These source contracts are not observations of the actual provider/kernel policy
 
 ## Required oracles before reader qualification
 
-All cases below are **unexecuted**; they define the next implementation's checks.
+These are the complete required oracles, not a completion checklist. The dated
+observations below cover only part of them; unobserved cases remain unqualified.
 
 | Case | Required result |
 | --- | --- |
@@ -125,7 +129,44 @@ symlink protection while retaining final-component NOFOLLOW, then require a
 fixture with an ordinary parent symlink whose target stays beneath the trusted
 root. The unchanged rejection assertion must detect that the mutant admits it.
 Record the expected behavior and assertion for each mutation; these remain
-unexecuted test plans.
+test plans until each has its own recorded result.
+
+## Partial implementation observations, 2026-10-27
+
+The private Linux-only implementation selects
+[rustix 1.1.6 and its reviewed graph](../../experiments/AUTH-001/DEPENDENCIES.md#linux-reader-dependency-selection-2026-10-27),
+superseding the research-only 1.1.5 candidate above. It borrows the established
+root, owns one opened descriptor, checks the exact object/UID/GID/mode, and reads
+at most 65,537 bytes before the unchanged decoder/profile checks. No serving
+caller, root acquisition, issuer trust or clock acquisition is introduced.
+
+Actual x86_64 Linux tests on WSL 2 kernel 6.18.54.1, Rust/Cargo 1.95.0, passed
+49 unit tests (including ten reader and two diagnostic helper tests) and 14 real
+transport tests using `--all-targets -- --test-threads=1`. This is a synthetic
+Linux-filesystem observation, not selected-provider mounted-secret qualification.
+The first executable attempt found disabled rcgen PEM APIs in the composition
+fixture; a correction then found a disabled allocating Base64 API. Separate source
+review also caught overlong Base64 fixture lines before the passing run. The final
+fixture uses the existing non-allocating codec API with canonical line wrapping;
+no dependency feature expansion or decoder weakening was needed.
+
+In an isolated source copy, removing all-component symlink restrictions admitted
+the parent-symlink fixture; weakening exact mode admission admitted a forbidden
+mode; weakening overflow admission accepted the extra byte; and removing
+`NONBLOCK` stranded the FIFO child until its owned five-second deadline. Each
+intended test failed and passed again after restoring the source. A separate
+diagnostic mutation that ignored a failed driver also failed its intended test
+and passed after restoration. These five observations do not constitute a
+mutation score or completion of the remaining planned oracles.
+
+The path-replacement test establishes an opened descriptor's behavior through
+the open/read helpers. It does not inject replacement during `read_bundle` and
+does not qualify the planned reopen-by-path mutation. Deterministic unsupported,
+denied, stat/allocation failures and descriptor cleanup across every failure
+category remain unqualified. These limits do not imply an observed defect in
+the current same-descriptor implementation. Minimum Rust-version, provider
+identity/mount mapping, trusted-root acquisition, writable-alias exclusion,
+integrated lifecycle and authentication remain open.
 
 ## Execution boundary and remaining decisions
 

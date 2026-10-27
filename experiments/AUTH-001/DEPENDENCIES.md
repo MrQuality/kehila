@@ -1,6 +1,6 @@
 # Standalone probe dependency review
 
-Owner: project maintainer. Initial review 2026-10-19; Tokio patch review 2026-10-26.
+Owner: project maintainer. Initial review 2026-10-19; Tokio patch review 2026-10-26; Linux reader dependency review 2026-10-27.
 Scope: the locked AUTH-001 experiment. The matching root-workspace Tokio patch is
 recorded in the canonical A0 disposition below.
 
@@ -8,7 +8,7 @@ recorded in the canonical A0 disposition below.
 
 TLS: rustls 0.23.46 with the explicit ring provider; Tokio/Tokio-rustls own asynchronous sockets and deadlines; Hyper/Hyper-util and http-body-util provide bounded HTTP/1 handling. Bytes is the body representation. Test-only rcgen/time generate disposable certificates, including renewal and invalid-certificate fixtures. All direct versions are exact; Cargo.lock fixes the complete registry graph.
 
-These are maintained upstream Rust TLS/runtime/HTTP projects with published source and release histories. Pinning does not establish security: review monthly and immediately after upstream security notices under [DEP-001](../../docs/engineering/DEPENDENCIES.md). The maintainer owns requalification. The minimum declared package requirement reaches Rust 1.88; execution here used 1.93.0, not a qualified full-graph minimum-version build.
+These are maintained upstream Rust TLS/runtime/HTTP projects with published source and release histories. Pinning does not establish security: review monthly and immediately after upstream security notices under [DEP-001](../../docs/engineering/DEPENDENCIES.md). The maintainer owns requalification. The minimum declared package requirement reaches Rust 1.88; initial execution used 1.93.0 and the dated Linux reader tests used 1.95.0, not a qualified full-graph minimum-version build.
 
 ## License selection and distribution
 
@@ -38,7 +38,44 @@ the MIT license text is byte-identical to 1.53.1 after LF normalization, so only
 the notice's version/source attribution changes. Existing monthly and immediate
 security-notice review remains the update policy.
 
-The 2026-10-19 package/version OSV query covered the then-locked 85 registry packages, including platform-specific and test-only entries. The subsequent adoption review below records the current 94-package graph. It is a point-in-time package advisory query, not a complete source/reachability audit or a qualification of the existing worker. The pre-existing worker rustls 0.21.12 follow-up remains under [#40](https://github.com/MrQuality/kehila/issues/40) and the [A0 plan](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up).
+The 2026-10-19 package/version OSV query covered the then-locked 85 registry packages, including platform-specific and test-only entries. The subsequent profile adoption review recorded the then-94-package graph; the Linux reader update below brings the selected inventory to 98. It is a point-in-time package advisory query, not a complete source/reachability audit or a qualification of the existing worker. The pre-existing worker rustls 0.21.12 follow-up remains under [#40](https://github.com/MrQuality/kehila/issues/40) and the [A0 plan](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up).
+
+## Linux reader dependency selection, 2026-10-27
+
+The private reader selects exact **rustix 1.1.6**, defaults disabled, Linux-only
+`fs`/`std` (`alloc` is transitively enabled). It supplies safe owned-descriptor
+`openat2`, `fstat` and bounded `read` APIs without application unsafe code. The
+root workspace is unchanged. Cargo adds rustix, bitflags 2.13.2, linux-raw-sys
+0.12.1 and errno 0.3.14: **94 to 98 registry entries**. Linux metadata includes
+rustix `alloc/fs/std`; Windows metadata has no rustix node. Lock inventory is not
+target execution evidence, and declared package Rust floors (rustix 1.65,
+bitflags/errno 1.56, linux-raw-sys 1.63) do not qualify a minimum-version build.
+
+The [upstream 1.1.5-to-1.1.6 comparison](https://github.com/bytecodealliance/rustix/compare/v1.1.5...v1.1.6)
+and actual published source were reviewed, including filesystem/backend fixes;
+the new adoption uses 1.1.6 rather than freezing the earlier 1.1.5 research
+candidate. Its packaged source identity is `4a563ad698b2c20ff848515821023d2265a788d0`.
+The APIs used by this reader retain their reviewed signatures. No general
+source/reachability audit or observed runtime performance follows from that review.
+
+Apache-2.0 is selected from each addition's actual packaged alternatives; the
+identical grant text (SHA-256 `a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2`)
+is retained once with all four source attributions in the notices. Archive SHA-256
+values were checked against Cargo's lock checksums. The rustix vDSO parser retains
+its [Linux-derived CC0 provenance](https://github.com/bytecodealliance/rustix/blob/4a563ad698b2c20ff848515821023d2265a788d0/src/backend/linux_raw/vdso.rs).
+Its [module cfg](https://github.com/bytecodealliance/rustix/blob/4a563ad698b2c20ff848515821023d2265a788d0/src/backend/linux_raw/mod.rs)
+excludes it for the reviewed x86_64 Linux `fs/std` selection. This is not a claim
+that all packaged source is exclusively Apache-2.0. Broader features/architectures
+or source redistribution require renewed distribution review and the provenance/
+CC0 notice coverage described in the [research record](../../docs/implementation/local-owner-authentication-linux-files.md#dependency-research-2026-10-26).
+
+The [new package/version observation](advisories-reader.json) queried all 98
+selected registry entries on 2026-10-27 and returned no findings. It binds the
+exact LF-normalized lock hash; it is not a root graph scan, platform/provider
+qualification or guarantee against future advisories. Older `advisories.json`
+records remain historical. Review monthly and immediately after security notices.
+Compilation, actual Linux descriptor tests and minimum-version qualification
+remain distinct evidence gates; none is claimed by these metadata results.
 
 ## Locked registry inventory
 
@@ -51,6 +88,7 @@ The 2026-10-19 package/version OSV query covered the then-locked 85 registry pac
 | [autocfg](https://crates.io/crates/autocfg/1.5.1) | 1.5.1 | Apache-2.0 |
 | [base64ct](https://crates.io/crates/base64ct/1.8.3) | 1.8.3 | Apache-2.0 |
 | [bit-vec](https://crates.io/crates/bit-vec/0.9.1) | 0.9.1 | Apache-2.0 |
+| [bitflags](https://crates.io/crates/bitflags/2.13.2) | 2.13.2 | Apache-2.0 |
 | [bytes](https://crates.io/crates/bytes/1.11.1) | 1.11.1 | MIT |
 | [cc](https://crates.io/crates/cc/1.9.0) | 1.9.0 | Apache-2.0 |
 | [cfg-if](https://crates.io/crates/cfg-if/1.0.5) | 1.0.5 | Apache-2.0 |
@@ -61,6 +99,7 @@ The 2026-10-19 package/version OSV query covered the then-locked 85 registry pac
 | [der_derive](https://crates.io/crates/der_derive/0.8.0) | 0.8.0 | Apache-2.0 |
 | [deranged](https://crates.io/crates/deranged/0.5.9) | 0.5.9 | Apache-2.0 |
 | [displaydoc](https://crates.io/crates/displaydoc/0.2.7) | 0.2.7 | Apache-2.0 |
+| [errno](https://crates.io/crates/errno/0.3.14) | 0.3.14 | Apache-2.0 |
 | [find-msvc-tools](https://crates.io/crates/find-msvc-tools/0.1.15) | 0.1.15 | Apache-2.0 |
 | [flagset](https://crates.io/crates/flagset/0.4.7) | 0.4.7 | Apache-2.0 |
 | [futures-channel](https://crates.io/crates/futures-channel/0.3.34) | 0.3.34 | Apache-2.0 |
@@ -76,6 +115,7 @@ The 2026-10-19 package/version OSV query covered the then-locked 85 registry pac
 | [itoa](https://crates.io/crates/itoa/1.0.18) | 1.0.18 | Apache-2.0 |
 | [lazy_static](https://crates.io/crates/lazy_static/1.5.1) | 1.5.1 | Apache-2.0 |
 | [libc](https://crates.io/crates/libc/0.2.191) | 0.2.191 | Apache-2.0 |
+| [linux-raw-sys](https://crates.io/crates/linux-raw-sys/0.12.1) | 0.12.1 | Apache-2.0 |
 | [memchr](https://crates.io/crates/memchr/2.8.3) | 2.8.3 | MIT |
 | [minimal-lexical](https://crates.io/crates/minimal-lexical/0.2.1) | 0.2.1 | Apache-2.0 |
 | [mio](https://crates.io/crates/mio/1.2.4) | 1.2.4 | MIT |
@@ -94,6 +134,7 @@ The 2026-10-19 package/version OSV query covered the then-locked 85 registry pac
 | [rcgen](https://crates.io/crates/rcgen/0.14.10) | 0.14.10 | Apache-2.0 |
 | [ring](https://crates.io/crates/ring/0.17.14) | 0.17.14 | Apache-2.0 AND ISC; bundled notices retained |
 | [rusticata-macros](https://crates.io/crates/rusticata-macros/4.1.0) | 4.1.0 | Apache-2.0 |
+| [rustix](https://crates.io/crates/rustix/1.1.6) | 1.1.6 | Apache-2.0 |
 | [rustls](https://crates.io/crates/rustls/0.23.46) | 0.23.46 | Apache-2.0 |
 | [rustls-pki-types](https://crates.io/crates/rustls-pki-types/1.15.1) | 1.15.1 | Apache-2.0 |
 | [rustls-webpki](https://crates.io/crates/rustls-webpki/0.103.16) | 0.103.16 | ISC |

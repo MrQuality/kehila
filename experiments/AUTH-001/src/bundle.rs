@@ -1,10 +1,34 @@
-//! Version-1 text decoding only. The result is not a TLS credential.
+//! Private version-1 decoding and profile composition. No serving caller.
 mod admission;
+#[cfg(target_os = "linux")]
+mod reader;
 
 use data_encoding::BASE64;
 use zeroize::Zeroizing;
 
 const MAX_ENCODED: usize = 65_536;
+
+#[cfg(target_os = "linux")]
+#[derive(Debug, PartialEq, Eq)]
+enum BundleLoadError {
+    File(reader::FileError),
+    Decode(BundleDecodeError),
+    Profile(admission::AdmissionError),
+}
+
+/// Private composition only: no root acquisition, listener, issuer trust or clock.
+#[cfg(target_os = "linux")]
+fn admit_path(
+    root: std::os::fd::BorrowedFd<'_>,
+    path: &std::ffi::CStr,
+    owner: reader::Owner,
+    now: rustls::pki_types::UnixTime,
+) -> Result<admission::ProfileCheckedGeneration, BundleLoadError> {
+    let encoded = reader::read_bundle(root, path, owner).map_err(BundleLoadError::File)?;
+    let decoded = decode_bundle(&encoded).map_err(BundleLoadError::Decode)?;
+    drop(encoded);
+    admission::admit(decoded, now).map_err(BundleLoadError::Profile)
+}
 
 #[derive(Debug, PartialEq, Eq)]
 enum BundleDecodeError {

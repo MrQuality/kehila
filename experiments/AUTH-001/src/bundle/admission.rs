@@ -21,7 +21,7 @@ const ECDSA_SHA256: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.2.840.100
 const SERVER_AUTH: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.5.5.7.3.1");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum AdmissionError {
+pub(super) enum AdmissionError {
     CertificateDer,
     CertificateProfile,
     Extensions,
@@ -35,7 +35,7 @@ enum AdmissionError {
 
 /// A profile/key-pair snapshot, not proof of issuer-signature authenticity or trust.
 /// TLS clients must independently perform ordinary certificate-path verification.
-struct ProfileCheckedGeneration {
+pub(super) struct ProfileCheckedGeneration {
     key: CertifiedKey,
     not_after: UnixTime,
 }
@@ -43,7 +43,7 @@ struct ProfileCheckedGeneration {
 /// Checks the disposable profile and key pair at the supplied time.
 /// Success does not authenticate the issuer signature or establish certificate trust;
 /// ongoing expiry and resume enforcement remain separate integration requirements.
-fn admit(
+pub(super) fn admit(
     mut bundle: super::DecodedBundle,
     now: UnixTime,
 ) -> Result<ProfileCheckedGeneration, AdmissionError> {

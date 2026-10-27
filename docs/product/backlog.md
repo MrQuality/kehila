@@ -410,6 +410,9 @@ completes T01-T16 or a supported installation.
   and its [candidate dependency research](../implementation/local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
   separately from implementation/execution; qualify descriptor reads, protected
   topology, owner/mount mapping and writable-alias exclusion.
+  The [2026-10-27 partial reader observations](../implementation/local-owner-authentication-linux-reader-slice.md#partial-implementation-observations-2026-10-27)
+  cover synthetic Linux tests and five targeted mutations, not provider mounts,
+  all failure oracles or authenticated integration.
 - Complete issuer trust, credential storage/provisioning, renewal, expiry/drain,
   ingress and integrated Windows-client/Linux-backend evidence under the
   [container](../implementation/local-owner-authentication-container-plan.md) and

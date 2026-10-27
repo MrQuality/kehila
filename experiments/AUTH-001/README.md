@@ -116,6 +116,21 @@ the existing shared verifier. A configured CI check is not a recorded Linux pass
 inspect its result before claiming qualification. No browser, trust installation,
 native production adoption or Podman path is qualified by that Linux job.
 
+The private Linux reader now has a Linux-only dependency/implementation
+inside the [owner-login delivery package](../../docs/implementation/local-owner-authentication-delivery.md).
+Its [98-entry advisory observation](advisories-reader.json) and dependency notices
+are separate from older snapshots. Tests and source review must be reported
+before claiming Linux descriptor behavior. The
+[partial Linux observations](../../docs/implementation/local-owner-authentication-linux-reader-slice.md#partial-implementation-observations-2026-10-27)
+record actual test/mutation results, corrected fixture failures and unqualified
+oracles; this unconnected reader does not qualify Podman mounts, a listener or login.
+
+The client preserves both exchange and connection-driver outcomes in bounded
+diagnostics without response content or raw error chains. Historical Windows
+failures remain unexplained; see the
+[bounded diagnostic observations](../../docs/implementation/local-owner-authentication-a0.md#windows-diagnostic-follow-up-2026-10-27).
+Passing reruns do not establish a repair.
+
 ## Coding-standard scope and remaining gates
 
 The affected module is this experiment only: explicit transport shape/admission,
