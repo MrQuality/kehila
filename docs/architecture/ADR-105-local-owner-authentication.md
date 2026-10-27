@@ -93,6 +93,11 @@ origin remains literal loopback and Rust still terminates TLS. It does not exten
 production authentication support or qualify ingress, storage or resume behavior;
 all other requirements here and execution gates retain their scope.
 
+ADR-106's [2026-10-27 extension](ADR-106-local-container-transport.md#accepted-authenticated-development-extension-2026-10-27)
+also accepts this bounded profile for synthetic, disposable authenticated tests.
+It supplies no real-data, supported-installation or supported-suspend guarantee;
+schema/capability review and execution/trust permissions remain separate.
+
 The installer/operator supplies a server certificate trusted by the actual
 browser and CLI, with the exact IP SAN and protected private key. Startup rejects
 missing/expired/mismatched material. CLI verifies the configured trust and server

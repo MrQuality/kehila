@@ -108,15 +108,16 @@ hot-update semantics. Stop/remove the old container, then create the new one wit
 one explicitly selected generation. Persist owned operation intent before mutation;
 ambiguous recovery stops for reconciliation. The plan defines each crash point.
 
-## Proposed authenticated-development extension, 2026-10-27
+## Accepted authenticated-development extension, 2026-10-27
 
-Status: **Proposed; not accepted by the delivery scope or PR merge.**
-The existing decisions above and the interruption amendment below retain their
-accepted diagnostic-only scope.
+Status: **Accepted for bounded disposable authenticated tests**, by
+[explicit maintainer decision](https://github.com/MrQuality/kehila/pull/87#issuecomment-6442532339).
+The original decisions above and interruption amendment below retain their
+historical diagnostic scope; this extension adds only the test scope below.
 
 The [owner-login delivery package](../implementation/local-owner-authentication-delivery.md)
-needs an explicit disposition before authenticated integration can use this
-topology. Proposed extension:
+may use this profile for authenticated test integration, subject to the remaining
+contract, dependency, execution and qualification gates:
 
 - Permit the same exact listener/public-origin, forwarding, restricted container
   and disposable key-generation profile for an isolated A1-A3 authentication
@@ -135,15 +136,15 @@ topology. Proposed extension:
   durable installation, production schema adoption, real-data readiness or A5
   recovery qualification. Those requirements remain unchanged in ADR-105.
 
-The maintainer may accept this bounded extension or require a different profile.
-Until then, independent reader/schema design work can proceed, but the new
-authenticated runtime must not depend on this exception.
+This acceptance does not qualify the provider, choose production storage, approve
+unreviewed A1 contracts or grant execution/trust permissions. Actual isolation,
+file admission, runtime lifecycle and client behavior still require evidence.
 
 ## Alternatives and reasons
 
 These alternatives evaluate the original accepted diagnostic transport and key
-delivery decision of 2026-10-22. They do not evaluate or accept the proposed
-authenticated-development extension of 2026-10-27 above.
+delivery decision of 2026-10-22. The authenticated-development extension above
+was accepted separately on 2026-10-27; this table does not qualify that profile.
 
 | Option | Assessment for the original diagnostic decision |
 | --- | --- |

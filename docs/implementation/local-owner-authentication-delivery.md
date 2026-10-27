@@ -31,8 +31,8 @@ full installation remain later A5/M1 qualification obligations.
 | Work | Current status / prerequisite |
 | --- | --- |
 | A0 private bundle reader | The [reader contract](local-owner-authentication-linux-reader-slice.md) defines descriptor ownership, exact object/owner/mode admission and a capped read. Implement it without a serving caller; review the exact Linux dependency graph and real Linux results separately. |
-| Container transport | ADR-106 accepts the disposable diagnostic topology only. Its [proposed authenticated-development extension](../architecture/ADR-106-local-container-transport.md#proposed-authenticated-development-extension-2026-10-27) must be explicitly accepted before authenticated runtime integration depends on it. |
-| A1 owner storage/capabilities | Prepare and review exact schema, roles/functions, installation-before-actor locks, generations, enrollment reconciliation and management audit identity before stateful authentication implementation. No production schema or serving-role expansion follows from the delivery grouping. |
+| Container transport | ADR-106's [authenticated-development extension](../architecture/ADR-106-local-container-transport.md#accepted-authenticated-development-extension-2026-10-27) was explicitly accepted on 2026-10-27 for synthetic disposable tests. Actual provider isolation, lifecycle and Windows-client qualification remain unexecuted gates; execution/trust permissions are separate. |
+| A1 owner storage/capabilities | The [exact A1 contract](local-owner-authentication-a1.md) defines records, role/function boundaries, installation-before-actor locks, generations, enrollment reconciliation and management audit identity. Review the actual SQL/rights before stateful runtime integration. No production schema or serving-role expansion follows from the delivery grouping. |
 | A2 credentials/admission | Follow ADR-105 password/session policy; select reviewed primitives and qualify complete hash-job ownership and bounded registries before HTTP integration. Provisional budgets are inputs to measure, not established performance. |
 | A3 browser/CLI | Integrate actual TLS, pre-session/CSRF, cookies, CLI credential protection, logout/password change and rejected/saturated requests on the selected profile. Client-side Windows protection is distinct from Linux server-key storage. |
 | Cross-package authority/recovery | Map remaining T01-T16 obligations to the later real command/read and supported restore deliveries. Never mark an entire case passed from an isolated helper or a partial oracle. |
@@ -43,8 +43,10 @@ it must not become an alternate supported path.
 
 ## Definition of done and evidence
 
-- [ ] The container transport/profile transition and exact A1 contracts have their
-  required dispositions before dependent implementation.
+- [x] The bounded disposable authenticated-test profile has its
+  [explicit acceptance](https://github.com/MrQuality/kehila/pull/87#issuecomment-6442532339).
+- [ ] Exact A1 SQL, capabilities and transaction contracts have their required
+  review before stateful runtime integration.
 - [ ] Real Linux file admission and selected-provider mount/identity premises are
   observed; no Windows pass or mocked read substitutes for those observations.
 - [ ] One-owner enrollment, uncertain-commit reconciliation, narrow serving versus

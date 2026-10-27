@@ -28,6 +28,12 @@ local MVP and authorizes A0, including restart logout and documented local
 availability/audit-loss trade-offs. It accepts no replicated mechanism or ADR-103
 adoption and supplies no authentication evidence.
 
+On 2026-10-27 the maintainer requested completion of the owning PR #87 and
+[explicitly accepted its bounded authenticated-test profile](https://github.com/MrQuality/kehila/pull/87#issuecomment-6442532339).
+This extends ADR-106 to synthetic disposable A1-A3 tests, with complete fixture
+discard and fresh enrollment after interruption. It does not accept production
+adoption, supported installation/suspend, unreviewed contracts or trust changes.
+
 - [ ] Complete bounded A0 dependency/transport proof before adopting runtime choices.
 - [ ] Measure provisional resource/lifetime/hash/deadline settings before support.
 - [ ] Review schema/capabilities and separately bounded A1-A5 implementation plans.

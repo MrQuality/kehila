@@ -365,13 +365,17 @@ SP-004, decoder, admission and platform records.
   governed by the ADR and [verification plan](../implementation/local-owner-authentication-verification.md).
   Singleton/volatile-session mechanics are local-MVP-only; [B-032/#65](#b-032)
   retains replicated/remote deployment and migration.
-- [ADR-106](../architecture/ADR-106-local-container-transport.md) accepts only the
+- [ADR-106](../architecture/ADR-106-local-container-transport.md) accepts the
   bounded disposable Podman/WSL 2 Linux-backend proof, with Windows MVP clients,
   direct TLS and disposable mounted-secret risks. The agreed
   [PoC TLS profile](../implementation/local-owner-authentication-installation-plan.md#agreed-poc-tls-profile)
   uses a disposable private CA, normal validation and no certificate fees.
   Observed/suspected diagnostic pause requires whole-run invalidation and a fresh
   rerun; this does not qualify supported authentication suspend handling.
+  Its [explicitly accepted authenticated-test extension](../architecture/ADR-106-local-container-transport.md#accepted-authenticated-development-extension-2026-10-27)
+  adds synthetic disposable accounts/sessions/authentication database fixtures;
+  interruption discards that fixture before fresh enrollment. Actual isolation,
+  contract/dependency review and execution/trust permissions remain separate.
 - Apply D-037 recovery, language and agent compatibility constraints now; broader
   recovery, multilingual and agent delivery remain post-MVP. The
   [platform post-mortem](../postmortems/2026-10-21-platform-assumption.md) preserves
@@ -390,9 +394,13 @@ completes T01-T16 or a supported installation.
 
 - The [owner-login delivery package](../implementation/local-owner-authentication-delivery.md)
   groups remaining transport, owner state, credential and browser/CLI work in one
-  capability PR with small commits. Its authenticated container-profile extension
-  and A1 contracts retain explicit review gates; no helper-only merge or current
+  capability PR with small commits. Its authenticated test profile is explicitly
+  accepted; exact A1 SQL and actual provider qualification retain review/evidence
+  gates. No helper-only merge or current
   login/authentication qualification is implied.
+  The [A1 storage/capability contract](../implementation/local-owner-authentication-a1.md)
+  is the next reviewed internal prerequisite: exact SQL rights, owner enrollment,
+  runtime fencing and audit oracles precede stateful runtime integration.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the
