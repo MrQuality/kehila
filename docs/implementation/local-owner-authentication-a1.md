@@ -3,8 +3,9 @@
 Status: reviewed disposable implementation contract, 2026-10-27. The
 [enrollment subset](../../experiments/AUTH-001/storage/README.md) now has SQL,
 separate capability roles and native enrollment/rights/constraint observations.
-Runtime startup, takeover, recovery and session-management SQL and their native
-proof remain pending. This is an
+Runtime startup and post-wait takeover fencing also have disposable SQL/native
+oracles. Recovery, credential-generation CAS and session-management SQL and their
+native proof remain pending. This is an
 internal task of the [owner-login delivery](local-owner-authentication-delivery.md),
 not a separate production migration or completed authentication capability.
 [ADR-105](../architecture/ADR-105-local-owner-authentication.md) already accepts

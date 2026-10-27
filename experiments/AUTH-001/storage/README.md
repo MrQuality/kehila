@@ -1,13 +1,13 @@
 # Disposable A1 storage proof
 
-This opt-in proof implements the enrollment portion of the
+This opt-in proof implements enrollment and runtime-start/takeover portions of the
 [A1 contract](../../../docs/implementation/local-owner-authentication-a1.md).
 It does not install a supported authentication database, serve an HTTP login,
 replace the prototype storage, or qualify the rest of A1–A3.
 
-Current state: the enrollment overlay, roles and native oracles are implemented.
-The small-workload native run passed four oracle groups. Runtime startup,
-takeover, recovery and session management are not implemented by this subset.
+Current state: enrollment, startup and post-wait runtime fencing are implemented.
+The small-workload native run passed six oracle groups. Recovery, credential
+replacement/CAS and session-management audit are not implemented by this subset.
 
 The default Compose profile uses the native foundation's pinned PostgreSQL 16
 image and strict container validator: no networking or published ports, no host
@@ -46,17 +46,28 @@ separate actual Rust tests before serving integration.
 The enrollment cases require atomic rollback; one winner after an observed lock
 wait between competing initializers; reconciliation after a lost response without
 password replacement; runtime/admin capability denials; immutable owner binding;
-bounded verifier/counters; and append-only audit history. Startup, recovery,
-generation races, session audit and remaining native failure cases are not covered
-by this enrollment subset.
+bounded verifier/counters; and append-only audit history. Recovery,
+credential-generation races, session audit and remaining native failure cases
+are not covered by this subset. Startup uses the caller's dedicated session
+advisory acquisition. SQL checks the exact calling backend/database/lock object;
+`pg_locks` does not prove session duration. Native acquisition survives both
+commit and rollback and excludes a different backend. Production Rust ownership,
+loss observation and admission/output suppression remain unimplemented.
 
 ## Observations, 2026-10-27
 
-The [sanitized enrollment receipt](results.enrollment.json) records the exact
+The historical [sanitized enrollment receipt](results.enrollment.json), from
+commit `4b4ba4dd18cc7f19a3bd24d7032015cd86b2e0f3`, records the exact
 executed command/profile, LF-normalized source hashes, unchanged foundation/shared
 helper baseline, actual PostgreSQL 16.15, Podman 5.8.3, Python 3.10.11 and Windows
 host observations. The provider was Podman/WSL 2. The final receipt is emitted only
-after owned container and machine cleanup completes.
+after owned container and machine cleanup completes. Its harness hash identifies
+that enrollment checkpoint, rather than the later authority runner.
+
+The [authority receipt](results.authority.json) identifies the later six-group
+source and restored native result. Moving the authority read ahead of the locks
+failed its queued stale-runtime oracle; the restored source passed all six groups.
+It includes the same actual tool/provider versions and confirmed owned cleanup.
 
 | Phase | Actual observation |
 | --- | --- |
@@ -65,6 +76,9 @@ after owned container and machine cleanup completes.
 | Before overlay implementation | After foundation installation, the native call failed with SQLSTATE `3F000` because the `auth001` schema did not exist. No enrollment invariant was qualified. |
 | Enrollment implementation | Four oracle groups passed: atomic/competing enrollment; simulated lost-response reconciliation; restricted capabilities; binding/verifier/audit constraints. The contention oracle observed a real blocking relation before releasing the winning transaction. |
 | Targeted regressions | Removing the explicit enrollment row lock failed the competing-enrollment SQLSTATE oracle. Disabling immutable-binding protection failed its constraint oracle. Both source changes were restored; the restored native run passed all four groups. These are two targeted checks, not a mutation score. |
+| Before authority implementation | New native authority calls failed with expected `55000` versus observed `42883` (missing function). This was not a passing rejection oracle. |
+| Startup/takeover implementation | Six groups passed, including the four enrollment groups. Dedicated session-lock survival, startup rollback and reused-attempt rejection, takeover waiting behind fenced work, queued old-runtime denial, inactive/blocked/stale-revision denial and runtime overflow rollback were exercised. |
+| Pre-wait snapshot regression | Moving the authority read before the locks caused the queued takeover oracle to accept stale authority and fail. Original SQL was restored and all six groups passed again. |
 
 Response loss is simulated by discarding the successful enrollment result and
 reconciling its fixed claim; this is not an injected network disconnect. The

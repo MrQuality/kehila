@@ -1,12 +1,12 @@
 # Local-owner authentication: proposed verification and delivery plan
 
-Status: A0 host transport and A1 disposable enrollment subsets recorded; complete authentication qualification remains pending. Owner: project maintainer. Recorded: 2026-10-19; enrollment update: 2026-10-27.
+Status: A0 host transport and A1 disposable enrollment/startup/takeover subsets recorded; complete authentication qualification remains pending. Owner: project maintainer. Recorded: 2026-10-19; storage update: 2026-10-27.
 Related: [ADR-105](../architecture/ADR-105-local-owner-authentication.md),
 [#40](https://github.com/MrQuality/kehila/issues/40),
 [#49 W2](https://github.com/MrQuality/kehila/issues/49), B-007/B-020/B-022.
 
 This plan makes the password/authority boundary reviewable. The
-[A1 enrollment record](../../experiments/AUTH-001/storage/README.md) supplies
+[A1 storage record](../../experiments/AUTH-001/storage/README.md) supplies
 scoped native evidence, not password/session/HTTP qualification. The existing worker remains unauthenticated and
 on the provisional storage path. ADR-105 is Accepted for local MVP; ADR-103 remains independently Proposed.
 All A0-A5/T01-T16 work here qualifies the proposed local-MVP profile only. Its
@@ -200,7 +200,7 @@ ADR-105 is now Accepted for local MVP, including the declared local availability
 and audit-loss trade-offs; these review refinements remain unexecuted contracts.
 The PR #64 review edits above were documentation only. Subsequent AUTH-001 work
 records T03-related component transport observations and the separate A1
-enrollment subset; no complete T01–T16 case is qualified. #40/#49 stay open.
+enrollment/startup/takeover subset; no complete T01–T16 case is qualified. #40/#49 stay open.
 
 ## D-037 follow-through
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Opt-in A1 enrollment proof in a fresh, owned, networkless PostgreSQL container."""
+"""Opt-in A1 owner-storage proof in a fresh, owned, networkless PostgreSQL container."""
 import argparse
 import hashlib
 import json
@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / 'experiments/SP-004'))
 from check_postgresql import IMAGE, preflight, validate_container
 from cleanup_errors import run_main
 from enrollment_cases import require, run
+from authority_cases import run as authority_cases
 from test_services import managed_runtime, service_group
 from verification_budget import command_timeout, work_budget
 
@@ -112,6 +113,8 @@ def main():
             db.sql(foundation())
             overlay = SOURCE / 'install.sql'
             db.sql(overlay.read_text(encoding='utf-8'))
+            authority = SOURCE / 'authority.sql'
+            db.sql(authority.read_text(encoding='utf-8'))
             db.sql("CREATE ROLE auth001_test_admin LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE "
                    "NOREPLICATION NOBYPASSRLS; "
                    "CREATE ROLE auth001_test_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE "
@@ -119,14 +122,16 @@ def main():
             db.sql('GRANT auth001_admin TO auth001_test_admin; '
                    'GRANT auth001_runtime TO auth001_test_runtime;')
             passed = run(db)
+            preflight()
+            passed += authority_cases(db)
             engine_version = subprocess.run([*db.podman, '--version'], capture_output=True,
                                             text=True, encoding='utf-8', env=db.environment,
                                             cwd=ROOT, check=True, timeout=command_timeout(10)).stdout.strip()
-            files = ('install.sql', 'run.py', 'enrollment_cases.py', compose)
+            files = ('install.sql', 'authority.sql', 'run.py', 'enrollment_cases.py', 'authority_cases.py', compose)
             hashes = {name: hashlib.sha256((SOURCE / name).read_bytes().replace(b'\r\n', b'\n')).hexdigest()
                       for name in files}
     # Report success only after both owned context managers complete cleanup.
-    print(json.dumps({'cases': passed, 'passed': len(passed), 'scope': 'A1 enrollment only',
+    print(json.dumps({'cases': passed, 'passed': len(passed), 'scope': 'A1 enrollment/startup/takeover',
                       'profile': args.profile, 'cgroup_limits_qualified': False,
                       'postgresql': version, 'engine': engine_version,
                       'python': platform.python_version(), 'host': platform.system(),
