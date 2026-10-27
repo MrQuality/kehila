@@ -172,6 +172,29 @@ Windows reliability follow-up, with next review **2026-11-02**. The separate rus
 2026-11-18 deadline remain unchanged. No risk acceptance or authentication
 qualification is implied.
 
+### Windows diagnostic follow-up, 2026-10-27
+
+A bounded comparison on the prepared reader candidate, before diagnostic changes,
+ran the documented Windows `--all-targets -- --test-threads=1` profile three times:
+each passed 37 unit and 14 transport tests. The first historical default-target,
+default-harness comparison reproduced the oversized-body failure (13/14 transport
+tests, generic HTTP connection error); that comparison stopped at the failure.
+
+The client now preserves both joined outcomes in a sanitized error: exchange
+request/body failure or completed status/body length, and driver failure with an
+underlying I/O error category when discoverable. It retains no response content
+or raw error chain. A driver failure remains fatal even after a response; an
+exchange failure remains fatal after clean driver completion. Two helper tests
+cover these combinations and body non-disclosure; they do not qualify actual
+Hyper error-chain classification or identify the historical failure's cause.
+
+Three subsequent Windows default-profile runs each passed 39 unit and 14
+transport tests. None reproduced a classified driver failure. This is a bounded
+observation, not a demonstrated repair. No deadline, teardown, network mutex or
+closure assertion was changed. Medium/P2 diagnosis remains open under #40 and
+requires disposition before A3 qualification; preserve the failed attempt above.
+The root dependency/advisory deadlines and shared-verifier follow-up are unchanged.
+
 ## Remaining authentication dependency candidates
 
 These are API-level reconnaissance on 2026-10-19, not added dependencies or

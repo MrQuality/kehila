@@ -7,6 +7,7 @@
     )
 )]
 mod bundle;
+mod diagnostics;
 
 use std::{
     convert::Infallible,
@@ -377,12 +378,12 @@ pub async fn request(
                 let response = sender
                     .send_request(request)
                     .await
-                    .map_err(|_| io_error("HTTP request failed"))?;
+                    .map_err(|_| diagnostics::ExchangeFailure::Request)?;
                 let status = response.status();
                 let body = Limited::new(response.into_body(), 1024)
                     .collect()
                     .await
-                    .map_err(|_| io_error("bounded response failed"))?
+                    .map_err(|_| diagnostics::ExchangeFailure::Body)?
                     .to_bytes();
                 Ok((status, body))
             }
@@ -392,8 +393,7 @@ pub async fn request(
         };
         // Cancellation drops both owned futures; no detached connection task survives.
         let (result, connected) = tokio::join!(work, connection);
-        connected.map_err(|_| io_error("HTTP connection failed"))?;
-        result
+        diagnostics::finish(result, connected)
     })
     .await
     .map_err(|_| io_error("request deadline exceeded"))?
