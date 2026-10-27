@@ -108,6 +108,37 @@ hot-update semantics. Stop/remove the old container, then create the new one wit
 one explicitly selected generation. Persist owned operation intent before mutation;
 ambiguous recovery stops for reconciliation. The plan defines each crash point.
 
+## Proposed authenticated-development extension, 2026-10-27
+
+Status: **Proposed; not accepted by the delivery scope or PR merge.**
+The existing decisions above and the interruption amendment below retain their
+accepted diagnostic-only scope.
+
+The [owner-login delivery package](../implementation/local-owner-authentication-delivery.md)
+needs an explicit disposition before authenticated integration can use this
+topology. Proposed extension:
+
+- Permit the same exact listener/public-origin, forwarding, restricted container
+  and disposable key-generation profile for an isolated A1-A3 authentication
+  test instance. Use only synthetic, disposable owner passwords, sessions and
+  authentication database fixtures; no real owner, domain commands or user data.
+- Retain ordinary browser/CLI TLS verification, the operator-owned issuer key,
+  preflight isolation and file-admission requirements. Certificate trust changes
+  still need their own exact-scope approval. No production key-storage or client
+  credential-protection mechanism is selected by this proposal.
+- An observed or suspected host/VM interruption invalidates the whole test run.
+  Stop the owned instance, reconcile its owned resources and discard the
+  disposable authentication fixture before fresh enrollment and execution.
+  Never infer that an in-flight auth transaction rolled back, reuse a partial
+  run, or continue old credentials across that reset.
+- This test concession supplies no supported authentication suspend guarantee,
+  durable installation, production schema adoption, real-data readiness or A5
+  recovery qualification. Those requirements remain unchanged in ADR-105.
+
+The maintainer may accept this bounded extension or require a different profile.
+Until then, independent reader/schema design work can proceed, but the new
+authenticated runtime must not depend on this exception.
+
 ## Alternatives and reasons
 
 | Option | Assessment for this proposal |

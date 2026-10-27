@@ -388,6 +388,12 @@ completes T01-T16 or a supported installation.
 
 **Active blockers and next work:**
 
+- The [owner-login delivery package](../implementation/local-owner-authentication-delivery.md)
+  groups remaining transport, owner state, credential and browser/CLI work in one
+  capability PR with small commits. Its authenticated container-profile extension
+  and A1 contracts retain explicit review gates; no helper-only merge or current
+  login/authentication qualification is implied.
+
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the
   separate rustls deadline.
