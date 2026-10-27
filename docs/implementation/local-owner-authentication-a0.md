@@ -195,6 +195,12 @@ closure assertion was changed. Medium/P2 diagnosis remains open under #40 and
 requires disposition before A3 qualification; preserve the failed attempt above.
 The root dependency/advisory deadlines and shared-verifier follow-up are unchanged.
 
+An additional capture series at committed source `ad24625` was bounded to ten
+default-profile runs, stopping at the first failure. All ten passed 39 unit and
+14 transport tests; no classified failure was captured. The series ended at its
+bound. This leaves the cause unresolved and does not supersede the earlier
+failed run or establish a repair.
+
 ## Remaining authentication dependency candidates
 
 These are API-level reconnaissance on 2026-10-19, not added dependencies or

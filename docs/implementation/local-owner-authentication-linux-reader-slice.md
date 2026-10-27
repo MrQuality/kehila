@@ -140,7 +140,7 @@ root, owns one opened descriptor, checks the exact object/UID/GID/mode, and read
 at most 65,537 bytes before the unchanged decoder/profile checks. No serving
 caller, root acquisition, issuer trust or clock acquisition is introduced.
 
-Actual x86_64 Linux tests on WSL 2 kernel 6.18.54.1, Rust/Cargo 1.95.0, passed
+Actual x86_64 Ubuntu 22.04 tests on WSL 2 kernel 6.18.54.1, Rust/Cargo 1.95.0, passed
 49 unit tests (including ten reader and two diagnostic helper tests) and 14 real
 transport tests using `--all-targets -- --test-threads=1`. This is a synthetic
 Linux-filesystem observation, not selected-provider mounted-secret qualification.
