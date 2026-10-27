@@ -13,7 +13,9 @@ Login, logout, session expiry/revocation and restart rejection must be observed
 on the explicitly qualified development profile. Do not describe this as a
 supported installation, production secret store or real-data readiness.
 
-The maintainer accepted capability-sized PRs on 2026-10-27. Reader, schema,
+The maintainer accepted capability-sized PRs on 2026-10-27; the
+[delivery decision record](https://github.com/MrQuality/kehila/pull/87#issuecomment-6433529952)
+records that authorization and its limits. Reader, schema,
 credential, HTTP/client and qualification work are internal tasks of this owning
 delivery package, not automatic independent merge units. The accepted ADRs,
 dependency review and internal prerequisite gates still apply. A planning or
@@ -50,6 +52,10 @@ it must not become an alternate supported path.
 - [ ] Browser/CLI login, rejection, logout, session expiry/revocation, password
   change and stale credentials after restart have applicable actual TLS/HTTP
   evidence. Domain-command and supported-restore cases remain explicitly mapped.
+- [ ] Disposition the existing Medium/P2 Windows HTTP reliability follow-up before
+  A3 qualification. Preserve both exchange and connection-driver outcomes and
+  failed attempts; distinguish the documented serial harness from historical
+  default-harness results. An unchanged passing rerun does not settle the cause.
 - [ ] Complete verification-plus-replacement hashing latency, peak memory,
   capacity rejection and owned work/connection cleanup are measured against the
   proposed profile limits. Report overruns without silently relaxing limits.

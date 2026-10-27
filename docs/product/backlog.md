@@ -403,6 +403,9 @@ completes T01-T16 or a supported installation.
   default-harness runs differ from README/CI's serial profile; unchanged passing
   reruns do not qualify the matching serial Windows result. Include pre-mutex
   fixture setup as a Low/P3 investigation observation; contention is not established.
+  This follow-up requires an evidence-backed disposition before A3 Windows
+  browser/CLI authentication qualification; it does not block independent reader
+  or schema design. See the [delivery review follow-up](https://github.com/MrQuality/kehila/pull/87#issuecomment-6433529952).
 - Review/adopt the [Linux reader slice](../implementation/local-owner-authentication-linux-reader-slice.md)
   and its [candidate dependency research](../implementation/local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
   separately from implementation/execution; qualify descriptor reads, protected

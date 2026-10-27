@@ -141,7 +141,11 @@ authenticated runtime must not depend on this exception.
 
 ## Alternatives and reasons
 
-| Option | Assessment for this proposal |
+These alternatives evaluate the original accepted diagnostic transport and key
+delivery decision of 2026-10-22. They do not evaluate or accept the proposed
+authenticated-development extension of 2026-10-27 above.
+
+| Option | Assessment for the original diagnostic decision |
 | --- | --- |
 | Container-loopback listener plus ordinary port publication | Preserves the literal bind rule, but the source material does not establish a complete reachable Windows path. Not a qualified baseline. |
 | Opaque TCP relay to container loopback | Keeps Rust TLS termination; needs another listener/process and bounded buffering, admission, shutdown and keyless relay review. Reconsider if the direct profile cannot meet isolation criteria; no automatic fallback. |
