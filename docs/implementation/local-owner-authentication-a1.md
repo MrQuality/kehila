@@ -3,9 +3,10 @@
 Status: reviewed disposable implementation contract, 2026-10-27. The
 [enrollment subset](../../experiments/AUTH-001/storage/README.md) now has SQL,
 separate capability roles and native enrollment/rights/constraint observations.
-Runtime startup, post-wait takeover fencing, recovery and credential-generation
-CAS also have disposable SQL/native oracles. Session issuance/logout/individual-
-revocation audit APIs and Rust integration remain pending. This is an
+Runtime startup, post-wait takeover fencing, recovery, credential-generation CAS
+and fixed-identity session-audit confirmation also have disposable SQL/native
+oracles. Eleven native groups and targeted regressions are recorded; Rust
+connection/hash/session ownership and actual client integration remain pending. This is an
 internal task of the [owner-login delivery](local-owner-authentication-delivery.md),
 not a separate production migration or completed authentication capability.
 [ADR-105](../architecture/ADR-105-local-owner-authentication.md) already accepts

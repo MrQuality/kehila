@@ -1,14 +1,14 @@
 # Disposable A1 storage proof
 
-This opt-in proof implements enrollment, runtime-start/takeover and credential-management portions of the
+This opt-in proof implements the disposable SQL portion of the
 [A1 contract](../../../docs/implementation/local-owner-authentication-a1.md).
 It does not install a supported authentication database, serve an HTTP login,
 replace the prototype storage, or qualify the rest of A1–A3.
 
-Current state: enrollment, startup, post-wait fencing and credential management
-are implemented. The small-workload native run passed nine oracle groups.
-Session issuance/logout/individual-revocation audit APIs and Rust integration
-remain outside this subset.
+Current state: enrollment, startup, post-wait fencing, credential management and
+session-audit confirmation SQL are implemented. The small-workload native run
+passed eleven oracle groups. Rust connection/hash/session ownership and actual
+browser/CLI integration remain outside this subset.
 
 The default Compose profile uses the native foundation's pinned PostgreSQL 16
 image and strict container validator: no networking or published ports, no host
@@ -50,8 +50,10 @@ password replacement; runtime/admin capability denials; immutable owner binding;
 bounded verifier/counters; and append-only audit history. Credential-management
 cases add post-actor-wait stale proof, competing replacements, generation-only
 revocation, inactive-owner recovery with structural history preservation, overflow
-and a distinctive injected audit failure. Session audit and remaining native
-failure cases are not covered by this subset. Startup uses the caller's dedicated session
+and a distinctive injected audit failure. Session-audit cases add fixed-identity
+confirmation, conflicting attributes, concurrent logout, unchanged timestamps,
+privilege denials, rollback, a distinct audit fault and stale authority. These
+calls do not establish real credential eligibility or local revocation. Startup uses the caller's dedicated session
 advisory acquisition. SQL checks the exact calling backend/database/lock object;
 `pg_locks` does not prove session duration. Native acquisition survives both
 commit and rollback and excludes a different backend. Production Rust ownership,
@@ -73,7 +75,8 @@ source and restored native result. Moving the authority read ahead of the locks
 failed its queued stale-runtime oracle; the restored source passed all six groups.
 It includes the same actual tool/provider versions and confirmed owned cleanup.
 
-The [credential-management receipt](results.management.json) identifies the
+The historical [credential-management receipt](results.management.json), from
+`aa2e484789083038b8af1bf23ef2b5a5ca7f9cb0`, identifies the
 nine-group source and restored native result. Ignoring auth generation allowed
 a stale proof after global revocation; advancing verifier revision on global
 revocation broke its independent oracle. Both changes were restored, and all
@@ -82,6 +85,17 @@ injected audit boundary before rollback. History rows are structural fixtures,
 not valid domain codec/command evidence. Global revocation is separate from
 revoke-other-sessions: the latter must retain the current session and individually
 revoke other registry entries without advancing auth generation.
+
+The [audit receipt](results.audit.json) identifies the eleven-group SQL boundary.
+Session-audit confirmation compares every fixed attribute and preserves the
+original timestamp. A changed credential kind, initiating session or auth
+generation cannot silently confirm a different event. Neutralizing the kind
+comparison failed the conflict oracle; restored source passed all eleven groups.
+`P0A02` identifies the injected session-audit write failure and intact retry.
+Only narrow runtime wrappers are granted. No token, digest, password, verifier or
+CSRF enters these event APIs. Confirmation returns a boolean, not a bearer, and
+cannot reconstruct a registry entry. Rust must enforce actual lookup/retention,
+same-logout eligibility and irreversible local revocation before calling SQL.
 
 | Phase | Actual observation |
 | --- | --- |
@@ -95,6 +109,8 @@ revoke other registry entries without advancing auth generation.
 | Pre-wait snapshot regression | Moving the authority read before the locks caused the queued takeover oracle to accept stale authority and fail. Original SQL was restored and all six groups passed again. |
 | Credential/recovery implementation | Nine groups passed, including existing enrollment/authority groups. Post-actor-wait rejection, one winner from identical old password metadata, generation-only revocation, inactive actor/permissions/history preservation, credential-counter overflow and audit-failure rollback were exercised. |
 | Credential regressions | Ignoring auth generation failed the post-global stale-proof oracle; changing the global-revocation revision increment failed its counter oracle. Both restored; final nine-group run passed. |
+| Session audit implementation | Eleven groups passed, including the earlier nine. Identical/concurrent confirmations retained one original event; valid but conflicting kind/initiator/auth attributes failed with `XX001`; `P0A02` write rejection, rollback and stale generations left no session-audit residue. |
+| Audit comparison regression | Replacing the stored kind with the proposed kind in the fixed-attribute comparison incorrectly accepted a conflict and failed its oracle. Restored SQL passed all eleven groups. |
 
 Response loss is simulated by discarding the successful enrollment result and
 reconciling its fixed claim; this is not an injected network disconnect. The

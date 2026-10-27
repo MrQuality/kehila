@@ -1,6 +1,6 @@
 # Local-owner authentication: proposed verification and delivery plan
 
-Status: A0 host transport and A1 disposable enrollment/authority/credential-management subsets recorded; complete authentication qualification remains pending. Owner: project maintainer. Recorded: 2026-10-19; storage update: 2026-10-27.
+Status: A0 host transport and the A1 disposable SQL subset recorded; complete authentication qualification remains pending. Owner: project maintainer. Recorded: 2026-10-19; storage update: 2026-10-27.
 Related: [ADR-105](../architecture/ADR-105-local-owner-authentication.md),
 [#40](https://github.com/MrQuality/kehila/issues/40),
 [#49 W2](https://github.com/MrQuality/kehila/issues/49), B-007/B-020/B-022.
@@ -200,7 +200,7 @@ ADR-105 is now Accepted for local MVP, including the declared local availability
 and audit-loss trade-offs; these review refinements remain unexecuted contracts.
 The PR #64 review edits above were documentation only. Subsequent AUTH-001 work
 records T03-related component transport observations and the separate A1
-enrollment/authority/credential-management subset; no complete T01–T16 case is qualified. #40/#49 stay open.
+SQL boundary subset; no complete T01–T16 case is qualified. #40/#49 stay open.
 
 ## D-037 follow-through
 

@@ -17,9 +17,10 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 sys.path.insert(0, str(ROOT / 'experiments/SP-004'))
 from check_postgresql import IMAGE, preflight, validate_container
 from cleanup_errors import run_main
-from enrollment_cases import require, run
+from enrollment_cases import require, run as enrollment_cases
 from authority_cases import run as authority_cases
 from credential_cases import run as credential_cases
+from audit_cases import run as audit_cases
 from test_services import managed_runtime, service_group
 from verification_budget import command_timeout, work_budget
 
@@ -118,26 +119,32 @@ def main():
             db.sql(authority.read_text(encoding='utf-8'))
             management = SOURCE / 'management.sql'
             db.sql(management.read_text(encoding='utf-8'))
+            audit = SOURCE / 'audit.sql'
+            db.sql(audit.read_text(encoding='utf-8'))
             db.sql("CREATE ROLE auth001_test_admin LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE "
                    "NOREPLICATION NOBYPASSRLS; "
                    "CREATE ROLE auth001_test_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE "
+                   "NOREPLICATION NOBYPASSRLS; "
+                   "CREATE ROLE auth001_test_unprivileged LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE "
                    "NOREPLICATION NOBYPASSRLS;")
             db.sql('GRANT auth001_admin TO auth001_test_admin; '
                    'GRANT auth001_runtime TO auth001_test_runtime;')
-            passed = run(db)
+            passed = enrollment_cases(db)
             preflight()
             passed += authority_cases(db)
             preflight()
             passed += credential_cases(db)
+            preflight()
+            passed += audit_cases(db)
             engine_version = subprocess.run([*db.podman, '--version'], capture_output=True,
                                             text=True, encoding='utf-8', env=db.environment,
                                             cwd=ROOT, check=True, timeout=command_timeout(10)).stdout.strip()
-            files = ('install.sql', 'authority.sql', 'management.sql', 'run.py', 'enrollment_cases.py',
-                     'authority_cases.py', 'credential_cases.py', compose)
+            files = ('install.sql', 'authority.sql', 'management.sql', 'audit.sql', 'run.py',
+                     'enrollment_cases.py', 'authority_cases.py', 'credential_cases.py', 'audit_cases.py', compose)
             hashes = {name: hashlib.sha256((SOURCE / name).read_bytes().replace(b'\r\n', b'\n')).hexdigest()
                       for name in files}
     # Report success only after both owned context managers complete cleanup.
-    print(json.dumps({'cases': passed, 'passed': len(passed), 'scope': 'A1 storage/credential management',
+    print(json.dumps({'cases': passed, 'passed': len(passed), 'scope': 'A1 disposable SQL boundary',
                       'profile': args.profile, 'cgroup_limits_qualified': False,
                       'postgresql': version, 'engine': engine_version,
                       'python': platform.python_version(), 'host': platform.system(),

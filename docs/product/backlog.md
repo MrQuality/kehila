@@ -399,11 +399,12 @@ completes T01-T16 or a supported installation.
   gates. No helper-only merge or current
   login/authentication qualification is implied.
   The [A1 storage/capability contract](../implementation/local-owner-authentication-a1.md)
-  has a reviewed [disposable enrollment/authority/credential-management implementation](../../experiments/AUTH-001/storage/README.md):
-  nine native oracle groups passed and targeted regressions were detected.
-  This does not complete A1: session issuance/logout/individual-revocation audit
-  APIs and their native oracles remain prerequisites to stateful runtime
-  integration. Rust advisory-loss handling remains unimplemented.
+  has a reviewed [disposable SQL boundary](../../experiments/AUTH-001/storage/README.md):
+  eleven native oracle groups passed for enrollment, authority, credential
+  management and session-audit confirmation; targeted regressions were detected.
+  This does not complete authentication: Rust connection/hash/session ownership,
+  advisory-loss handling, credential eligibility and actual client integration
+  remain unimplemented.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the
