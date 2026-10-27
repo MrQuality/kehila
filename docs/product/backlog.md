@@ -399,8 +399,11 @@ completes T01-T16 or a supported installation.
   gates. No helper-only merge or current
   login/authentication qualification is implied.
   The [A1 storage/capability contract](../implementation/local-owner-authentication-a1.md)
-  is the next reviewed internal prerequisite: exact SQL rights, owner enrollment,
-  runtime fencing and audit oracles precede stateful runtime integration.
+  has a reviewed [disposable enrollment implementation](../../experiments/AUTH-001/storage/README.md):
+  four native oracle groups passed, two targeted regressions were detected and
+  the restored source passed. This does not complete A1: runtime startup/takeover,
+  recovery, session-management SQL and their rights/fencing/audit oracles remain
+  prerequisites to stateful runtime integration.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

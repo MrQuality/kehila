@@ -5,6 +5,10 @@ under [#40](https://github.com/MrQuality/kehila/issues/40) and
 [#49 W2](https://github.com/MrQuality/kehila/issues/49). This standalone Cargo
 workspace does not alter the production worker or implement authentication.
 
+The separate opt-in [A1 storage proof](storage/README.md) exercises disposable
+owner enrollment against PostgreSQL. It is outside this Cargo workspace and
+does not add authentication to these diagnostic HTTP endpoints.
+
 ## Contract
 
 The server and client accept literal `127.0.0.1` only. TLS 1.3 uses normal

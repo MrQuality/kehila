@@ -63,6 +63,12 @@ failing staged AUTH-001 case fails the local check, both paths run its manifest,
 and external build outputs, bounded execution and cleanup remain preserved.
 This records the gap; no verifier or test behavior is changed here.
 
+The separate [A1 enrollment proof](../experiments/AUTH-001/storage/README.md)
+is opt-in and outside both the Cargo checks and shared verifier. Its native
+PostgreSQL observations, selected resource profile and source hashes must be
+retained separately; a normal local/hosted gate does not execute its SQL oracles.
+It does not qualify password/session/HTTP behavior or the rest of A1–A3.
+
 ### Owned test services
 
 Full verification first runs tooling/static checks, precompiles the complete
