@@ -19,6 +19,7 @@ from check_postgresql import IMAGE, preflight, validate_container
 from cleanup_errors import run_main
 from enrollment_cases import require, run
 from authority_cases import run as authority_cases
+from credential_cases import run as credential_cases
 from test_services import managed_runtime, service_group
 from verification_budget import command_timeout, work_budget
 
@@ -115,6 +116,8 @@ def main():
             db.sql(overlay.read_text(encoding='utf-8'))
             authority = SOURCE / 'authority.sql'
             db.sql(authority.read_text(encoding='utf-8'))
+            management = SOURCE / 'management.sql'
+            db.sql(management.read_text(encoding='utf-8'))
             db.sql("CREATE ROLE auth001_test_admin LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE "
                    "NOREPLICATION NOBYPASSRLS; "
                    "CREATE ROLE auth001_test_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE "
@@ -124,14 +127,17 @@ def main():
             passed = run(db)
             preflight()
             passed += authority_cases(db)
+            preflight()
+            passed += credential_cases(db)
             engine_version = subprocess.run([*db.podman, '--version'], capture_output=True,
                                             text=True, encoding='utf-8', env=db.environment,
                                             cwd=ROOT, check=True, timeout=command_timeout(10)).stdout.strip()
-            files = ('install.sql', 'authority.sql', 'run.py', 'enrollment_cases.py', 'authority_cases.py', compose)
+            files = ('install.sql', 'authority.sql', 'management.sql', 'run.py', 'enrollment_cases.py',
+                     'authority_cases.py', 'credential_cases.py', compose)
             hashes = {name: hashlib.sha256((SOURCE / name).read_bytes().replace(b'\r\n', b'\n')).hexdigest()
                       for name in files}
     # Report success only after both owned context managers complete cleanup.
-    print(json.dumps({'cases': passed, 'passed': len(passed), 'scope': 'A1 enrollment/startup/takeover',
+    print(json.dumps({'cases': passed, 'passed': len(passed), 'scope': 'A1 storage/credential management',
                       'profile': args.profile, 'cgroup_limits_qualified': False,
                       'postgresql': version, 'engine': engine_version,
                       'python': platform.python_version(), 'host': platform.system(),
