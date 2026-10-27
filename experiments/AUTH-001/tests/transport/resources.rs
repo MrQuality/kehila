@@ -139,17 +139,61 @@ async fn oversized_body_is_rejected_after_valid_tls() {
         .header("Content-Length", "3")
         .body(Full::new(Bytes::from_static(b"{}x")))
         .unwrap();
-    assert_eq!(
-        request(
+    let result = request(
+        running.address,
+        ca.client(),
+        ServerName::from(running.address.ip()),
+        body,
+    )
+    .await;
+    let observed = running.finish_checked().await;
+    let response = result.unwrap_or_else(|error| panic!("client={error}; server={observed:?}"));
+    assert!(
+        observed.is_ok(),
+        "client_status={}; server={observed:?}",
+        response.0
+    );
+    assert_eq!(response.0, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn body_boundary_keeps_client_and_server_outcomes() {
+    let ca = Authority::new();
+    for body in [b"{}".as_slice(), b"{}x", &[b'x'; 32]] {
+        let running = Running::start(&ca, "127.0.0.1", false).await;
+        let host = running.address.to_string();
+        let request_body = Request::post("/probe")
+            .header("Host", &host)
+            .header("Origin", format!("https://{host}"))
+            .header("Content-Type", "application/json")
+            .header("Content-Length", body.len())
+            .body(Full::new(Bytes::copy_from_slice(body)))
+            .unwrap();
+        let result = request(
             running.address,
             ca.client(),
             ServerName::from(running.address.ip()),
-            body
+            request_body,
         )
-        .await
-        .unwrap()
-        .0,
-        StatusCode::BAD_REQUEST
-    );
-    running.finish().await;
+        .await;
+        let observed = running.finish_checked().await;
+        let response = result.unwrap_or_else(|error| {
+            panic!(
+                "input_bytes={}; client={error}; server={observed:?}",
+                body.len()
+            )
+        });
+        eprintln!(
+            "input_bytes={}; status={}; server={observed:?}",
+            body.len(),
+            response.0
+        );
+        let expected = if body.len() == 2 {
+            StatusCode::OK
+        } else {
+            StatusCode::BAD_REQUEST
+        };
+        assert_eq!(response.0, expected);
+        assert_eq!(observed.unwrap().accepted, 1);
+    }
 }
