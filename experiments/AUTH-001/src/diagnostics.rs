@@ -17,9 +17,9 @@ enum ExchangeOutcome {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum DriverFailure {
-    Http,
-    Io(io::ErrorKind),
+struct DriverFailure {
+    during_shutdown: bool,
+    io_kind: Option<io::ErrorKind>,
 }
 
 #[derive(Debug)]
@@ -41,21 +41,31 @@ impl fmt::Display for RequestFailure {
 impl Error for RequestFailure {}
 
 fn driver_failure(error: &hyper::Error) -> DriverFailure {
+    DriverFailure {
+        during_shutdown: error.is_shutdown(),
+        io_kind: underlying_io_kind(error),
+    }
+}
+
+fn underlying_io_kind(error: &(dyn Error + 'static)) -> Option<io::ErrorKind> {
     let mut source: &(dyn Error + 'static) = error;
     // Bound traversal even for an unexpected cyclic upstream error chain.
     for _ in 0..8 {
         if let Some(error) = source.downcast_ref::<io::Error>() {
-            return DriverFailure::Io(error.kind());
+            return Some(error.kind());
         }
         match source.source() {
             Some(next) => source = next,
             None => break,
         }
     }
-    DriverFailure::Http
+    None
 }
 
 type ExchangeResult = Result<(StatusCode, Bytes), ExchangeFailure>;
+
+#[cfg(test)]
+mod shutdown_test;
 
 pub(crate) fn finish(
     exchange: ExchangeResult,
@@ -91,7 +101,10 @@ mod tests {
     fn completed_response_cannot_hide_a_failed_driver_or_leak_body() {
         let error = settle(
             Ok((StatusCode::OK, Bytes::from_static(b"private-value"))),
-            Some(DriverFailure::Io(io::ErrorKind::ConnectionReset)),
+            Some(DriverFailure {
+                during_shutdown: false,
+                io_kind: Some(io::ErrorKind::ConnectionReset),
+            }),
         )
         .unwrap_err();
         let detail = error
@@ -108,7 +121,10 @@ mod tests {
         );
         assert_eq!(
             detail.driver,
-            Some(DriverFailure::Io(io::ErrorKind::ConnectionReset))
+            Some(DriverFailure {
+                during_shutdown: false,
+                io_kind: Some(io::ErrorKind::ConnectionReset)
+            })
         );
         assert!(!format!("{error:?} {error}").contains("private-value"));
     }
@@ -116,7 +132,13 @@ mod tests {
     #[test]
     fn both_failures_survive_and_clean_driver_does_not_hide_exchange_failure() {
         for stage in [ExchangeFailure::Request, ExchangeFailure::Body] {
-            for driver in [None, Some(DriverFailure::Http)] {
+            for driver in [
+                None,
+                Some(DriverFailure {
+                    during_shutdown: false,
+                    io_kind: None,
+                }),
+            ] {
                 let failed_driver = driver.is_some();
                 let error = settle(Err(stage), driver).unwrap_err();
                 let detail = error
