@@ -3,14 +3,14 @@ use std::time::Instant;
 
 const TOKEN_NANOS: u64 = 12_000_000_000; // Five tokens per minute.
 
-struct Bucket {
+pub(crate) struct Bucket {
     credit: u64,
     ceiling: u64,
     observed: Instant,
 }
 
 impl Bucket {
-    fn new(now: Instant, burst: u8) -> Self {
+    pub(crate) fn new(now: Instant, burst: u8) -> Self {
         let ceiling = u64::from(burst) * TOKEN_NANOS;
         Self {
             credit: ceiling,
@@ -19,7 +19,7 @@ impl Bucket {
         }
     }
 
-    fn charge(&mut self, now: Instant) -> bool {
+    pub(crate) fn charge(&mut self, now: Instant) -> bool {
         let Some(elapsed) = now.checked_duration_since(self.observed) else {
             return false;
         };

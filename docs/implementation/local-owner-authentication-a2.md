@@ -204,12 +204,48 @@ formatting and Clippy. The 64-slot bound does not bound every captured allocatio
 real coordinators must also bound reference retention and owned task lifetime.
 No registry guard spans an await in this pure component.
 
+## Anonymous browser pre-sessions
+
+The unconnected pre-session pool has 32 slots shared by reservations and ready
+entries. Allocation atomically checks capacity and the installation-wide
+five/minute, burst-two allowance before randomness. An owned reservation permits
+secret generation outside the pool guard; its drop releases only its matching
+slot and does not refund the attempt. Completion preserves the original
+five-minute deadline. Checked internal tickets and owner identity reject delayed
+completion after expiry/reclamation. Bearers remain digest-only and CSRF secrets
+are independently generated and retained for reuse.
+
+Reuse returns the same CSRF and deadline without charging allocation, including
+while a login claim is pending. Only one owned claim may exist for an entry.
+The real coordinator must claim briefly under the already-held actor fence, then
+release the pool guard before SQL work. Confirmed rollback may release the same
+still-live claim. Confirmed commit consumes it; abandonment or an unknown result
+consumes/discards it instead of guessing rollback. The client can then obtain a
+new bounded pre-session. Expired or replaced state cannot be restored by a late
+completion. No durable queue or stored-secret replay is introduced.
+
+Pool destruction closes its supplied irreversible runtime latch. A shared
+liveness type now also serves session storage and exposes no reset operation;
+actual wiring of both pools and the database observer to one runtime owner
+remains unfinished. Slot limits do not qualify the lifetime/count of outstanding
+uncancellable randomness jobs or captured references; the coordinator needs
+independent owned-job bounds through actual completion.
+
+Eight initial lifecycle tests failed against the missing behavior and passed
+after implementation. The final ten include delayed generation, owner drop,
+stale completion, rollback, abandoned claims, exact TTL/capacity and a real
+two-thread competing-claim test. Mutations allowing competing claims, releasing
+an abandoned claim and bypassing expiry were detected. Restored final local
+verification passed 105 unit and 20 serial transport tests with the external
+corpus selected, formatting and Clippy. These are controlled engine observations,
+not browser/SQL login or request-saturation qualification.
+
 ## Remaining integration gates
 
 Qualify the actual coordinator's timeout and retained worker capacity, and
 measure the Linux/container and complete request budgets. Connect blocklist
 file admission and enrollment/recovery callers, then complete bounded
-pre-sessions and actual registry/rate coordinators. Login verification must not
+revoke-other batching and actual registry/rate/pre-session coordinators. Login verification must not
 reapply a newer blocklist to an existing password.
 
 Connect credentials to the reviewed PostgreSQL fences and runtime generation,

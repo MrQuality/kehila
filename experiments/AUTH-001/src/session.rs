@@ -1,10 +1,8 @@
 //! Volatile candidate credentials, not database authorization verdicts.
+use crate::lifecycle::RuntimeLiveness;
 use crate::secret::{Digest, Secret};
 use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
@@ -59,7 +57,7 @@ struct State {
 }
 
 struct Session {
-    live_runtime: Arc<AtomicBool>,
+    live_runtime: Arc<RuntimeLiveness>,
     public_id: String,
     binding: Binding,
     kind: Kind,
@@ -78,7 +76,7 @@ struct NewSession {
 }
 
 struct Registry {
-    live_runtime: Arc<AtomicBool>,
+    live_runtime: Arc<RuntimeLiveness>,
     startup: Binding,
     entries: Vec<Arc<Session>>,
 }
@@ -95,12 +93,12 @@ impl Registry {
         Ok(Self {
             startup,
             entries,
-            live_runtime: Arc::new(AtomicBool::new(true)),
+            live_runtime: RuntimeLiveness::new(),
         })
     }
 
     fn stop(&mut self) {
-        self.live_runtime.store(false, Ordering::Release);
+        self.live_runtime.stop();
         self.entries.clear();
     }
 
@@ -110,7 +108,7 @@ impl Registry {
         snapshot: &Snapshot,
         now: Instant,
     ) -> Result<Arc<Session>, SessionError> {
-        if !self.live_runtime.load(Ordering::Acquire) {
+        if !self.live_runtime.is_live() {
             return Err(SessionError::Unavailable);
         }
         if !snapshot.actor_active
@@ -200,7 +198,7 @@ impl Registry {
         snapshot: &Snapshot,
         now: Instant,
     ) -> Result<(), SessionError> {
-        if !self.live_runtime.load(Ordering::Acquire) {
+        if !self.live_runtime.is_live() {
             return Err(SessionError::Unavailable);
         }
         if !self.entries.iter().any(|stored| Arc::ptr_eq(stored, entry)) {
@@ -238,7 +236,7 @@ impl Registry {
     }
 
     fn lookup(&self, bearer: &Digest, kind: Kind, now: Instant) -> Option<Arc<Session>> {
-        if !self.live_runtime.load(Ordering::Acquire) {
+        if !self.live_runtime.is_live() {
             return None;
         }
         for entry in &self.entries {
@@ -310,7 +308,7 @@ impl Session {
         Some(zeroize::Zeroizing::new(*self.csrf.as_ref()?.encoded()))
     }
     fn current(&self, snapshot: &Snapshot, now: Instant, state: &State) -> bool {
-        self.live_runtime.load(Ordering::Acquire)
+        self.live_runtime.is_live()
             && snapshot.actor_active
             && snapshot.binding == self.binding
             && now >= self.issued
@@ -645,19 +643,18 @@ mod tests {
         let entry = registry.reserve(new, &snapshot, now).unwrap();
         assert!(entry.csrf_for_bootstrap(&snapshot, now).is_none());
         registry.publish(&entry, &snapshot, now).unwrap();
-        assert_eq!(
-            entry.csrf_for_bootstrap(&snapshot, now).unwrap().as_slice(),
-            expected.as_slice()
+        assert!(
+            entry.csrf_for_bootstrap(&snapshot, now).unwrap().as_slice() == expected.as_slice()
         );
         entry
             .revoke_for_logout(&snapshot, now + Duration::from_secs(60))
             .unwrap();
-        assert_eq!(
+        assert!(
             entry
                 .csrf_for_bootstrap(&snapshot, now + IDLE - Duration::from_nanos(1))
                 .unwrap()
-                .as_slice(),
-            expected.as_slice()
+                .as_slice()
+                == expected.as_slice()
         );
         assert!(entry.csrf_for_bootstrap(&snapshot, now + IDLE).is_none());
     }

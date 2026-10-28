@@ -411,8 +411,9 @@ completes T01-T16 or a supported installation.
   new-password blocklist admission; its pinned external-corpus tests do not
   qualify startup file admission or HTTP coordinators. The unconnected 64-slot
   session core now checks publication, expiry, retirement, own-logout retention
-  and owner destruction; pre-sessions, revoke-other batching and bounded
-  coordinator reference ownership remain unfinished.
+  and owner destruction. The 32-slot pre-session engine now preserves original
+  deadlines and owns single-use claims; revoke-other batching, actual shared
+  runtime/coordinator wiring and bounded reference/job ownership remain unfinished.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

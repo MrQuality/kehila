@@ -50,34 +50,29 @@ Safe file admission and the container proof remain unfinished. The
 
 ## Credential core in progress
 
-The unconnected password and random-secret modules implement the fixed policy
-and strict verifier/token admission described in [A2](../../docs/implementation/local-owner-authentication-a2.md).
-The restored primitive checkpoint passed 56 unit and 20 serial transport tests
-on Windows; adding the owned worker passed 69 unit and 20 transport tests.
-Five release samples measured verification plus replacement and joined cleanup
-at 188.700–195.864 ms, with observed process peak working set 69.54–69.72 MiB.
-See A2 for sampling limits and failed-attempt history. These observations do not
-qualify login, session storage, Linux/container performance, the complete request
-budget or supported secret provisioning. Coordinator and registry behavior remain
-separate gates.
+The unconnected [A2 components](../../docs/implementation/local-owner-authentication-a2.md)
+implement normalization, strict fixed-cost verifier/token admission, owned hash
+work, typed new-password blocklist checks, separate rate allowances, 64 session
+slots and 32 pre-session slots with owned allocation/one-time claims. Existing
+password verification does not reapply the new-password list. Session/pre-session
+state preserves original expiry, shared retirement and irreversible owner teardown.
 
-New-password worker operations now require the opaque output of blocklist
-admission. Policy one pins an external 2,097-entry historical common-password
-asset; neither source corpus nor derived data is bundled. Its license/coverage,
-reproduction and opt-in test are recorded in A2. With the real asset explicitly
-selected, final local verification passed 77 unit and 20 transport tests.
-Ordinary CI omits the single external-asset test. Existing-password verification
-does not reapply the new-password list. Startup file admission and actual
-enrollment/recovery/HTTP callers remain unfinished.
-The pure rate-admission engine adds independent bounded login/management
-allowances; its latest selected-asset local suite passed 81 unit and 20 transport
-tests. Actual request charging and HTTP saturation behavior remain unconnected.
-See A2 for the newer-hosted-Clippy failure and decoder correction history.
-The session-candidate core now has shared retirement, unpublished issuance,
-expiry, own-logout retention, CSRF retrieval and irreversible owner teardown.
-Its latest selected-asset local suite passed 95 unit and 20 transport tests.
-It has no database/HTTP caller; pre-sessions, revoke-other batching, snapshot
-provenance and bounded coordinator reference ownership remain unfinished.
+Current selected-asset local verification passed 105 unit and 20 serial transport
+tests, formatting and Clippy. It includes independent vectors, detected mutations
+and a two-thread competing-claim case. The pinned 2,097-entry historical corpus
+stays external with its own license/coverage limits; ordinary CI ignores its
+single external-asset test. A2 records reproduction and executed evidence.
+
+Historical Windows release worker samples measured verification plus replacement
+and joined cleanup at 188.700-195.864 ms, with observed process peak working set
+69.54-69.72 MiB. These are source-specific component observations; A2 preserves
+sampling limits, failed attempts and the newer-hosted-Clippy correction history.
+They do not qualify current-head Linux performance or the full request budget.
+
+Startup file admission, shared runtime/database ownership, revoke-other batching,
+bounded retained references/randomness jobs and actual Windows browser/CLI login
+remain unfinished. Diagnostic HTTP endpoints have no authentication caller, and
+no supported installation, secret provisioning or real-data readiness is claimed.
 
 ## Run
 

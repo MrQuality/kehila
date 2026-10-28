@@ -2,7 +2,7 @@
 use unicode_normalization::UnicodeNormalization;
 use zeroize::Zeroizing;
 
-mod admission;
+pub(crate) mod admission;
 mod blocklist;
 mod hash;
 mod worker;

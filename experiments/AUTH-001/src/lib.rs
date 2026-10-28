@@ -9,6 +9,7 @@
 )]
 mod bundle;
 mod diagnostics;
+mod lifecycle;
 #[cfg_attr(
     not(test),
     expect(
@@ -17,6 +18,14 @@ mod diagnostics;
     )
 )]
 mod password;
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Pre-session state awaits fenced login integration"
+    )
+)]
+mod pre_session;
 #[cfg_attr(
     not(test),
     expect(dead_code, reason = "Secret primitives await session integration")
