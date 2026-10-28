@@ -61,6 +61,15 @@ qualify login, session storage, Linux/container performance, the complete reques
 budget or supported secret provisioning. Coordinator and registry behavior remain
 separate gates.
 
+New-password worker operations now require the opaque output of blocklist
+admission. Policy one pins an external 2,097-entry historical common-password
+asset; neither source corpus nor derived data is bundled. Its license/coverage,
+reproduction and opt-in test are recorded in A2. With the real asset explicitly
+selected, final local verification passed 77 unit and 20 transport tests.
+Ordinary CI omits the single external-asset test. Existing-password verification
+does not reapply the new-password list. Startup file admission and actual
+enrollment/recovery/HTTP callers remain unfinished.
+
 ## Run
 
 Set `CARGO_TARGET_DIR` to an external build directory before building so generated

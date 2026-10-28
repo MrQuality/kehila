@@ -2,6 +2,7 @@
 use unicode_normalization::UnicodeNormalization;
 use zeroize::Zeroizing;
 
+mod blocklist;
 mod hash;
 mod worker;
 

@@ -1,6 +1,7 @@
 //! One owned CPU worker. Normal shutdown joins after stopping admission and
 //! outside request execution, shared locks and database fences.
 use super::{
+    blocklist::AllowedPassword,
     hash::{HashError, Hasher, Verifier},
     NormalizedPassword,
 };
@@ -22,6 +23,29 @@ enum Change {
 }
 type HashPending<T> = Pending<Result<T, HashError>>;
 
+fn random_salt() -> Result<[u8; 16], HashError> {
+    let mut salt = [0; 16];
+    SystemRandom::new()
+        .fill(&mut salt)
+        .map_err(|_| HashError::Unavailable)?;
+    Ok(salt)
+}
+
+fn salted_stage<T>(
+    control: &Control,
+    random: impl FnOnce() -> Result<[u8; 16], HashError>,
+    hash: impl FnOnce([u8; 16]) -> Result<T, HashError>,
+) -> Result<T, HashError> {
+    if !control.allowed() {
+        return Err(HashError::Cancelled);
+    }
+    let salt = random()?;
+    if !control.allowed() {
+        return Err(HashError::Cancelled);
+    }
+    hash(salt)
+}
+
 // Keep stage admission shared by production and deterministic cancellation tests.
 fn replacement_stages<C, T>(
     control: &Control,
@@ -36,14 +60,7 @@ fn replacement_stages<C, T>(
     if !verify(context)? {
         return Ok(None);
     }
-    if !control.allowed() {
-        return Err(HashError::Cancelled);
-    }
-    let salt = random()?;
-    if !control.allowed() {
-        return Err(HashError::Cancelled);
-    }
-    replace(context, salt).map(Some)
+    salted_stage(control, random, |salt| replace(context, salt)).map(Some)
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -87,14 +104,42 @@ impl Worker {
         }
     }
 
+    fn new_verifier(
+        &mut self,
+        deadline: Instant,
+        password: AllowedPassword,
+    ) -> Result<HashPending<Verifier>, WorkerError> {
+        let password = password.into_password();
+        self.start(deadline, move |control| {
+            let mut hasher = Hasher::new()?;
+            salted_stage(control, random_salt, |salt| hasher.hash(&password, salt))
+        })
+    }
+
+    fn verify(
+        &mut self,
+        deadline: Instant,
+        password: NormalizedPassword,
+        verifier: Verifier,
+    ) -> Result<HashPending<bool>, WorkerError> {
+        self.start(deadline, move |control| {
+            let mut hasher = Hasher::new()?;
+            if !control.allowed() {
+                return Err(HashError::Cancelled);
+            }
+            hasher.verify(&password, &verifier)
+        })
+    }
+
     fn replacement(
         &mut self,
         deadline: Instant,
         current: NormalizedPassword,
-        replacement: NormalizedPassword,
+        replacement: AllowedPassword,
         verifier: Verifier,
     ) -> Result<HashPending<Change>, WorkerError> {
-        // The caller applies the new-password blocklist before this computation.
+        let replacement = replacement.into_password();
+        // Only the blocklist can construct an admitted new password.
         // No database or session state enters the CPU worker.
         self.start(deadline, move |control| {
             let mut hasher = Hasher::new()?;
@@ -102,13 +147,7 @@ impl Worker {
                 control,
                 &mut hasher,
                 |hasher| hasher.verify(&current, &verifier),
-                || {
-                    let mut salt = [0; 16];
-                    SystemRandom::new()
-                        .fill(&mut salt)
-                        .map_err(|_| HashError::Unavailable)?;
-                    Ok(salt)
-                },
+                random_salt,
                 |hasher, salt| hasher.hash(&replacement, salt),
             )
             .map(|result| result.map_or(Change::Mismatch, Change::Replacement))
@@ -247,6 +286,12 @@ mod tests {
         Instant::now() + Duration::from_secs(3)
     }
 
+    fn allowed(value: &str) -> AllowedPassword {
+        super::super::blocklist::Blocklist::synthetic_for_tests()
+            .admit(NormalizedPassword::new(zeroize::Zeroizing::new(value.to_owned())).unwrap())
+            .unwrap()
+    }
+
     fn reference_verifier() -> Verifier {
         Verifier::from_stored(
             zeroize::Zeroizing::new(
@@ -259,6 +304,64 @@ mod tests {
             1,
         )
         .unwrap()
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn admitted_new_password_hashes_and_existing_password_verifies_without_blocklist() {
+        let mut owner = Worker::new();
+        let verifier = owner
+            .new_verifier(
+                Instant::now() + Duration::from_secs(30),
+                allowed("a synthetic new password"),
+            )
+            .unwrap()
+            .result()
+            .await
+            .unwrap()
+            .unwrap();
+        owner.join_active().unwrap();
+        let password = NormalizedPassword::new(zeroize::Zeroizing::new(
+            "a synthetic new password".to_owned(),
+        ))
+        .unwrap();
+        assert!(owner
+            .verify(Instant::now() + Duration::from_secs(30), password, verifier)
+            .unwrap()
+            .result()
+            .await
+            .unwrap()
+            .unwrap());
+        owner.shutdown().unwrap();
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn blocklisted_current_password_still_verifies_but_cannot_be_new_password() {
+        let password = || {
+            NormalizedPassword::new(zeroize::Zeroizing::new(
+                "blocked synthetic password".to_owned(),
+            ))
+            .unwrap()
+        };
+        let list = super::super::blocklist::Blocklist::synthetic_for_tests();
+        assert!(matches!(
+            list.admit(password()),
+            Err(super::super::blocklist::BlocklistError::Blocked)
+        ));
+        // Represents a verifier created before this choice entered the list.
+        let verifier = Hasher::new().unwrap().hash(&password(), [3; 16]).unwrap();
+        let mut owner = Worker::new();
+        assert!(owner
+            .verify(
+                Instant::now() + Duration::from_secs(30),
+                password(),
+                verifier,
+            )
+            .unwrap()
+            .result()
+            .await
+            .unwrap()
+            .unwrap());
+        owner.shutdown().unwrap();
     }
 
     #[test]
@@ -299,16 +402,30 @@ mod tests {
         assert!(matches!(result, Err(HashError::Cancelled)));
     }
 
+    #[test]
+    fn new_and_replacement_hash_share_cancellation_after_randomness() {
+        let control = Control {
+            cancelled: Arc::new(AtomicBool::new(false)),
+            deadline: deadline(),
+        };
+        let result = salted_stage(
+            &control,
+            || {
+                control.cancelled.store(true, Ordering::Release);
+                Ok([0; 16])
+            },
+            |_| -> Result<(), HashError> { panic!("new hash started after cancellation") },
+        );
+        assert!(matches!(result, Err(HashError::Cancelled)));
+    }
+
     #[tokio::test(flavor = "current_thread")]
     async fn real_verify_and_replacement_share_one_owned_workspace() {
         let mut owner = Worker::new();
         let current =
             NormalizedPassword::new(zeroize::Zeroizing::new("a fixed test password".to_owned()))
                 .unwrap();
-        let replacement = NormalizedPassword::new(zeroize::Zeroizing::new(
-            "a different replacement".to_owned(),
-        ))
-        .unwrap();
+        let replacement = allowed("a different replacement");
         // Unoptimized mechanism test; five-second operating qualification uses
         // the separately measured release profile rather than this debug bound.
         let started = Instant::now();
@@ -344,10 +461,7 @@ mod tests {
             "the wrong test password".to_owned(),
         ))
         .unwrap();
-        let replacement = NormalizedPassword::new(zeroize::Zeroizing::new(
-            "a different replacement".to_owned(),
-        ))
-        .unwrap();
+        let replacement = allowed("a different replacement");
         let outcome = owner
             .replacement(
                 Instant::now() + Duration::from_secs(30),

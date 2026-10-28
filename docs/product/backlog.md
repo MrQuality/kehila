@@ -407,7 +407,9 @@ completes T01-T16 or a supported installation.
   with independent vectors and detected regressions; these have no HTTP caller.
   This does not complete authentication: Rust connection/hash/session ownership,
   advisory-loss handling, credential eligibility and actual client integration
-  remain unimplemented.
+  remain unfinished. A2 now owns hash completion/cancellation and requires typed
+  new-password blocklist admission; its pinned external-corpus tests do not
+  qualify session registries, startup file admission or HTTP coordinators.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the
