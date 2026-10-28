@@ -409,7 +409,10 @@ completes T01-T16 or a supported installation.
   advisory-loss handling, credential eligibility and actual client integration
   remain unfinished. A2 now owns hash completion/cancellation and requires typed
   new-password blocklist admission; its pinned external-corpus tests do not
-  qualify session registries, startup file admission or HTTP coordinators.
+  qualify startup file admission or HTTP coordinators. The unconnected 64-slot
+  session core now checks publication, expiry, retirement, own-logout retention
+  and owner destruction; pre-sessions, revoke-other batching and bounded
+  coordinator reference ownership remain unfinished.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

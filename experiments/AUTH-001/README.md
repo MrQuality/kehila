@@ -73,6 +73,11 @@ The pure rate-admission engine adds independent bounded login/management
 allowances; its latest selected-asset local suite passed 81 unit and 20 transport
 tests. Actual request charging and HTTP saturation behavior remain unconnected.
 See A2 for the newer-hosted-Clippy failure and decoder correction history.
+The session-candidate core now has shared retirement, unpublished issuance,
+expiry, own-logout retention, CSRF retrieval and irreversible owner teardown.
+Its latest selected-asset local suite passed 95 unit and 20 transport tests.
+It has no database/HTTP caller; pre-sessions, revoke-other batching, snapshot
+provenance and bounded coordinator reference ownership remain unfinished.
 
 ## Run
 

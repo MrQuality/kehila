@@ -160,15 +160,56 @@ formatting and Clippy on Windows/Rust 1.93. A
 failed Rust 1.99 Clippy's constant `chunks_exact` lint. The decoder now uses safe
 [fixed-array chunks](https://doc.rust-lang.org/stable/std/primitive.slice.html#method.as_chunks),
 available since Rust 1.88; exact prior length admission ensures no remainder.
-Hosted verification of the correction remains required. Local success and API
-availability do not qualify execution on the minimum compiler.
+[Hosted verification of correction `a891c61`](https://github.com/MrQuality/kehila/actions/runs/40635696198)
+passed. The earlier failed run remains historical evidence. Local success and
+API availability do not qualify execution on the minimum compiler.
+
+## Session candidate registry
+
+The unconnected registry owns at most 64 unpublished, active or retained session
+slots. Each entry binds installation, owner, runtime/auth generations, kind and
+public ID to a bearer digest; browser entries retain an independent CSRF secret.
+Lookup returns a candidate reference, never a permission verdict. Publication
+requires a still-registered unpublished entry and a current matching snapshot.
+The coordinator must obtain that snapshot from the real fenced database read;
+the Rust value cannot establish its provenance, grants or connection ownership.
+
+Captured references share phase/activity state through a per-entry mutex.
+Revocation and retirement never return to active. Admission scans at most 64
+entry states for expiry, duplicates and the oldest audit-confirmed logout;
+active or unconfirmed entries are not evicted. Retirement precedes slot removal,
+and reclamation orders by revocation time then public ID. Unpublished entries
+cannot be looked up, and failed issuance cleanup denies later publication.
+
+Monotonic inactivity/absolute deadlines are 30 minutes/12 hours. Only the explicit
+successful-business transition renews still-active state. CSRF bootstrap returns
+the existing browser value without renewal, including eligible own-logout retry
+state. Its actual HTTP metadata/cookie checks remain unimplemented. The current
+revocation method models own logout only; revoke-other batching and retry rights
+remain separate unfinished work.
+
+Explicit stop closes a shared runtime latch before releasing entries. Source
+review found that owner destruction initially left captured references locally
+eligible; a regression failed before the fix. Registry destruction now performs
+the same irreversible stop. This is local lifetime enforcement, not evidence of
+actual PostgreSQL advisory-loss detection or output suppression.
+
+Fourteen controlled-time/state tests cover publication and failed issuance,
+kind/duplicate rejection, exact expiry and activity, binding/generation changes,
+revocation/retained references, bounded capacity, confirmed-logout ordering,
+CSRF retrieval, stop and owner destruction. Revocation, audit-dependent capacity,
+expiry and runtime-latch mutations were detected; restored final verification
+passed 95 unit and 20 serial transport tests with the external corpus selected,
+formatting and Clippy. The 64-slot bound does not bound every captured allocation:
+real coordinators must also bound reference retention and owned task lifetime.
+No registry guard spans an await in this pure component.
 
 ## Remaining integration gates
 
 Qualify the actual coordinator's timeout and retained worker capacity, and
 measure the Linux/container and complete request budgets. Connect blocklist
-file admission and enrollment/recovery callers, then implement bounded
-session/pre-session registries and rate admission. Login verification must not
+file admission and enrollment/recovery callers, then complete bounded
+pre-sessions and actual registry/rate coordinators. Login verification must not
 reapply a newer blocklist to an existing password.
 
 Connect credentials to the reviewed PostgreSQL fences and runtime generation,

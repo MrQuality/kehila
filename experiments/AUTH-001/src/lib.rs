@@ -22,6 +22,14 @@ mod password;
     expect(dead_code, reason = "Secret primitives await session integration")
 )]
 mod secret;
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Registry candidates await fenced runtime integration"
+    )
+)]
+mod session;
 
 use std::{
     convert::Infallible,

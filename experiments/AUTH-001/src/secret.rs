@@ -8,21 +8,21 @@ use subtle::ConstantTimeEq;
 use zeroize::Zeroizing;
 
 #[derive(Debug, Eq, PartialEq)]
-enum SecretError {
+pub(super) enum SecretError {
     Unavailable,
     Invalid,
 }
 
 #[derive(Clone, Copy)]
-struct Digest([u8; 32]);
+pub(super) struct Digest([u8; 32]);
 
-struct Secret {
+pub(super) struct Secret {
     encoded: Zeroizing<[u8; 43]>,
     digest: Digest,
 }
 
 impl Secret {
-    fn generate() -> Result<Self, SecretError> {
+    pub(super) fn generate() -> Result<Self, SecretError> {
         let source = SystemRandom::new();
         Self::from_source(|buffer| source.fill(buffer).map_err(|_| ()))
     }
@@ -39,8 +39,12 @@ impl Secret {
         })
     }
 
-    fn encoded(&self) -> &[u8; 43] {
+    pub(super) fn encoded(&self) -> &[u8; 43] {
         &self.encoded
+    }
+
+    pub(super) fn digest(&self) -> Digest {
+        self.digest
     }
 }
 
@@ -53,7 +57,7 @@ impl Digest {
         Self(bytes)
     }
 
-    fn from_encoded(encoded: &[u8]) -> Result<Self, SecretError> {
+    pub(super) fn from_encoded(encoded: &[u8]) -> Result<Self, SecretError> {
         if encoded.len() != 43 {
             return Err(SecretError::Invalid);
         }
@@ -72,7 +76,7 @@ impl Digest {
         Ok(Self::of_raw(&raw))
     }
 
-    fn matches(&self, other: &Self) -> bool {
+    pub(super) fn matches(&self, other: &Self) -> bool {
         bool::from(self.0.as_slice().ct_eq(other.0.as_slice()))
     }
 }
