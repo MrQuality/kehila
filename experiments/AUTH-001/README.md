@@ -53,9 +53,13 @@ Safe file admission and the container proof remain unfinished. The
 The unconnected password and random-secret modules implement the fixed policy
 and strict verifier/token admission described in [A2](../../docs/implementation/local-owner-authentication-a2.md).
 The restored primitive checkpoint passed 56 unit and 20 serial transport tests
-on Windows. This does not qualify login, session storage, container integration
-or supported secret provisioning. Complete hash-job latency/memory, cancellation
-and registry behavior remain separate gates.
+on Windows; adding the owned worker passed 69 unit and 20 transport tests.
+Five release samples measured verification plus replacement and joined cleanup
+at 188.700–195.864 ms, with observed process peak working set 69.54–69.72 MiB.
+See A2 for sampling limits and failed-attempt history. These observations do not
+qualify login, session storage, Linux/container performance, the complete request
+budget or supported secret provisioning. Coordinator and registry behavior remain
+separate gates.
 
 ## Run
 

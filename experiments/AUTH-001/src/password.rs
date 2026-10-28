@@ -3,6 +3,7 @@ use unicode_normalization::UnicodeNormalization;
 use zeroize::Zeroizing;
 
 mod hash;
+mod worker;
 
 #[derive(Debug, Eq, PartialEq)]
 enum InputError {

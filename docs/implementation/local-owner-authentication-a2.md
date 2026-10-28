@@ -43,10 +43,47 @@ parameters, changing the actual Argon2 time cost while retaining its label, and
 omitting workspace wiping. Source was restored and the suite rerun. These are
 primitive observations, not completed authentication cases T01–T16.
 
+## Owned hash worker
+
+One owned thread runs at a time, with no waiting queue. Dropping a request marks
+only its job cancelled; the slot remains occupied until the actual thread is
+joined. Completed work is joined before reuse. Shutdown stops admission, marks
+cancellation and joins outside request execution, shared locks and SQL fences.
+Thread-spawn failure drops its captured inputs; a panic is reported and joined.
+
+Password replacement verifies the current password, obtains a fresh salt and
+hashes the replacement sequentially with one workspace. Cancellation/deadline
+checks between stages prevent starting later work. The receiving coordinator
+must apply its absolute timeout and drop the pending future; an active Argon2
+call cannot be interrupted. Dropping the future never detaches the worker.
+The caller must admit a new password against the blocklist before this job;
+that typed integration remains unfinished.
+
+Thirteen worker tests passed, including real verification/replacement, wrong
+password, spawn failure, panic, shutdown, retained capacity after abandonment
+and cancellation between the actual replacement stages. Removing either
+inter-stage cancellation check failed its targeted regression; restored tests
+passed. This does not yet qualify a live request coordinator.
+The restored worker source passed 69 unit and 20 serial transport tests, plus
+Clippy with warnings denied. An interrupted final run had no completed result;
+these totals come from its completed resumed run.
+
+Five Windows/Rust 1.93 release samples measured the real verify-plus-replacement
+job through workspace cleanup and worker join: 188.700–195.864 ms, median
+189.390 ms. Observed process peak working set was 69.54–69.72 MiB. Peak counters
+were polled every 20 ms; the process included the test harness and a subsequent
+verification, so this is an observed process high-water mark, not an allocation
+trace or Linux/container RSS. The fixed workspace remains 64 MiB. Test-process
+wall times were 326–401 ms; these are not full HTTP/database request latencies.
+The initial measurement test passed but its harness could not obtain exit
+status; the process harness was corrected before collecting these five samples.
+No cost or deadline was relaxed. Linux measurements and real-request budget
+qualification remain pending.
+
 ## Remaining integration gates
 
-Qualify owned hash-worker cancellation, deadlines, join and saturation; measure
-release verification-plus-replacement latency and peak memory. Apply the reviewed
+Qualify the actual coordinator's timeout and retained worker capacity, and
+measure the Linux/container and complete request budgets. Apply the reviewed
 new-password blocklist before enrollment/replacement, then implement bounded
 session/pre-session registries and rate admission. Login verification must not
 reapply a newer blocklist to an existing password.

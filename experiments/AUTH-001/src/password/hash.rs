@@ -14,6 +14,7 @@ const MEMORY_KIB: usize = 65536;
 pub(super) enum HashError {
     UnsupportedVerifier,
     Unavailable,
+    Cancelled,
 }
 
 pub(super) struct Verifier {
