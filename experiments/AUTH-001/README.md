@@ -69,6 +69,10 @@ selected, final local verification passed 77 unit and 20 transport tests.
 Ordinary CI omits the single external-asset test. Existing-password verification
 does not reapply the new-password list. Startup file admission and actual
 enrollment/recovery/HTTP callers remain unfinished.
+The pure rate-admission engine adds independent bounded login/management
+allowances; its latest selected-asset local suite passed 81 unit and 20 transport
+tests. Actual request charging and HTTP saturation behavior remain unconnected.
+See A2 for the newer-hosted-Clippy failure and decoder correction history.
 
 ## Run
 

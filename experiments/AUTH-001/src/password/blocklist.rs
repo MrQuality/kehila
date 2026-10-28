@@ -59,8 +59,7 @@ impl Blocklist {
         entries
             .try_reserve_exact(expected_count)
             .map_err(|_| BlocklistError::InvalidAsset)?;
-        for chunk in bytes.chunks_exact(32) {
-            let entry: [u8; 32] = chunk.try_into().map_err(|_| BlocklistError::InvalidAsset)?;
+        for &entry in bytes.as_chunks::<32>().0 {
             if entries.last().is_some_and(|previous| previous >= &entry) {
                 return Err(BlocklistError::InvalidAsset);
             }

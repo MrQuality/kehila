@@ -138,6 +138,31 @@ the external asset explicitly selected, passed 77 unit and 20 serial transport
 tests, formatting and Clippy with warnings denied. Ordinary CI runs the synthetic
 subset and leaves the one external-asset test ignored.
 
+## Password-attempt admission engine
+
+The pure admission state has separate login and authenticated-management buckets,
+each refilling at five attempts per minute with burst five. Integer nanosecond
+credit preserves partial refill, caps idle accumulation and rejects backwards
+time without rewinding its observation. No client-keyed map or waiting queue is
+allocated. A two-token burst uses the same arithmetic for later pre-session
+allocation, whose registry/atomic allocation integration is still unfinished.
+
+Four controlled-time tests cover exact burst/refill boundaries, capped idle
+credit, backwards time and allowance independence. The threshold mutation failed
+its regression; restored source passed. The actual server must own these buckets
+once per installation and charge at the accepted ordering points. This engine
+does not yet qualify session/CSRF validation before management charging, busy
+worker handling, HTTP 429 or concurrent request admission.
+
+Final selected-asset verification passed 81 unit and 20 serial transport tests,
+formatting and Clippy on Windows/Rust 1.93. A
+[hosted run at the earlier blocklist source](https://github.com/MrQuality/kehila/actions/runs/40634853337)
+failed Rust 1.99 Clippy's constant `chunks_exact` lint. The decoder now uses safe
+[fixed-array chunks](https://doc.rust-lang.org/stable/std/primitive.slice.html#method.as_chunks),
+available since Rust 1.88; exact prior length admission ensures no remainder.
+Hosted verification of the correction remains required. Local success and API
+availability do not qualify execution on the minimum compiler.
+
 ## Remaining integration gates
 
 Qualify the actual coordinator's timeout and retained worker capacity, and
