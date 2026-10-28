@@ -8,6 +8,12 @@
     )
 )]
 mod bundle;
+#[cfg(target_os = "linux")]
+#[expect(
+    dead_code,
+    reason = "Native database ownership awaits fixture qualification and HTTP wiring"
+)]
+mod database;
 mod diagnostics;
 mod lifecycle;
 #[cfg_attr(

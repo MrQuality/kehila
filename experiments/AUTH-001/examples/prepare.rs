@@ -12,6 +12,13 @@ use rcgen::{
 };
 use time::{Duration, OffsetDateTime};
 
+#[derive(Clone, Copy)]
+enum Profile {
+    Transport,
+    Cases,
+    Database,
+}
+
 fn write_new(path: &Path, bytes: &[u8]) -> Result<(), Box<dyn Error>> {
     let mut file = OpenOptions::new().write(true).create_new(true).open(path)?;
     file.write_all(bytes)?;
@@ -25,10 +32,15 @@ fn leaf(
     issuer: &Issuer<'_, KeyPair>,
     name: &str,
     expired: bool,
+    profile: Profile,
 ) -> Result<(), Box<dyn Error>> {
     let now = OffsetDateTime::now_utc();
     let mut params = CertificateParams::new(vec![name.to_owned()])?;
     params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
+    if matches!(profile, Profile::Database) {
+        params.is_ca = IsCa::ExplicitNoCa;
+        params.key_usages = vec![KeyUsagePurpose::DigitalSignature];
+    }
     params.not_before = now - Duration::minutes(5);
     params.not_after = now + Duration::hours(12);
     if expired {
@@ -49,10 +61,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         args.next()
             .ok_or("expected pre-created protected directory")?,
     );
-    let profiles = match args.next() {
-        None => false,
-        Some(flag) if flag == "--profiles" => true,
-        Some(_) => return Err("expected optional --profiles".into()),
+    let profile = match args.next() {
+        None => Profile::Transport,
+        Some(flag) if flag == "--profiles" => Profile::Cases,
+        Some(flag) if flag == "--database" => Profile::Database,
+        Some(_) => return Err("expected optional --profiles or --database".into()),
     };
     if args.next().is_some() || !directory.is_dir() || directory.is_symlink() {
         return Err("expected an existing non-symlink protected directory".into());
@@ -70,17 +83,27 @@ fn main() -> Result<(), Box<dyn Error>> {
     // The caller must restrict directory ACLs before invoking this fixture helper.
     let now = OffsetDateTime::now_utc();
     let mut ca = CertificateParams::new(Vec::<String>::new())?;
-    ca.distinguished_name
-        .push(DnType::CommonName, "Disposable local transport CA");
+    ca.distinguished_name.push(
+        DnType::CommonName,
+        if matches!(profile, Profile::Database) {
+            "Disposable local database CA"
+        } else {
+            "Disposable local transport CA"
+        },
+    );
     ca.is_ca = IsCa::Ca(BasicConstraints::Constrained(0));
     ca.key_usages = vec![KeyUsagePurpose::KeyCertSign];
     ca.not_before = now - Duration::minutes(5);
     ca.not_after = now + Duration::hours(24);
     ca.name_constraints = Some(NameConstraints {
-        permitted_subtrees: vec![
-            GeneralSubtree::IpAddress(CidrSubnet::V4([127, 0, 0, 1], [255, 255, 255, 255])),
-            GeneralSubtree::DnsName("probe.invalid".to_owned()),
-        ],
+        permitted_subtrees: if matches!(profile, Profile::Database) {
+            vec![GeneralSubtree::DnsName("auth-db".to_owned())]
+        } else {
+            vec![
+                GeneralSubtree::IpAddress(CidrSubnet::V4([127, 0, 0, 1], [255, 255, 255, 255])),
+                GeneralSubtree::DnsName("probe.invalid".to_owned()),
+            ]
+        },
         excluded_subtrees: Vec::new(),
     });
     let ca_key = KeyPair::generate()?;
@@ -91,10 +114,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         &directory,
         ca_certificate.der(),
         &issuer,
-        "127.0.0.1",
+        if matches!(profile, Profile::Database) {
+            "auth-db"
+        } else {
+            "127.0.0.1"
+        },
         false,
+        profile,
     )?;
-    if profiles {
+    if matches!(profile, Profile::Cases) {
         for (profile, name, expired) in [
             ("renewed", "127.0.0.1", false),
             ("wrong-san", "probe.invalid", false),
@@ -102,7 +130,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         ] {
             let nested = directory.join(profile);
             std::fs::create_dir(&nested)?;
-            leaf(&nested, ca_certificate.der(), &issuer, name, expired)?;
+            leaf(
+                &nested,
+                ca_certificate.der(),
+                &issuer,
+                name,
+                expired,
+                Profile::Cases,
+            )?;
         }
     }
     println!("Prepared disposable certificate fixtures; trust stores unchanged.");

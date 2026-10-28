@@ -11,6 +11,10 @@ The separate opt-in [A1 storage proof](storage/README.md) exercises disposable
 owner enrollment against PostgreSQL. It is outside this Cargo workspace and
 does not add authentication to these diagnostic HTTP endpoints.
 
+The Linux-only [database bridge](../../docs/implementation/local-owner-authentication-database-bridge.md)
+now owns dedicated authority and serving connections in a synthetic PostgreSQL
+TLS proof. Its narrow credential-read API is not connected to these endpoints.
+
 ## Contract
 
 The server and client accept literal `127.0.0.1` only. TLS 1.3 uses normal
