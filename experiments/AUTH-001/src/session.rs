@@ -26,7 +26,7 @@ struct Snapshot {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
-enum Kind {
+pub(crate) enum Kind {
     Browser,
     Cli,
 }
@@ -82,7 +82,7 @@ struct Registry {
 }
 
 impl Registry {
-    fn new(startup: Binding) -> Result<Self, SessionError> {
+    fn new(startup: Binding, live_runtime: Arc<RuntimeLiveness>) -> Result<Self, SessionError> {
         if !startup.valid() {
             return Err(SessionError::Invalid);
         }
@@ -93,7 +93,7 @@ impl Registry {
         Ok(Self {
             startup,
             entries,
-            live_runtime: RuntimeLiveness::new(),
+            live_runtime,
         })
     }
 
@@ -418,7 +418,7 @@ mod tests {
     fn unpublished_entries_never_lookup_and_failed_issuance_retires_captured_reference() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let (new, digest) = candidate("session");
         let entry = registry.reserve(new, &snapshot, now).unwrap();
         assert!(registry.lookup(&digest, Kind::Cli, now).is_none());
@@ -433,7 +433,7 @@ mod tests {
     fn publication_kind_and_exact_idle_expiry_are_enforced() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let (new, digest) = candidate("session");
         let entry = registry.reserve(new, &snapshot, now).unwrap();
         registry.publish(&entry, &snapshot, now).unwrap();
@@ -448,7 +448,7 @@ mod tests {
     fn revocation_is_seen_by_captured_reference_and_retains_only_logout_retry() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let (new, _) = candidate("session");
         let entry = registry.reserve(new, &snapshot, now).unwrap();
         registry.publish(&entry, &snapshot, now).unwrap();
@@ -465,7 +465,7 @@ mod tests {
     fn full_registry_never_evicts_active_or_unconfirmed_but_reclaims_confirmed_logout() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let mut captured = Vec::new();
         for index in 0..CAPACITY {
             let (new, _) = candidate(&format!("session-{index}"));
@@ -496,7 +496,7 @@ mod tests {
     fn confirmed_reclamation_orders_by_revocation_time_then_public_id() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let mut captured = Vec::new();
         for index in 0..CAPACITY {
             let id = match index {
@@ -523,7 +523,7 @@ mod tests {
     fn activity_can_extend_idle_but_never_absolute_expiry_or_revocation() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let entry = registry
             .reserve(candidate("session").0, &snapshot, now)
             .unwrap();
@@ -540,7 +540,7 @@ mod tests {
     fn generation_and_owner_changes_or_inactive_actor_deny_captured_reference() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let entry = registry
             .reserve(candidate("session").0, &snapshot, now)
             .unwrap();
@@ -566,7 +566,7 @@ mod tests {
     fn expired_entries_are_reclaimed_and_old_references_cannot_be_resurrected() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let old = registry
             .reserve(candidate("old").0, &snapshot, now)
             .unwrap();
@@ -583,20 +583,22 @@ mod tests {
     fn stopped_runtime_cannot_publish_or_accept_cached_or_new_credentials() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let live = RuntimeLiveness::new();
+        let mut registry = Registry::new(snapshot.binding.clone(), live.clone()).unwrap();
         let (new, digest) = candidate("active");
         let active = registry.reserve(new, &snapshot, now).unwrap();
         registry.publish(&active, &snapshot, now).unwrap();
         let unpublished = registry
             .reserve(candidate("pending").0, &snapshot, now)
             .unwrap();
-        registry.stop();
+        live.stop();
         assert!(!active.eligible(&snapshot, now));
         assert!(registry.lookup(&digest, Kind::Cli, now).is_none());
         assert!(registry.publish(&unpublished, &snapshot, now).is_err());
         assert!(registry
             .reserve(candidate("new").0, &snapshot, now)
             .is_err());
+        registry.stop();
         assert!(registry.entries.is_empty());
     }
 
@@ -604,7 +606,7 @@ mod tests {
     fn revoked_unpublished_entry_never_becomes_lookup_or_logout_eligible() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let (new, digest) = candidate("unpublished");
         let entry = registry.reserve(new, &snapshot, now).unwrap();
         entry.revoke_for_logout(&snapshot, now).unwrap();
@@ -619,7 +621,7 @@ mod tests {
     fn browser_requires_distinct_csrf_and_bootstrap_never_renews_expiry() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let token = Secret::generate().unwrap();
         let digest = token.digest();
         let reused = NewSession {
@@ -663,7 +665,7 @@ mod tests {
     fn cli_has_no_csrf_bootstrap_and_mixed_kind_state_is_rejected() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let (mut new, _) = candidate("mixed");
         new.csrf = Some(Secret::generate().unwrap());
         assert!(matches!(
@@ -681,7 +683,7 @@ mod tests {
     fn dropping_registry_invalidates_active_and_retained_browser_references() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let active = registry
             .reserve(candidate("active").0, &snapshot, now)
             .unwrap();
@@ -715,7 +717,7 @@ mod tests {
     fn duplicate_live_public_id_or_bearer_cannot_allocate_another_identity() {
         let now = Instant::now();
         let snapshot = snapshot();
-        let mut registry = Registry::new(snapshot.binding.clone()).unwrap();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
         let (new, digest) = candidate("original");
         let original = registry.reserve(new, &snapshot, now).unwrap();
         registry.publish(&original, &snapshot, now).unwrap();

@@ -242,6 +242,20 @@ not browser/SQL login or request-saturation qualification.
 
 ## Remaining integration gates
 
+The registry now accepts its owner's shared irreversible liveness value rather
+than creating an independent one. External stop denies captured, unpublished and
+new credentials; normal registry stop/destruction still releases local entries.
+The latch retains its stopped value even without observers and can wake an idle
+runtime owner through Tokio watch notification. Its observer test polls the
+active wait to Pending before stopping, then checks a late observer; it does not
+rely on a scheduling hint. No reset or sender capability escapes the latch.
+
+This supplies the common stop mechanism, not completed application wiring. The
+database and pre-session owners can share it with the registry, but the actual
+owner must still stop admission/output, retain active work through cleanup and
+join owned workers/drivers. See the [database bridge record](local-owner-authentication-database-bridge.md)
+for the current native subset and combined-source verification limits.
+
 Qualify the actual coordinator's timeout and retained worker capacity, and
 measure the Linux/container and complete request budgets. Connect blocklist
 file admission and enrollment/recovery callers, then complete bounded
