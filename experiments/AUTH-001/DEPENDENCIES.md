@@ -1,6 +1,6 @@
 # Standalone probe dependency review
 
-Owner: project maintainer. Initial review 2026-10-19; Tokio patch review 2026-10-26; Linux reader dependency review 2026-10-27.
+Owner: project maintainer. Initial review 2026-10-19; Tokio patch review 2026-10-26; Linux reader review 2026-10-27; credential primitive review 2026-10-28.
 Scope: the locked AUTH-001 experiment. The matching root-workspace Tokio patch is
 recorded in the canonical A0 disposition below.
 
@@ -77,10 +77,77 @@ records remain historical. Review monthly and immediately after security notices
 Compilation, actual Linux descriptor tests and minimum-version qualification
 remain distinct evidence gates; none is claimed by these metadata results.
 
+## Credential primitive selection, 2026-10-28
+
+Argon2 0.6.0 requests `alloc/password-hash/zeroize` with defaults disabled;
+unicode-normalization 0.1.26 requests no features. Existing ring 0.17.14 is
+promoted with `std` for OS randomness/SHA-256, and subtle 2.6.1 with defaults
+disabled for fixed-size comparison. The resolved graph has 112 registry packages:
+14 additions and no removed or changed existing versions. Defaults disabled on
+an edge do not disable transitively unified features; ring retains default/std/
+alloc. No production manifest/lock changes.
+
+All fourteen new published archive hashes match Cargo's generated lock. Actual
+supplied grants select Apache-2.0, plus Unicode-3.0 for normalization. The packaged
+Unicode grant was explicitly reviewed: retain its copyright/permission text,
+avoid endorsement, and retain the code grant as well. These obligations permit
+the experimental distribution; Unicode data is not relicensed. Actual selected
+text variants and package attribution are retained in THIRD-PARTY-NOTICES.txt.
+None of the fourteen supplied a separate top-level NOTICE file.
+
+[The credential graph query](advisories-credential.json) returned no OSV findings
+for all 112 package/versions on 2026-10-28, including test/target entries. It is
+bound to the lock hash, not a source/reachability audit or production disposition.
+Root advisory obligations remain separate. Inspected upstream repositories are
+not archived/disabled. RustCrypto and normalization show October 2026 activity;
+tinyvec September, typenum May, ring July. Subtle's latest observed push is
+August 2024: a mature low-churn component, not proof of active support or
+abandonment. Re-review monthly and on security notices under DEP-001.
+
+New declared Rust minima fit the existing 1.88 floor: ctutils reaches 1.87;
+the RustCrypto additions generally declare 1.85. Tinyvec declares no manifest
+minimum; its README states 1.47. A full minimum-compiler build is still
+unqualified. Current compiler execution must not be described as that build.
+
+Two source/API pitfalls affect the implementation:
+
+- Argon2's allocating hash path deallocates its workspace without wiping it,
+  including with its optional `zeroize` feature. Use caller-owned pre-sized
+  `Zeroizing<Vec<Block>>` and the with-memory API; explicitly wipe each block
+  after computation and retain the owner through actual completion. PHC's old
+  serialization helper is deprecated; use its supported string formatting.
+- PHC 0.6.1 permits duplicate parameter names: lookup takes the first while
+  Argon2 conversion takes the last. Version one admits only the exact canonical
+  `m=65536,t=3,p=1` string, Argon2id/v19, salt16/output32 and bounded ASCII encoding.
+  Hashing always uses independently constructed fixed parameters. Unsupported
+  storage is unavailable, never a wrong-password verdict or unbounded hash job.
+
+The fixed profile has an independent full-PHC known answer from the Argon2 C
+implementation through argon2-cffi/bindings 25.1.0. It uses an explicitly public
+synthetic password/salt, not an owner credential. Those reference tools are not
+runtime dependencies. The OS-random primitive has a separate SHA-256 known answer;
+no weak/randomness fallback is allowed. Ring permits a blocking first random
+fill, so error handling alone cannot establish request deadlines.
+
+Credential policy one pins Unicode 18.0.0 tables. Unicode stability excludes
+then-unassigned scalars; table changes require credential-policy compatibility
+review rather than silently changing existing passwords. Input/output and owned
+hash workspace are wiped, but Unicode iterators retain internal char buffers and
+PHC/provider types can make copies. No universal physical-erasure guarantee is
+claimed. Independent worker ownership, blocklist/registry and actual HTTP/CLI
+qualification remain distinct from these primitive/API observations.
+
+Primary source: [Argon2 workspace](https://github.com/RustCrypto/password-hashes/blob/argon2-v0.6.0/argon2/src/block.rs),
+[PHC parameters](https://docs.rs/phc/0.6.1/phc/struct.ParamsString.html),
+[Argon2 parameters](https://docs.rs/argon2/0.6.0/argon2/struct.Params.html),
+[Unicode stability](https://www.unicode.org/policies/stability_policy.html),
+[reference API](https://argon2-cffi.readthedocs.io/en/stable/api.html#argon2.low_level.hash_secret).
+
 ## Locked registry inventory
 
 | Package | Version | Selected grant |
 | --- | --- | --- |
+| [argon2](https://crates.io/crates/argon2/0.6.0) | 0.6.0 | Apache-2.0 |
 | [asn1-rs](https://crates.io/crates/asn1-rs/0.7.2) | 0.7.2 | Apache-2.0 |
 | [asn1-rs-derive](https://crates.io/crates/asn1-rs-derive/0.6.0) | 0.6.0 | Apache-2.0 |
 | [asn1-rs-impl](https://crates.io/crates/asn1-rs-impl/0.2.0) | 0.2.0 | Apache-2.0 |
@@ -89,15 +156,22 @@ remain distinct evidence gates; none is claimed by these metadata results.
 | [base64ct](https://crates.io/crates/base64ct/1.8.3) | 1.8.3 | Apache-2.0 |
 | [bit-vec](https://crates.io/crates/bit-vec/0.9.1) | 0.9.1 | Apache-2.0 |
 | [bitflags](https://crates.io/crates/bitflags/2.13.2) | 2.13.2 | Apache-2.0 |
+| [blake2](https://crates.io/crates/blake2/0.11.0) | 0.11.0 | Apache-2.0 |
+| [block-buffer](https://crates.io/crates/block-buffer/0.12.1) | 0.12.1 | Apache-2.0 |
 | [bytes](https://crates.io/crates/bytes/1.11.1) | 1.11.1 | MIT |
 | [cc](https://crates.io/crates/cc/1.9.0) | 1.9.0 | Apache-2.0 |
 | [cfg-if](https://crates.io/crates/cfg-if/1.0.5) | 1.0.5 | Apache-2.0 |
+| [cmov](https://crates.io/crates/cmov/0.5.4) | 0.5.4 | Apache-2.0 |
 | [const-oid](https://crates.io/crates/const-oid/0.10.2) | 0.10.2 | Apache-2.0 |
+| [cpufeatures](https://crates.io/crates/cpufeatures/0.3.1) | 0.3.1 | Apache-2.0 |
+| [crypto-common](https://crates.io/crates/crypto-common/0.2.2) | 0.2.2 | Apache-2.0 |
+| [ctutils](https://crates.io/crates/ctutils/0.4.6) | 0.4.6 | Apache-2.0 |
 | [data-encoding](https://crates.io/crates/data-encoding/2.11.1) | 2.11.1 | MIT |
 | [der](https://crates.io/crates/der/0.8.2) | 0.8.2 | Apache-2.0 |
 | [der-parser](https://crates.io/crates/der-parser/10.0.0) | 10.0.0 | Apache-2.0 |
 | [der_derive](https://crates.io/crates/der_derive/0.8.0) | 0.8.0 | Apache-2.0 |
 | [deranged](https://crates.io/crates/deranged/0.5.9) | 0.5.9 | Apache-2.0 |
+| [digest](https://crates.io/crates/digest/0.11.3) | 0.11.3 | Apache-2.0 |
 | [displaydoc](https://crates.io/crates/displaydoc/0.2.7) | 0.2.7 | Apache-2.0 |
 | [errno](https://crates.io/crates/errno/0.3.14) | 0.3.14 | Apache-2.0 |
 | [find-msvc-tools](https://crates.io/crates/find-msvc-tools/0.1.15) | 0.1.15 | Apache-2.0 |
@@ -110,6 +184,7 @@ remain distinct evidence gates; none is claimed by these metadata results.
 | [http-body-util](https://crates.io/crates/http-body-util/0.1.3) | 0.1.3 | MIT |
 | [httparse](https://crates.io/crates/httparse/1.10.1) | 1.10.1 | Apache-2.0 |
 | [httpdate](https://crates.io/crates/httpdate/1.0.3) | 1.0.3 | Apache-2.0 |
+| [hybrid-array](https://crates.io/crates/hybrid-array/0.4.15) | 0.4.15 | Apache-2.0 |
 | [hyper](https://crates.io/crates/hyper/1.11.1) | 1.11.1 | MIT |
 | [hyper-util](https://crates.io/crates/hyper-util/0.1.21) | 0.1.21 | MIT |
 | [itoa](https://crates.io/crates/itoa/1.0.18) | 1.0.18 | Apache-2.0 |
@@ -126,6 +201,8 @@ remain distinct evidence gates; none is claimed by these metadata results.
 | [num-traits](https://crates.io/crates/num-traits/0.2.19) | 0.2.19 | Apache-2.0 |
 | [oid-registry](https://crates.io/crates/oid-registry/0.8.1) | 0.8.1 | Apache-2.0 |
 | [once_cell](https://crates.io/crates/once_cell/1.21.4) | 1.21.4 | Apache-2.0 |
+| [password-hash](https://crates.io/crates/password-hash/0.6.1) | 0.6.1 | Apache-2.0 |
+| [phc](https://crates.io/crates/phc/0.6.1) | 0.6.1 | Apache-2.0 |
 | [pin-project-lite](https://crates.io/crates/pin-project-lite/0.2.17) | 0.2.17 | Apache-2.0 |
 | [pkcs8](https://crates.io/crates/pkcs8/0.11.0) | 0.11.0 | Apache-2.0 |
 | [powerfmt](https://crates.io/crates/powerfmt/0.2.1) | 0.2.1 | Apache-2.0 |
@@ -155,11 +232,14 @@ remain distinct evidence gates; none is claimed by these metadata results.
 | [time](https://crates.io/crates/time/0.3.55) | 0.3.55 | Apache-2.0 |
 | [time-core](https://crates.io/crates/time-core/0.1.9) | 0.1.9 | Apache-2.0 |
 | [time-macros](https://crates.io/crates/time-macros/0.2.32) | 0.2.32 | Apache-2.0 |
+| [tinyvec](https://crates.io/crates/tinyvec/1.13.3) | 1.13.3 | Apache-2.0 |
 | [tokio](https://crates.io/crates/tokio/1.53.3) | 1.53.3 | MIT |
 | [tokio-macros](https://crates.io/crates/tokio-macros/2.7.2) | 2.7.2 | MIT |
 | [tokio-rustls](https://crates.io/crates/tokio-rustls/0.26.6) | 0.26.6 | Apache-2.0 |
 | [try-lock](https://crates.io/crates/try-lock/0.2.5) | 0.2.5 | MIT |
+| [typenum](https://crates.io/crates/typenum/1.20.1) | 1.20.1 | Apache-2.0 |
 | [unicode-ident](https://crates.io/crates/unicode-ident/1.0.27) | 1.0.27 | Apache-2.0 AND Unicode-3.0 |
+| [unicode-normalization](https://crates.io/crates/unicode-normalization/0.1.26) | 0.1.26 | Apache-2.0 AND Unicode-3.0 |
 | [untrusted](https://crates.io/crates/untrusted/0.9.0) | 0.9.0 | ISC |
 | [want](https://crates.io/crates/want/0.3.2) | 0.3.2 | MIT |
 | [wasi](https://crates.io/crates/wasi/0.11.1+wasi-snapshot-preview1) | 0.11.1+wasi-snapshot-preview1 | MIT |
