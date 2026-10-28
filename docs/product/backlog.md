@@ -405,9 +405,14 @@ completes T01-T16 or a supported installation.
   The [A2 primitive checkpoint](../implementation/local-owner-authentication-a2.md)
   adds strict normalization, fixed-cost Argon2id and random-secret admission,
   with independent vectors and detected regressions; these have no HTTP caller.
-  This does not complete authentication: Rust connection/hash/session ownership,
-  advisory-loss handling, credential eligibility and actual client integration
-  remain unfinished. A2 now owns hash completion/cancellation and requires typed
+  The [Linux database bridge](../implementation/local-owner-authentication-database-bridge.md)
+  now owns dedicated/serving connections and records native TLS loss/cancellation
+  observations. Typed serving transactions preserve password/session capabilities
+  and explicit rollback/commit outcomes; one native roundtrip covers selected
+  write bindings and borrowed-operation cancellation. This does not complete
+  authentication: cross-component ownership, admission/output suppression,
+  credential eligibility and actual client integration remain unfinished.
+  A2 now owns hash completion/cancellation and requires typed
   new-password blocklist admission; its pinned external-corpus tests do not
   qualify startup file admission or HTTP coordinators. The unconnected 64-slot
   session core now checks publication, expiry, retirement, own-logout retention

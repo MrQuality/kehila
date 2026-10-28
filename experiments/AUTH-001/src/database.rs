@@ -15,6 +15,8 @@ use tokio_postgres::{config::SslMode, Client, Config, IsolationLevel, Row};
 use tokio_postgres_rustls::MakeRustlsConnect;
 use zeroize::Zeroizing;
 
+pub(crate) mod transaction;
+
 const LOGIN: &str = "auth001_runtime_login";
 const SERVER_NAME: &str = "auth-db";
 const ADVISORY_NAMESPACE: i32 = 1262831689;
@@ -77,11 +79,11 @@ impl Drop for StopOnDriverExit {
     }
 }
 
-struct PendingRead {
+struct PendingOperation {
     live: Arc<RuntimeLiveness>,
     completed: bool,
 }
-impl Drop for PendingRead {
+impl Drop for PendingOperation {
     fn drop(&mut self) {
         if !self.completed {
             self.live.stop();
@@ -277,7 +279,7 @@ impl Database {
         }
         // Abandonment cannot make a busy connection reusable. This first
         // profile stops the runtime; its owner must subsequently close/join.
-        let mut pending = PendingRead {
+        let mut pending = PendingOperation {
             live: self.live.clone(),
             completed: false,
         };
@@ -420,7 +422,7 @@ mod tests {
 
     // Explicit opt-in fixture stdin: address, runtime password, CA base64,
     // installation, fresh startup-attempt ID. No password in argv/environment.
-    fn fixture() -> (Endpoint, String, String, PathBuf) {
+    pub(super) fn fixture() -> (Endpoint, String, String, PathBuf) {
         let mut input = Zeroizing::new(Vec::new());
         std::io::stdin()
             .take(16385)
@@ -456,7 +458,7 @@ mod tests {
         )
     }
 
-    fn mark(directory: &Path, name: &str) {
+    pub(super) fn mark(directory: &Path, name: &str) {
         use std::io::Write;
         std::fs::OpenOptions::new()
             .write(true)
@@ -467,7 +469,7 @@ mod tests {
             .unwrap();
     }
 
-    async fn wait(directory: &Path, name: &str) {
+    pub(super) async fn wait(directory: &Path, name: &str) {
         let deadline = TokioInstant::now() + Duration::from_secs(15);
         while !directory.join(name).is_file() {
             assert!(

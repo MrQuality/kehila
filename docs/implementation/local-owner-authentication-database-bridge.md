@@ -94,3 +94,48 @@ records the pins, grants and advisory scope. Actual Linux compiler artifacts
 contain all 37 selected additions and none of the 21 inactive additions. This
 does not clear those inactive packages for other platforms or source
 redistribution. Rust 1.88 execution remains unqualified.
+
+## Typed serving transactions, 2026-10-28
+
+The bridge now exposes fixed serving operations through an owned READ COMMITTED
+transaction wrapper. Password fencing checks the supplied authentication
+generation and verifier revision; session fencing checks its frozen runtime and
+authentication generations. Distinct returned capability types prevent a
+session-only fence from calling issuance, password change or password-required
+revocation. The caller must still actually verify the password outside the SQL
+fence; these types do not establish that cryptographic provenance themselves.
+
+Each borrowed operation marks the wrapper unusable before awaiting SQL and owns
+its own cancellation guard. Abandonment stops the shared runtime even if the
+outer transaction survives. An observed error requires explicit rollback before
+reuse; confirmed rollback preserves runtime availability. Commit checks liveness
+and the absolute deadline, and an unknown commit never produces an authority
+result. Cleanup retains ownership for up to five seconds beyond the request
+budget; transport closure is still not proof of server rollback.
+
+Independent source review caught and corrected two initial flaws before
+execution: an undifferentiated transaction type could upgrade session checks
+into password-required operations, and a borrowed method's cancellation did not
+invalidate its surviving wrapper. Both corrections received source review.
+
+The opt-in `native_fenced_roundtrip` passed against PostgreSQL 16.15/TLS 1.3. It
+rejected a wrong revision and a stale password proof, observed actual durable
+absence after rollback, committed issuance/logout/password-change bindings and
+checked incremented counters. A confirmed SQL rejection/rollback left the
+connection usable. For cancellation, the fixture first observed the actual
+audit query waiting on a relation lock, then abandoned the borrowed logout
+future while retaining its wrapper. Liveness closed, reuse and commit failed,
+and independent SQL inspection confirmed no cancelled audit survived rollback.
+Both drivers joined without abort and the advisory lock was released.
+
+A targeted mutation disarming the borrowed operation's cancellation guard before
+its SQL await failed at the intended `!live.is_live()` assertion while the outer
+wrapper remained alive. It used a separate external source copy; repository
+source and the original test binary remained intact.
+
+The combined prepared source passed Linux Rust 1.93.1 Clippy and serial all-target
+tests: 115 unit and 20 transport tests passed. Four ordinary unit skips were the
+three opt-in database fixtures and the external corpus. The new transaction
+fixture ran separately; the two earlier bridge fixtures and corpus retain their
+dated observations above and in A2. No revoke-other wrapper/batch, injected
+commit-response-loss or complete login qualification follows from this subset.

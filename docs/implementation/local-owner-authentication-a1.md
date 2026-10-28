@@ -7,7 +7,8 @@ Runtime startup, post-wait takeover fencing, recovery, credential-generation CAS
 and fixed-identity session-audit confirmation also have disposable SQL/native
 oracles. Eleven native SQL groups and targeted regressions are recorded. The
 [Linux database bridge](local-owner-authentication-database-bridge.md) now has
-two native TLS connection-lifetime/cancellation observations; credential/session
+two native TLS connection-lifetime/cancellation observations plus a typed serving
+transaction roundtrip for selected writes and operation cancellation; credential/session
 components exist, but their actual application/client integration remains pending. This is an
 internal task of the [owner-login delivery](local-owner-authentication-delivery.md),
 not a separate production migration or completed authentication capability.
