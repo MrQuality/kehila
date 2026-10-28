@@ -402,6 +402,9 @@ completes T01-T16 or a supported installation.
   has a reviewed [disposable SQL boundary](../../experiments/AUTH-001/storage/README.md):
   eleven native oracle groups passed for enrollment, authority, credential
   management and session-audit confirmation; targeted regressions were detected.
+  The [A2 primitive checkpoint](../implementation/local-owner-authentication-a2.md)
+  adds strict normalization, fixed-cost Argon2id and random-secret admission,
+  with independent vectors and detected regressions; these have no HTTP caller.
   This does not complete authentication: Rust connection/hash/session ownership,
   advisory-loss handling, credential eligibility and actual client integration
   remain unimplemented.

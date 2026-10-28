@@ -1,4 +1,5 @@
-//! Disposable A0 transport probe. No identity, database, session or trust-store access.
+//! Disposable AUTH-001 components: diagnostic transport and unconnected credential
+//! primitives. No supported login, production database or trust-store access.
 #[cfg_attr(
     not(test),
     expect(
@@ -8,6 +9,19 @@
 )]
 mod bundle;
 mod diagnostics;
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Credential core is not connected to HTTP before qualification"
+    )
+)]
+mod password;
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "Secret primitives await session integration")
+)]
+mod secret;
 
 use std::{
     convert::Infallible,

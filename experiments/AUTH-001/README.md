@@ -3,7 +3,9 @@
 Disposable evidence for [A0](../../docs/implementation/local-owner-authentication-a0.md)
 under [#40](https://github.com/MrQuality/kehila/issues/40) and
 [#49 W2](https://github.com/MrQuality/kehila/issues/49). This standalone Cargo
-workspace does not alter the production worker or implement authentication.
+workspace does not alter the production worker. Its diagnostic endpoints remain
+transport-only; separately developed SQL and credential components are unconnected
+until complete owner-login integration is qualified.
 
 The separate opt-in [A1 storage proof](storage/README.md) exercises disposable
 owner enrollment against PostgreSQL. It is outside this Cargo workspace and
@@ -38,13 +40,22 @@ conversion. The scoped dead-code expectation documents that deliberate boundary;
 it must be removed when qualified admission is integrated. Existing server/client
 paths retain their original separate DER inputs and host-loopback checks.
 
-The complete standalone suite now has 37 unit and 14 transport tests. Ten
+The earlier admission checkpoint had 37 unit and 14 transport tests. Ten
 admission mutations were detected, including raw extension/default encodings,
 signature shape and rejection of an explicitly matching inner P-256 parameter. See the [decoder contract](../../docs/implementation/local-owner-authentication-parser-adapter-plan.md)
 and [admission result and limits](../../docs/implementation/local-owner-authentication-credential-admission.md#private-implementation-result-2026-10-23).
 These checks do not establish issuer authenticity, client trust or ongoing expiry.
 Safe file admission and the container proof remain unfinished. The
 [dependency review](DEPENDENCIES.md) records the locked adoption and advisory scope.
+
+## Credential core in progress
+
+The unconnected password and random-secret modules implement the fixed policy
+and strict verifier/token admission described in [A2](../../docs/implementation/local-owner-authentication-a2.md).
+The restored primitive checkpoint passed 56 unit and 20 serial transport tests
+on Windows. This does not qualify login, session storage, container integration
+or supported secret provisioning. Complete hash-job latency/memory, cancellation
+and registry behavior remain separate gates.
 
 ## Run
 
