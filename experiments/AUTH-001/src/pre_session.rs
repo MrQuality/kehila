@@ -14,7 +14,7 @@ const CAPACITY: usize = 32;
 const TTL: Duration = Duration::from_secs(5 * 60);
 
 #[derive(Debug, Eq, PartialEq)]
-enum PreError {
+pub(crate) enum PreError {
     Busy,
     Full,
     Expired,
@@ -29,7 +29,7 @@ enum Phase {
     Consumed,
 }
 
-struct PreSession {
+pub(crate) struct PreSession {
     ticket: u64,
     issued: Instant,
     deadline: Instant,
@@ -53,12 +53,12 @@ struct Inner {
     next: u64,
     issuance: Bucket,
 }
-struct Pool {
+pub(crate) struct Pool {
     inner: Arc<Mutex<Inner>>,
     live_runtime: Arc<RuntimeLiveness>,
 }
 
-struct Reservation {
+pub(crate) struct Reservation {
     ticket: u64,
     issued: Instant,
     deadline: Instant,
@@ -67,14 +67,14 @@ struct Reservation {
     finished: bool,
 }
 
-struct Claim {
+pub(crate) struct Claim {
     entry: Arc<PreSession>,
     id: u64,
     finished: bool,
 }
 
 impl Pool {
-    fn new(live_runtime: Arc<RuntimeLiveness>, now: Instant) -> Result<Self, PreError> {
+    pub(crate) fn new(live_runtime: Arc<RuntimeLiveness>, now: Instant) -> Result<Self, PreError> {
         let mut slots = Vec::new();
         slots
             .try_reserve_exact(CAPACITY)
@@ -88,7 +88,7 @@ impl Pool {
             live_runtime,
         })
     }
-    fn reserve(&self, now: Instant) -> Result<Reservation, PreError> {
+    pub(crate) fn reserve(&self, now: Instant) -> Result<Reservation, PreError> {
         if !self.live_runtime.is_live() {
             return Err(PreError::Unavailable);
         }
@@ -131,7 +131,7 @@ impl Pool {
             finished: false,
         })
     }
-    fn reuse(&self, bearer: &Digest, now: Instant) -> Option<Arc<PreSession>> {
+    pub(crate) fn reuse(&self, bearer: &Digest, now: Instant) -> Option<Arc<PreSession>> {
         if !self.live_runtime.is_live() {
             return None;
         }
@@ -145,7 +145,7 @@ impl Pool {
         }
         None
     }
-    fn claim(&self, entry: &Arc<PreSession>, now: Instant) -> Result<Claim, PreError> {
+    pub(crate) fn claim(&self, entry: &Arc<PreSession>, now: Instant) -> Result<Claim, PreError> {
         if !self.live_runtime.is_live() {
             return Err(PreError::Unavailable);
         }
@@ -183,7 +183,7 @@ impl Drop for Pool {
 }
 
 impl Reservation {
-    fn finish(
+    pub(crate) fn finish(
         mut self,
         bearer: Digest,
         csrf: Secret,
@@ -259,7 +259,7 @@ impl PreSession {
                 .lock()
                 .is_ok_and(|phase| !matches!(*phase, Phase::Consumed))
     }
-    fn csrf(&self, now: Instant) -> Option<zeroize::Zeroizing<[u8; 43]>> {
+    pub(crate) fn csrf(&self, now: Instant) -> Option<zeroize::Zeroizing<[u8; 43]>> {
         let phase = self.phase.lock().ok()?;
         if !self.current(now) || matches!(*phase, Phase::Consumed) {
             return None;
@@ -269,10 +269,10 @@ impl PreSession {
 }
 
 impl Claim {
-    fn commit_confirmed(mut self, now: Instant) -> Result<(), PreError> {
+    pub(crate) fn commit_confirmed(mut self, now: Instant) -> Result<(), PreError> {
         self.resolve(now, false)
     }
-    fn rollback_confirmed(mut self, now: Instant) -> Result<(), PreError> {
+    pub(crate) fn rollback_confirmed(mut self, now: Instant) -> Result<(), PreError> {
         self.resolve(now, true)
     }
     fn resolve(&mut self, now: Instant, rollback: bool) -> Result<(), PreError> {

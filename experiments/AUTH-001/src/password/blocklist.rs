@@ -12,13 +12,13 @@ const POLICY_ONE_SHA256: [u8; 32] = [
 ];
 
 #[derive(Debug, Eq, PartialEq)]
-pub(super) enum BlocklistError {
+pub(crate) enum BlocklistError {
     InvalidAsset,
     Blocked,
 }
 
-pub(super) struct Blocklist(Vec<[u8; 32]>);
-pub(super) struct AllowedPassword(NormalizedPassword);
+pub(crate) struct Blocklist(Vec<[u8; 32]>);
+pub(crate) struct AllowedPassword(NormalizedPassword);
 
 impl AllowedPassword {
     pub(super) fn into_password(self) -> NormalizedPassword {
@@ -28,7 +28,7 @@ impl AllowedPassword {
 
 impl Blocklist {
     #[cfg(test)]
-    pub(super) fn synthetic_for_tests() -> Self {
+    pub(crate) fn synthetic_for_tests() -> Self {
         // Mechanics fixture only; never used to qualify actual corpus coverage.
         Self(vec![digest::digest(
             &digest::SHA256,
@@ -38,7 +38,7 @@ impl Blocklist {
         .try_into()
         .expect("SHA-256 has a fixed 32-byte output")])
     }
-    pub(super) fn policy_one(bytes: &[u8]) -> Result<Self, BlocklistError> {
+    pub(crate) fn policy_one(bytes: &[u8]) -> Result<Self, BlocklistError> {
         Self::decode(bytes, POLICY_ONE_COUNT, &POLICY_ONE_SHA256)
     }
     // Expected count/hash are trusted, reviewed startup inputs, never request
@@ -68,7 +68,7 @@ impl Blocklist {
         Ok(Self(entries))
     }
 
-    pub(super) fn admit(
+    pub(crate) fn admit(
         &self,
         password: NormalizedPassword,
     ) -> Result<AllowedPassword, BlocklistError> {

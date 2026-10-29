@@ -11,18 +11,18 @@ const IDLE: Duration = Duration::from_secs(30 * 60);
 const ABSOLUTE: Duration = Duration::from_secs(12 * 60 * 60);
 
 #[derive(Clone, Eq, PartialEq)]
-struct Binding {
-    installation: String,
-    owner: String,
-    runtime_generation: u64,
-    auth_generation: u64,
+pub(crate) struct Binding {
+    pub(crate) installation: String,
+    pub(crate) owner: String,
+    pub(crate) runtime_generation: u64,
+    pub(crate) auth_generation: u64,
 }
 
 // The coordinator must obtain this from a fresh fenced SQL read. A value of
 // this type cannot prove that provenance, active permissions or lock ownership.
-struct Snapshot {
-    binding: Binding,
-    actor_active: bool,
+pub(crate) struct Snapshot {
+    pub(crate) binding: Binding,
+    pub(crate) actor_active: bool,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -32,7 +32,7 @@ pub(crate) enum Kind {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-enum SessionError {
+pub(crate) enum SessionError {
     Invalid,
     Full,
     Unavailable,
@@ -56,11 +56,11 @@ struct State {
     idle_deadline: Instant,
 }
 
-struct Session {
+pub(crate) struct Session {
     live_runtime: Arc<RuntimeLiveness>,
-    public_id: String,
-    binding: Binding,
-    kind: Kind,
+    pub(crate) public_id: String,
+    pub(crate) binding: Binding,
+    pub(crate) kind: Kind,
     bearer: Digest,
     csrf: Option<Secret>,
     issued: Instant,
@@ -68,21 +68,50 @@ struct Session {
     state: Mutex<State>,
 }
 
-struct NewSession {
-    public_id: String,
-    kind: Kind,
-    bearer: Digest,
-    csrf: Option<Secret>,
+pub(crate) struct NewSession {
+    pub(crate) public_id: String,
+    pub(crate) kind: Kind,
+    pub(crate) bearer: Digest,
+    pub(crate) csrf: Option<Secret>,
 }
 
-struct Registry {
+pub(crate) struct Registry {
     live_runtime: Arc<RuntimeLiveness>,
     startup: Binding,
     entries: Vec<Arc<Session>>,
 }
 
 impl Registry {
-    fn new(startup: Binding, live_runtime: Arc<RuntimeLiveness>) -> Result<Self, SessionError> {
+    // Only fresh fenced/committed authority reaches this operation. A new
+    // generation removes eligibility; existing credentials are never rebound.
+    pub(crate) fn observe_generation(&mut self, snapshot: &Snapshot) -> Result<(), SessionError> {
+        if !self.live_runtime.is_live()
+            || !snapshot.actor_active
+            || !self.startup.same_runtime(&snapshot.binding)
+            || snapshot.binding.auth_generation < self.startup.auth_generation
+        {
+            return Err(SessionError::Unavailable);
+        }
+        if snapshot.binding.auth_generation > self.startup.auth_generation {
+            for entry in &self.entries {
+                if entry.binding.auth_generation != snapshot.binding.auth_generation {
+                    entry.retire();
+                }
+            }
+            self.entries
+                .retain(|entry| entry.binding.auth_generation == snapshot.binding.auth_generation);
+            self.startup.auth_generation = snapshot.binding.auth_generation;
+        }
+        if self.live_runtime.is_live() {
+            Ok(())
+        } else {
+            Err(SessionError::Unavailable)
+        }
+    }
+    pub(crate) fn new(
+        startup: Binding,
+        live_runtime: Arc<RuntimeLiveness>,
+    ) -> Result<Self, SessionError> {
         if !startup.valid() {
             return Err(SessionError::Invalid);
         }
@@ -97,12 +126,12 @@ impl Registry {
         })
     }
 
-    fn stop(&mut self) {
+    pub(crate) fn stop(&mut self) {
         self.live_runtime.stop();
         self.entries.clear();
     }
 
-    fn reserve(
+    pub(crate) fn reserve(
         &mut self,
         new: NewSession,
         snapshot: &Snapshot,
@@ -114,6 +143,7 @@ impl Registry {
         if !snapshot.actor_active
             || !snapshot.binding.valid()
             || !self.startup.same_runtime(&snapshot.binding)
+            || self.startup.auth_generation != snapshot.binding.auth_generation
             || new.public_id.is_empty()
             || new.public_id.len() > 128
             || !new.public_id.bytes().all(|byte| byte.is_ascii_graphic())
@@ -192,7 +222,7 @@ impl Registry {
         Ok(entry)
     }
 
-    fn publish(
+    pub(crate) fn publish(
         &mut self,
         entry: &Arc<Session>,
         snapshot: &Snapshot,
@@ -212,7 +242,7 @@ impl Registry {
         Ok(())
     }
 
-    fn discard_unpublished(&mut self, entry: &Arc<Session>) -> Result<(), SessionError> {
+    pub(crate) fn discard_unpublished(&mut self, entry: &Arc<Session>) -> Result<(), SessionError> {
         let index = self
             .entries
             .iter()
@@ -235,7 +265,7 @@ impl Registry {
         Ok(())
     }
 
-    fn lookup(&self, bearer: &Digest, kind: Kind, now: Instant) -> Option<Arc<Session>> {
+    pub(crate) fn lookup(&self, bearer: &Digest, kind: Kind, now: Instant) -> Option<Arc<Session>> {
         if !self.live_runtime.is_live() {
             return None;
         }
@@ -286,7 +316,15 @@ impl Binding {
 }
 
 impl Session {
-    fn csrf_for_bootstrap(
+    // Delivery abandonment is terminal, including after local publication.
+    // No bearer or retained reference can restore this entry.
+    pub(crate) fn retire(&self) {
+        match self.state.lock() {
+            Ok(mut state) => state.phase = Phase::Retired,
+            Err(_) => self.live_runtime.stop(),
+        }
+    }
+    pub(crate) fn csrf_for_bootstrap(
         &self,
         snapshot: &Snapshot,
         now: Instant,
@@ -316,12 +354,16 @@ impl Session {
             && now < state.idle_deadline
             && now < self.absolute_deadline
     }
-    fn eligible(&self, snapshot: &Snapshot, now: Instant) -> bool {
+    pub(crate) fn eligible(&self, snapshot: &Snapshot, now: Instant) -> bool {
         self.state.lock().is_ok_and(|state| {
             self.current(snapshot, now, &state) && matches!(state.phase, Phase::Active)
         })
     }
-    fn revoke_for_logout(&self, snapshot: &Snapshot, now: Instant) -> Result<(), SessionError> {
+    pub(crate) fn revoke_for_logout(
+        &self,
+        snapshot: &Snapshot,
+        now: Instant,
+    ) -> Result<(), SessionError> {
         let mut state = self.state.lock().map_err(|_| SessionError::Unavailable)?;
         if !self.current(snapshot, now, &state) {
             return Err(SessionError::Unknown);
@@ -341,7 +383,11 @@ impl Session {
         }
     }
     // Called only after the coordinator confirms the matching fixed SQL audit.
-    fn confirm_logout(&self, snapshot: &Snapshot, now: Instant) -> Result<(), SessionError> {
+    pub(crate) fn confirm_logout(
+        &self,
+        snapshot: &Snapshot,
+        now: Instant,
+    ) -> Result<(), SessionError> {
         let mut state = self.state.lock().map_err(|_| SessionError::Unavailable)?;
         if !self.current(snapshot, now, &state) {
             return Err(SessionError::Unknown);
@@ -356,7 +402,7 @@ impl Session {
             Err(SessionError::Unknown)
         }
     }
-    fn logout_retry(&self, snapshot: &Snapshot, now: Instant) -> bool {
+    pub(crate) fn logout_retry(&self, snapshot: &Snapshot, now: Instant) -> bool {
         self.state.lock().is_ok_and(|state| {
             self.current(snapshot, now, &state)
                 && matches!(
@@ -560,6 +606,35 @@ mod tests {
             assert!(!entry.eligible(&changed, now));
             assert!(!entry.successful_business(&changed, now));
         }
+    }
+
+    #[test]
+    fn committed_generation_retires_captured_entries_and_reclaims_full_capacity() {
+        let now = Instant::now();
+        let old = snapshot();
+        let mut registry = Registry::new(old.binding.clone(), RuntimeLiveness::new()).unwrap();
+        let mut captured = Vec::new();
+        for index in 0..CAPACITY {
+            let entry = registry
+                .reserve(candidate(&format!("old-{index}")).0, &old, now)
+                .unwrap();
+            registry.publish(&entry, &old, now).unwrap();
+            captured.push(entry);
+        }
+        let mut fresh = snapshot();
+        fresh.binding.auth_generation += 1;
+        registry.observe_generation(&fresh).unwrap();
+        for entry in captured {
+            assert!(!entry.eligible(&old, now));
+        }
+        for index in 0..CAPACITY {
+            registry
+                .reserve(candidate(&format!("new-{index}")).0, &fresh, now)
+                .unwrap();
+        }
+        assert!(registry
+            .reserve(candidate("overflow").0, &fresh, now)
+            .is_err());
     }
 
     #[test]

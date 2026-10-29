@@ -5,6 +5,7 @@ use super::{
     hash::{HashError, Hasher, Verifier},
     NormalizedPassword,
 };
+use crate::lifecycle::RuntimeLiveness;
 use ring::rand::{SecureRandom, SystemRandom};
 use std::{
     io,
@@ -17,11 +18,11 @@ use std::{
 };
 use tokio::sync::oneshot;
 
-enum Change {
+pub(crate) enum Change {
     Mismatch,
     Replacement(Verifier),
 }
-type HashPending<T> = Pending<Result<T, HashError>>;
+pub(crate) type HashPending<T> = Pending<Result<T, HashError>>;
 
 fn random_salt() -> Result<[u8; 16], HashError> {
     let mut salt = [0; 16];
@@ -64,7 +65,7 @@ fn replacement_stages<C, T>(
 }
 
 #[derive(Debug, Eq, PartialEq)]
-enum WorkerError {
+pub(crate) enum WorkerError {
     Busy,
     Unavailable,
     Expired,
@@ -73,6 +74,7 @@ enum WorkerError {
 }
 
 struct Control {
+    live: Arc<RuntimeLiveness>,
     cancelled: Arc<AtomicBool>,
     deadline: Instant,
 }
@@ -80,11 +82,12 @@ struct Active {
     cancelled: Arc<AtomicBool>,
     thread: JoinHandle<()>,
 }
-struct Worker {
+pub(crate) struct Worker {
+    live: Arc<RuntimeLiveness>,
     active: Option<Active>,
     stopped: bool,
 }
-struct Pending<T> {
+pub(crate) struct Pending<T> {
     receiver: Option<oneshot::Receiver<Result<T, WorkerError>>>,
     cancelled: Arc<AtomicBool>,
     deadline: Instant,
@@ -93,18 +96,21 @@ struct Pending<T> {
 
 impl Control {
     fn allowed(&self) -> bool {
-        !self.cancelled.load(Ordering::Acquire) && Instant::now() < self.deadline
+        self.live.is_live()
+            && !self.cancelled.load(Ordering::Acquire)
+            && Instant::now() < self.deadline
     }
 }
 impl Worker {
-    fn new() -> Self {
+    pub(crate) fn new(live: Arc<RuntimeLiveness>) -> Self {
         Self {
+            live,
             active: None,
             stopped: false,
         }
     }
 
-    fn new_verifier(
+    pub(crate) fn new_verifier(
         &mut self,
         deadline: Instant,
         password: AllowedPassword,
@@ -116,7 +122,7 @@ impl Worker {
         })
     }
 
-    fn verify(
+    pub(crate) fn verify(
         &mut self,
         deadline: Instant,
         password: NormalizedPassword,
@@ -131,7 +137,7 @@ impl Worker {
         })
     }
 
-    fn replacement(
+    pub(crate) fn replacement(
         &mut self,
         deadline: Instant,
         current: NormalizedPassword,
@@ -172,7 +178,7 @@ impl Worker {
         work: impl FnOnce(&Control) -> T + Send + 'static,
         spawn: impl FnOnce(Box<dyn FnOnce() + Send>) -> io::Result<JoinHandle<()>>,
     ) -> Result<Pending<T>, WorkerError> {
-        if self.stopped {
+        if self.stopped || !self.live.is_live() {
             return Err(WorkerError::Stopped);
         }
         if Instant::now() >= deadline {
@@ -190,6 +196,7 @@ impl Worker {
         }
         let cancelled = Arc::new(AtomicBool::new(false));
         let control = Control {
+            live: self.live.clone(),
             cancelled: cancelled.clone(),
             deadline,
         };
@@ -227,7 +234,7 @@ impl Worker {
         }
         Ok(())
     }
-    fn shutdown(&mut self) -> Result<(), WorkerError> {
+    pub(crate) fn shutdown(&mut self) -> Result<(), WorkerError> {
         self.stopped = true;
         if let Some(active) = &self.active {
             active.cancelled.store(true, Ordering::Release);
@@ -239,7 +246,7 @@ impl<T> Pending<T> {
     // Completion-oriented: the request coordinator must wrap this future in
     // its absolute timeout. Dropping it cancels admission of later stages but
     // cannot interrupt an active hash or release the owner's thread slot.
-    async fn result(mut self) -> Result<T, WorkerError> {
+    pub(crate) async fn result(mut self) -> Result<T, WorkerError> {
         let result = self
             .receiver
             .take()
@@ -286,6 +293,30 @@ mod tests {
         Instant::now() + Duration::from_secs(3)
     }
 
+    #[tokio::test(flavor = "current_thread")]
+    async fn shared_runtime_stop_denies_later_worker_stages_and_new_jobs() {
+        let live = RuntimeLiveness::new();
+        let mut owner = Worker::new(live.clone());
+        let (started, observed) = mpsc::channel();
+        let (release, gate) = mpsc::channel();
+        let pending = owner
+            .start(deadline(), move |control| {
+                started.send(()).unwrap();
+                gate.recv_timeout(Duration::from_secs(2)).unwrap();
+                control.allowed()
+            })
+            .unwrap();
+        observed.recv_timeout(Duration::from_secs(2)).unwrap();
+        live.stop();
+        release.send(()).unwrap();
+        assert!(matches!(pending.result().await, Err(WorkerError::Expired)));
+        owner.join_active().unwrap();
+        assert!(matches!(
+            owner.start(deadline(), |_| ()),
+            Err(WorkerError::Stopped)
+        ));
+    }
+
     fn allowed(value: &str) -> AllowedPassword {
         super::super::blocklist::Blocklist::synthetic_for_tests()
             .admit(NormalizedPassword::new(zeroize::Zeroizing::new(value.to_owned())).unwrap())
@@ -308,7 +339,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn admitted_new_password_hashes_and_existing_password_verifies_without_blocklist() {
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         let verifier = owner
             .new_verifier(
                 Instant::now() + Duration::from_secs(30),
@@ -349,7 +380,7 @@ mod tests {
         ));
         // Represents a verifier created before this choice entered the list.
         let verifier = Hasher::new().unwrap().hash(&password(), [3; 16]).unwrap();
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         assert!(owner
             .verify(
                 Instant::now() + Duration::from_secs(30),
@@ -367,6 +398,7 @@ mod tests {
     #[test]
     fn replacement_cancellation_after_verification_prevents_random_and_hash() {
         let control = Control {
+            live: RuntimeLiveness::new(),
             cancelled: Arc::new(AtomicBool::new(false)),
             deadline: deadline(),
         };
@@ -386,6 +418,7 @@ mod tests {
     #[test]
     fn replacement_cancellation_during_randomness_prevents_hash() {
         let control = Control {
+            live: RuntimeLiveness::new(),
             cancelled: Arc::new(AtomicBool::new(false)),
             deadline: deadline(),
         };
@@ -405,6 +438,7 @@ mod tests {
     #[test]
     fn new_and_replacement_hash_share_cancellation_after_randomness() {
         let control = Control {
+            live: RuntimeLiveness::new(),
             cancelled: Arc::new(AtomicBool::new(false)),
             deadline: deadline(),
         };
@@ -421,7 +455,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn real_verify_and_replacement_share_one_owned_workspace() {
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         let current =
             NormalizedPassword::new(zeroize::Zeroizing::new("a fixed test password".to_owned()))
                 .unwrap();
@@ -456,7 +490,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn wrong_current_password_produces_no_replacement() {
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         let current = NormalizedPassword::new(zeroize::Zeroizing::new(
             "the wrong test password".to_owned(),
         ))
@@ -487,7 +521,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn spawn_failure_drops_owned_inputs_and_leaves_no_active_slot() {
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         let dropped = Arc::new(AtomicUsize::new(0));
         let witness = Dropped(dropped.clone());
         let result = owner.start_with(
@@ -514,7 +548,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn dropping_an_old_pending_result_cannot_cancel_a_new_job() {
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         let old = owner.start(deadline(), |_| 1).unwrap();
         owner.join_active().unwrap();
         let (release, gate) = mpsc::channel();
@@ -532,7 +566,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn ready_result_is_rejected_when_receiving_deadline_has_expired() {
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         let mut pending = owner.start(deadline(), |_| 1).unwrap();
         owner.join_active().unwrap(); // Result is now ready, without timing sleeps.
         pending.deadline = Instant::now(); // Exercise the receiving coordinator guard.
@@ -541,7 +575,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn shutdown_cancels_and_joins_before_owned_destructors_are_reported_done() {
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         let dropped = Arc::new(AtomicUsize::new(0));
         let witness = Dropped(dropped.clone());
         let (started, ready) = mpsc::channel();
@@ -566,7 +600,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn cancellation_never_releases_running_capacity() {
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         let (started, ready) = mpsc::channel();
         let (release, gate) = mpsc::channel();
         let pending = owner
@@ -598,7 +632,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn cancelled_first_stage_never_starts_the_second_stage() {
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         let (started, ready) = mpsc::channel();
         let (release, gate) = mpsc::channel();
         let second = Arc::new(AtomicUsize::new(0));
@@ -621,7 +655,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn expired_admission_never_runs_work() {
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         let calls = Arc::new(AtomicUsize::new(0));
         let observed = calls.clone();
         assert!(matches!(
@@ -635,7 +669,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn shutdown_is_terminal_and_joins_admitted_work() {
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         let calls = Arc::new(AtomicUsize::new(0));
         let observed = calls.clone();
         let pending = owner
@@ -655,7 +689,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn panic_is_reported_and_the_owned_handle_is_joined() {
-        let mut owner = Worker::new();
+        let mut owner = Worker::new(RuntimeLiveness::new());
         let pending = owner
             .start(deadline(), |_| panic!("controlled worker panic"))
             .unwrap();

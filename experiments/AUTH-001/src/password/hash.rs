@@ -11,13 +11,13 @@ const PARAMETERS: &str = "m=65536,t=3,p=1";
 const MEMORY_KIB: usize = 65536;
 
 #[derive(Debug, Eq, PartialEq)]
-pub(super) enum HashError {
+pub(crate) enum HashError {
     UnsupportedVerifier,
     Unavailable,
     Cancelled,
 }
 
-pub(super) struct Verifier {
+pub(crate) struct Verifier {
     encoded: Zeroizing<String>,
     salt: [u8; 16],
     expected: Zeroizing<[u8; 32]>,
@@ -29,7 +29,7 @@ pub(super) struct Hasher {
 }
 
 impl Verifier {
-    pub(super) fn from_stored(encoded: Zeroizing<String>, policy: u32) -> Result<Self, HashError> {
+    pub(crate) fn from_stored(encoded: Zeroizing<String>, policy: u32) -> Result<Self, HashError> {
         if policy != 1 || encoded.is_empty() || encoded.len() > 512 || !encoded.is_ascii() {
             return Err(HashError::UnsupportedVerifier);
         }
@@ -66,7 +66,7 @@ impl Verifier {
         })
     }
 
-    pub(super) fn encoded(&self) -> &str {
+    pub(crate) fn encoded(&self) -> &str {
         &self.encoded
     }
 }

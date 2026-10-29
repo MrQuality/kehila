@@ -1,10 +1,12 @@
 //! Shared irreversible local stop state; not proof of database lock ownership.
+#[cfg(any(target_os = "linux", test))]
 use std::sync::Arc;
 use tokio::sync::watch;
 
 pub(crate) struct RuntimeLiveness(watch::Sender<bool>);
 
 impl RuntimeLiveness {
+    #[cfg(any(target_os = "linux", test))]
     pub(crate) fn new() -> Arc<Self> {
         Arc::new(Self(watch::channel(true).0))
     }

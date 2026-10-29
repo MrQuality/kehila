@@ -266,3 +266,14 @@ Connect credentials to the reviewed PostgreSQL fences and runtime generation,
 then qualify actual browser/CLI behavior. No HTTP caller or production worker
 currently uses these primitives. Minimum Rust 1.88 execution, Linux credential
 measurements and integrated container/client evidence remain unqualified.
+
+## Shared stop and generation integration, 2026-10-29
+
+The worker now receives the same irreversible runtime stop state as its owner
+and checks it at admission and between stages. A private coordinator will retain
+exclusive hash ownership through actual thread join. The registry can observe
+fresh fenced/committed authentication generations, retire captured superseded
+entries and reclaim their slots without rebinding old credentials. Reservation
+rejects a snapshot older than the observed generation. Focused worker-stop and
+full-capacity generation regressions cover these engine contracts. They do not
+qualify an HTTP caller or supported installation.

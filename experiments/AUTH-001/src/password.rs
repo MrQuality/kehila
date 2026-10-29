@@ -3,22 +3,22 @@ use unicode_normalization::UnicodeNormalization;
 use zeroize::Zeroizing;
 
 pub(crate) mod admission;
-mod blocklist;
-mod hash;
-mod worker;
+pub(crate) mod blocklist;
+pub(crate) mod hash;
+pub(crate) mod worker;
 
 #[derive(Debug, Eq, PartialEq)]
-enum InputError {
+pub(crate) enum InputError {
     InputTooLarge,
     TooShort,
     TooLong,
 }
 
 // No Debug, Display, serialization or implicit string conversion for secrets.
-struct NormalizedPassword(Zeroizing<String>);
+pub(crate) struct NormalizedPassword(Zeroizing<String>);
 
 impl NormalizedPassword {
-    fn new(input: Zeroizing<String>) -> Result<Self, InputError> {
+    pub(crate) fn new(input: Zeroizing<String>) -> Result<Self, InputError> {
         if input.len() > 1024 {
             return Err(InputError::InputTooLarge);
         }
