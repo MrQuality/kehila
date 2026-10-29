@@ -1,8 +1,10 @@
 # Disposable owner coordinator
 
-Status: coordinator subset observed, 2026-10-29. Source review, Linux/Windows
-Clippy, restored Linux regressions and the typed native journey passed. Final
-commit gates and hosted verification remain pending. This is an internal part of the existing
+Status: coordinator subset observed, 2026-10-29, at source `0c3706c`.
+Source review, Linux/Windows Clippy, restored Linux regressions and the typed
+native journey passed. Publication requires the normal gates and CI at the
+proposed head; [PR #87](https://github.com/MrQuality/kehila/pull/87) records those
+results separately. This is an internal part of the existing
 [owner-login delivery](local-owner-authentication-delivery.md), not a completed
 login capability, supported installation or production adoption.
 
