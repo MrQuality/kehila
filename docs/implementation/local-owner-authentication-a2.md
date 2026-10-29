@@ -4,6 +4,11 @@ Status: implementation in progress, 2026-10-28. This is an internal part of the
 [owner-login delivery](local-owner-authentication-delivery.md), not a completed
 login capability or production authentication implementation.
 
+The [coordinator](local-owner-authentication-coordinator.md) now connects these
+components in Linux source and has a real PostgreSQL/TLS typed-journey observation.
+Client/provider qualification remains pending; earlier component checkpoints
+below preserve their original source limits.
+
 ## Implemented primitive boundary
 
 The standalone experiment owns password normalization, fixed-profile Argon2id
@@ -250,27 +255,26 @@ runtime owner through Tokio watch notification. Its observer test polls the
 active wait to Pending before stopping, then checks a late observer; it does not
 rely on a scheduling hint. No reset or sender capability escapes the latch.
 
-This supplies the common stop mechanism, not completed application wiring. The
-database and pre-session owners can share it with the registry, but the actual
-owner must still stop admission/output, retain active work through cleanup and
-join owned workers/drivers. See the [database bridge record](local-owner-authentication-database-bridge.md)
-for the current native subset and combined-source verification limits.
+The typed coordinator now shares this mechanism among the database, pre-session
+pool, registry and worker. Its bounded native journey observed owned cleanup and
+denial at retained replies after dedicated-connection loss. HTTP admission/output
+and client/provider qualification remain unfinished. See the
+[coordinator record](local-owner-authentication-coordinator.md) for evidence and limits.
 
-Qualify the actual coordinator's timeout and retained worker capacity, and
-measure the Linux/container and complete request budgets. Connect blocklist
-file admission and enrollment/recovery callers, then complete bounded
-revoke-other batching and actual registry/rate/pre-session coordinators. Login verification must not
-reapply a newer blocklist to an existing password.
+Extend qualification from the controlled typed journey to the actual client and
+provider path, including complete request budgets. Connect protected blocklist
+file admission and enrollment/recovery callers, and complete bounded revoke-other
+batching. Existing-password verification must not reapply a newer blocklist.
 
-Connect credentials to the reviewed PostgreSQL fences and runtime generation,
-then qualify actual browser/CLI behavior. No HTTP caller or production worker
-currently uses these primitives. Minimum Rust 1.88 execution, Linux credential
-measurements and integrated container/client evidence remain unqualified.
+The experiment now connects credentials to reviewed PostgreSQL fences/runtime
+generation. No HTTP caller or production worker uses this coordinator yet.
+Minimum Rust 1.88 execution, client storage, selected-provider isolation and full
+HTTP/container budget qualification remain unfinished.
 
 ## Shared stop and generation integration, 2026-10-29
 
 The worker now receives the same irreversible runtime stop state as its owner
-and checks it at admission and between stages. A private coordinator will retain
+and checks it at admission and between stages. The coordinator retains
 exclusive hash ownership through actual thread join. The registry can observe
 fresh fenced/committed authentication generations, retire captured superseded
 entries and reclaim their slots without rebinding old credentials. Reservation

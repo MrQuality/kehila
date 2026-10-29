@@ -4,8 +4,9 @@ Disposable evidence for [A0](../../docs/implementation/local-owner-authenticatio
 under [#40](https://github.com/MrQuality/kehila/issues/40) and
 [#49 W2](https://github.com/MrQuality/kehila/issues/49). This standalone Cargo
 workspace does not alter the production worker. Its diagnostic endpoints remain
-transport-only; separately developed SQL and credential components are unconnected
-until complete owner-login integration is qualified.
+transport-only. Linux [coordinator source](../../docs/implementation/local-owner-authentication-coordinator.md)
+connects SQL and credential components with a real typed PostgreSQL/TLS journey.
+The actual HTTP/client/provider path remains unqualified.
 
 The separate opt-in [A1 storage proof](storage/README.md) exercises disposable
 owner enrollment against PostgreSQL. It is outside this Cargo workspace and
@@ -16,6 +17,9 @@ now owns dedicated authority and serving connections in a synthetic PostgreSQL
 TLS proof. Its narrow credential-read API is not connected to these endpoints.
 
 ## Contract
+
+This section describes the diagnostic server/client. The coordinator's separate
+ownership and qualification record is linked above; it adds no diagnostic login route.
 
 The server and client accept literal `127.0.0.1` only. TLS 1.3 uses normal
 rustls certificate verification, an explicit CLI root set and IP SAN validation.

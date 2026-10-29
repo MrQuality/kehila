@@ -21,7 +21,7 @@ impl RuntimeLiveness {
     }
 
     #[cfg_attr(
-        not(test),
+        all(not(test), not(target_os = "linux")),
         expect(dead_code, reason = "Application-owner shutdown wiring is in progress")
     )]
     pub(crate) async fn stopped(&self) {

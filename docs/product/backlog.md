@@ -410,15 +410,20 @@ completes T01-T16 or a supported installation.
   observations. Typed serving transactions preserve password/session capabilities
   and explicit rollback/commit outcomes; one native roundtrip covers selected
   write bindings and borrowed-operation cancellation. This does not complete
-  authentication: cross-component ownership, admission/output suppression,
-  credential eligibility and actual client integration remain unfinished.
+  authentication. The [owned coordinator](../implementation/local-owner-authentication-coordinator.md)
+  now has a typed PostgreSQL/TLS journey for bounded jobs/replies, credential
+  issuance, password change, local generation retirement, logout and observed
+  authority loss. Actual HTTP/client/provider integration remains unfinished.
   A2 now owns hash completion/cancellation and requires typed
   new-password blocklist admission; its pinned external-corpus tests do not
   qualify startup file admission or HTTP coordinators. The unconnected 64-slot
   session core now checks publication, expiry, retirement, own-logout retention
   and owner destruction. The 32-slot pre-session engine now preserves original
-  deadlines and owns single-use claims; revoke-other batching, actual shared
-  runtime/coordinator wiring and bounded reference/job ownership remain unfinished.
+  deadlines and owns single-use claims. The coordinator shares the runtime latch
+  and accounts for jobs and retained replies; revoke-other batching, protected
+  startup asset admission, uncertain-commit consumers and client qualification
+  remain unfinished. Its fixture uses a synthetic blocklist and typed delivery
+  confirmation, not actual browser or HTTP observations.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

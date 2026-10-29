@@ -1,9 +1,12 @@
 //! Disposable diagnostic transport and experimental credential/coordinator code.
 //! No supported installation, production database or trust-store access.
 #[cfg(target_os = "linux")]
-#[expect(
-    dead_code,
-    reason = "Owned job dispatcher follows in the next focused commit"
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Coordinator awaits client and fixture qualification"
+    )
 )]
 mod application;
 #[cfg_attr(

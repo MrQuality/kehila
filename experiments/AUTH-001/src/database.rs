@@ -413,7 +413,7 @@ fn authority(row: &Row) -> Result<Authority, DbError> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::{
         io::Read,
@@ -422,7 +422,7 @@ mod tests {
 
     // Explicit opt-in fixture stdin: address, runtime password, CA base64,
     // installation, fresh startup-attempt ID. No password in argv/environment.
-    pub(super) fn fixture() -> (Endpoint, String, String, PathBuf) {
+    pub(crate) fn fixture() -> (Endpoint, String, String, PathBuf) {
         let mut input = Zeroizing::new(Vec::new());
         std::io::stdin()
             .take(16385)
@@ -458,7 +458,7 @@ mod tests {
         )
     }
 
-    pub(super) fn mark(directory: &Path, name: &str) {
+    pub(crate) fn mark(directory: &Path, name: &str) {
         use std::io::Write;
         std::fs::OpenOptions::new()
             .write(true)
@@ -469,7 +469,7 @@ mod tests {
             .unwrap();
     }
 
-    pub(super) async fn wait(directory: &Path, name: &str) {
+    pub(crate) async fn wait(directory: &Path, name: &str) {
         let deadline = TokioInstant::now() + Duration::from_secs(15);
         while !directory.join(name).is_file() {
             assert!(

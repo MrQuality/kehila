@@ -21,6 +21,8 @@ use std::{
 use tokio::sync::Mutex as AsyncMutex;
 use zeroize::Zeroizing;
 
+pub(crate) mod jobs;
+
 const WORK_DEADLINE: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

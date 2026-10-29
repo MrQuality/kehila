@@ -9,7 +9,8 @@ oracles. Eleven native SQL groups and targeted regressions are recorded. The
 [Linux database bridge](local-owner-authentication-database-bridge.md) now has
 two native TLS connection-lifetime/cancellation observations plus a typed serving
 transaction roundtrip for selected writes and operation cancellation; credential/session
-components exist, but their actual application/client integration remains pending. This is an
+components now connect through a [typed coordinator](local-owner-authentication-coordinator.md)
+with a real PostgreSQL/TLS journey. HTTP/client/provider qualification remains pending. This is an
 internal task of the [owner-login delivery](local-owner-authentication-delivery.md),
 not a separate production migration or completed authentication capability.
 [ADR-105](../architecture/ADR-105-local-owner-authentication.md) already accepts
