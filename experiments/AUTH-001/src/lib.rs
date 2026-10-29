@@ -1,5 +1,11 @@
-//! Disposable AUTH-001 components: diagnostic transport and unconnected credential
-//! primitives. No supported login, production database or trust-store access.
+//! Disposable diagnostic transport and experimental credential/coordinator code.
+//! No supported installation, production database or trust-store access.
+#[cfg(target_os = "linux")]
+#[expect(
+    dead_code,
+    reason = "Owned job dispatcher follows in the next focused commit"
+)]
+mod application;
 #[cfg_attr(
     not(test),
     expect(
@@ -25,7 +31,7 @@ mod lifecycle;
 )]
 mod password;
 #[cfg_attr(
-    not(test),
+    all(not(test), not(target_os = "linux")),
     expect(
         dead_code,
         reason = "Pre-session state awaits fenced login integration"
@@ -33,7 +39,7 @@ mod password;
 )]
 mod pre_session;
 #[cfg_attr(
-    not(test),
+    all(not(test), not(target_os = "linux")),
     expect(dead_code, reason = "Secret primitives await session integration")
 )]
 mod secret;

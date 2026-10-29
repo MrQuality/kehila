@@ -6,6 +6,8 @@ use super::{
     NormalizedPassword,
 };
 use crate::lifecycle::RuntimeLiveness;
+#[cfg(target_os = "linux")]
+use crate::{secret::Secret, session::Kind};
 use ring::rand::{SecureRandom, SystemRandom};
 use std::{
     io,
@@ -17,6 +19,29 @@ use std::{
     time::Instant,
 };
 use tokio::sync::oneshot;
+
+#[cfg(target_os = "linux")]
+pub(crate) struct LoginSecrets {
+    pub(crate) bearer: Secret,
+    pub(crate) csrf: Option<Secret>,
+    pub(crate) public_id: String,
+}
+
+#[cfg(target_os = "linux")]
+fn secret(control: &Control) -> Result<Secret, HashError> {
+    if !control.allowed() {
+        return Err(HashError::Cancelled);
+    }
+    Secret::generate().map_err(|_| HashError::Unavailable)
+}
+
+#[cfg(target_os = "linux")]
+fn public_id(control: &Control) -> Result<String, HashError> {
+    let id = secret(control)?;
+    Ok(std::str::from_utf8(id.encoded())
+        .map_err(|_| HashError::Unavailable)?
+        .to_owned())
+}
 
 pub(crate) enum Change {
     Mismatch,
@@ -102,6 +127,65 @@ impl Control {
     }
 }
 impl Worker {
+    #[cfg(target_os = "linux")]
+    pub(crate) fn public_id(
+        &mut self,
+        deadline: Instant,
+    ) -> Result<HashPending<String>, WorkerError> {
+        self.start(deadline, public_id)
+    }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn finished(&self) -> bool {
+        self.active
+            .as_ref()
+            .is_none_or(|active| active.thread.is_finished())
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn join_completed(&mut self) -> Result<(), WorkerError> {
+        if !self.finished() {
+            return Err(WorkerError::Busy);
+        }
+        self.join_active()
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn anonymous(
+        &mut self,
+        deadline: Instant,
+    ) -> Result<HashPending<(Secret, Secret)>, WorkerError> {
+        self.start(deadline, |control| Ok((secret(control)?, secret(control)?)))
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn login(
+        &mut self,
+        deadline: Instant,
+        password: NormalizedPassword,
+        verifier: Verifier,
+        kind: Kind,
+    ) -> Result<HashPending<Option<LoginSecrets>>, WorkerError> {
+        self.start(deadline, move |control| {
+            let mut hasher = Hasher::new()?;
+            if !control.allowed() {
+                return Err(HashError::Cancelled);
+            }
+            if !hasher.verify(&password, &verifier)? {
+                return Ok(None);
+            }
+            let bearer = secret(control)?;
+            let csrf = match kind {
+                Kind::Browser => Some(secret(control)?),
+                Kind::Cli => None,
+            };
+            let public_id = public_id(control)?;
+            Ok(Some(LoginSecrets {
+                bearer,
+                csrf,
+                public_id,
+            }))
+        })
+    }
     pub(crate) fn new(live: Arc<RuntimeLiveness>) -> Self {
         Self {
             live,
