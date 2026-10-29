@@ -39,34 +39,34 @@ deadlines and a five-second total connection deadline. Shutdown drains owned wor
 the example server has a three-minute lifetime. These are experiment bounds,
 not measurements of the later authentication capacity or availability budgets.
 
-## Unconnected bundle decoder and profile checks
+## Bundle decoder, profile checks and protected startup
 
 The private `bundle` module checks bounded version-1 ASCII framing and canonical
 base64, returning explicitly unvalidated bytes. Its private admission stage checks
 the accepted disposable certificate/key profile and requires positive key
-matching at a supplied time. Neither stage has a listener caller or public
-conversion. The scoped dead-code expectation documents that deliberate boundary;
-it must be removed when qualified admission is integrated. Existing server/client
-paths retain their original separate DER inputs and host-loopback checks.
+matching at a supplied time. The Linux protected-startup loader now consumes
+these checks and constructs a fixed TLS configuration. The diagnostic server/client
+examples retain their original separate DER inputs and host-loopback checks.
 
 The earlier admission checkpoint had 37 unit and 14 transport tests. Ten
 admission mutations were detected, including raw extension/default encodings,
 signature shape and rejection of an explicitly matching inner P-256 parameter. See the [decoder contract](../../docs/implementation/local-owner-authentication-parser-adapter-plan.md)
 and [admission result and limits](../../docs/implementation/local-owner-authentication-credential-admission.md#private-implementation-result-2026-10-23).
 These checks do not establish issuer authenticity, client trust or ongoing expiry.
-Safe file admission and the container proof remain unfinished. The
+The [protected startup record](../../docs/implementation/local-owner-authentication-linux-reader-slice.md#protected-authentication-startup-2026-10-29)
+reports actual opened-file and Podman secret admission; the integrated container proof remains unfinished. The
 [dependency review](DEPENDENCIES.md) records the locked adoption and advisory scope.
 
 ## Credential core in progress
 
-The unconnected [A2 components](../../docs/implementation/local-owner-authentication-a2.md)
+The [A2 components](../../docs/implementation/local-owner-authentication-a2.md)
 implement normalization, strict fixed-cost verifier/token admission, owned hash
 work, typed new-password blocklist checks, separate rate allowances, 64 session
 slots and 32 pre-session slots with owned allocation/one-time claims. Existing
 password verification does not reapply the new-password list. Session/pre-session
 state preserves original expiry, shared retirement and irreversible owner teardown.
 
-Current selected-asset local verification passed 105 unit and 20 serial transport
+Earlier selected-asset local verification passed 105 unit and 20 serial transport
 tests, formatting and Clippy. It includes independent vectors, detected mutations
 and a two-thread competing-claim case. The pinned 2,097-entry historical corpus
 stays external with its own license/coverage limits; ordinary CI ignores its
@@ -78,9 +78,14 @@ and joined cleanup at 188.700-195.864 ms, with observed process peak working set
 sampling limits, failed attempts and the newer-hosted-Clippy correction history.
 They do not qualify current-head Linux performance or the full request budget.
 
-Startup file admission, shared runtime/database ownership, revoke-other batching,
-bounded retained references/randomness jobs and actual Windows browser/CLI login
-remain unfinished. Diagnostic HTTP endpoints have no authentication caller, and
+The later startup/revoke-other checkpoint passed Linux Clippy and 128 serial unit
+tests with eight opt-in skips. Separate native fixtures exercised protected startup
+assets, uncertain-commit consumers and revoke-other audit rollback/retry. The
+[coordinator record](../../docs/implementation/local-owner-authentication-coordinator.md)
+describes shared runtime/database ownership and retained reply bounds. These
+component observations do not qualify a serving listener, full request budgets,
+selected-provider isolation or actual Windows browser/CLI login. Diagnostic HTTP
+endpoints have no authentication caller, and
 no supported installation, secret provisioning or real-data readiness is claimed.
 
 ## Run

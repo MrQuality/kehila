@@ -257,17 +257,21 @@ rely on a scheduling hint. No reset or sender capability escapes the latch.
 
 The typed coordinator now shares this mechanism among the database, pre-session
 pool, registry and worker. Its bounded native journey observed owned cleanup and
-denial at retained replies after dedicated-connection loss. HTTP admission/output
-and client/provider qualification remain unfinished. See the
+denial at retained replies after dedicated-connection loss. The prepared HTTP
+admission/output adapter has an in-memory journey; serving/client/provider
+qualification remains unfinished. See the
 [coordinator record](local-owner-authentication-coordinator.md) for evidence and limits.
 
 Extend qualification from the controlled typed journey to the actual client and
-provider path, including complete request budgets. Connect protected blocklist
-file admission and enrollment/recovery callers, and complete bounded revoke-other
-batching. Existing-password verification must not reapply a newer blocklist.
+provider path, including complete request budgets. Protected blocklist-file
+admission and bounded revoke-other batching now have separate native observations
+in the startup/coordinator records. Enrollment/recovery client callers and the
+complete serving path remain gates. Existing-password verification must not
+reapply a newer blocklist.
 
 The experiment now connects credentials to reviewed PostgreSQL fences/runtime
-generation. No HTTP caller or production worker uses this coordinator yet.
+generation. The prepared HTTP adapter calls it; no serving listener or production
+worker is qualified yet.
 Minimum Rust 1.88 execution, client storage, selected-provider isolation and full
 HTTP/container budget qualification remain unfinished.
 
