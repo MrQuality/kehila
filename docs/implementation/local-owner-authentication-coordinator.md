@@ -48,7 +48,8 @@ A reply's delivery guard retires its new session on failed/unconsumed delivery.
 Secret access and exchange confirmation check current local eligibility,
 liveness and the original deadline. The adapter must retain the reply/guard
 through its own observed exchange outcome. A successful channel send is not
-HTTP delivery evidence. No HTTP adapter currently uses this module.
+HTTP delivery evidence. A prepared HTTP adapter now calls this module in an
+in-memory fixture; no serving listener calls it.
 
 State/CSRF retrieval uses fresh session fencing without requiring an existing
 CSRF value, avoiding a bootstrap cycle. It neither renews activity nor rotates
@@ -71,6 +72,67 @@ capacity could survive. A full-capacity transition regression and retained old
 delivery assertions were added before execution qualification.
 
 ## Verification boundary
+
+### Prepared HTTP boundary, 2026-10-29
+
+The separate `http_auth` module admits only explicit browser/CLI routes before
+coordinator submission: exact configured loopback HTTPS authority, closed method
+and target, 8-KiB aggregate headers, 2-KiB target, 4-KiB JSON, canonical declared
+length and no proxy assertions, compression or transfer coding. Browser changes
+require exact Origin and CSRF, plus a fixed client header and same-origin Fetch
+Metadata. CLI routes reject browser context and require exactly one bearer on
+authenticated calls. All Cookie fields are inspected for repeated authentication
+names; browser and CLI credentials never fall through into another mode.
+
+Initial pre-session issuance and read-only CSRF retrieval are separate operations.
+Retrieval cannot allocate, rotate or renew state. A supplied unknown pre-session
+denies rather than silently allocating. A typed local lookup miss permits clearing
+stale browser cookies for a subsequent explicit bootstrap; wrong password/CSRF
+proof preserves valid cookies. In particular, a mistyped current password must
+not discard the current session. Unconfirmed logout audit keeps the revoked
+cookie available for its bounded retry.
+
+The prepared dispatcher checks actual body length, a two-second body budget and
+the caller's original absolute work deadline. Typed JSON decoding rejects
+positional arrays, duplicate/unknown fields and wrong types before scheduling.
+Owned password/body/response buffers are zeroizing; library scratch and headers
+remain outside a universal wiping guarantee. Browser output contains only CSRF
+or fixed status data, with protected HttpOnly cookies; only the separate CLI
+login returns a bearer in JSON. Responses are no-store, no-CORS, no-sniff and
+same-origin, with a restrictive CSP.
+
+The dispatcher returns an owned exchange guard alongside the encoded response.
+Its outbound gate checks current issued-session eligibility as well as runtime
+liveness/deadline; generation retirement must suppress already-encoded material.
+The future listener must use that gate through outbound delivery and retain the
+guard through observed exchange/cleanup. Merely encoding, polling a body to its
+end or confirming the in-memory fixture does not establish network delivery.
+
+Current prepared-source checks passed: four Windows admission tests, Windows
+Clippy, Linux Clippy, and Linux serial regressions (123 unit plus 20 transport;
+five opt-in unit cases skipped). The modified native adapter journey also passed
+against PostgreSQL 16.15/TLS 1.3: actual in-memory CLI/browser requests reached the
+coordinator, response body/cookie material was checked, and the retained encoded
+browser exchange denied outbound delivery and confirmation after password change.
+The independent SQL history/generation/lock oracles passed unchanged. This is not
+a live HTTP/browser observation. RAM preflight held earlier phases; the optimized
+build and native run proceeded only after headroom recovered. Owned services were
+cleaned up and generated private keys deleted. Publication requires mandatory
+commit gates and final-head CI; PR #87 records those results separately. The earlier typed native
+measurement below retains its original source limits.
+
+A targeted mutation removing unknown-field rejection failed its intended JSON
+oracle. An initial post-mutation rerun reused a stale test executable; cleaning
+the experiment's compiled artifacts and rebuilding unchanged original source
+restored the four-test/Clippy pass. Earlier failures also caught the valid browser
+login falling through to rejection and a Linux closure error-type inference gap.
+Independent source review corrected overly broad cookie clearing and a missing
+issued-session check in the outbound guard before execution qualification.
+
+Startup asset admission and uncertain-commit consumer qualification remain gates
+before a serving listener is connected. The diagnostic endpoints remain unchanged.
+Windows forwarding/client protection, actual browser behavior, process/container
+restart and integrated transport qualification are still pending.
 
 The opt-in `native_owned_login` passed using actual PostgreSQL 16.15/TLS 1.3 and a
 synthetic blocklist. It exercises retained-reply capacity, abandoned receivers,

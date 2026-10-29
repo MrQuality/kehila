@@ -24,6 +24,14 @@ mod bundle;
 )]
 mod database;
 mod diagnostics;
+#[cfg_attr(
+    any(not(test), not(target_os = "linux")),
+    expect(
+        dead_code,
+        reason = "The HTTP adapter is Linux-only and awaits qualified startup wiring"
+    )
+)]
+mod http_auth;
 mod lifecycle;
 #[cfg_attr(
     not(test),

@@ -416,7 +416,10 @@ completes T01-T16 or a supported installation.
   authority loss. Actual HTTP/client/provider integration remains unfinished.
   A2 now owns hash completion/cancellation and requires typed
   new-password blocklist admission; its pinned external-corpus tests do not
-  qualify startup file admission or HTTP coordinators. The unconnected 64-slot
+  qualify startup file admission or a serving HTTP listener. A prepared closed
+  browser/CLI dispatcher preserves request bounds, strict bootstrap, protected
+  response encoding and retained exchange eligibility; integrated client/provider
+  and uncertain-commit consumer qualification remain pending. The unconnected 64-slot
   session core now checks publication, expiry, retirement, own-logout retention
   and owner destruction. The 32-slot pre-session engine now preserves original
   deadlines and owns single-use claims. The coordinator shares the runtime latch

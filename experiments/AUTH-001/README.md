@@ -19,7 +19,8 @@ TLS proof. Its narrow credential-read API is not connected to these endpoints.
 ## Contract
 
 This section describes the diagnostic server/client. The coordinator's separate
-ownership and qualification record is linked above; it adds no diagnostic login route.
+ownership and qualification record is linked above; its prepared HTTP dispatcher
+is not connected to a serving listener and adds no diagnostic login route.
 
 The server and client accept literal `127.0.0.1` only. TLS 1.3 uses normal
 rustls certificate verification, an explicit CLI root set and IP SAN validation.

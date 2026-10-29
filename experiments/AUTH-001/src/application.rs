@@ -29,6 +29,7 @@ const WORK_DEADLINE: Duration = Duration::from_secs(5);
 pub(crate) enum Error {
     Invalid,
     Unauthorized,
+    UnknownCredential,
     Busy,
     Unavailable,
     AuditUnconfirmed,
@@ -47,6 +48,7 @@ pub(crate) struct Credential {
 
 pub(crate) enum Operation {
     PreSession(Option<Digest>),
+    PreCsrf(Digest),
     Login {
         password: NormalizedPassword,
         kind: LoginKind,
@@ -179,7 +181,7 @@ impl Engine {
             .lock()
             .map_err(|_| Error::Unavailable)?
             .lookup(&credential.bearer, credential.kind, Instant::now())
-            .ok_or(Error::Unauthorized)
+            .ok_or(Error::UnknownCredential)
     }
 
     fn csrf(
@@ -244,10 +246,11 @@ impl Engine {
         bearer: Option<Digest>,
         deadline: Instant,
     ) -> Result<Output, Error> {
-        if let Some(entry) = bearer
-            .as_ref()
-            .and_then(|digest| self.pre_sessions.reuse(digest, Instant::now()))
-        {
+        if let Some(bearer) = bearer {
+            let entry = self
+                .pre_sessions
+                .reuse(&bearer, Instant::now())
+                .ok_or(Error::UnknownCredential)?;
             return Ok(Output::PreSession {
                 bearer: None,
                 csrf: entry.csrf(Instant::now()).ok_or(Error::Unauthorized)?,
@@ -281,7 +284,7 @@ impl Engine {
                 let entry = self
                     .pre_sessions
                     .reuse(&bearer, Instant::now())
-                    .ok_or(Error::Unauthorized)?;
+                    .ok_or(Error::UnknownCredential)?;
                 if !csrf_matches(entry.csrf(Instant::now()), &csrf) {
                     return Err(Error::Unauthorized);
                 }
@@ -582,6 +585,16 @@ impl Engine {
         self.check(deadline)?;
         match operation {
             Operation::PreSession(bearer) => self.pre_session(bearer, deadline).await,
+            Operation::PreCsrf(bearer) => {
+                let entry = self
+                    .pre_sessions
+                    .reuse(&bearer, Instant::now())
+                    .ok_or(Error::UnknownCredential)?;
+                Ok(Output::PreSession {
+                    bearer: None,
+                    csrf: entry.csrf(Instant::now()).ok_or(Error::Unauthorized)?,
+                })
+            }
             Operation::Login { password, kind } => self.login(password, kind, deadline).await,
             Operation::State(credential) => self.session(credential, false, deadline).await,
             Operation::Logout(credential) => self.session(credential, true, deadline).await,
