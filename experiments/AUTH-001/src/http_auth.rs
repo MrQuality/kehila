@@ -23,6 +23,7 @@ pub(crate) enum Route {
     State(Kind),
     Logout(Kind),
     Password(Kind),
+    RevokeOthers(Kind),
 }
 
 pub(crate) struct Admitted {
@@ -163,10 +164,16 @@ impl Profile {
             (&Method::POST, "/auth/browser/password") => {
                 (Route::Password(Kind::Browser), Kind::Browser, true)
             }
+            (&Method::POST, "/auth/browser/revoke-others") => {
+                (Route::RevokeOthers(Kind::Browser), Kind::Browser, true)
+            }
             (&Method::POST, "/auth/cli/login") => (Route::Login(Kind::Cli), Kind::Cli, true),
             (&Method::GET, "/auth/cli/state") => (Route::State(Kind::Cli), Kind::Cli, false),
             (&Method::POST, "/auth/cli/logout") => (Route::Logout(Kind::Cli), Kind::Cli, true),
             (&Method::POST, "/auth/cli/password") => (Route::Password(Kind::Cli), Kind::Cli, true),
+            (&Method::POST, "/auth/cli/revoke-others") => {
+                (Route::RevokeOthers(Kind::Cli), Kind::Cli, true)
+            }
             _ => return Err(StatusCode::NOT_FOUND),
         };
         let length = match one(request, "content-length")? {
@@ -223,7 +230,10 @@ impl Profile {
                     }
                     Route::Login(_) => {}
                     Route::Csrf if admitted.bearer.is_some() => {}
-                    Route::State(_) | Route::Logout(_) | Route::Password(_)
+                    Route::State(_)
+                    | Route::Logout(_)
+                    | Route::Password(_)
+                    | Route::RevokeOthers(_)
                         if cookies.session.is_some() => {}
                     _ => return Err(StatusCode::UNAUTHORIZED),
                 }

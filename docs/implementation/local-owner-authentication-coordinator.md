@@ -198,7 +198,33 @@ passed. Portable Clippy and the focused Windows shared-worker-stop and
 generation/capacity regressions passed. Linux Clippy passed; intermediate serial
 phases held by the RAM minimum remain recorded separately.
 
-Final commit gates and hosted verification remain required. Startup file/corpus admission, revoke-other batching,
-unknown-commit consumer qualification, provider isolation and browser/CLI
-integration remain unfinished. A4 domain authority and A5 supported restore retain
+Final commit gates and hosted verification remain required. The later startup
+asset and revoke-other observations below supplement this initial journey;
+provider isolation and browser/CLI integration remain unfinished. A4 domain authority and A5 supported restore retain
 their separate gates. No full T01–T16 case is marked passed here.
+
+## Revoke-other consumers, 2026-10-29
+
+The coordinator now implements authenticated revoke-other with a current-password
+check and a separate management allowance. It freezes at most 63 target public
+IDs, kinds and the initiating session's original deadline. Local target eligibility
+ends before audit writes. A confirmed rollback retains that batch for retry;
+retry cannot select a later login or change the original revocation provenance.
+Targets gain no own-logout retry right. Confirmed success clears the pending batch,
+and a later explicit request may select a new batch.
+
+The opt-in PostgreSQL 16.15/TLS 1.3 consumer test passed separately. A controlled
+audit rejection rolled back SQL while selected sessions stayed revoked, including
+a retained issuance reply. External SQL observations found zero revocation events
+before allowing retry. Retry recorded the two original targets while a later login
+stayed active; a new request revoked that later login. A final known commit with
+its confirmation deliberately withheld stopped the runtime and preserved the typed
+audit-unconfirmed result. Final SQL checks observed five issuance and four
+revocation events, one initiating session, unchanged authentication/verifier
+generations and release of the dedicated advisory lock. This is a consumer seam
+after a real commit, not a simulated TLS wire failure.
+
+Browser and CLI HTTP routes share the existing strict admission and closed
+password object. The new route-specific admission/JSON regression passed on
+Windows. Live HTTP delivery, user interface behavior, actual provider isolation,
+remaining lifecycle measurements and exact-head publication gates remain required.

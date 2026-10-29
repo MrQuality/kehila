@@ -23,8 +23,9 @@ impl Response {
     // Borrowing preserves the accounted reply/credential lifetime. Adapters
     // retain Response until their exchange/cleanup finishes.
     pub(crate) fn result(&self) -> Result<&Output, Error> {
-        if matches!(self.result, Err(Error::AuditUnconfirmed)) {
-            return Err(Error::AuditUnconfirmed);
+        if let Err(error @ (Error::AuditUnconfirmed | Error::OtherAuditUnconfirmed)) = &self.result
+        {
+            return Err(*error);
         }
         if !self.live.is_live() || Instant::now() >= self.deadline {
             return Err(Error::Unavailable);
@@ -185,7 +186,7 @@ impl Owner {
                         let mut failure = StopOnAbandonment { live: engine.live.clone(), completed: false };
                         let result = engine.execute(message.operation, message.deadline).await;
                         let result = if engine.check(message.deadline).is_ok()
-                            || matches!(result, Err(Error::AuditUnconfirmed)) { result }
+                            || matches!(result, Err(Error::AuditUnconfirmed | Error::OtherAuditUnconfirmed)) { result }
                                      else { drop(result); Err(Error::Unavailable) };
                         let _ = message.reply.send(Response { result, deadline: message.deadline,
                             live: engine.live.clone(), _permit: message.permit });

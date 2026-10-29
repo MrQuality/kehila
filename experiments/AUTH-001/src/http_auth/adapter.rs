@@ -24,7 +24,11 @@ impl Exchange {
     pub(crate) fn check_outbound(&self) -> Result<(), application::Error> {
         match self.0.as_ref().map(jobs::Response::result) {
             Some(Ok(Output::Issued(delivery))) => delivery.material().map(|_| ()),
-            None | Some(Ok(_)) | Some(Err(application::Error::AuditUnconfirmed)) => Ok(()),
+            None
+            | Some(Ok(_))
+            | Some(Err(
+                application::Error::AuditUnconfirmed | application::Error::OtherAuditUnconfirmed,
+            )) => Ok(()),
             Some(Err(error)) => Err(error),
         }
     }
@@ -122,6 +126,12 @@ impl Admitted {
                 },
             }),
             (Route::State(kind), json::Input::Empty) => Ok(Operation::State(credential(kind)?)),
+            (Route::RevokeOthers(kind), json::Input::Login(password)) => {
+                Ok(Operation::RevokeOthers {
+                    credential: credential(kind)?,
+                    password,
+                })
+            }
             (Route::Logout(kind), json::Input::Empty) => Ok(Operation::Logout(credential(kind)?)),
             (
                 Route::Password(kind),
@@ -146,9 +156,9 @@ fn app_status(error: application::Error) -> StatusCode {
             StatusCode::UNAUTHORIZED
         }
         application::Error::Busy => StatusCode::TOO_MANY_REQUESTS,
-        application::Error::Unavailable | application::Error::AuditUnconfirmed => {
-            StatusCode::SERVICE_UNAVAILABLE
-        }
+        application::Error::Unavailable
+        | application::Error::AuditUnconfirmed
+        | application::Error::OtherAuditUnconfirmed => StatusCode::SERVICE_UNAVAILABLE,
     }
 }
 
@@ -229,6 +239,14 @@ fn encode(
                 Zeroizing::new(b"{\"signed_out\":true,\"audit_confirmed\":false}".to_vec()),
             ));
         }
+        (Route::RevokeOthers(_), Err(application::Error::OtherAuditUnconfirmed)) => {
+            return Ok(response(
+                StatusCode::SERVICE_UNAVAILABLE,
+                Zeroizing::new(
+                    b"{\"other_sessions_revoked\":true,\"audit_confirmed\":false}".to_vec(),
+                ),
+            ))
+        }
         (_, Err(error)) => return Err(error),
         (Route::PreSession | Route::Csrf, Ok(Output::PreSession { bearer, csrf })) => {
             secret_field(&mut body, b"csrf", csrf);
@@ -269,6 +287,12 @@ fn encode(
             body.extend_from_slice(b"{\"password_changed\":true}");
             clear = true;
         }
+        (Route::RevokeOthers(_), Ok(Output::OthersRevoked { count })) => body.extend_from_slice(
+            format!(
+                "{{\"other_sessions_revoked\":true,\"audit_confirmed\":true,\"count\":{count}}}"
+            )
+            .as_bytes(),
+        ),
         _ => return Err(application::Error::Unavailable),
     }
     let mut response = response(StatusCode::OK, body);

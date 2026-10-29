@@ -62,14 +62,17 @@ pub(super) fn decode(route: super::Route, body: &[u8]) -> Result<Input, ()> {
     // explicitly a JSON object, including for the empty logout message.
     if matches!(
         route,
-        super::Route::Login(_) | super::Route::Password(_) | super::Route::Logout(_)
+        super::Route::Login(_)
+            | super::Route::Password(_)
+            | super::Route::Logout(_)
+            | super::Route::RevokeOthers(_)
     ) && body.iter().find(|byte| !byte.is_ascii_whitespace()) != Some(&b'{')
     {
         return Err(());
     }
     let normalize = |value: Password| NormalizedPassword::new(value.0).map_err(|_| ());
     match route {
-        super::Route::Login(_) => {
+        super::Route::Login(_) | super::Route::RevokeOthers(_) => {
             let value: Login = serde_json::from_slice(body).map_err(|_| ())?;
             Ok(Input::Login(normalize(value.password)?))
         }

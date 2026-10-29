@@ -1,5 +1,6 @@
 use super::*;
 use crate::database::tests::{fixture, mark, wait};
+mod revoke_others;
 mod unknown_commit;
 
 fn password(value: &str) -> NormalizedPassword {
@@ -16,6 +17,7 @@ async fn request(handle: &Handle, operation: Operation) -> Response {
         Operation::State(_) => "state",
         Operation::Logout(_) => "logout",
         Operation::Password { .. } => "password_change",
+        Operation::RevokeOthers { .. } => "revoke_others",
     };
     let started = Instant::now();
     let response =

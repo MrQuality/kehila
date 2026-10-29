@@ -79,6 +79,36 @@ fn explicit_browser_and_cli_routes_admit_only_their_credentials() {
 }
 
 #[test]
+fn revoke_others_requires_its_route_specific_credential_and_closed_password_object() {
+    let mut web = browser(Method::POST, "/auth/browser/revoke-others");
+    cookie(&mut web, SESSION);
+    let mut native = cli(Method::POST, "/auth/cli/revoke-others");
+    bearer(&mut native);
+    for (request, kind) in [(web, Kind::Browser), (native, Kind::Cli)] {
+        let admitted = profile().admit(&request).unwrap();
+        assert!(matches!(admitted.route, Route::RevokeOthers(value) if value == kind));
+        assert!(matches!(
+            json::decode(admitted.route, br#"{"password":"a fixed test password"}"#),
+            Ok(json::Input::Login(_))
+        ));
+        for body in [
+            br#"{}"#.as_slice(),
+            br#"["a fixed test password"]"#,
+            br#"{"password":"first","password":"second"}"#,
+            br#"{"password":"a fixed test password","targets":[]}"#,
+        ] {
+            assert!(json::decode(admitted.route, body).is_err());
+        }
+    }
+    assert!(profile()
+        .admit(&cli(Method::POST, "/auth/cli/revoke-others"))
+        .is_err());
+    assert!(profile()
+        .admit(&browser(Method::POST, "/auth/browser/revoke-others"))
+        .is_err());
+}
+
+#[test]
 fn browser_rejects_missing_foreign_duplicate_or_mixed_proofs() {
     let mut login = browser(Method::POST, "/auth/browser/login");
     cookie(&mut login, PRE_SESSION);

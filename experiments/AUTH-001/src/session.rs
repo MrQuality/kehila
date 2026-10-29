@@ -5,6 +5,8 @@ use std::{
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
+mod revocation;
+use revocation::Cause;
 
 const CAPACITY: usize = 64;
 const IDLE: Duration = Duration::from_secs(30 * 60);
@@ -46,6 +48,7 @@ enum Phase {
         at: Instant,
         audit_confirmed: bool,
         was_published: bool,
+        cause: Cause,
     },
     Retired,
 }
@@ -54,6 +57,7 @@ struct State {
     phase: Phase,
     activity: Instant,
     idle_deadline: Instant,
+    pending: Option<revocation::Batch>,
 }
 
 pub(crate) struct Session {
@@ -216,6 +220,7 @@ impl Registry {
                 phase: Phase::Unpublished,
                 activity: now,
                 idle_deadline,
+                pending: None,
             }),
         });
         self.entries.push(entry.clone());
@@ -283,6 +288,7 @@ impl Registry {
                     Phase::Active
                         | Phase::Revoked {
                             was_published: true,
+                            cause: Cause::Logout,
                             ..
                         }
                 )
@@ -337,6 +343,7 @@ impl Session {
                 Phase::Active
                     | Phase::Revoked {
                         was_published: true,
+                        cause: Cause::Logout,
                         ..
                     }
             )
@@ -375,10 +382,15 @@ impl Session {
                     at: now,
                     audit_confirmed: false,
                     was_published,
+                    cause: Cause::Logout,
                 };
                 Ok(())
             }
-            Phase::Revoked { .. } => Ok(()),
+            Phase::Revoked {
+                cause: Cause::Logout,
+                ..
+            } => Ok(()),
+            Phase::Revoked { .. } => Err(SessionError::Unknown),
             Phase::Retired => Err(SessionError::Unknown),
         }
     }
@@ -393,7 +405,9 @@ impl Session {
             return Err(SessionError::Unknown);
         }
         if let Phase::Revoked {
-            audit_confirmed, ..
+            audit_confirmed,
+            cause: Cause::Logout,
+            ..
         } = &mut state.phase
         {
             *audit_confirmed = true;
@@ -409,6 +423,7 @@ impl Session {
                     state.phase,
                     Phase::Revoked {
                         was_published: true,
+                        cause: Cause::Logout,
                         ..
                     }
                 )
@@ -816,5 +831,95 @@ mod tests {
         assert_eq!(registry.entries.len(), 1);
         assert!(original.eligible(&snapshot, now));
         assert!(registry.lookup(&digest, Kind::Browser, now).is_none());
+    }
+    fn published(
+        registry: &mut Registry,
+        snapshot: &Snapshot,
+        id: &str,
+        now: Instant,
+    ) -> Arc<Session> {
+        let entry = registry.reserve(candidate(id).0, snapshot, now).unwrap();
+        registry.publish(&entry, snapshot, now).unwrap();
+        entry
+    }
+
+    #[test]
+    fn revoke_other_batch_is_bounded_and_never_grants_own_logout_retry() {
+        let now = Instant::now();
+        let snapshot = snapshot();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
+        let initiator = published(&mut registry, &snapshot, "initiator", now);
+        let targets: Vec<_> = (0..CAPACITY - 1)
+            .map(|index| published(&mut registry, &snapshot, &format!("other-{index}"), now))
+            .collect();
+        let batch = registry.revoke_others(&initiator, &snapshot, now).unwrap();
+        assert_eq!(batch.len(), 63);
+        assert!(initiator.eligible(&snapshot, now));
+        for entry in &targets {
+            assert!(!entry.eligible(&snapshot, now));
+            assert!(!entry.logout_retry(&snapshot, now));
+            assert!(registry.lookup(&entry.bearer, entry.kind, now).is_none());
+            assert!(entry.revoke_for_logout(&snapshot, now).is_err());
+        }
+        assert!(matches!(
+            registry.reserve(candidate("excess").0, &snapshot, now),
+            Err(SessionError::Full)
+        ));
+        registry
+            .confirm_revoke_others(&initiator, &snapshot, &batch, now)
+            .unwrap();
+        let replacement = published(&mut registry, &snapshot, "replacement", now);
+        assert!(replacement.eligible(&snapshot, now));
+        assert!(initiator.eligible(&snapshot, now));
+        assert!(targets.iter().all(|entry| !entry.eligible(&snapshot, now)));
+    }
+
+    #[test]
+    fn pending_batch_freezes_targets_and_deadline_despite_later_activity() {
+        let now = Instant::now();
+        let snapshot = snapshot();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
+        let initiator = published(&mut registry, &snapshot, "initiator", now);
+        let original = published(&mut registry, &snapshot, "original", now);
+        let batch = registry.revoke_others(&initiator, &snapshot, now).unwrap();
+        assert_eq!(batch.len(), 1);
+        let later = now + IDLE / 2;
+        assert!(initiator.successful_business(&snapshot, later));
+        let new = published(&mut registry, &snapshot, "new", later);
+        assert!(
+            registry
+                .revoke_others(&initiator, &snapshot, later)
+                .unwrap()
+                == batch
+        );
+        assert!(!original.eligible(&snapshot, later));
+        assert!(new.eligible(&snapshot, later));
+        assert!(initiator.eligible(&snapshot, now + IDLE));
+        assert!(matches!(
+            registry.revoke_others(&initiator, &snapshot, now + IDLE),
+            Err(SessionError::Unknown)
+        ));
+        assert!(registry
+            .confirm_revoke_others(&initiator, &snapshot, &batch, now + IDLE)
+            .is_err());
+        assert!(new.eligible(&snapshot, now + IDLE));
+    }
+
+    #[test]
+    fn another_batch_cannot_replace_an_existing_revocation_initiator() {
+        let now = Instant::now();
+        let snapshot = snapshot();
+        let mut registry = Registry::new(snapshot.binding.clone(), RuntimeLiveness::new()).unwrap();
+        let first = published(&mut registry, &snapshot, "first", now);
+        let target = published(&mut registry, &snapshot, "target", now);
+        registry.revoke_others(&first, &snapshot, now).unwrap();
+        let second = published(&mut registry, &snapshot, "second", now);
+        let batch = registry.revoke_others(&second, &snapshot, now).unwrap();
+        assert_eq!(batch.len(), 1);
+        assert_eq!(batch[0].public_id, "first");
+        assert!(
+            matches!(&target.state.lock().unwrap().phase, Phase::Revoked { cause: Cause::Other(original), .. } if original == "first")
+        );
+        assert!(!target.logout_retry(&snapshot, now));
     }
 }

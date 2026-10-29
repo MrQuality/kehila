@@ -22,6 +22,7 @@ use tokio::sync::Mutex as AsyncMutex;
 use zeroize::Zeroizing;
 
 pub(crate) mod jobs;
+mod management;
 
 const WORK_DEADLINE: Duration = Duration::from_secs(5);
 
@@ -33,6 +34,7 @@ pub(crate) enum Error {
     Busy,
     Unavailable,
     AuditUnconfirmed,
+    OtherAuditUnconfirmed,
 }
 
 pub(crate) enum LoginKind {
@@ -60,6 +62,10 @@ pub(crate) enum Operation {
         current: NormalizedPassword,
         replacement: NormalizedPassword,
     },
+    RevokeOthers {
+        credential: Credential,
+        password: NormalizedPassword,
+    },
 }
 
 pub(crate) enum Output {
@@ -74,6 +80,9 @@ pub(crate) enum Output {
     },
     LoggedOut,
     PasswordChanged,
+    OthersRevoked {
+        count: usize,
+    },
 }
 
 // The adapter retains this through its observed exchange outcome. Channel
@@ -501,23 +510,7 @@ impl Engine {
         replacement: NormalizedPassword,
         deadline: Instant,
     ) -> Result<Output, Error> {
-        let entry = self.candidate(&credential)?;
-        let credentials = tokio::time::timeout_at(
-            tokio::time::Instant::from_std(deadline),
-            self.database.lock(),
-        )
-        .await
-        .map_err(|_| Error::Unavailable)?
-        .credentials(deadline)
-        .await
-        .map_err(|_| Error::Unavailable)?;
-        let (proof, verifier) = verifier(credentials)?;
-        let fresh = snapshot(&proof);
-        self.csrf(&entry, &credential, &fresh)?;
-        if !entry.eligible(&fresh, Instant::now()) {
-            return Err(Error::Unauthorized);
-        }
-        charge(&self.management_allowance)?;
+        let (entry, proof, verifier) = self.admit_management(&credential, deadline).await?;
         let replacement = self
             .blocklist
             .admit(replacement)
@@ -598,6 +591,10 @@ impl Engine {
             Operation::Login { password, kind } => self.login(password, kind, deadline).await,
             Operation::State(credential) => self.session(credential, false, deadline).await,
             Operation::Logout(credential) => self.session(credential, true, deadline).await,
+            Operation::RevokeOthers {
+                credential,
+                password,
+            } => self.revoke_others(credential, password, deadline).await,
             Operation::Password {
                 credential,
                 current,
