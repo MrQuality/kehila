@@ -8,15 +8,34 @@ use rustix::{
 };
 use zeroize::Zeroizing;
 
+/// Closed startup purposes: caller/request data cannot choose an allocation cap.
 #[derive(Clone, Copy)]
-pub(super) struct Owner {
+pub(crate) enum Asset {
+    TlsBundle,
+    DatabaseRoot,
+    Configuration,
+    PasswordBlocklist,
+}
+impl Asset {
+    const fn limit(self) -> usize {
+        match self {
+            Self::TlsBundle => crate::bundle::MAX_ENCODED,
+            Self::DatabaseRoot => 65_536,
+            Self::Configuration => 4096,
+            Self::PasswordBlocklist => crate::password::blocklist::ENCODED_LEN,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct Owner {
     pub uid: u32,
     pub gid: u32,
 }
 
 /// Categories and errno only; never retain a configured path or secret bytes.
 #[derive(Debug, PartialEq, Eq)]
-pub(super) enum FileError {
+pub(crate) enum FileError {
     Open(Errno),
     Stat(Errno),
     ObjectType,
@@ -51,9 +70,10 @@ fn open_checked(root: BorrowedFd<'_>, path: &CStr, owner: Owner) -> Result<Owned
 }
 
 fn read_bounded(
+    asset: Asset,
     mut read: impl FnMut(&mut [u8]) -> Result<usize, Errno>,
 ) -> Result<Zeroizing<Vec<u8>>, FileError> {
-    let cap = super::MAX_ENCODED + 1;
+    let cap = asset.limit() + 1;
     let mut bytes = Zeroizing::new(Vec::new());
     bytes
         .try_reserve_exact(cap)
@@ -68,7 +88,7 @@ fn read_bounded(
             }
             Ok(length) => {
                 filled += length;
-                if filled > super::MAX_ENCODED {
+                if filled > asset.limit() {
                     return Err(FileError::TooLarge);
                 }
             }
@@ -80,13 +100,14 @@ fn read_bounded(
 
 /// Borrow the established root, own one opened descriptor, and read it once.
 /// The byte cap is not an I/O deadline or proof against a writable alias.
-pub(super) fn read_bundle(
+pub(crate) fn read_asset(
     root: BorrowedFd<'_>,
     path: &CStr,
     owner: Owner,
+    asset: Asset,
 ) -> Result<Zeroizing<Vec<u8>>, FileError> {
     let fd = open_checked(root, path, owner)?;
-    read_bounded(|output| rustix::io::read(&fd, output))
+    read_bounded(asset, |output| rustix::io::read(&fd, output))
 }
 
 #[cfg(test)]

@@ -168,7 +168,7 @@ the current same-descriptor implementation. Minimum Rust-version, provider
 identity/mount mapping, trusted-root acquisition, writable-alias exclusion,
 integrated lifecycle and authentication remain open.
 
-## Execution boundary and remaining decisions
+## Historical execution boundary for the reader proposal
 
 This proposal needs maintainer review before the code/dependency slice. Builds,
 actual Linux/provider fixtures and mandatory executable commit gates need fresh
@@ -182,3 +182,32 @@ suspected diagnostic pause invalidates the run under ADR-106's accepted fresh
 rerun rule. No trust/security setting changes or A1-A5 implementation are included.
 A0/T01-T16, ADR-103 and #65 remain unqualified; #40's separate production
 dependency disposition and 2026-11-18 review deadline remain unchanged.
+
+## Protected authentication startup, 2026-10-29
+
+The Linux loader now reuses the opened-object reader for four closed asset
+purposes. TLS bundles and database roots retain 65,536-byte ceilings, configuration
+is limited to 4,096 bytes, and the pinned 2,097-entry digest corpus has its exact
+67,104-byte envelope. This does not increase the TLS parser limit. The corpus is
+checked against its existing count, ordering and digest before use.
+
+Startup requires real/effective UID and GID 10001, no supplemental group outside
+that identity, and a root-owned, exactly mode-0755 `/run/secrets` directory opened
+without symlink traversal. Each asset must be an opened regular file owned by
+10001:10001 with exactly mode 0400. Configuration is a closed JSON object; the
+database address, database root and strict server certificate/key profile are
+validated before returning startup assets. This loader does not connect to a
+database or open a listener.
+
+Linux Clippy and 128 serial unit tests passed, with eight opt-in tests skipped in
+that ordinary run. The protected-startup opt-in test then passed separately in
+Podman as UID/GID 10001 with actual secret mounts: it admitted all four assets,
+rejected a corpus-blocked password and configured HTTP/1.1 TLS. An initial fixture
+failed before execution because the copied test binary lacked execute permission;
+correcting fixture setup did not change the application identity or secret policy.
+
+These observations establish startup asset admission for that fixture. They do
+not establish immutable storage, absence of writable aliases, durable provisioning,
+listener locality, container resource limits, continuous expiry, provider isolation
+or browser/CLI integration. Those delivery gates remain open. The enabled rustix
+feature is recorded in the experiment's dependency review.

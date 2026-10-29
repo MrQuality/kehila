@@ -1,4 +1,11 @@
 use super::*;
+fn read_bundle(
+    root: BorrowedFd<'_>,
+    path: &CStr,
+    owner: Owner,
+) -> Result<Zeroizing<Vec<u8>>, FileError> {
+    read_asset(root, path, owner, Asset::TlsBundle)
+}
 use std::{
     fs::{self, DirBuilder, File, OpenOptions},
     io::Write,
@@ -199,7 +206,7 @@ fn opened_descriptor_does_not_follow_a_replaced_path() {
     let fd = open_checked(f.root.as_fd(), c"bundle", f.owner).unwrap();
     fs::rename(f.path.join("bundle"), f.path.join("old")).unwrap();
     f.file("bundle", b"replacement", 0o400);
-    let bytes = read_bounded(|output| rustix::io::read(&fd, output)).unwrap();
+    let bytes = read_bounded(Asset::TlsBundle, |output| rustix::io::read(&fd, output)).unwrap();
     assert_eq!(bytes.as_slice(), b"original");
     assert_eq!(f.read(c"bundle").unwrap().as_slice(), b"replacement");
 }
@@ -217,18 +224,18 @@ fn writable_alias_is_not_immutable_generation_evidence() {
         .unwrap();
     let fd = open_checked(f.root.as_fd(), c"bundle", f.owner).unwrap();
     writer.write_all(b"new").unwrap();
-    let bytes = read_bounded(|output| rustix::io::read(&fd, output)).unwrap();
+    let bytes = read_bounded(Asset::TlsBundle, |output| rustix::io::read(&fd, output)).unwrap();
     assert_eq!(bytes.as_slice(), b"new");
 }
 
 #[test]
 fn byte_cap_is_measured_from_reads_not_metadata() {
     let f = Fixture::new();
-    f.file("exact", &vec![b' '; super::super::MAX_ENCODED], 0o400);
-    assert_eq!(f.read(c"exact").unwrap().len(), super::super::MAX_ENCODED);
+    f.file("exact", &vec![b' '; crate::bundle::MAX_ENCODED], 0o400);
+    assert_eq!(f.read(c"exact").unwrap().len(), crate::bundle::MAX_ENCODED);
     f.file(
         "overflow",
-        &vec![b' '; super::super::MAX_ENCODED + 1],
+        &vec![b' '; crate::bundle::MAX_ENCODED + 1],
         0o400,
     );
     assert_eq!(f.read(c"overflow").err(), Some(FileError::TooLarge));
@@ -243,10 +250,10 @@ fn byte_cap_is_measured_from_reads_not_metadata() {
     let fd = open_checked(f.root.as_fd(), c"growing", f.owner).unwrap();
     assert_eq!(fstat(&fd).unwrap().st_size, 0);
     writer
-        .write_all(&vec![b' '; super::super::MAX_ENCODED + 1])
+        .write_all(&vec![b' '; crate::bundle::MAX_ENCODED + 1])
         .unwrap();
     assert_eq!(
-        read_bounded(|output| rustix::io::read(&fd, output)).err(),
+        read_bounded(Asset::TlsBundle, |output| rustix::io::read(&fd, output)).err(),
         Some(FileError::TooLarge)
     );
 }
@@ -255,7 +262,7 @@ fn byte_cap_is_measured_from_reads_not_metadata() {
 fn short_reads_interruptions_and_read_errors_preserve_the_bound() {
     let mut attempts = 0;
     let mut input = b"fixture".as_slice();
-    let bytes = read_bounded(|output| {
+    let bytes = read_bounded(Asset::TlsBundle, |output| {
         attempts += 1;
         if attempts % 2 == 1 {
             return Err(Errno::INTR);
@@ -268,7 +275,7 @@ fn short_reads_interruptions_and_read_errors_preserve_the_bound() {
     .unwrap();
     assert_eq!(bytes.as_slice(), b"fixture");
     assert_eq!(
-        read_bounded(|_| Err(Errno::IO)).err(),
+        read_bounded(Asset::TlsBundle, |_| Err(Errno::IO)).err(),
         Some(FileError::Read(Errno::IO))
     );
 }
@@ -304,7 +311,7 @@ fn opened_file_descriptors_are_released_after_success_and_rejection() {
 
 #[test]
 fn private_composition_preserves_file_decode_and_profile_errors() {
-    use super::super::{admit_path, BundleDecodeError, BundleLoadError};
+    use crate::bundle::{admit_path, BundleDecodeError, BundleLoadError};
     use rustls::pki_types::UnixTime;
     let f = Fixture::new();
     let now = UnixTime::since_unix_epoch(std::time::Duration::from_secs(1_767_312_000));
@@ -332,7 +339,7 @@ fn private_composition_preserves_file_decode_and_profile_errors() {
     let key = rcgen::KeyPair::generate().unwrap();
     let cert = params.self_signed(&key).unwrap();
     fn base64_lines(input: &[u8]) -> Zeroizing<Vec<u8>> {
-        let codec = super::super::BASE64;
+        let codec = data_encoding::BASE64;
         let mut output = Zeroizing::new(vec![0; codec.encode_len(input.len())]);
         codec.encode_mut(input, &mut output);
         let mut lines = Zeroizing::new(Vec::new());
@@ -351,7 +358,7 @@ fn private_composition_preserves_file_decode_and_profile_errors() {
     encoded.extend_from_slice(b"-----END PRIVATE KEY-----\n");
     f.file("valid", &encoded, 0o400);
     assert!(admit_path(f.root.as_fd(), c"valid", f.owner, now).is_ok());
-    encoded.resize(super::super::MAX_ENCODED, b' ');
+    encoded.resize(crate::bundle::MAX_ENCODED, b' ');
     f.file("exact", &encoded, 0o400);
     assert!(admit_path(f.root.as_fd(), c"exact", f.owner, now).is_ok());
     encoded.push(b' ');
@@ -360,4 +367,44 @@ fn private_composition_preserves_file_decode_and_profile_errors() {
         admit_path(f.root.as_fd(), c"overflow", f.owner, now),
         Err(BundleLoadError::File(FileError::TooLarge))
     ));
+}
+
+#[test]
+fn startup_asset_caps_do_not_expand_the_tls_bundle_boundary() {
+    let f = Fixture::new();
+    let size = crate::password::blocklist::ENCODED_LEN;
+    assert!(size > crate::bundle::MAX_ENCODED);
+    f.file("corpus", &vec![0; size], 0o400);
+    assert_eq!(
+        read_asset(f.root.as_fd(), c"corpus", f.owner, Asset::PasswordBlocklist)
+            .unwrap()
+            .len(),
+        size
+    );
+    assert_eq!(
+        read_asset(f.root.as_fd(), c"corpus", f.owner, Asset::TlsBundle).err(),
+        Some(FileError::TooLarge)
+    );
+    assert_eq!(
+        read_asset(f.root.as_fd(), c"corpus", f.owner, Asset::DatabaseRoot).err(),
+        Some(FileError::TooLarge)
+    );
+    f.file("config", &vec![b' '; 4096], 0o400);
+    assert_eq!(
+        read_asset(f.root.as_fd(), c"config", f.owner, Asset::Configuration)
+            .unwrap()
+            .len(),
+        4096
+    );
+    f.file("oversized-config", &vec![b' '; 4097], 0o400);
+    assert_eq!(
+        read_asset(
+            f.root.as_fd(),
+            c"oversized-config",
+            f.owner,
+            Asset::Configuration
+        )
+        .err(),
+        Some(FileError::TooLarge)
+    );
 }

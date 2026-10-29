@@ -6,6 +6,7 @@ use zeroize::Zeroizing;
 
 const MAX_ENTRIES: usize = 4096;
 const POLICY_ONE_COUNT: usize = 2097;
+pub(crate) const ENCODED_LEN: usize = POLICY_ONE_COUNT * 32;
 const POLICY_ONE_SHA256: [u8; 32] = [
     0x4a, 0x2e, 0xc4, 0x3e, 0x1b, 0x73, 0x7b, 0xfa, 0xe0, 0x6e, 0xb3, 0xe4, 0xae, 0xc4, 0x69, 0x93,
     0x34, 0x4c, 0x28, 0xdd, 0x8a, 0xa9, 0x59, 0xf5, 0x01, 0x1c, 0x37, 0x8b, 0xad, 0x7c, 0x2f, 0xc8,
@@ -179,7 +180,7 @@ mod tests {
         let mut bytes = Vec::new();
         std::fs::File::open(path)
             .unwrap()
-            .take((MAX_ENTRIES * 32 + 1) as u64)
+            .take((ENCODED_LEN + 1) as u64)
             .read_to_end(&mut bytes)
             .unwrap();
         let list = Blocklist::policy_one(&bytes).unwrap();

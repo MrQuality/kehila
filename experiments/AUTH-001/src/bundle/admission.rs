@@ -21,7 +21,7 @@ const ECDSA_SHA256: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.2.840.100
 const SERVER_AUTH: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.5.5.7.3.1");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum AdmissionError {
+pub(crate) enum AdmissionError {
     CertificateDer,
     CertificateProfile,
     Extensions,
@@ -35,9 +35,37 @@ pub(super) enum AdmissionError {
 
 /// A profile/key-pair snapshot, not proof of issuer-signature authenticity or trust.
 /// TLS clients must independently perform ordinary certificate-path verification.
-pub(super) struct ProfileCheckedGeneration {
+pub(crate) struct ProfileCheckedGeneration {
     key: CertifiedKey,
     not_after: UnixTime,
+}
+
+impl ProfileCheckedGeneration {
+    #[cfg(target_os = "linux")]
+    pub(crate) fn configuration(
+        self,
+    ) -> Result<(Arc<rustls::ServerConfig>, UnixTime), AdmissionError> {
+        struct Fixed(Arc<CertifiedKey>);
+        impl std::fmt::Debug for Fixed {
+            fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("Fixed admitted certificate generation")
+            }
+        }
+        impl rustls::server::ResolvesServerCert for Fixed {
+            fn resolve(&self, _: rustls::server::ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
+                Some(self.0.clone())
+            }
+        }
+        let mut config = rustls::ServerConfig::builder_with_provider(Arc::new(
+            rustls::crypto::ring::default_provider(),
+        ))
+        .with_protocol_versions(&[&rustls::version::TLS13])
+        .map_err(|_| AdmissionError::KeyLoad)?
+        .with_no_client_auth()
+        .with_cert_resolver(Arc::new(Fixed(Arc::new(self.key))));
+        config.alpn_protocols = vec![b"http/1.1".to_vec()];
+        Ok((Arc::new(config), self.not_after))
+    }
 }
 
 /// Checks the disposable profile and key pair at the supplied time.

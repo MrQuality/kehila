@@ -10,7 +10,7 @@
 )]
 mod application;
 #[cfg_attr(
-    not(test),
+    all(not(test), not(target_os = "linux")),
     expect(
         dead_code,
         reason = "No caller until complete credential admission is qualified"
@@ -18,9 +18,12 @@ mod application;
 )]
 mod bundle;
 #[cfg(target_os = "linux")]
-#[expect(
-    dead_code,
-    reason = "Native database ownership awaits fixture qualification and HTTP wiring"
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Native database ownership awaits qualified startup wiring"
+    )
 )]
 mod database;
 mod diagnostics;
@@ -49,6 +52,8 @@ mod password;
     )
 )]
 mod pre_session;
+#[cfg(target_os = "linux")]
+mod protected_file;
 #[cfg_attr(
     all(not(test), not(target_os = "linux")),
     expect(dead_code, reason = "Secret primitives await session integration")
@@ -62,6 +67,15 @@ mod secret;
     )
 )]
 mod session;
+#[cfg(target_os = "linux")]
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Protected owner startup is awaiting the qualified listener"
+    )
+)]
+mod startup;
 
 use std::{
     convert::Infallible,

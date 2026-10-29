@@ -17,6 +17,7 @@ enum Profile {
     Transport,
     Cases,
     Database,
+    Owner,
 }
 
 fn write_new(path: &Path, bytes: &[u8]) -> Result<(), Box<dyn Error>> {
@@ -37,7 +38,7 @@ fn leaf(
     let now = OffsetDateTime::now_utc();
     let mut params = CertificateParams::new(vec![name.to_owned()])?;
     params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
-    if matches!(profile, Profile::Database) {
+    if matches!(profile, Profile::Database | Profile::Owner) {
         params.is_ca = IsCa::ExplicitNoCa;
         params.key_usages = vec![KeyUsagePurpose::DigitalSignature];
     }
@@ -65,7 +66,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         None => Profile::Transport,
         Some(flag) if flag == "--profiles" => Profile::Cases,
         Some(flag) if flag == "--database" => Profile::Database,
-        Some(_) => return Err("expected optional --profiles or --database".into()),
+        Some(flag) if flag == "--owner" => Profile::Owner,
+        Some(_) => return Err("expected optional --profiles, --database or --owner".into()),
     };
     if args.next().is_some() || !directory.is_dir() || directory.is_symlink() {
         return Err("expected an existing non-symlink protected directory".into());
@@ -87,6 +89,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         DnType::CommonName,
         if matches!(profile, Profile::Database) {
             "Disposable local database CA"
+        } else if matches!(profile, Profile::Owner) {
+            "Disposable local owner test CA"
         } else {
             "Disposable local transport CA"
         },
@@ -98,6 +102,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     ca.name_constraints = Some(NameConstraints {
         permitted_subtrees: if matches!(profile, Profile::Database) {
             vec![GeneralSubtree::DnsName("auth-db".to_owned())]
+        } else if matches!(profile, Profile::Owner) {
+            vec![GeneralSubtree::IpAddress(CidrSubnet::V4(
+                [127, 0, 0, 1],
+                [255, 255, 255, 255],
+            ))]
         } else {
             vec![
                 GeneralSubtree::IpAddress(CidrSubnet::V4([127, 0, 0, 1], [255, 255, 255, 255])),
@@ -122,6 +131,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         false,
         profile,
     )?;
+    if matches!(profile, Profile::Owner) {
+        let renewed = directory.join("renewed");
+        std::fs::create_dir(&renewed)?;
+        leaf(
+            &renewed,
+            ca_certificate.der(),
+            &issuer,
+            "127.0.0.1",
+            false,
+            Profile::Owner,
+        )?;
+    }
     if matches!(profile, Profile::Cases) {
         for (profile, name, expired) in [
             ("renewed", "127.0.0.1", false),

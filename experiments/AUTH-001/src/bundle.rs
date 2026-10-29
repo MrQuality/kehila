@@ -1,16 +1,16 @@
 //! Private version-1 decoding and profile composition. No serving caller.
 mod admission;
 #[cfg(target_os = "linux")]
-mod reader;
+use crate::protected_file as reader;
 
 use data_encoding::BASE64;
 use zeroize::Zeroizing;
 
-const MAX_ENCODED: usize = 65_536;
+pub(crate) const MAX_ENCODED: usize = 65_536;
 
 #[cfg(target_os = "linux")]
 #[derive(Debug, PartialEq, Eq)]
-enum BundleLoadError {
+pub(crate) enum BundleLoadError {
     File(reader::FileError),
     Decode(BundleDecodeError),
     Profile(admission::AdmissionError),
@@ -18,20 +18,21 @@ enum BundleLoadError {
 
 /// Private composition only: no root acquisition, listener, issuer trust or clock.
 #[cfg(target_os = "linux")]
-fn admit_path(
+pub(crate) fn admit_path(
     root: std::os::fd::BorrowedFd<'_>,
     path: &std::ffi::CStr,
     owner: reader::Owner,
     now: rustls::pki_types::UnixTime,
 ) -> Result<admission::ProfileCheckedGeneration, BundleLoadError> {
-    let encoded = reader::read_bundle(root, path, owner).map_err(BundleLoadError::File)?;
+    let encoded = reader::read_asset(root, path, owner, reader::Asset::TlsBundle)
+        .map_err(BundleLoadError::File)?;
     let decoded = decode_bundle(&encoded).map_err(BundleLoadError::Decode)?;
     drop(encoded);
     admission::admit(decoded, now).map_err(BundleLoadError::Profile)
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum BundleDecodeError {
+pub(crate) enum BundleDecodeError {
     TooLarge,
     Framing,
     Base64,

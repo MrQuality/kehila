@@ -1,6 +1,6 @@
 # Standalone probe dependency review
 
-Owner: project maintainer. Initial review 2026-10-19; Tokio patch review 2026-10-26; Linux reader review 2026-10-27; credential primitive review 2026-10-28; HTTP parser review 2026-10-29.
+Owner: project maintainer. Initial review 2026-10-19; Tokio patch review 2026-10-26; Linux reader review 2026-10-27; credential primitive review 2026-10-28; HTTP parser and startup feature review 2026-10-29.
 Scope: the locked AUTH-001 experiment. The matching root-workspace Tokio patch is
 recorded in the canonical A0 disposition below.
 
@@ -41,6 +41,15 @@ security-notice review remains the update policy.
 The 2026-10-19 package/version OSV query covered the then-locked 85 registry packages, including platform-specific and test-only entries. The subsequent profile adoption review recorded the then-94-package graph; the Linux reader update below brings the selected inventory to 98. It is a point-in-time package advisory query, not a complete source/reachability audit or a qualification of the existing worker. The pre-existing worker rustls 0.21.12 follow-up remains under [#40](https://github.com/MrQuality/kehila/issues/40) and the [A0 plan](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up).
 
 ## Authentication HTTP parser, 2026-10-29
+
+The protected Linux startup loader additionally enables `process` on the already
+selected rustix 1.1.6, with defaults still disabled. The inspected packaged
+manifest maps that feature to `linux-raw-sys/prctl`; the loader uses the safe
+real/effective UID/GID and supplemental-group APIs. The locked Linux feature
+tree selects `alloc/fs/process/std`. No package/version or lockfile change is
+introduced, and the production graph remains unchanged. Linux Clippy, unit
+regressions and actual UID/GID 10001 secret admission ran with this expansion.
+This is a feature review, not a fresh advisory query or minimum-version build.
 
 The closed authentication messages select exact serde_json 1.0.154 (`std`,
 defaults disabled) and promote already-locked serde 1.0.229 (`derive/std`).
