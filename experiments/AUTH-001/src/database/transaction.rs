@@ -29,6 +29,8 @@ pub(crate) struct Fenced<'a, P> {
     pending: PendingOperation,
     deadline: Instant,
     failed: bool,
+    #[cfg(test)]
+    lose_confirmation: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl Database {
@@ -87,6 +89,8 @@ impl Database {
             completed: false,
         };
         let started = self.authority.as_ref().ok_or(DbError::Unavailable)?;
+        #[cfg(test)]
+        let lose_confirmation = self.lose_confirmation.clone();
         let transaction = timeout_at(
             TokioInstant::from_std(deadline),
             self.serving
@@ -126,6 +130,8 @@ impl Database {
                 pending,
                 deadline,
                 failed: false,
+                #[cfg(test)]
+                lose_confirmation,
             }),
             Err(error) => {
                 rollback(transaction, pending).await?;
@@ -235,6 +241,16 @@ impl<P> Fenced<'_, P> {
             .await
             .map_err(|_| DbError::UnknownCommit)?
             .map_err(|_| DbError::UnknownCommit)?;
+        // Qualification seam only: SQL really committed, but this boundary
+        // withholds confirmation from the consumer. The normal pending guard
+        // stops admission/output exactly as for an unknown driver outcome.
+        #[cfg(test)]
+        if self
+            .lose_confirmation
+            .swap(false, std::sync::atomic::Ordering::SeqCst)
+        {
+            return Err(DbError::UnknownCommit);
+        }
         if !self.pending.live.is_live() || Instant::now() >= self.deadline {
             return Err(DbError::UnknownCommit);
         }

@@ -73,6 +73,25 @@ delivery assertions were added before execution qualification.
 
 ## Verification boundary
 
+### Unknown-commit consumers, 2026-10-29
+
+The opt-in native consumer journey passed against PostgreSQL 16.15/TLS 1.3.
+A per-instance, test-only seam withholds confirmation after a real successful
+commit and returns the existing `UnknownCommit` outcome before disarming the
+normal pending guard. This is not a TCP/TLS fault injection or a claim about every
+possible server outcome. The ordinary runtime-stop, suppression and cleanup paths
+remain unchanged in production.
+
+The journey confirmed issuance returns no credential and stops new admission,
+logout retains its signed-out/audit-unconfirmed outcome despite runtime stop,
+and password-change uncertainty reconciles through a fresh runtime and login:
+the old password denies and the chosen replacement succeeds. Independent SQL
+inspection found four runtime starts, four issuance events, one logout and one
+password change, with the expected generation/revision and unchanged owner/grants.
+All owned drivers/workers settled and the advisory lock was released. Each owner
+was recreated within the same test process; this does not qualify process/container
+restart, a serving HTTP listener or revoke-other consumers.
+
 ### Prepared HTTP boundary, 2026-10-29
 
 The separate `http_auth` module admits only explicit browser/CLI routes before

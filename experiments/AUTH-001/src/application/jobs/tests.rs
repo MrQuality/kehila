@@ -1,5 +1,6 @@
 use super::*;
 use crate::database::tests::{fixture, mark, wait};
+mod unknown_commit;
 
 fn password(value: &str) -> NormalizedPassword {
     NormalizedPassword::new(Zeroizing::new(value.to_owned())).unwrap()

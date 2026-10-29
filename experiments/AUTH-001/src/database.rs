@@ -1,5 +1,5 @@
 //! Linux-only disposable PostgreSQL transport and dedicated authority owner.
-//! Serving clients stay private. The application coordinator is not wired yet.
+//! Serving clients stay private behind the owned application coordinator.
 use crate::lifecycle::RuntimeLiveness;
 use rustls::{pki_types::CertificateDer, ClientConfig, RootCertStore};
 use std::{
@@ -64,6 +64,8 @@ pub(crate) struct Database {
     live: Arc<RuntimeLiveness>,
     installation: String,
     authority: Option<Authority>,
+    #[cfg(test)]
+    lose_confirmation: Arc<std::sync::atomic::AtomicBool>,
 }
 
 pub(crate) struct Shutdown {
@@ -148,6 +150,12 @@ impl Endpoint {
 }
 
 impl Database {
+    #[cfg(test)]
+    pub(crate) fn lose_next_confirmation_for_test(&mut self) {
+        self.lose_confirmation
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+
     pub(crate) async fn start(
         endpoint: &Endpoint,
         installation: String,
@@ -170,6 +178,8 @@ impl Database {
             live: RuntimeLiveness::new(),
             installation,
             authority: None,
+            #[cfg(test)]
+            lose_confirmation: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         };
         let result = timeout_at(
             TokioInstant::from_std(deadline),
