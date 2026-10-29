@@ -1,6 +1,6 @@
 # Standalone probe dependency review
 
-Owner: project maintainer. Initial review 2026-10-19; Tokio patch review 2026-10-26; Linux reader review 2026-10-27; credential primitive review 2026-10-28.
+Owner: project maintainer. Initial review 2026-10-19; Tokio patch review 2026-10-26; Linux reader review 2026-10-27; credential primitive review 2026-10-28; HTTP parser review 2026-10-29.
 Scope: the locked AUTH-001 experiment. The matching root-workspace Tokio patch is
 recorded in the canonical A0 disposition below.
 
@@ -39,6 +39,41 @@ the notice's version/source attribution changes. Existing monthly and immediate
 security-notice review remains the update policy.
 
 The 2026-10-19 package/version OSV query covered the then-locked 85 registry packages, including platform-specific and test-only entries. The subsequent profile adoption review recorded the then-94-package graph; the Linux reader update below brings the selected inventory to 98. It is a point-in-time package advisory query, not a complete source/reachability audit or a qualification of the existing worker. The pre-existing worker rustls 0.21.12 follow-up remains under [#40](https://github.com/MrQuality/kehila/issues/40) and the [A0 plan](../../docs/implementation/local-owner-authentication-a0.md#advisory-follow-up).
+
+## Authentication HTTP parser, 2026-10-29
+
+The closed authentication messages select exact serde_json 1.0.154 (`std`,
+defaults disabled) and promote already-locked serde 1.0.229 (`derive/std`).
+The lock adds only serde_json and zmij 1.0.23: 170 to 172 registry packages,
+with no existing version changes. Optional arbitrary-precision, raw-value,
+preserve-order and unbounded-depth features are not selected. The production
+graph is unchanged. The selected serde_json/zmij manifests declare Rust 1.71;
+this is not a minimum-toolchain execution result.
+
+The [parser release comparison](https://github.com/serde-rs/json/compare/v1.0.151...v1.0.154)
+covers UTF-8 error-position corrections, optional ordered-map support and
+numeric-value fixes. Authentication uses typed string fields, no generic Value
+tree or numbers. A first-token object check prevents Serde's positional struct
+sequence representation from expanding the wire format. Derived closed structs
+reject duplicate/unknown keys, including escaped aliases; a bounded custom string
+visitor copies into zeroizing password storage. Parser errors are discarded,
+never logged or reflected. The 4-KiB encoded bound precedes parsing; nested values
+cannot match any password field. Library escape scratch, HTTP/header buffers and
+allocator history are outside the owned-buffer wiping guarantee.
+
+Actual archives match the generated lock checksums. Apache-2.0 is selected for
+serde_json; zmij's sole MIT grant and both package attributions are retained in
+the notices. Neither archive supplies a separate NOTICE. Upstream repositories
+are neither archived nor disabled: inspected pushes were October 2026 for
+[serde/json](https://github.com/serde-rs/json) and
+[serde](https://github.com/serde-rs/serde), August 2026 for
+[zmij](https://github.com/dtolnay/zmij). This is maintenance evidence, not a support
+guarantee. Review monthly and on security notices under DEP-001.
+
+The [dated package/version query](advisories-http.json) returned no findings for
+all 172 locked registry entries on 2026-10-29. Its LF-normalized lock digest binds
+the inventory; source/reachability, the production graph and the separate root
+advisory dispositions remain outside that result.
 
 ## Linux reader dependency selection, 2026-10-27
 
