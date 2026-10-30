@@ -97,6 +97,10 @@ ADR-106's [2026-10-27 extension](ADR-106-local-container-transport.md#accepted-a
 also accepts this bounded profile for synthetic, disposable authenticated tests.
 It supplies no real-data, supported-installation or supported-suspend guarantee;
 schema/capability review and execution/trust permissions remain separate.
+The [2026-10-30 local-caller amendment](ADR-106-local-container-transport.md#accepted-local-caller-amendment-2026-10-30)
+permits untrusted same-PC Windows/WSL/container callers to reach the application
+in disposable authenticated tests only. It selects no supported-installation
+exposure boundary and grants no caller authority.
 
 The installer/operator supplies a server certificate trusted by the actual
 browser and CLI, with the exact IP SAN and protected private key. Startup rejects

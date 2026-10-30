@@ -107,9 +107,14 @@ owner. A separate copy observation retains owner-mismatch rejection. Production
 checks remain unchanged; the PR records the hosted result for the corrected head.
 
 These results do not establish actual owner serving, protected assets on the new
-provider, Windows forwarding, guest/LAN exclusion, expired/revoked credential
+provider, the amended local/external ingress matrix, expired/revoked credential
 delivery, process/container restart rejection or full-request performance. The
 [container record](local-owner-authentication-container-plan.md) separately
 describes the initial native-WSL resource observation. A4 domain commands,
 supported installation/recovery, real-data readiness and replicated deployment
 retain their own gates.
+
+The [2026-10-30 local-caller amendment](../architecture/ADR-106-local-container-transport.md#accepted-local-caller-amendment-2026-10-30)
+now permits untrusted local guest access for disposable authenticated tests.
+The earlier TCP-only guest-isolation failure remains recorded in the container
+plan; it supplies no actual owner-login or LAN-exclusion qualification.

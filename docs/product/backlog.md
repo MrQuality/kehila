@@ -427,7 +427,11 @@ completes T01-T16 or a supported installation.
   and accounts for jobs and retained replies. Revoke-other audit rollback/retry
   batches have a native SQL journey. The [prepared listener and clients](../implementation/local-owner-authentication-listener.md)
   remain unqualified for live owner login. The [native-WSL resource subset](../implementation/local-owner-authentication-container-plan.md#native-wsl-resource-subset-2026-10-30)
-  does not qualify mounts, Windows forwarding or isolation. Earlier synthetic-
+  does not qualify mounts, Windows forwarding or the ingress matrix. The accepted
+  [local-caller amendment](../architecture/ADR-106-local-container-transport.md#accepted-local-caller-amendment-2026-10-30)
+  permits untrusted same-PC guest reachability for disposable authenticated tests
+  only; the original TCP isolation failure remains recorded and a fresh integrated
+  run plus external-peer exclusion are still required. Earlier synthetic-
   corpus and typed-delivery observations remain distinct from actual startup
   corpus admission and the outstanding browser/HTTP exchanges.
 

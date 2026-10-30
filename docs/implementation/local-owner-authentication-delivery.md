@@ -41,6 +41,15 @@ No merged proposal, draft PR or reviewer verdict supplies missing maintainer
 acceptance. The current Go/FerretDB prototype stays isolated and unauthenticated;
 it must not become an alternate supported path.
 
+On 2026-10-30 the maintainer explicitly accepted the
+[local-caller amendment](../architecture/ADR-106-local-container-transport.md#accepted-local-caller-amendment-2026-10-30)
+for disposable authenticated tests. Ordinary same-PC Windows/WSL/container
+callers may reach the application but remain untrusted; external ingress,
+protected files/database/admin boundaries and all authentication controls remain
+qualification gates. The earlier guest-reachability failure is preserved against
+its original contract. A fresh integrated run is still required; neither this
+decision nor the passing component CI completes this delivery.
+
 ## Definition of done and evidence
 
 - [x] The bounded disposable authenticated-test profile has its

@@ -78,6 +78,17 @@ Windows loopback forwarding and read-protected file secrets. Trusted engine/VM
 administration and retained disk/backup copies can expose keys. Actual ingress,
 file/alias and resume controls remain unqualified; no production storage or
 execution permission follows.
+The [2026-10-30 local-caller amendment](../architecture/ADR-106-local-container-transport.md#accepted-local-caller-amendment-2026-10-30)
+permits ordinary same-PC WSL processes and containers to reach the existing
+application listener for disposable authenticated tests, like ordinary Windows
+callers. They remain adversaries, not trusted peers. This increases exposure to
+TLS/HTTP flaws, password guessing, pre-session allocation and shared-admission
+denial of service. Credentials and current authority remain mandatory; browser
+headers do not authenticate native callers. Keys, PostgreSQL and administration
+remain independently protected. External LAN ingress is forbidden; a cooperating
+local relay is outside that confinement guarantee. No supported-installation or
+real-data boundary is accepted by this test concession. The original failed
+guest-isolation observation remains a failure under its original criterion.
 Confirmed logout entries can be reclaimed without reactivating captured tokens;
 later retries can return 401 without contradicting a committed audit. Reload-safe
 CSRF retrieval exposes only the existing independent CSRF value through bounded,
