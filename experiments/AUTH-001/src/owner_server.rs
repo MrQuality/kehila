@@ -1,5 +1,7 @@
 //! Bounded disposable Linux owner listener; no supported installation contract.
 mod clock;
+#[cfg(test)]
+mod tests;
 mod ui;
 
 use crate::{
@@ -45,6 +47,20 @@ impl Guarded {
             .transpose()
             .map(|_| ())
             .map_err(|_| crate::io_error("reply eligibility ended"))
+    }
+
+    async fn close(&mut self) -> Result<(), Rejection> {
+        // Send TLS closure without TCP FIN: a forwarding transport may stop
+        // relaying the peer's close notification after observing a half-close.
+        // Retain the reply gate and original deadline through both directions.
+        self.tls.get_mut().1.send_close_notify();
+        self.flush().await.map_err(|_| Rejection::TlsShutdown)?;
+        let mut unexpected = [0];
+        if !matches!(self.read(&mut unexpected).await, Ok(0)) {
+            return Err(Rejection::PeerClose);
+        }
+        self.shutdown().await.map_err(|_| Rejection::TlsShutdown)?;
+        Ok(())
     }
 }
 impl AsyncRead for Guarded {
@@ -162,12 +178,8 @@ async fn connection(
         if !parts.read_buf.is_empty() {
             return Outcome::Rejected(Rejection::PeerClose);
         }
-        if io.shutdown().await.is_err() {
-            return Outcome::Rejected(Rejection::TlsShutdown);
-        }
-        let mut unexpected = [0];
-        if !matches!(io.read(&mut unexpected).await, Ok(0)) {
-            return Outcome::Rejected(Rejection::PeerClose);
+        if let Err(rejection) = io.close().await {
+            return Outcome::Rejected(rejection);
         }
         let reply = match exchange.lock() {
             Ok(mut retained) => retained.take(),

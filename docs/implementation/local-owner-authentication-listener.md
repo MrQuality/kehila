@@ -29,8 +29,12 @@ body limits, with a two-second body deadline. The original five-second connectio
 deadline starts at accept and includes scheduling, handshake, HTTP and closure.
 
 The listener retains the accounted coordinator reply through actual TLS writes,
-flushes, reads that may flush TLS records, and closure. Each such operation checks
-current reply/issued-session eligibility. Bytes already written cannot be recalled.
+flushes, reads that may flush TLS records, and closure. It sends and flushes the
+TLS close notification, receives the peer's TLS closure with no surplus data,
+then shuts down TCP. Calling tokio-rustls shutdown first also shuts down the
+underlying transport; that TCP half-close must not precede the peer notification
+which this listener still requires. Each operation checks current
+reply/issued-session eligibility. Bytes already written cannot be recalled.
 Only observed completion with no buffered or subsequent surplus application bytes
 permits exchange confirmation; cancellation/failure drops the retained guard and
 retires unconfirmed issuance.
@@ -166,3 +170,75 @@ failures remain recorded. Cleanup required reconciliation after the first
 attempt; later owned cleanup and earlier temporary trust removals completed. Chrome,
 external-peer rejection, actual login/password/logout/restart journeys, expiry,
 graceful drain and complete request/capacity budgets remain unqualified.
+
+## Single-network native request subset, 2026-10-30
+
+A subsequent controlled request used the Rust source at `f234c8f`, an explicit
+test root and ordinary TLS 1.3/IP verification. The authority and its necessary
+PostgreSQL fixture occupied one restricted bridge, with separate namespaces,
+identities and secrets; only the application endpoint was published. The earlier
+two-network diagnostic returned a reset with zero Rust accepts. That observation
+places that sampled failure before Rust admission; it does not identify the
+cause of earlier Windows failures or establish a provider defect.
+
+The single-network request returned HTTP 401 with the fixed rejection envelope.
+The controlled server stop recorded exactly one accept and one completed
+exchange, with zero recorded rejection/timeout categories and a normal exit.
+This establishes one actual wrong-password rejection, not a successful login.
+
+Against the live database, an ordinary guest UID with no effective capabilities
+completed no TCP connection within two seconds. An unrelated container on its
+own network reported refusal/unreachability. Database liveness was checked
+before and after, and authority startup subsequently established its intended
+verified TLS/SCRAM connection. These are bounded path observations, not proof
+of every possible ingress route. Owned fixture cleanup completed; no Windows
+trust-store change was made for this subset.
+
+A following explicit-root Python/OpenSSL fixture, running on Windows, observed
+HTTP 401 for a wrong password and HTTP 200 for login, followed by HTTP 401 for
+the issued credential's state request. The journey stopped at that failure and
+cleanup completed. A controlled repeat recorded three accepts, three peer-close
+rejections and no completed exchanges, with a normal server exit. The login
+credential was therefore not confirmed; retiring it is required failure behavior.
+This is not a passing login/session journey and does not classify older failures.
+
+A focused real-TLS regression demonstrated that the original shutdown order
+sent TCP FIN before receiving the required peer close notification. The corrected
+order keeps TCP open until that notification arrives. This follows the pinned
+[tokio-rustls shutdown implementation](https://docs.rs/tokio-rustls/0.26.6/src/tokio_rustls/server.rs.html#534-544),
+which delegates shutdown to the underlying stream. The original regression failed;
+the repair passed Linux Clippy with warnings denied, 132 unit tests and 21 serial
+transport tests. Eight opt-in fixture tests were skipped: six PostgreSQL tests,
+one external-corpus test and one protected-startup fixture. Neither
+the regression nor source inspection alone establishes a defect in a forwarding
+provider. Schannel, the product CLI's cache/parser and Chrome remain separate
+qualification targets; external LAN exclusion, expiry/drain and complete request
+budgets remain open.
+
+### Corrected explicit-root journey
+
+With the corrected close order, the same Windows Python/OpenSSL fixture passed
+16 sequential TLS/HTTP observations against the Linux authority and disposable
+PostgreSQL: wrong-password rejection, login and active state, password change,
+old-session rejection, new-password login, revoke-other with exactly one target,
+rejection of that target while the initiating session remained active, rejection
+after process restart, fresh login, logout and its retry-only state/audit retry.
+The restart used a forced process stop; it does not demonstrate graceful drain.
+The earlier failed journey and three peer-close rejections remain failures at
+their original source, rather than retrospective passes.
+
+The fixture checked the actual two-member restricted bridge, separate network
+namespaces, runtime identities, read-only protected mounts, other-UID refusal,
+TLS/SCRAM database startup and absence of database publication. The ordinary
+guest and unrelated-container database negatives retained the bounded scope
+above. Owned fixture cleanup completed. No Windows root trust was installed for
+these runs.
+
+In this one small workload, password change took approximately 0.34 seconds
+from connection setup through TLS closure. The measuring clock's resolution was
+15.625 ms. Before restart, application cgroup peak memory was 70,053,888 bytes
+(about 66.8 MiB), with zero recorded OOM events at that observation. These are
+single-run measurements under a 256-MiB container ceiling, not sustained-load,
+concurrency-capacity or full request-budget qualification. They do not qualify
+Schannel, the Windows product CLI, Chrome, external LAN exclusion, credential
+expiry, supported installation or recovery.
