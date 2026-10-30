@@ -6,6 +6,16 @@ recorded in the canonical A0 disposition below.
 
 ## Purpose and selection
 
+The experimental Windows CLI separately uses the installed .NET Framework BCL,
+Schannel and DPAPI. It adds no NuGet package or Cargo dependency and does not
+redistribute a .NET runtime. Windows/runtime servicing remains a host dependency;
+the Rust package advisory/license inventory below does not audit it. The local
+client build, protected-file/DPAPI and JSON checks ran on the observed Windows
+profile. TLS negotiation, certificate rejection, stalled-read cancellation and
+broader Windows-version support remain unqualified; a TLS 1.3 enum value or a
+successful compilation is not that evidence. See the
+[client contract and limits](clients/windows/README.md).
+
 TLS: rustls 0.23.46 with the explicit ring provider; Tokio/Tokio-rustls own asynchronous sockets and deadlines; Hyper/Hyper-util and http-body-util provide bounded HTTP/1 handling. Bytes is the body representation. Test-only rcgen/time generate disposable certificates, including renewal and invalid-certificate fixtures. All direct versions are exact; Cargo.lock fixes the complete registry graph.
 
 These are maintained upstream Rust TLS/runtime/HTTP projects with published source and release histories. Pinning does not establish security: review monthly and immediately after upstream security notices under [DEP-001](../../docs/engineering/DEPENDENCIES.md). The maintainer owns requalification. The minimum declared package requirement reaches Rust 1.88; initial execution used 1.93.0 and the dated Linux reader tests used 1.95.0, not a qualified full-graph minimum-version build.

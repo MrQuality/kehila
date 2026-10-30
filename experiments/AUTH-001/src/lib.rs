@@ -1,13 +1,6 @@
 //! Disposable diagnostic transport and experimental credential/coordinator code.
 //! No supported installation, production database or trust-store access.
 #[cfg(target_os = "linux")]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "Coordinator awaits client and fixture qualification"
-    )
-)]
 mod application;
 #[cfg_attr(
     all(not(test), not(target_os = "linux")),
@@ -28,7 +21,7 @@ mod bundle;
 mod database;
 mod diagnostics;
 #[cfg_attr(
-    any(not(test), not(target_os = "linux")),
+    not(target_os = "linux"),
     expect(
         dead_code,
         reason = "The HTTP adapter is Linux-only and awaits qualified startup wiring"
@@ -36,6 +29,8 @@ mod diagnostics;
 )]
 mod http_auth;
 mod lifecycle;
+#[cfg(target_os = "linux")]
+mod owner_server;
 #[cfg_attr(
     not(test),
     expect(
@@ -68,13 +63,6 @@ mod secret;
 )]
 mod session;
 #[cfg(target_os = "linux")]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "Protected owner startup is awaiting the qualified listener"
-    )
-)]
 mod startup;
 
 use std::{
@@ -101,6 +89,16 @@ use tokio::{
     time::timeout,
 };
 use tokio_rustls::{TlsAcceptor, TlsConnector};
+
+/// Runs the explicitly configured disposable Linux owner profile. Startup reads
+/// fixed protected assets; this does not install trust or provision an owner.
+#[cfg(target_os = "linux")]
+pub async fn serve_owner(
+    arguments: Vec<String>,
+    stop: oneshot::Receiver<()>,
+) -> io::Result<Observations> {
+    owner_server::run(arguments, stop).await
+}
 
 pub const CONNECTION_LIMIT: usize = 16;
 pub const CONNECTION_DEADLINE: Duration = Duration::from_secs(5);

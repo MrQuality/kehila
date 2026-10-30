@@ -19,8 +19,10 @@ TLS proof. Its narrow credential-read API is not connected to these endpoints.
 ## Contract
 
 This section describes the diagnostic server/client. The coordinator's separate
-ownership and qualification record is linked above; its prepared HTTP dispatcher
-is not connected to a serving listener and adds no diagnostic login route.
+ownership and qualification record is linked above. The separate experimental
+[owner listener](../../docs/implementation/local-owner-authentication-listener.md)
+connects its prepared HTTP dispatcher; actual client/provider qualification is
+unfinished. It adds no diagnostic login route.
 
 The server and client accept literal `127.0.0.1` only. TLS 1.3 uses normal
 rustls certificate verification, an explicit CLI root set and IP SAN validation.
@@ -87,6 +89,13 @@ component observations do not qualify a serving listener, full request budgets,
 selected-provider isolation or actual Windows browser/CLI login. Diagnostic HTTP
 endpoints have no authentication caller, and
 no supported installation, secret provisioning or real-data readiness is claimed.
+
+The prepared Linux `owner` example and first-party browser page now connect that
+dispatcher through bounded TLS I/O and owned cleanup. The
+[Windows client](clients/windows/README.md) has local DPAPI/file/JSON checks.
+Neither implementation has a qualified live browser/CLI journey yet. The
+[provider resource subset](../../docs/implementation/local-owner-authentication-container-plan.md#native-wsl-resource-subset-2026-10-30)
+is separate from mounts, Windows publication, ingress isolation and authentication.
 
 ## Run
 

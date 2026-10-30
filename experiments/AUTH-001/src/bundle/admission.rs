@@ -37,6 +37,8 @@ pub(crate) enum AdmissionError {
 /// TLS clients must independently perform ordinary certificate-path verification.
 pub(crate) struct ProfileCheckedGeneration {
     key: CertifiedKey,
+    #[cfg(target_os = "linux")]
+    not_before: UnixTime,
     not_after: UnixTime,
 }
 
@@ -44,7 +46,7 @@ impl ProfileCheckedGeneration {
     #[cfg(target_os = "linux")]
     pub(crate) fn configuration(
         self,
-    ) -> Result<(Arc<rustls::ServerConfig>, UnixTime), AdmissionError> {
+    ) -> Result<(Arc<rustls::ServerConfig>, UnixTime, UnixTime), AdmissionError> {
         struct Fixed(Arc<CertifiedKey>);
         impl std::fmt::Debug for Fixed {
             fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -64,7 +66,7 @@ impl ProfileCheckedGeneration {
         .with_no_client_auth()
         .with_cert_resolver(Arc::new(Fixed(Arc::new(self.key))));
         config.alpn_protocols = vec![b"http/1.1".to_vec()];
-        Ok((Arc::new(config), self.not_after))
+        Ok((Arc::new(config), self.not_before, self.not_after))
     }
 }
 
@@ -85,6 +87,14 @@ pub(super) fn admit(
             .map(|values| values.as_slice()),
     )?;
     let expiry = check_certificate(&certificate, now)?;
+    #[cfg(target_os = "linux")]
+    let not_before = UnixTime::since_unix_epoch(
+        certificate
+            .tbs_certificate()
+            .validity()
+            .not_before
+            .to_unix_duration(),
+    );
     let signing = load_key(&bundle.private_key)?;
     drop(certificate);
     let mut chain = Vec::new();
@@ -98,6 +108,8 @@ pub(super) fn admit(
     require_pair(&key)?;
     Ok(ProfileCheckedGeneration {
         key,
+        #[cfg(target_os = "linux")]
+        not_before,
         not_after: UnixTime::since_unix_epoch(expiry),
     })
 }

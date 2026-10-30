@@ -139,6 +139,7 @@ pub(crate) struct Assets {
     pub(crate) installation: String,
     pub(crate) blocklist: Blocklist,
     pub(crate) tls: Arc<rustls::ServerConfig>,
+    pub(crate) not_before: rustls::pki_types::UnixTime,
     pub(crate) not_after: rustls::pki_types::UnixTime,
 }
 
@@ -203,7 +204,7 @@ fn load_owned(root: BorrowedFd<'_>, owner: Owner) -> Result<Assets, StartupError
     drop(corpus);
     let generation = bundle::admit_path(root, c"server-bundle.pem", owner, utc()?)
         .map_err(|_| StartupError::Certificate)?;
-    let (tls, not_after) = generation
+    let (tls, not_before, not_after) = generation
         .configuration()
         .map_err(|_| StartupError::Certificate)?;
     Ok(Assets {
@@ -211,6 +212,7 @@ fn load_owned(root: BorrowedFd<'_>, owner: Owner) -> Result<Assets, StartupError
         installation: configuration.installation,
         blocklist,
         tls,
+        not_before,
         not_after,
     })
 }
@@ -254,11 +256,13 @@ mod tests {
             installation,
             blocklist,
             tls,
+            not_before,
             not_after,
         } = prepare().unwrap();
         assert_eq!(installation, "installation");
         assert_eq!(tls.alpn_protocols, vec![b"http/1.1".to_vec()]);
         assert!(not_after > utc().unwrap());
+        assert!(not_before <= utc().unwrap());
         assert!(blocklist
             .admit(
                 crate::password::NormalizedPassword::new(Zeroizing::new(

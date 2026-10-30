@@ -1,7 +1,8 @@
 # Remaining A0: bounded Linux-container proof plan
 
 Status: ADR-106 architecture accepted for the bounded disposable proof; executable
-proposal and API/provider qualification remain pending. No execution permission.
+proposal and full API/provider qualification remain pending. Execution permission
+is phase-specific; the bounded resource subset below ran on 2026-10-30.
 Owner: project maintainer. Recorded: 2026-10-22. Related #40/#49 W2;
 [Accepted bounded ADR-106](../architecture/ADR-106-local-container-transport.md),
 [Accepted ADR-105](../architecture/ADR-105-local-owner-authentication.md),
@@ -315,3 +316,28 @@ results and confirmed owned cleanup. Partial evidence remains partial. This proo
 does not complete A0's wider dependency/installation/client work or any T01-T16
 case, authorize A1-A5, adopt ADR-103 or qualify production/replicated deployment.
 Record reached subset and remaining gates in #40/#49 and the implementing PR.
+
+## Native WSL resource subset, 2026-10-30
+
+The maintainer approved a separate disposable resource/lifecycle check while
+retaining container limits. A native-systemd Ubuntu 26.04.1 WSL 2 profile with
+distribution-packaged rootless Podman 5.7.0 exposed delegated memory, CPU and PID
+controllers using the systemd cgroup manager. Native boot and those controllers
+survived a distribution restart. An earlier provider had no available controllers
+in the relevant ancestry and rejected the memory limit before workload startup;
+its declaration of cgroup v2 or service delegation alone was insufficient.
+
+The running networkless probe's kernel files reported `memory.max=67108864`,
+`memory.swap.max=0`, `cpu.max=50000 100000` and `pids.max=32`. A fixed 96-MiB
+allocation attempt ended with OOM-killed state and exit 137. The dedicated user
+hierarchy's kernel `oom_kill` counter increased from zero to one, with no competing
+container in that fixture. This demonstrates memory containment for that bounded
+64-MiB case. CPU/PID kernel configuration was inspected; their stress behavior was
+not exercised. The owned container was removed and the provider stopped.
+
+This is a resource/lifecycle subset, not the application-container proof. Protected
+mounts and writable-alias exclusion, assigned-address verification, Windows
+loopback publication, guest/LAN exclusion, certificate lifecycle and real browser/
+CLI authentication still require observations on this profile. Neither a new
+distribution nor a successful memory probe inherits the earlier provider's mount
+or forwarding evidence. No resource-limit waiver or production deployment follows.

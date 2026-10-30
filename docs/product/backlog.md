@@ -418,15 +418,18 @@ completes T01-T16 or a supported installation.
   new-password blocklist admission; its pinned external-corpus tests do not
   qualify startup file admission or a serving HTTP listener. A prepared closed
   browser/CLI dispatcher preserves request bounds, strict bootstrap, protected
-  response encoding and retained exchange eligibility; integrated client/provider
-  and uncertain-commit consumer qualification remain pending. The unconnected 64-slot
+  response encoding and retained exchange eligibility. Separate native fixtures
+  now cover protected startup and uncertain-commit consumers; integrated client/
+  provider qualification remains pending. The 64-slot
   session core now checks publication, expiry, retirement, own-logout retention
   and owner destruction. The 32-slot pre-session engine now preserves original
   deadlines and owns single-use claims. The coordinator shares the runtime latch
-  and accounts for jobs and retained replies; revoke-other batching, protected
-  startup asset admission, uncertain-commit consumers and client qualification
-  remain unfinished. Its fixture uses a synthetic blocklist and typed delivery
-  confirmation, not actual browser or HTTP observations.
+  and accounts for jobs and retained replies. Revoke-other audit rollback/retry
+  batches have a native SQL journey. The [prepared listener and clients](../implementation/local-owner-authentication-listener.md)
+  remain unqualified for live owner login. The [native-WSL resource subset](../implementation/local-owner-authentication-container-plan.md#native-wsl-resource-subset-2026-10-30)
+  does not qualify mounts, Windows forwarding or isolation. Earlier synthetic-
+  corpus and typed-delivery observations remain distinct from actual startup
+  corpus admission and the outstanding browser/HTTP exchanges.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

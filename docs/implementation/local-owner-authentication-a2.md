@@ -124,11 +124,12 @@ rejects unsorted or duplicate digests. Production policy-one construction pins
 the expected count/hash in code. Matching is an exact normalized whole-password
 lookup; no trimming, case folding or substring matching. Submitted digest scratch
 is zeroized. Missing/invalid configured data must fail startup closed; no
-allow-all fallback exists. The bounded production file reader is not connected
-yet, so file admission and startup failure remain integration gates.
+allow-all fallback exists. The experimental protected-startup reader now admits
+the pinned asset in a native subset fixture; its integration with serving and
+the selected provider remains unqualified. No production file reader is adopted.
 
 The opt-in `selected_external_corpus_matches_pin_and_admits_by_exact_password`
-test reads at most 131,073 bytes from `AUTH001_BLOCKLIST_FIXTURE`, verifies the
+test reads at most 67,105 bytes from `AUTH001_BLOCKLIST_FIXTURE`, verifies the
 actual pinned asset and tests listed/unlisted choices. Run it explicitly with
 `--include-ignored` and a separately provisioned external asset. Ordinary CI
 ignores this asset test; its synthetic tests qualify mechanics only. Local
@@ -270,8 +271,8 @@ complete serving path remain gates. Existing-password verification must not
 reapply a newer blocklist.
 
 The experiment now connects credentials to reviewed PostgreSQL fences/runtime
-generation. The prepared HTTP adapter calls it; no serving listener or production
-worker is qualified yet.
+generation. The prepared HTTP adapter and experimental listener call it; no live
+owner-login path or production worker is qualified yet.
 Minimum Rust 1.88 execution, client storage, selected-provider isolation and full
 HTTP/container budget qualification remain unfinished.
 
