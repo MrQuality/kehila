@@ -36,8 +36,10 @@ checked as full-width `u64`, without signed narrowing.
 
 A credential read requires exclusive database ownership. Dropping or timing out
 that read stops admission; it does not make the connection reusable. Normal
-shutdown drops clients and joins both owned drivers, with a five-second fallback
-that aborts and joins remaining tasks. Exceptional destruction requests abort;
+shutdown drops clients and joins both owned drivers within the shared first-stop
+cleanup budget, with a fallback that aborts and joins remaining tasks. The budget
+is five seconds from the first stop, rather than five additional seconds after
+coordinator cleanup. Exceptional destruction requests abort;
 it does not claim observed joins or completed server rollback. Driver buffers
 and configuration may copy secrets; zeroizing owned inputs is not a universal
 memory-erasure guarantee.

@@ -454,7 +454,8 @@ pub async fn serve(
                         http.keep_alive(false).max_headers(32).max_buf_size(8192)
                             .timer(TokioTimer::new()).header_read_timeout(HANDSHAKE_DEADLINE);
                         match http.serve_connection(TokioIo::new(tls), service_fn(move |request| route(request, address))).without_shutdown().await {
-                            Ok(parts) => close_tls(parts.io.into_inner()).await,
+                            Ok(parts) if parts.read_buf.is_empty() => close_tls(parts.io.into_inner()).await,
+                            Ok(_) => Outcome::Rejected(Rejection::PeerClose),
                             Err(_) => Outcome::Rejected(Rejection::Http),
                         }
                     };

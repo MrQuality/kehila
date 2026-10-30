@@ -376,3 +376,13 @@ suites, an initial ECDSA P-256/SHA-256 certificate profile and exact loopback IP
 SAN. Certificate fees are excluded. The OWASP basis and RFC 9525 naming rationale
 are recorded there. This selects PoC inputs only; tooling/storage selection,
 execution, exact trust changes and broader platform qualification remain gated.
+
+### Buffered surplus input, 2026-10-30
+
+A real TLS regression sent a complete bodyless request and surplus application
+data in one write. The original diagnostic listener reported a completed
+exchange because Hyper had already buffered the surplus bytes; its later socket
+read saw only peer closure. The listener now rejects a nonempty Hyper read buffer
+before treating TLS closure as completion. The Windows regression failed before
+the change and passed afterward. This corrects close classification without
+adding routes or changing the diagnostic listener's loopback/HTTP limits.

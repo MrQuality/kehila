@@ -354,7 +354,7 @@ impl Database {
         self.live.stop();
         self.dedicated.take();
         self.serving.take();
-        let deadline = TokioInstant::now() + Duration::from_secs(5);
+        let deadline = TokioInstant::from_std(self.live.shutdown_deadline());
         let mut result = Shutdown {
             joined: 0,
             failed: false,

@@ -34,6 +34,14 @@ owner destruction closes liveness and requests task abort; it does not claim
 observed normal joins or server rollback. An active hash/OS randomness call is
 not assumed interruptible.
 
+Cleanup now uses the first irreversible stop's five-second budget across the
+coordinator and database drivers. Repeated stop calls cannot renew it. Driver
+cleanup uses only the remaining time before aborting and observing joins;
+coordinator cleanup reports an observed overrun as failure while retaining
+ownership. This does not make an active OS entropy call or hash thread forcibly
+interruptible, or prove a hard scheduling bound. The runnable drain measurement
+remains an integration gate.
+
 ## Credential transitions
 
 Login performs bounded pre-session/CSRF admission where applicable, charges the

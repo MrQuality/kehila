@@ -196,7 +196,7 @@ impl Owner {
                 }
             }
         }
-        self.engine().live.stop();
+        let stop_deadline = self.engine().live.shutdown_deadline();
         self.receiver.close();
         // Queued inputs/replies own permits and zeroizing values; draining them
         // never starts work after stop and does not touch an active job future.
@@ -215,7 +215,7 @@ impl Owner {
         // Keeping Worker here also retains its joining Drop on exceptional exit.
         let hash = worker.shutdown();
         let database = engine.database.into_inner().shutdown().await;
-        if hash.is_err() || database.aborted || database.failed {
+        if hash.is_err() || database.aborted || database.failed || Instant::now() > stop_deadline {
             Err(Error::Unavailable)
         } else {
             Ok(())

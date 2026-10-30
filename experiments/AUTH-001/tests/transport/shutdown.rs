@@ -17,6 +17,32 @@ use tokio::{
     time::{timeout, Sleep},
 };
 
+#[tokio::test]
+async fn buffered_surplus_input_cannot_complete_an_exchange() {
+    let ca = Authority::new();
+    let running = Running::start(&ca, "127.0.0.1", false).await;
+    timeout(CONNECTION_DEADLINE, async {
+        let socket = TcpStream::connect(running.address).await.unwrap();
+        let mut tls = tokio_rustls::TlsConnector::from(ca.client())
+            .connect(ServerName::from(running.address.ip()), socket)
+            .await
+            .unwrap();
+        // One TLS application write puts surplus bytes beside the complete
+        // request, exercising Hyper's already-read input as well as the socket.
+        let input = format!("GET / HTTP/1.1\r\nHost: {}\r\n\r\n!", running.address);
+        tls.write_all(input.as_bytes()).await.unwrap();
+        let _ = tls.shutdown().await;
+        let mut bounded = tls.take(2048);
+        let mut response = Vec::new();
+        let _ = bounded.read_to_end(&mut response).await;
+    })
+    .await
+    .expect("bounded surplus-input client");
+    let observed = running.finish().await;
+    assert_eq!(observed.completed, 0);
+    assert_eq!(observed.peer_close_rejected, 1);
+}
+
 // Delay TCP half-close after rustls has flushed its closure alert. No injected error.
 struct DelayedShutdown {
     socket: TcpStream,
