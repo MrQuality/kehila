@@ -1,7 +1,7 @@
 //! Bounded disposable Linux owner listener; no supported installation contract.
 mod clock;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 mod ui;
 
 use crate::{

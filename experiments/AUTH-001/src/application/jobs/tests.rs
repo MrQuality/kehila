@@ -1,5 +1,6 @@
 use super::*;
 use crate::database::tests::{fixture, mark, wait};
+mod expiry;
 mod revoke_others;
 mod unknown_commit;
 

@@ -12,6 +12,13 @@ const CAPACITY: usize = 64;
 const IDLE: Duration = Duration::from_secs(30 * 60);
 const ABSOLUTE: Duration = Duration::from_secs(12 * 60 * 60);
 
+#[cfg(all(test, target_os = "linux"))]
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum ExpiryCase {
+    Idle,
+    Absolute,
+}
+
 #[derive(Clone, Eq, PartialEq)]
 pub(crate) struct Binding {
     pub(crate) installation: String,
@@ -86,6 +93,54 @@ pub(crate) struct Registry {
 }
 
 impl Registry {
+    /// Construct elapsed history for a real issued session without changing
+    /// policy constants or introducing a clock/configuration input in production.
+    #[cfg(all(test, target_os = "linux"))]
+    pub(crate) fn expire_for_test(
+        &mut self,
+        bearer: &Digest,
+        case: ExpiryCase,
+    ) -> Result<(), SessionError> {
+        let entry = self
+            .entries
+            .iter_mut()
+            .find(|entry| entry.bearer.matches(bearer))
+            .ok_or(SessionError::Unknown)?;
+        // A retained issuance/response must be gone before rewriting history.
+        let entry = Arc::get_mut(entry).ok_or(SessionError::Unavailable)?;
+        let state = entry
+            .state
+            .get_mut()
+            .map_err(|_| SessionError::Unavailable)?;
+        if entry.kind != Kind::Cli || !matches!(state.phase, Phase::Active) {
+            return Err(SessionError::Invalid);
+        }
+        let now = Instant::now();
+        let age = match case {
+            ExpiryCase::Idle => IDLE,
+            ExpiryCase::Absolute => ABSOLUTE,
+        };
+        let issued = now.checked_sub(age).ok_or(SessionError::Unavailable)?;
+        let activity = match case {
+            ExpiryCase::Idle => issued,
+            ExpiryCase::Absolute => now
+                .checked_sub(Duration::from_secs(1))
+                .ok_or(SessionError::Unavailable)?,
+        };
+        let absolute_deadline = issued
+            .checked_add(ABSOLUTE)
+            .ok_or(SessionError::Unavailable)?;
+        let idle_deadline = activity
+            .checked_add(IDLE)
+            .ok_or(SessionError::Unavailable)?
+            .min(absolute_deadline);
+        entry.issued = issued;
+        entry.absolute_deadline = absolute_deadline;
+        state.activity = activity;
+        state.idle_deadline = idle_deadline;
+        Ok(())
+    }
+
     // Only fresh fenced/committed authority reaches this operation. A new
     // generation removes eligibility; existing credentials are never rebound.
     pub(crate) fn observe_generation(&mut self, snapshot: &Snapshot) -> Result<(), SessionError> {

@@ -97,6 +97,18 @@ Neither implementation has a qualified live browser/CLI journey yet. The
 [provider resource subset](../../docs/implementation/local-owner-authentication-container-plan.md#native-wsl-resource-subset-2026-10-30)
 is separate from mounts, Windows publication, ingress isolation and authentication.
 
+The opt-in [`native_cli_expiry_over_tls`](src/application/jobs/tests/expiry.rs)
+test obtains real PostgreSQL/coordinator issuance, confirms that typed response,
+then checks state over actual loopback TLS before and after constructing expired
+idle or absolute history. The fixture is confined to Linux test builds; it uses
+the existing policy constants and changes no production clock or lifetime.
+Both histories returned canonical HTTP 401. An isolated bypass of expiry checks
+in both lookup and current-state validation failed the new HTTP assertion; the
+restored implementation passed again. This is state-route integration evidence,
+not HTTP login, browser-cookie expiry, protected startup, provider publication or
+elapsed 30-minute/12-hour waiting. See the [listener evidence record](../../docs/implementation/local-owner-authentication-listener.md)
+for the separate runtime and client observations.
+
 ## Run
 
 Set `CARGO_TARGET_DIR` to an external build directory before building so generated
