@@ -41,6 +41,13 @@ the BCL parser/writer rejects unknown metadata, duplicate fields and trailing
 bytes. This deliberately does not promise compatibility with arbitrary JSON
 formatting from other servers.
 
+For HTTP 400-599, the client also accepts the backend's exact canonical
+`{"error":"request rejected"}` envelope and maps it to the existing typed status
+handling. The same body on a success/redirect status, different text, mixed
+success/error fields or trailing data is rejected. Server text is never displayed.
+The parser regression reproduced rejection of the real error envelope before
+this repair; local checks do not prove the observed live request's failure cause.
+
 The bearer cache is bound to the origin and issuer fingerprint, protected with
 DPAPI CurrentUser, and checked against owner-only file/directory ACLs. Ancestors
 must have trusted ownership and exclude untrusted replacement rights. Reparse

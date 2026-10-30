@@ -434,6 +434,10 @@ completes T01-T16 or a supported installation.
   run plus external-peer exclusion are still required. Earlier synthetic-
   corpus and typed-delivery observations remain distinct from actual startup
   corpus admission and the outstanding browser/HTTP exchanges.
+  The [native startup/file/database subset](../implementation/local-owner-authentication-listener.md#native-startup-and-first-windows-request-2026-10-30)
+  now has bounded observations. The first Windows request remains unconfirmed;
+  a separately reproduced rejection-envelope mismatch has a local client repair,
+  not a successful authentication journey.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

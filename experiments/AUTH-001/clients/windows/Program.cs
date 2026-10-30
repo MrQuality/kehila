@@ -76,8 +76,8 @@ namespace Kehila.Auth001.Client
                         string name = reader.LocalName; string type = reader.GetAttribute("type");
                         Require(reader.NamespaceURI.Length == 0 && reader.Prefix.Length == 0 && reader.AttributeCount == 1);
                         Require(fields.Count < 3 && !fields.ContainsKey(name));
-                        string expected = name == "bearer" ? "string" : name == "count" ? "number" : "boolean";
-                        Require(type == expected && (name == "bearer" || name == "count" || name == "active" ||
+                        string expected = name == "bearer" || name == "error" ? "string" : name == "count" ? "number" : "boolean";
+                        Require(type == expected && (name == "bearer" || name == "error" || name == "count" || name == "active" ||
                             name == "signed_out" || name == "audit_confirmed" || name == "password_changed" || name == "other_sessions_revoked"));
                         fields.Add(name, reader.ReadElementContentAsString());
                         order.Add(name);
@@ -102,7 +102,7 @@ namespace Kehila.Auth001.Client
                         foreach (string name in order)
                         {
                             writer.WriteStartElement(name);
-                            writer.WriteAttributeString("type", name == "bearer" ? "string" : name == "count" ? "number" : "boolean");
+                            writer.WriteAttributeString("type", name == "bearer" || name == "error" ? "string" : name == "count" ? "number" : "boolean");
                             writer.WriteString(fields[name]); writer.WriteEndElement();
                         }
                         writer.WriteEndElement(); writer.Flush();
@@ -112,6 +112,14 @@ namespace Kehila.Auth001.Client
                 }
             }
             finally { Array.Clear(canonical, 0, canonical.Length); }
+            if (fields.ContainsKey("error"))
+            {
+                // Normalize only the server's fixed canonical rejection envelope.
+                // Error status and exact shape are required; never print server text.
+                int status = (int)reply.Status;
+                Require(status >= 400 && status <= 599 && fields.Count == 1 && fields["error"] == "request rejected");
+                fields.Clear();
+            }
             return fields;
         }
 

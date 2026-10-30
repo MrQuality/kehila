@@ -118,3 +118,32 @@ The [2026-10-30 local-caller amendment](../architecture/ADR-106-local-container-
 now permits untrusted local guest access for disposable authenticated tests.
 The earlier TCP-only guest-isolation failure remains recorded in the container
 plan; it supplies no actual owner-login or LAN-exclusion qualification.
+
+## Native startup and first Windows request, 2026-10-30
+
+A bounded native-WSL run of the Rust implementation at `7e033f5` started the
+backend and PostgreSQL on separate serving/database bridges, with only the
+application's configured loopback port published. Both containers' kernel
+memory/swap/CPU/PID settings matched their proposed ceilings: 256 MiB memory and
+zero swap each, 0.5/1 CPU and 64/128 PIDs for application/database respectively.
+These are observed configured limits, not application-capacity or OOM evidence.
+Actual file ownership/mode, effective read-only secret mounts and other-UID
+read/traversal refusal checks passed. A wrong-source PostgreSQL connection using
+normal certificate/hostname verification reached the intended TLS HBA refusal.
+This is a startup/file/database subset, not the full ingress or login matrix.
+
+The first Windows wrong-password request returned only the client's generic
+unconfirmed-result message, so its HTTP status and failure stage remain unknown.
+The run stopped before successful login. Source inspection separately found
+that the backend emits a fixed error envelope which the client rejected as an
+unknown field. Local response regressions reproduced that defect; the prepared
+repair accepts only the exact canonical rejection on HTTP 400-599. It is not
+yet established as the sole cause of the live failure. Malformed envelopes still
+fail closed, and no TLS validation was weakened.
+
+Earlier attempts stopped on a rejected fixture mount option and an assertion
+that confused inherited image-port metadata with actual publication. Those
+failures remain recorded. Cleanup required reconciliation after the first
+attempt; later owned cleanup and temporary trust removal completed. Chrome,
+external-peer rejection, actual login/password/logout/restart journeys, expiry,
+graceful drain and complete request/capacity budgets remain unqualified.
