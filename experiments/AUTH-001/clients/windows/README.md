@@ -48,6 +48,15 @@ success/error fields or trailing data is rejected. Server text is never displaye
 The parser regression reproduced rejection of the real error envelope before
 this repair; local checks do not prove the observed live request's failure cause.
 
+Requests explicitly suppress `Expect: 100-continue`, which the backend's closed
+admission rejects. On .NET Framework the request flag configures the endpoint's
+shared ServicePoint; this client uses one origin and one request slot. It does not
+change the ServicePointManager default or any OS setting. A controlled TLS
+comparison observed the automatic header in the baseline client and its absence
+with this setting on the tested Windows profile. The Rust-backed request still
+encountered an unclassified transport failure; authentication qualification
+remains outstanding.
+
 The bearer cache is bound to the origin and issuer fingerprint, protected with
 DPAPI CurrentUser, and checked against owner-only file/directory ACLs. Ancestors
 must have trusted ownership and exclude untrusted replacement rights. Reparse

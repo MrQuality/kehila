@@ -90,6 +90,7 @@ namespace Kehila.Auth001.Client
                     Origin + "/auth/cli/" + operation))
                 {
                     request.Version = new Version(1, 1); request.Headers.ConnectionClose = true;
+                    request.Headers.ExpectContinue = false;
                     if (credential != null)
                     {
                         // HttpClient requires an immutable header string. Owned

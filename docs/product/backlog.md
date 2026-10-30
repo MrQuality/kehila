@@ -435,9 +435,12 @@ completes T01-T16 or a supported installation.
   corpus and typed-delivery observations remain distinct from actual startup
   corpus admission and the outstanding browser/HTTP exchanges.
   The [native startup/file/database subset](../implementation/local-owner-authentication-listener.md#native-startup-and-first-windows-request-2026-10-30)
-  now has bounded observations. The first Windows request remains unconfirmed;
-  a separately reproduced rejection-envelope mismatch has a local client repair,
-  not a successful authentication journey.
+  now has bounded observations. The repaired Windows client decodes the rejection
+  envelope, but a live diagnostic returns HTTP 400 with an unidentified admission
+  cause. A controlled TLS comparison confirmed Framework's automatic Expect
+  header and its suppression in the repaired client. The Rust-backed request
+  still fails with an unclassified transport failure; server-side outcome
+  measurement and a successful authentication journey remain gates.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

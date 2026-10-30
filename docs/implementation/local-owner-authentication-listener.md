@@ -141,9 +141,28 @@ repair accepts only the exact canonical rejection on HTTP 400-599. It is not
 yet established as the sole cause of the live failure. Malformed envelopes still
 fail closed, and no TLS validation was weakened.
 
+With the repaired client, a bounded diagnostic using the same production
+transport decoded HTTP 400 with the fixed rejection envelope. Normal certificate
+validation and the selected-issuer pin succeeded for that diagnostic; the exact
+admission predicate remains unknown. The client now explicitly suppresses
+`Expect: 100-continue`, which Framework defaults can add and this backend rejects.
+A controlled TLS comparison using matched clients differing only in that setting
+observed the header in the baseline and its absence with explicit suppression.
+Selected Host, target, version, content-type and canonical-length checks passed
+for both controls. These controls observe client headers, not Rust authentication.
+The earlier HTTP 400 alone does not identify its rejected admission predicate.
+
+The following Rust-backed attempt still failed at the first wrong-password
+request: the client diagnostic reported an unclassified transport failure without a response status.
+The backend remained running without an observed OOM kill. No successful login
+or typed password rejection was established. Source review found no confirmed
+denial-response defect; server-side connection outcomes are the next required
+measurement before another full journey. Owned resource cleanup completed;
+temporary trust removal remains a separate observed cleanup requirement.
+
 Earlier attempts stopped on a rejected fixture mount option and an assertion
 that confused inherited image-port metadata with actual publication. Those
 failures remain recorded. Cleanup required reconciliation after the first
-attempt; later owned cleanup and temporary trust removal completed. Chrome,
+attempt; later owned cleanup and earlier temporary trust removals completed. Chrome,
 external-peer rejection, actual login/password/logout/restart journeys, expiry,
 graceful drain and complete request/capacity budgets remain unqualified.
