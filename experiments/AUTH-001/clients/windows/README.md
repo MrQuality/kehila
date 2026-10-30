@@ -15,6 +15,11 @@ The output path and its ancestors must be inspected and protected from untrusted
 replacement. The script rejects reparse ancestors; textual path checks are not a
 general atomic containment guarantee against administrator/path remapping.
 
+The interrupted-write test creates a valid pending file with an explicit
+current-user owner and protected DACL at creation, matching the cache contract.
+It separately observes the ambient owner of a copied file and requires rejection
+when that owner differs. No SIDs, paths or encrypted contents are printed.
+
 ```powershell
 ./build.ps1 -OutputDirectory $externalOutput -Test
 ```

@@ -99,6 +99,13 @@ were corrected without weakening the protection contract. Hosted Windows CI is
 configured to build and run these local client checks; it does not run a TLS or
 application-container journey.
 
+The first hosted Windows attempt failed a protection check during fixture
+recovery; its stack did not identify the exact failed predicate. The valid
+interrupted-write fixture now creates its pending file with the same explicit
+owner/DACL contract as production, rather than assuming a copied file's ambient
+owner. A separate copy observation retains owner-mismatch rejection. Production
+checks remain unchanged; the PR records the hosted result for the corrected head.
+
 These results do not establish actual owner serving, protected assets on the new
 provider, Windows forwarding, guest/LAN exclusion, expired/revoked credential
 delivery, process/container restart rejection or full-request performance. The

@@ -47,8 +47,26 @@ namespace Kehila.Auth001.Client
                 FileSecurity pendingSecurity = File.GetAccessControl(pending);
                 pendingSecurity.SetAccessRuleProtection(true, true);
                 File.SetAccessControl(pending, pendingSecurity);
+                // A copied file uses the creator token's ambient owner. Measure
+                // that separately; it is not a valid production-write fixture.
+                bool copiedOwnerMatches;
+                using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+                { copiedOwnerMatches = identity.User.Equals(File.GetAccessControl(pending).GetOwner(typeof(SecurityIdentifier))); }
+                Console.WriteLine("Copied pending fixture owner matches current user: " + copiedOwnerMatches);
+                if (!copiedOwnerMatches) { Reject(delegate { store.Forget(); }); }
+                File.Delete(pending); // Only the file this fresh fixture just created.
+                FileSecurity ownedPending = new FileSecurity();
+                using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+                {
+                    ownedPending.SetOwner(identity.User); ownedPending.SetAccessRuleProtection(true, false);
+                    ownedPending.AddAccessRule(new FileSystemAccessRule(identity.User, FileSystemRights.FullControl, AccessControlType.Allow));
+                }
+                using (FileStream destination = new FileStream(pending, FileMode.CreateNew, FileSystemRights.FullControl,
+                    FileShare.None, 4096, FileOptions.None, ownedPending))
+                using (FileStream sourceFile = File.OpenRead(current)) { sourceFile.CopyTo(destination); }
                 Reject(delegate { using (Credential copy = store.Read(origin, root)) { } });
                 Reject(delegate { store.Write(origin, root, source); });
+                Console.WriteLine("Checking interrupted-write recovery.");
                 store.Forget();
                 Check(!File.Exists(current) && !File.Exists(pending));
 
@@ -57,6 +75,7 @@ namespace Kehila.Auth001.Client
                 encrypted[encrypted.Length / 2] ^= 1;
                 File.WriteAllBytes(current, encrypted);
                 Reject(delegate { using (Credential copy = store.Read(origin, root)) { } });
+                Console.WriteLine("Checking corrupt-envelope removal.");
                 store.Forget();
 
                 store.Write(origin, root, source);
@@ -70,6 +89,7 @@ namespace Kehila.Auth001.Client
                 FileSecurity restored = File.GetAccessControl(current);
                 restored.PurgeAccessRules(users);
                 File.SetAccessControl(current, restored);
+                Console.WriteLine("Checking restored-ACL removal.");
                 store.Forget();
 
                 Directory.CreateDirectory(current);
