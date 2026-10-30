@@ -449,6 +449,11 @@ completes T01-T16 or a supported installation.
   logout retry. Earlier failures remain recorded. Product Schannel/Chrome,
   external LAN exclusion, expiry/drain and complete request/capacity gates remain
   open; the test-client result does not complete this capability or T01-T16.
+  Further [runtime/expiry subsets](../implementation/local-owner-authentication-listener.md#bounded-connection-pressure-and-authority-loss-2026-10-30)
+  observe excess-connection rejection, explicit-stop cleanup, database-loss
+  suppression, natural runtime termination and controlled-history CLI expiry
+  through real TLS. Browser/product-client, external ingress and complete
+  workload qualification remain open.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

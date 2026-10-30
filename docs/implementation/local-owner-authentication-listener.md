@@ -244,3 +244,82 @@ single-run measurements under a 256-MiB container ceiling, not sustained-load,
 concurrency-capacity or full request-budget qualification. They do not qualify
 Schannel, the Windows product CLI, Chrome, external LAN exclusion, credential
 expiry, supported installation or recovery.
+
+## Bounded connection pressure and authority loss, 2026-10-30
+
+Additional runs used the same Rust implementation at `93ab653`, normal explicit-root
+TLS verification, the restricted two-component fixture and the existing container
+ceilings. No production code or Windows trust configuration changed.
+
+Sixteen clients completed TLS handshakes concurrently and withheld HTTP headers.
+Their setup took about 42 ms; an actual socket observation still showed all sixteen
+present when an explicit stop was requested. The seventeenth connection was
+rejected. Server accounting recorded nineteen accepted connections: three completed
+initial HTTP exchanges and sixteen HTTP-level rejections from the held connections,
+plus one separate capacity rejection. No connection timeout or TLS/peer-closure
+rejection was recorded in this sample. These are listener accounting categories,
+not a claim that the held clients received an HTTP error response.
+
+The explicit-stop interval was 2.67 seconds from before stop delivery through
+observed process exit. It conservatively includes control and container-wait
+overhead. The runtime exited normally after joining owned work. Application
+cgroup peak memory at the held-connection observation was 69,836,800 bytes
+(about 66.6 MiB), with zero recorded OOM events. This checks one saturated
+header-wait case and the existing stop input; it does not qualify sustained
+traffic, active hashing/SQL drain, OS signals or a supported container shutdown
+policy.
+
+After a fresh process established login and active state, deliberately stopping
+PostgreSQL prevented another authenticated response. That client's observed
+outcome was TLS EOF, not a certificate-policy rejection. The application ended
+with its expected owned-listener error and exit code 1, without OOM or a panic.
+The interval from before database stop through observed application termination
+was 1.55 seconds. This is a real authority-loss subset; it does not cover every
+in-flight commit or outbound-publication race. Owned cleanup completed for both
+subsets. Product Schannel/Chrome, external-peer ingress, remaining expiry and
+full-load/request-budget gates stay open.
+
+### Natural runnable-lifetime subset
+
+The unmodified public owner executable at `93ab653` also completed its natural
+runnable-lifetime interval without a stop input, signal or database interruption.
+The observed interval from before container creation through process exit was
+181.93 seconds. Exit code was zero, the joined-stop message was observed and no
+OOM was recorded. PostgreSQL remained running; the two runtime connections and
+one runtime advisory lock present before the wait were absent afterward.
+
+This host interval includes startup, scheduling, cleanup and container-wait
+overhead. It supports this fixture's natural maximum-runnable-lifetime stop;
+it does not independently measure an exact 180-second admission cutoff or a
+separate five-second drain. The certificates remained valid throughout. It is
+neither certificate-expiry nor session-expiry evidence. A preceding attempt
+stopped before application startup and supplies no lifetime observation. Owned
+cleanup completed after the successful fresh run.
+
+### Controlled-history CLI expiry
+
+The opt-in `native_cli_expiry_over_tls` fixture, introduced in
+[`073c6ea`](https://github.com/MrQuality/kehila/commit/073c6ea42713ba27caf7e2b66bf6e0be140078e1),
+adds the narrower expiry wire
+observation required alongside the existing controlled-time core tests. Each
+idle/absolute case obtains a separately issued credential from the actual
+PostgreSQL/coordinator path, confirms that typed response and observes active
+state over real loopback TLS. Linux-test-only code then constructs elapsed
+history from the unchanged 30-minute/12-hour constants, preserving credential,
+identity, binding and phase. The unchanged connection/adapter path returns the
+canonical HTTP 401 for the same credential.
+
+The normal fixture passed both histories. An isolated mutation bypassing expiry
+in registry lookup and current-state validation failed the intended HTTP assertion
+by returning success for the idle-expired history. The restored implementation
+passed again. Each case released its runtime database connections and advisory
+lock, and owned cleanup completed. Ordinary Linux Clippy and serial suites also
+passed: 132 unit tests, 21 transport tests and nine opt-in fixture skips. The
+explicit native expiry fixture ran separately from those skipped checks.
+
+Issuance here is observed at the typed coordinator boundary; HTTP coverage is
+the state route before/after constructed history. Absolute history also caps the
+idle deadline, so this does not independently isolate the redundant absolute-only
+guard. No OS clock, production policy or runtime limit changed. Protected
+startup/provider publication, browser-cookie expiry, product Schannel/Chrome and
+external ingress retain separate gates; this is not a complete T06 pass.

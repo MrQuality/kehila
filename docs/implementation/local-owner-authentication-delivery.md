@@ -54,6 +54,13 @@ decision nor the passing component CI completes this delivery. The subsequent
 is partial integration evidence; product-client and complete ingress qualification
 remain outstanding.
 
+Additional [runtime and expiry subsets](local-owner-authentication-listener.md#bounded-connection-pressure-and-authority-loss-2026-10-30)
+now observe sixteen held TLS connections with excess rejection, a 2.67-second
+explicit stop, fail-closed database loss, natural runnable-lifetime termination
+and controlled-history CLI expiry over actual TLS/HTTP. Their stated timing,
+workload, test-history and client limitations remain part of the evidence.
+They do not complete browser/product-client, full-load or ingress qualification.
+
 ## Definition of done and evidence
 
 - [x] The bounded disposable authenticated-test profile has its
