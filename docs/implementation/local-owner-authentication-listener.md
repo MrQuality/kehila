@@ -217,7 +217,9 @@ budgets remain open.
 
 ### Corrected explicit-root journey
 
-With the corrected close order, the same Windows Python/OpenSSL fixture passed
+With the corrected close order in
+[`b290968`](https://github.com/MrQuality/kehila/commit/b290968c823ec7d2d6be9fdd3bfab31efb4600ce),
+the same Windows Python/OpenSSL fixture passed
 16 sequential TLS/HTTP observations against the Linux authority and disposable
 PostgreSQL: wrong-password rejection, login and active state, password change,
 old-session rejection, new-password login, revoke-other with exactly one target,

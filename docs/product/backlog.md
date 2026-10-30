@@ -425,22 +425,30 @@ completes T01-T16 or a supported installation.
   and owner destruction. The 32-slot pre-session engine now preserves original
   deadlines and owns single-use claims. The coordinator shares the runtime latch
   and accounts for jobs and retained replies. Revoke-other audit rollback/retry
-  batches have a native SQL journey. The [prepared listener and clients](../implementation/local-owner-authentication-listener.md)
-  remain unqualified for live owner login. The [native-WSL resource subset](../implementation/local-owner-authentication-container-plan.md#native-wsl-resource-subset-2026-10-30)
-  does not qualify mounts, Windows forwarding or the ingress matrix. The accepted
+  batches have a native SQL journey. The first-party Windows CLI and Chrome
+  journeys in the [listener record](../implementation/local-owner-authentication-listener.md)
+  remain unqualified. The earlier [native-WSL resource subset](../implementation/local-owner-authentication-container-plan.md#native-wsl-resource-subset-2026-10-30)
+  alone does not qualify mounts, Windows forwarding or the ingress matrix. The accepted
   [local-caller amendment](../architecture/ADR-106-local-container-transport.md#accepted-local-caller-amendment-2026-10-30)
   permits untrusted same-PC guest reachability for disposable authenticated tests
-  only; the original TCP isolation failure remains recorded and a fresh integrated
-  run plus external-peer exclusion are still required. Earlier synthetic-
+  only; the original TCP isolation failure remains recorded and full product-client
+  and external-peer qualification are still required. Earlier synthetic-
   corpus and typed-delivery observations remain distinct from actual startup
-  corpus admission and the outstanding browser/HTTP exchanges.
+  corpus admission and the outstanding product browser/CLI exchanges.
   The [native startup/file/database subset](../implementation/local-owner-authentication-listener.md#native-startup-and-first-windows-request-2026-10-30)
   now has bounded observations. The repaired Windows client decodes the rejection
   envelope, but a live diagnostic returns HTTP 400 with an unidentified admission
   cause. A controlled TLS comparison confirmed Framework's automatic Expect
-  header and its suppression in the repaired client. The Rust-backed request
-  still fails with an unclassified transport failure; server-side outcome
-  measurement and a successful authentication journey remain gates.
+  header and its suppression in the repaired client. That Rust-backed attempt
+  remained unclassified. Subsequent server counters distinguished a native
+  zero-accept reset from a Windows test client's peer-closure failures. A focused
+  regression failed the original TCP-before-peer-TLS closure order; the repair
+  passed Linux checks and a [16-observation explicit-root Windows Python/OpenSSL
+  journey](../implementation/local-owner-authentication-listener.md#corrected-explicit-root-journey),
+  including password change, other-session revocation, restart rejection and
+  logout retry. Earlier failures remain recorded. Product Schannel/Chrome,
+  external LAN exclusion, expiry/drain and complete request/capacity gates remain
+  open; the test-client result does not complete this capability or T01-T16.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

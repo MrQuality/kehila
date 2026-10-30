@@ -89,6 +89,16 @@ other attached workload and one explicit IPv4 publication; no publish-all, wildc
 listener, host networking, shared namespaces or TLS proxy. Do not enable/change
 provider networking, firewall or security settings to make the proof pass.
 
+For the accepted authenticated-development extension, the restricted bridge may
+instead contain exactly the authority and its necessary disposable PostgreSQL
+fixture, in separate network namespaces and with separate identities, secrets
+and administrative access. This is related fixture membership, not permission
+for unrelated peers. Publish only the application endpoint; PostgreSQL has no
+publication. Verify the intended TLS/SCRAM connection and independently test
+ordinary guest and unrelated-container TCP access to the live database. A
+completed database TCP connection fails this boundary even if authentication
+later rejects it. Keep the original app-only diagnostic observations distinct.
+
 ### Trusted network configuration
 
 For this separately selected diagnostic profile, require exactly one occurrence

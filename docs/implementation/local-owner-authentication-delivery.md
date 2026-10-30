@@ -34,7 +34,7 @@ full installation remain later A5/M1 qualification obligations.
 | Container transport | ADR-106's [authenticated-development extension](../architecture/ADR-106-local-container-transport.md#accepted-authenticated-development-extension-2026-10-27) was explicitly accepted on 2026-10-27 for synthetic disposable tests. Full application-container lifecycle, provider isolation and Windows-client qualification remain gates; the resource/restart subset is recorded separately below. Execution/trust permissions remain separate. |
 | A1 owner storage/capabilities | The [exact A1 contract](local-owner-authentication-a1.md) defines records, role/function boundaries, installation-before-actor locks, generations, enrollment reconciliation and management audit identity. Its [disposable SQL boundary](../../experiments/AUTH-001/storage/README.md) has reviewed enrollment/authority/credential/session-audit functions and eleven native oracle groups with targeted regressions. The [Linux database bridge](local-owner-authentication-database-bridge.md) adds native TLS ownership/cancellation and typed transaction observations. The [coordinator record](local-owner-authentication-coordinator.md) adds actual PostgreSQL journeys for bounded jobs, publication, authority loss, withheld commit confirmation and revoke-other rollback/retry. Client/provider qualification and full request budgets remain pending. No production schema adoption follows from the delivery grouping. |
 | A2 credentials/admission | The [credential core](local-owner-authentication-a2.md) connects through the owned coordinator: exclusive hash completion, fresh SQL fences, pre-session claims, generation retirement and fixed revoke-other batches have native subset evidence. Protected startup separately admitted the actual pinned corpus. Single-journey latency/RSS and typed adapter confirmation do not qualify a serving listener, Windows clients or full-request budgets. |
-| A3 browser/CLI | The [prepared listener and clients](local-owner-authentication-listener.md) connect bounded TLS dispatch, first-party browser controls and a Windows DPAPI CLI. Local component tests do not qualify live exchanges. The [native-WSL resource subset](local-owner-authentication-container-plan.md#native-wsl-resource-subset-2026-10-30) demonstrated one memory-containment case and inspected CPU/PID settings. Actual mounts, Windows publication, isolation, full-request budgets and authentication journeys remain gates. Client-side Windows protection is distinct from Linux server-key storage. |
+| A3 browser/CLI | The [listener and clients](local-owner-authentication-listener.md) connect bounded TLS dispatch, first-party browser controls and a Windows DPAPI CLI. The [corrected explicit-root journey](local-owner-authentication-listener.md#corrected-explicit-root-journey) observed 16 Windows Python/OpenSSL-to-container checks, including password change, other-session revocation, restart rejection and logout retry. Actual protected mounts and the two-related-component fixture were inspected. These establish that bounded functional journey; product Schannel/Chrome, external ingress, expiry/drain and full-request/capacity gates remain. Client-side Windows protection is distinct from Linux server-key storage. |
 | Cross-package authority/recovery | Map remaining T01-T16 obligations to the later real command/read and supported restore deliveries. Never mark an entire case passed from an isolated helper or a partial oracle. |
 
 No merged proposal, draft PR or reviewer verdict supplies missing maintainer
@@ -47,8 +47,12 @@ for disposable authenticated tests. Ordinary same-PC Windows/WSL/container
 callers may reach the application but remain untrusted; external ingress,
 protected files/database/admin boundaries and all authentication controls remain
 qualification gates. The earlier guest-reachability failure is preserved against
-its original contract. A fresh integrated run is still required; neither this
-decision nor the passing component CI completes this delivery.
+its original contract. Complete product-client and ingress qualification is
+still required; neither this
+decision nor the passing component CI completes this delivery. The subsequent
+[explicit-root journey](local-owner-authentication-listener.md#corrected-explicit-root-journey)
+is partial integration evidence; product-client and complete ingress qualification
+remain outstanding.
 
 ## Definition of done and evidence
 
@@ -58,8 +62,9 @@ decision nor the passing component CI completes this delivery.
   review and native subset evidence before stateful runtime integration.
 - [ ] Rust owns the dedicated PostgreSQL connection, bounded serving work and
   uncertain-outcome cleanup; observed loss suppresses admission and output.
-- [ ] Real Linux file admission and selected-provider mount/identity premises are
-  observed; no Windows pass or mocked read substitutes for those observations.
+- [x] Real Linux file admission and selected-provider mount/identity premises
+  were observed in the bounded disposable fixture. This does not qualify a
+  supported installation or every provider/file failure case.
 - [x] Disposable one-owner enrollment, simulated lost-response reconciliation,
   narrow serving/admin rights, generation fencing and fixed audit confirmation
   have real PostgreSQL oracles. This does not qualify Rust credential eligibility.
