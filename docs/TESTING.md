@@ -63,6 +63,14 @@ failing staged AUTH-001 case fails the local check, both paths run its manifest,
 and external build outputs, bounded execution and cleanup remain preserved.
 This records the gap; no verifier or test behavior is changed here.
 
+The experimental [Windows owner client](../experiments/AUTH-001/clients/windows/README.md)
+has an independent `build.ps1 -Test` path using installed .NET Framework. Give it
+a protected output directory outside the checkout. Its local DPAPI/file and
+closed-response tests contact no service and install no trust. A separate hosted
+Windows job is configured for those checks; it does not qualify TLS negotiation,
+browser behavior or the Linux application-container path, and does not resolve
+the standalone Rust staged-entry-point gap above.
+
 The separate [A1 disposable SQL proof](../experiments/AUTH-001/storage/README.md)
 is opt-in and outside both the Cargo checks and shared verifier. Its native
 PostgreSQL observations, selected resource profile and source hashes must be
