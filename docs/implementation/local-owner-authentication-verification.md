@@ -215,3 +215,36 @@ receive stable IDs/codes and a versioned password-normalization boundary distinc
 from domain data. Agent execution (#62) receives a typed actor/credential seam;
 human-owner CLI tokens are not agent identities, delegation or approvals. None of
 these post-MVP features is implemented or accepted as a detailed design here.
+
+## Optional hosted integration tests
+
+On 2026-10-31 the maintainer retained hosted integration testing as a future
+option to reduce development-host resource use. Fly.io is excluded from the
+current testing proposal because recurring compute charges are unacceptable.
+Alternative compute providers will be assessed later. Supabase PostgreSQL remains
+a candidate database service, conditional on compatibility with the eventual
+compute provider and the contracts below; it is not an adopted dependency or
+permission to deploy. This does not change the accepted Windows-client/Linux-
+container local MVP profile or select Supabase Auth.
+
+Before a hosted proof, review its cost/quota, exposure, credentials, synthetic-data
+isolation and cleanup. Check the actual PostgreSQL version, schema/role privileges,
+TLS identity and session ownership. The current AUTH-001 adapter accepts private
+IPv4 addresses only, fixes the database TLS name to `auth-db`, and requires TLS
+1.3; its storage installation requires PostgreSQL 16. A hosted profile therefore
+requires explicit compatibility work rather than substituting a connection URL.
+Preserve the dedicated session advisory lock: prefer a direct PostgreSQL
+connection; any session pooler needs separate verification, and transaction
+pooling cannot preserve the required session ownership.
+
+Hosted application/database results can supplement integration evidence. They
+cannot qualify Windows trust and credential storage, Podman publication and LAN
+isolation, or failure cases requiring control of the PostgreSQL process,
+certificates or operating-system resource limits. Keep controllable disposable
+fixtures for those cases. No hosted compatibility proof has been run.
+
+Provider references (recheck terms before selecting a profile):
+[Fly.io trial](https://docs.fly.io/about/free-trial),
+[Supabase pricing](https://supabase.com/pricing),
+[Supabase PostgreSQL connections](https://supabase.com/docs/guides/database/connecting-to-postgres)
+and [managed database privileges](https://supabase.com/docs/guides/database/postgres/roles-superuser).
