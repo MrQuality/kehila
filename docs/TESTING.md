@@ -7,6 +7,33 @@ For bounded technical investigations, see the approved [spike procedure and
 register](spikes/README.md). Spike records distinguish planned cases from observed
 results and link experiments to decisions and reusable regression coverage.
 
+## Automated checks and user-assisted final verification
+
+The maintainer directed this scheduling rule on 2026-10-31: checks that require
+someone to operate a separate device, handle an operating-system confirmation
+or make a temporary trust change belong to final qualification before the PR
+is ready for review. They are not routine per-commit checks. User attention and
+machine resources are part of the verification budget.
+
+First prepare and review the implementation and test harnesses, complete
+applicable automated checks, and resolve known harness failures. Automated
+checks may include owned service-backed tests; separate execution and resource
+permissions still apply. Then arrange one bounded user-assisted campaign with
+a short checklist, prerequisites, expected duration, exact permissions and
+cleanup. Group related cases within the approved scope and time window.
+
+Retain passed evidence while its relevant source and environment premises remain
+valid. A material change requires the affected cases and necessary positive
+controls to be revalidated; an unrelated prose edit does not require another
+manual campaign. Preserve failed attempts and state what invalidates or limits
+earlier results. If a test harness fails during user-assisted verification, stop
+that campaign, repair and check the harness without user involvement, and
+schedule the affected rerun rather than repeatedly debugging through prompts.
+
+This is a scheduling and evidence rule, not new semantic enforcement in CI.
+Deferred or unexecuted cases remain incomplete. It neither grants security or
+trust permissions nor authorizes changing a PR's status.
+
 ## Commands
 
 Full and pure verification validate the [engineering register](engineering/ENGINEERING-STANDARD.md)

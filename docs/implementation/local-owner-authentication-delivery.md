@@ -130,6 +130,11 @@ Trust-store changes require approval for the exact issuer, store, scope, lifetim
 and removal. Do not disable TLS verification or change security-product settings.
 Memory-heavy local execution requires its separate permission and RAM preflight;
 keep build, temporary and confidential evidence outputs outside the checkout.
+Apply the [user-assisted final-verification rule](../TESTING.md#automated-checks-and-user-assisted-final-verification):
+finish and review harness preparation and automated checks before arranging the
+bounded certificate/device campaign. Retain relevant evidence and repeat only
+affected cases and controls after changes; do not use user confirmations to
+debug unfinished harnesses.
 
 The existing root-TLS advisory triage and Windows diagnostic/shared-verifier
 follow-ups in the [A0 record](local-owner-authentication-a0.md#advisory-follow-up)
