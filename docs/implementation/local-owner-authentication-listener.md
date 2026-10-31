@@ -407,7 +407,30 @@ The normal shared staged verification passed for this correction, including 292
 tooling tests (three documented platform skips), Rust/Go/static checks and the
 required owned-service checks. Hosted CI remains an independent final-head gate;
 its current result is reported in [PR #87](https://github.com/MrQuality/kehila/pull/87).
-External-device
-LAN exclusion, the complete certificate matrix, full traffic, active hashing/write
-drain and complete T01-T16 coverage retain their separate gates. These disposable
+The complete external-ingress matrix, certificate matrix, full traffic, active
+hashing/write drain and complete T01-T16 coverage retain their separate gates. These disposable
 journeys do not qualify supported installation, production adoption or real data.
+
+### Sampled Android LAN connection check (2026-10-31)
+
+One Android phone on the same LAN attempted a direct HTTPS connection to the
+Windows host's LAN address and application port during a measured live window.
+The user-reported verbose curl output identified the intended target and a
+connection-stage timeout after 5,003 milliseconds, with no successful connection
+or TLS negotiation reported. The complete report arrived within the live window.
+Authenticated loopback controls passed before and after the attempt with the same
+credential; the running backend container identity and start time were unchanged.
+
+This supports sampled client-observed TCP nonconnection from that phone. It does
+not prove that packets reached the PC, identify the blocking layer or establish
+exclusion across all devices, interfaces, routes or provider configurations.
+Earlier attempts remain inconclusive because their timing or command output did
+not establish the intended live request. No certificate bypass or phone trust
+installation was used. Local controls used normal chain, validity and IP-name
+verification against an explicit disposable test root; they add no new Windows
+platform-trust or Chrome certificate-matrix qualification.
+
+The public bounded runtime ended normally and reported joined cleanup. Runtime
+database connections and advisory locks were absent afterward, and owned fixture
+cleanup completed. This observation supplies one external-peer subset; the full
+ingress matrix and the other capability-delivery gates remain open.

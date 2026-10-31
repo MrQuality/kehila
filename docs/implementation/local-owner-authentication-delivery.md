@@ -75,6 +75,13 @@ One positively witnessed blocked SQL read also ended with normal, joined cleanup
 inside a conservative 4.69-second stop-to-exit interval and no authenticated
 success after stop. This does not qualify active hashing, writes or all drain races.
 
+The [sampled Android LAN check](local-owner-authentication-listener.md#sampled-android-lan-connection-check-2026-10-31)
+observed a direct phone connection-stage timeout while authenticated loopback
+controls passed before and after against the same running backend. Normal runtime
+exit, database connection/lock release and owned cleanup were checked separately.
+This supplies one external-peer subset, not the complete ingress matrix or a
+diagnosis of the blocking layer. Earlier inconclusive attempts remain recorded.
+
 ## Definition of done and evidence
 
 - [x] The bounded disposable authenticated-test profile has its

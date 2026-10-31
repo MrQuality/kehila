@@ -463,6 +463,12 @@ completes T01-T16 or a supported installation.
   through real TLS. Browser/product-client, external ingress and complete
   workload qualification remain open.
 
+  The [sampled Android LAN check](../implementation/local-owner-authentication-listener.md#sampled-android-lan-connection-check-2026-10-31)
+  observed no completed phone TCP connection during one live request, bracketed
+  by successful authenticated loopback controls on the same backend. Earlier
+  inconclusive attempts remain distinct. This qualifies only that sampled path;
+  the full ingress matrix and remaining delivery gates stay open.
+
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the
   separate rustls deadline.
