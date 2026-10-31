@@ -434,3 +434,77 @@ The public bounded runtime ended normally and reported joined cleanup. Runtime
 database connections and advisory locks were absent afterward, and owned fixture
 cleanup completed. This observation supplies one external-peer subset; the full
 ingress matrix and the other capability-delivery gates remain open.
+
+### Complete-request workload and active-work subsets (2026-10-31)
+
+Three serial password-change requests traversed normal explicit-root TLS, HTTP,
+password verification and replacement, PostgreSQL commit and complete response
+closure. Their observed Windows-client intervals were 0.375, 0.391 and 0.390
+seconds, each below the unchanged five-second request budget. The durable verifier
+revision and authentication generation both advanced from one to four, with
+three password-change audit events.
+
+The Linux kernel reported a process `VmHWM` of 70,484 KiB (about 68.83 MiB).
+The separately accounted cgroup memory peak was 70,365,184 bytes (about
+67.11 MiB), with no memory-limit or OOM events under the enforced 256-MiB
+application ceiling. These are different kernel counters, not interchangeable
+memory measurements. A subsequent pair of overlapping valid login requests
+returned HTTP 200 in 0.203 seconds and canonical HTTP 429 in 0.031 seconds;
+the successful credential remained usable. This does not isolate hash-lane
+rejection from other bounded admission or establish sustained-load behavior.
+
+A separate stop request followed a positively observed running password worker
+with recorded CPU time. The pending password-change request returned HTTP 503;
+the runtime exited normally within a conservative 0.890-second interval from
+request start. Durable verifier revision, authentication generation and
+password-change audit count were unchanged. Runtime database connections and
+advisory locks were released, and owned cleanup completed. This witnesses active
+password work, not a particular Argon2 stage or every cancellation race.
+
+Two blocked-write attempts reached the password-change SQL statement waiting on
+its audit write and ended with normal runtime exit. Their conservative external
+intervals were 6.016 seconds from request start and 5.152 seconds from stop-command
+start, respectively. Those observations include work or command/notification
+overhead before the actual runtime stop signal; neither independently establishes
+the five-second stop-to-return bound. The test stopped at that unresolved timing
+assertion, so its later rollback/output assertions do not qualify the case.
+The first attempt also needed later listener-release reconciliation; the second
+completed owned cleanup. Neither is reported as a write-drain pass. Direct
+runtime timing remains required without relaxing the limit.
+
+### Explicit-root diagnostic certificate subset (2026-10-31)
+
+A host-only diagnostic TLS endpoint accepted the original and a distinct renewed
+leaf under the same explicit test root. The Windows Python/OpenSSL client rejected
+the wrong-IP leaf with verification code 64, the expired leaf with code 10, and
+the untrusted issuer and omitted trust anchor with code 20. Each negative reached
+a typed certificate-verification failure rather than a generic connection reset.
+The endpoint exited normally and released its listener after each case.
+
+These six observations qualify that explicit-root diagnostic client path. They
+do not establish protected owner startup rejection, the Windows Schannel/Chrome
+certificate matrix or authenticated browser expiry. OS trust was unchanged;
+trusted platform-client checks retain their separate approval and evidence gates.
+
+### Short-lived owner certificate and held connection (2026-10-31)
+
+A separate disposable Linux-owner fixture used a normally validated certificate
+with a 75-second validity horizon. Authenticated login and state passed before
+expiry. A TLS connection established while the certificate was valid completed
+its authenticated request after the one-second expiry-detection allowance and
+received HTTP 503. The response was observed 1.547 seconds after TLS establishment,
+before the separate two-second header deadline could explain it.
+
+The public runtime exited normally and joined its work 1.635 seconds after the
+certificate expiry timestamp, measured through host observation. That interval
+includes observation overhead and falls within the one-second detection plus
+five-second drain envelope. Runtime database connections and advisory locks were
+absent afterward, and owned cleanup completed. No wall clock, session policy,
+runtime lifetime limit or OS trust was changed. The issuer and leaf were
+disposable; explicit client roots supplied ordinary chain, validity and IP checks.
+
+This observes one actual certificate-expiry schedule and a held connection. It
+does not cover the first second after expiry, every active-hash/write schedule,
+clock jumps, suspend/resume or platform-browser certificate behavior. Earlier
+preparation failures supplied no serving-lifetime evidence; a separate cleanup
+reconciliation after one failed preflight remains distinct from this passed run.

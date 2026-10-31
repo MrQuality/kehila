@@ -90,6 +90,13 @@ not been remeasured; these numbers remain a source-specific component baseline.
 The measurement binary also compiled unconnected blocklist mechanics tests;
 only the named worker case ran in each sample.
 
+The later [Linux complete-request subset](local-owner-authentication-listener.md#complete-request-workload-and-active-work-subsets-2026-10-31)
+measures three actual TLS/HTTP password changes through the connected blocklist,
+coordinator and PostgreSQL path, with kernel process/cgroup memory observations.
+It supplies a small serial integration sample; the earlier Windows component
+measurements above retain their original source and scope. Sustained load,
+precise active-hash stages and complete drain qualification remain separate.
+
 ## External new-password blocklist, policy one
 
 The blocklist module admits new passwords before worker scheduling. Its opaque

@@ -469,6 +469,17 @@ completes T01-T16 or a supported installation.
   inconclusive attempts remain distinct. This qualifies only that sampled path;
   the full ingress matrix and remaining delivery gates stay open.
 
+  The [complete-request and active-work observations](../implementation/local-owner-authentication-listener.md#complete-request-workload-and-active-work-subsets-2026-10-31)
+  add three bounded dual-hash HTTP samples with process/cgroup memory, overlapping
+  admission and normal shutdown during observed password work. Blocked-write
+  timing remains unresolved; failed observations are retained. Six
+  [explicit-root diagnostic certificate cases](../implementation/local-owner-authentication-listener.md#explicit-root-diagnostic-certificate-subset-2026-10-31)
+  do not replace the platform-client certificate matrix or actual browser expiry.
+  One [actual certificate-expiry schedule](../implementation/local-owner-authentication-listener.md#short-lived-owner-certificate-and-held-connection-2026-10-31)
+  also denied a held authenticated request after the detection allowance and
+  released owned runtime/database resources. Other expiry/drain schedules remain
+  unqualified.
+
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the
   separate rustls deadline.
