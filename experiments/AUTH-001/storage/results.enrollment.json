@@ -1,0 +1,46 @@
+{
+  "cases": [
+    "atomic_competing_enrollment",
+    "simulated_lost_response_reconciliation",
+    "restricted_capabilities",
+    "binding_verifier_and_audit_constraints"
+  ],
+  "passed": 4,
+  "scope": "A1 enrollment only",
+  "profile": "small-workload",
+  "cgroup_limits_qualified": false,
+  "postgresql": "16.15 (Debian 16.15-1.pgdg12+2)",
+  "engine": "podman version 5.8.3",
+  "python": "3.10.11",
+  "host": "Windows",
+  "source_sha256_lf": {
+    "install.sql": "e6b89f830e7a3d6f80595ae2a8a3ecc6851de540e4727a6b449c2ea1d96e3797",
+    "run.py": "333d2099c28bd176f430466ff33475c94077a6ac0218dd5e0bb3e7f139e0737b",
+    "enrollment_cases.py": "56c9d5e24b9011f13e751335a3fa86d4bbe5d906f000d79ebc75d90840396a08",
+    "compose.small-workload.yml": "da9a776def3ff28a1c84077733696466be4a7792843610ad017ca6167e6f83db"
+  },
+  "owned_cleanup_confirmed": true,
+  "recorded": "2026-10-27",
+  "unchanged_foundation_and_shared_helpers_revision": "146e2841eb98776cb59e1c8bc352ff8d1003d46c",
+  "provider": "Podman/WSL 2",
+  "command": "python experiments/AUTH-001/storage/run.py --podman-machine <owned-machine> --exclusive-podman-machine --profile small-workload",
+  "targeted_mutations": [
+    {
+      "change": "Remove enrollment installation FOR UPDATE",
+      "observed": "Competing-enrollment SQLSTATE oracle failed",
+      "restored": true
+    },
+    {
+      "change": "Disable immutable-binding update condition",
+      "observed": "Expected SQLSTATE 23514, observed success",
+      "restored": true
+    }
+  ],
+  "limits": [
+    "Enrollment subset only",
+    "Simulated lost-response reconciliation",
+    "No cgroup limit qualification",
+    "No password/session/HTTP qualification",
+    "Native SQL proof is opt-in, outside shared and Cargo CI"
+  ]
+}

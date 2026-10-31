@@ -1,12 +1,69 @@
-//! Disposable A0 transport probe. No identity, database, session or trust-store access.
+//! Disposable diagnostic transport and experimental credential/coordinator code.
+//! No supported installation, production database or trust-store access.
+#[cfg(target_os = "linux")]
+mod application;
 #[cfg_attr(
-    not(test),
+    all(not(test), not(target_os = "linux")),
     expect(
         dead_code,
         reason = "No caller until complete credential admission is qualified"
     )
 )]
 mod bundle;
+#[cfg(target_os = "linux")]
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Native database ownership awaits qualified startup wiring"
+    )
+)]
+mod database;
+mod diagnostics;
+#[cfg_attr(
+    not(target_os = "linux"),
+    expect(
+        dead_code,
+        reason = "The HTTP adapter is Linux-only and awaits qualified startup wiring"
+    )
+)]
+mod http_auth;
+mod lifecycle;
+#[cfg(target_os = "linux")]
+mod owner_server;
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Credential core is not connected to HTTP before qualification"
+    )
+)]
+mod password;
+#[cfg_attr(
+    all(not(test), not(target_os = "linux")),
+    expect(
+        dead_code,
+        reason = "Pre-session state awaits fenced login integration"
+    )
+)]
+mod pre_session;
+#[cfg(target_os = "linux")]
+mod protected_file;
+#[cfg_attr(
+    all(not(test), not(target_os = "linux")),
+    expect(dead_code, reason = "Secret primitives await session integration")
+)]
+mod secret;
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Registry candidates await fenced runtime integration"
+    )
+)]
+mod session;
+#[cfg(target_os = "linux")]
+mod startup;
 
 use std::{
     convert::Infallible,
@@ -25,13 +82,23 @@ use rustls::{
     ClientConfig, ServerConfig,
 };
 use tokio::{
-    io::AsyncWriteExt,
+    io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
     sync::oneshot,
     task::JoinSet,
     time::timeout,
 };
 use tokio_rustls::{TlsAcceptor, TlsConnector};
+
+/// Runs the explicitly configured disposable Linux owner profile. Startup reads
+/// fixed protected assets; this does not install trust or provision an owner.
+#[cfg(target_os = "linux")]
+pub async fn serve_owner(
+    arguments: Vec<String>,
+    stop: oneshot::Receiver<()>,
+) -> io::Result<Observations> {
+    owner_server::run(arguments, stop).await
+}
 
 pub const CONNECTION_LIMIT: usize = 16;
 pub const CONNECTION_DEADLINE: Duration = Duration::from_secs(5);
@@ -262,19 +329,78 @@ pub struct Observations {
     pub capacity_rejected: usize,
     pub protocol_rejected: usize,
     pub timed_out: usize,
+    pub completed: usize,
+    pub tls_rejected: usize,
+    pub http_rejected: usize,
+    pub tls_shutdown_rejected: usize,
+    pub peer_close_rejected: usize,
+}
+
+enum Rejection {
+    Tls,
+    Http,
+    TlsShutdown,
+    PeerClose,
 }
 
 enum Outcome {
     Complete,
-    Rejected,
+    Rejected(Rejection),
     TimedOut,
 }
 
 fn observe(result: Outcome, observations: &mut Observations) {
     match result {
-        Outcome::Complete => {}
-        Outcome::Rejected => observations.protocol_rejected += 1,
+        Outcome::Complete => observations.completed += 1,
+        Outcome::Rejected(stage) => {
+            observations.protocol_rejected += 1;
+            match stage {
+                Rejection::Tls => observations.tls_rejected += 1,
+                Rejection::Http => observations.http_rejected += 1,
+                Rejection::TlsShutdown => observations.tls_shutdown_rejected += 1,
+                Rejection::PeerClose => observations.peer_close_rejected += 1,
+            }
+        }
         Outcome::TimedOut => observations.timed_out += 1,
+    }
+}
+
+#[test]
+fn rejection_stages_preserve_aggregate_and_timeout_classification() {
+    let mut observed = Observations::default();
+    for stage in [
+        Rejection::Tls,
+        Rejection::Http,
+        Rejection::TlsShutdown,
+        Rejection::PeerClose,
+    ] {
+        observe(Outcome::Rejected(stage), &mut observed);
+    }
+    observe(Outcome::Complete, &mut observed);
+    observe(Outcome::TimedOut, &mut observed);
+    assert_eq!(observed.protocol_rejected, 4);
+    assert_eq!(observed.peer_close_rejected, 1);
+    assert_eq!(
+        (
+            observed.tls_rejected,
+            observed.http_rejected,
+            observed.tls_shutdown_rejected
+        ),
+        (1, 1, 1)
+    );
+    assert_eq!((observed.completed, observed.timed_out), (1, 1));
+}
+
+async fn close_tls(mut tls: tokio_rustls::server::TlsStream<TcpStream>) -> Outcome {
+    if tls.shutdown().await.is_err() {
+        return Outcome::Rejected(Rejection::TlsShutdown);
+    }
+    // Keep the read side owned until peer closure, under the outer deadline.
+    // One unexpected application byte is rejection, never an unbounded drain.
+    let mut byte = [0];
+    match tls.read(&mut byte).await {
+        Ok(0) => Outcome::Complete,
+        _ => Outcome::Rejected(Rejection::PeerClose),
     }
 }
 
@@ -319,18 +445,16 @@ pub async fn serve(
                     let work = async {
                         let tls = match timeout(HANDSHAKE_DEADLINE, acceptor.accept(socket)).await {
                             Ok(Ok(tls)) => tls,
-                            Ok(Err(_)) => return Outcome::Rejected,
+                            Ok(Err(_)) => return Outcome::Rejected(Rejection::Tls),
                             Err(_) => return Outcome::TimedOut,
                         };
                         let mut http = hyper::server::conn::http1::Builder::new();
                         http.keep_alive(false).max_headers(32).max_buf_size(8192)
                             .timer(TokioTimer::new()).header_read_timeout(HANDSHAKE_DEADLINE);
                         match http.serve_connection(TokioIo::new(tls), service_fn(move |request| route(request, address))).without_shutdown().await {
-                            Ok(parts) => match parts.io.into_inner().shutdown().await {
-                                Ok(()) => Outcome::Complete,
-                                Err(_) => Outcome::Rejected,
-                            },
-                            Err(_) => Outcome::Rejected,
+                            Ok(parts) if parts.read_buf.is_empty() => close_tls(parts.io.into_inner()).await,
+                            Ok(_) => Outcome::Rejected(Rejection::PeerClose),
+                            Err(_) => Outcome::Rejected(Rejection::Http),
                         }
                     };
                     match timeout(CONNECTION_DEADLINE, work).await {
@@ -377,12 +501,12 @@ pub async fn request(
                 let response = sender
                     .send_request(request)
                     .await
-                    .map_err(|_| io_error("HTTP request failed"))?;
+                    .map_err(|_| diagnostics::ExchangeFailure::Request)?;
                 let status = response.status();
                 let body = Limited::new(response.into_body(), 1024)
                     .collect()
                     .await
-                    .map_err(|_| io_error("bounded response failed"))?
+                    .map_err(|_| diagnostics::ExchangeFailure::Body)?
                     .to_bytes();
                 Ok((status, body))
             }
@@ -392,8 +516,7 @@ pub async fn request(
         };
         // Cancellation drops both owned futures; no detached connection task survives.
         let (result, connected) = tokio::join!(work, connection);
-        connected.map_err(|_| io_error("HTTP connection failed"))?;
-        result
+        diagnostics::finish(result, connected)
     })
     .await
     .map_err(|_| io_error("request deadline exceeded"))?

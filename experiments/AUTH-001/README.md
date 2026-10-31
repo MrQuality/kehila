@@ -3,9 +3,26 @@
 Disposable evidence for [A0](../../docs/implementation/local-owner-authentication-a0.md)
 under [#40](https://github.com/MrQuality/kehila/issues/40) and
 [#49 W2](https://github.com/MrQuality/kehila/issues/49). This standalone Cargo
-workspace does not alter the production worker or implement authentication.
+workspace does not alter the production worker. Its diagnostic endpoints remain
+transport-only. Linux [coordinator source](../../docs/implementation/local-owner-authentication-coordinator.md)
+connects SQL and credential components with a real typed PostgreSQL/TLS journey.
+The actual HTTP/client/provider path remains unqualified.
+
+The separate opt-in [A1 storage proof](storage/README.md) exercises disposable
+owner enrollment against PostgreSQL. It is outside this Cargo workspace and
+does not add authentication to these diagnostic HTTP endpoints.
+
+The Linux-only [database bridge](../../docs/implementation/local-owner-authentication-database-bridge.md)
+now owns dedicated authority and serving connections in a synthetic PostgreSQL
+TLS proof. Its narrow credential-read API is not connected to these endpoints.
 
 ## Contract
+
+This section describes the diagnostic server/client. The coordinator's separate
+ownership and qualification record is linked above. The separate experimental
+[owner listener](../../docs/implementation/local-owner-authentication-listener.md)
+connects its prepared HTTP dispatcher; actual client/provider qualification is
+unfinished. It adds no diagnostic login route.
 
 The server and client accept literal `127.0.0.1` only. TLS 1.3 uses normal
 rustls certificate verification, an explicit CLI root set and IP SAN validation.
@@ -24,23 +41,73 @@ deadlines and a five-second total connection deadline. Shutdown drains owned wor
 the example server has a three-minute lifetime. These are experiment bounds,
 not measurements of the later authentication capacity or availability budgets.
 
-## Unconnected bundle decoder and profile checks
+## Bundle decoder, profile checks and protected startup
 
 The private `bundle` module checks bounded version-1 ASCII framing and canonical
 base64, returning explicitly unvalidated bytes. Its private admission stage checks
 the accepted disposable certificate/key profile and requires positive key
-matching at a supplied time. Neither stage has a listener caller or public
-conversion. The scoped dead-code expectation documents that deliberate boundary;
-it must be removed when qualified admission is integrated. Existing server/client
-paths retain their original separate DER inputs and host-loopback checks.
+matching at a supplied time. The Linux protected-startup loader now consumes
+these checks and constructs a fixed TLS configuration. The diagnostic server/client
+examples retain their original separate DER inputs and host-loopback checks.
 
-The complete standalone suite now has 37 unit and 14 transport tests. Ten
+The earlier admission checkpoint had 37 unit and 14 transport tests. Ten
 admission mutations were detected, including raw extension/default encodings,
 signature shape and rejection of an explicitly matching inner P-256 parameter. See the [decoder contract](../../docs/implementation/local-owner-authentication-parser-adapter-plan.md)
 and [admission result and limits](../../docs/implementation/local-owner-authentication-credential-admission.md#private-implementation-result-2026-10-23).
 These checks do not establish issuer authenticity, client trust or ongoing expiry.
-Safe file admission and the container proof remain unfinished. The
+The [protected startup record](../../docs/implementation/local-owner-authentication-linux-reader-slice.md#protected-authentication-startup-2026-10-29)
+reports actual opened-file and Podman secret admission; the integrated container proof remains unfinished. The
 [dependency review](DEPENDENCIES.md) records the locked adoption and advisory scope.
+
+## Credential core in progress
+
+The [A2 components](../../docs/implementation/local-owner-authentication-a2.md)
+implement normalization, strict fixed-cost verifier/token admission, owned hash
+work, typed new-password blocklist checks, separate rate allowances, 64 session
+slots and 32 pre-session slots with owned allocation/one-time claims. Existing
+password verification does not reapply the new-password list. Session/pre-session
+state preserves original expiry, shared retirement and irreversible owner teardown.
+
+Earlier selected-asset local verification passed 105 unit and 20 serial transport
+tests, formatting and Clippy. It includes independent vectors, detected mutations
+and a two-thread competing-claim case. The pinned 2,097-entry historical corpus
+stays external with its own license/coverage limits; ordinary CI ignores its
+single external-asset test. A2 records reproduction and executed evidence.
+
+Historical Windows release worker samples measured verification plus replacement
+and joined cleanup at 188.700-195.864 ms, with observed process peak working set
+69.54-69.72 MiB. These are source-specific component observations; A2 preserves
+sampling limits, failed attempts and the newer-hosted-Clippy correction history.
+They do not qualify current-head Linux performance or the full request budget.
+
+The later startup/revoke-other checkpoint passed Linux Clippy and 128 serial unit
+tests with eight opt-in skips. Separate native fixtures exercised protected startup
+assets, uncertain-commit consumers and revoke-other audit rollback/retry. The
+[coordinator record](../../docs/implementation/local-owner-authentication-coordinator.md)
+describes shared runtime/database ownership and retained reply bounds. These
+component observations do not qualify a serving listener, full request budgets,
+selected-provider isolation or actual Windows browser/CLI login. Diagnostic HTTP
+endpoints have no authentication caller, and
+no supported installation, secret provisioning or real-data readiness is claimed.
+
+The prepared Linux `owner` example and first-party browser page now connect that
+dispatcher through bounded TLS I/O and owned cleanup. The
+[Windows client](clients/windows/README.md) has local DPAPI/file/JSON checks.
+Neither implementation has a qualified live browser/CLI journey yet. The
+[provider resource subset](../../docs/implementation/local-owner-authentication-container-plan.md#native-wsl-resource-subset-2026-10-30)
+is separate from mounts, Windows publication, ingress isolation and authentication.
+
+The opt-in [`native_cli_expiry_over_tls`](src/application/jobs/tests/expiry.rs)
+test obtains real PostgreSQL/coordinator issuance, confirms that typed response,
+then checks state over actual loopback TLS before and after constructing expired
+idle or absolute history. The fixture is confined to Linux test builds; it uses
+the existing policy constants and changes no production clock or lifetime.
+Both histories returned canonical HTTP 401. An isolated bypass of expiry checks
+in both lookup and current-state validation failed the new HTTP assertion; the
+restored implementation passed again. This is state-route integration evidence,
+not HTTP login, browser-cookie expiry, protected startup, provider publication or
+elapsed 30-minute/12-hour waiting. See the [listener evidence record](../../docs/implementation/local-owner-authentication-listener.md)
+for the separate runtime and client observations.
 
 ## Run
 
@@ -115,6 +182,29 @@ Linux CI runs the standalone formatter, linter and transport suite separately fr
 the existing shared verifier. A configured CI check is not a recorded Linux pass;
 inspect its result before claiming qualification. No browser, trust installation,
 native production adoption or Podman path is qualified by that Linux job.
+
+The private Linux reader now has a Linux-only dependency/implementation
+inside the [owner-login delivery package](../../docs/implementation/local-owner-authentication-delivery.md).
+Its [98-entry advisory observation](advisories-reader.json) and dependency notices
+are separate from older snapshots. Tests and source review must be reported
+before claiming Linux descriptor behavior. The
+[partial Linux observations](../../docs/implementation/local-owner-authentication-linux-reader-slice.md#partial-implementation-observations-2026-10-27)
+record actual test/mutation results, corrected fixture failures and unqualified
+oracles; this unconnected reader does not qualify Podman mounts, a listener or login.
+
+The client preserves both exchange and connection-driver outcomes in bounded
+diagnostics without response content or raw error chains. Earlier generic failures
+cannot all be attributed to one cause. The
+[initial diagnostic observations](../../docs/implementation/local-owner-authentication-a0.md#windows-diagnostic-follow-up-2026-10-27)
+are historical; passing reruns alone did not establish a repair.
+
+The [controlled Windows shutdown investigation](../../docs/implementation/local-owner-authentication-a0.md#controlled-windows-shutdown-investigation-2026-10-27)
+records a reproduced post-response shutdown failure and a bounded close-lifetime
+remedy. After sending TLS closure, the server waits for peer closure under the
+same total deadline and connection slot. Silent peers time out; extra application
+data or missing TLS closure fails. Stage counters and test diagnostics contain no
+message content or raw error chains. Historical browser results do not qualify
+this changed close path; remaining verification gates are recorded explicitly.
 
 ## Coding-standard scope and remaining gates
 

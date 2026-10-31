@@ -8,6 +8,8 @@ The 2026-10-24 development-proof interruption amendment below replaces the
 original diagnostic resume gate. Live-test permission and production storage
 adoption remain separate. APIs, isolation, dependencies and runtime qualification
 remain gated. Acceptance does not turn unexecuted criteria into evidence.
+The 2026-10-30 local-caller amendment below applies only to disposable
+authenticated tests; it does not select the supported installation boundary.
 Related: [ADR-105](ADR-105-local-owner-authentication.md),
 [B-007](../product/backlog.md#b-007), [#40](https://github.com/MrQuality/kehila/issues/40),
 [#49](https://github.com/MrQuality/kehila/issues/49), D-036/D-037;
@@ -73,7 +75,9 @@ This is an explicitly accepted amendment to diagnostic reachability, not a
 reinterpretation of ADR-105's original host-only rule. The allowed/denied path
 matrix in the probe plan must pass
 on the selected Windows provider before any qualification. A failed direct-access
-isolation test blocks this profile; it does not authorize broader VM/LAN exposure.
+isolation test blocks this original profile; the local-caller amendment below
+revises that criterion only for disposable authenticated tests. Neither permits
+broader VM/LAN exposure.
 ADR-105 remains Accepted with this bounded diagnostic amendment; all other
 transport/authentication requirements and the original host-only evidence retain
 their scope.
@@ -108,9 +112,87 @@ hot-update semantics. Stop/remove the old container, then create the new one wit
 one explicitly selected generation. Persist owned operation intent before mutation;
 ambiguous recovery stops for reconciliation. The plan defines each crash point.
 
+## Accepted authenticated-development extension, 2026-10-27
+
+Status: **Accepted for bounded disposable authenticated tests**, by
+[explicit maintainer decision](https://github.com/MrQuality/kehila/pull/87#issuecomment-6442532339).
+The original decisions above and interruption amendment below retain their
+historical diagnostic scope; this extension adds only the test scope below.
+
+The [owner-login delivery package](../implementation/local-owner-authentication-delivery.md)
+may use this profile for authenticated test integration, subject to the remaining
+contract, dependency, execution and qualification gates:
+
+- Permit the same exact listener/public-origin, forwarding, restricted container
+  and disposable key-generation profile for an isolated A1-A3 authentication
+  test instance. Use only synthetic, disposable owner passwords, sessions and
+  authentication database fixtures; no real owner, domain commands or user data.
+- Retain ordinary browser/CLI TLS verification, the operator-owned issuer key,
+  preflight isolation and file-admission requirements. Certificate trust changes
+  still need their own exact-scope approval. No production key-storage or client
+  credential-protection mechanism is selected by this proposal.
+- An observed or suspected host/VM interruption invalidates the whole test run.
+  Stop the owned instance, reconcile its owned resources and discard the
+  disposable authentication fixture before fresh enrollment and execution.
+  Never infer that an in-flight auth transaction rolled back, reuse a partial
+  run, or continue old credentials across that reset.
+- This test concession supplies no supported authentication suspend guarantee,
+  durable installation, production schema adoption, real-data readiness or A5
+  recovery qualification. Those requirements remain unchanged in ADR-105.
+
+This acceptance does not qualify the provider, choose production storage, approve
+unreviewed A1 contracts or grant execution/trust permissions. Actual isolation,
+file admission, runtime lifecycle and client behavior still require evidence.
+
+## Accepted local-caller amendment, 2026-10-30
+
+Status: **Accepted for bounded disposable authenticated tests**, by
+[explicit maintainer decision](https://github.com/MrQuality/kehila/pull/87#issuecomment-6521367219)
+after explanation of the architecture and increased attack surface.
+
+Ordinary same-PC Windows/WSL processes and containers may reach the application
+listener through the existing guest-loopback publication or private `V:P` if
+reachable. This supersedes the ordinary-guest exclusion in the original ingress
+matrix only for these tests. It creates no additional publication, route or bridge
+membership. Local callers remain untrusted; source IP, reachability and request
+headers grant no identity, session, enrollment or recovery privilege.
+
+Retain the exact Windows client origin, normal TLS verification and Rust TLS
+termination, exact private listener binding, restricted rootless bridge membership,
+protected keys, separate PostgreSQL/admin access, and all password, session,
+CSRF, generation and admission controls. No wildcard or extra publication,
+shared network namespace or privileged container is introduced. External LAN
+ingress through Windows, WSL/VM interfaces or alternate provider paths remains
+forbidden and requires actual external-peer evidence. A local caller can relay
+traffic; this profile cannot contain a cooperating or compromised local relay.
+
+This deliberately removes one defense in depth: more untrusted local processes
+can attack TLS/HTTP parsing, guess passwords, allocate pre-sessions and compete
+for shared transport/login/hash capacity. Limits mitigate work, not all software
+vulnerabilities or local denial of service. Native callers can forge browser
+headers; those headers never replace credentials. Neither guest reachability nor
+this amendment permits reading keys, connecting to PostgreSQL or using enrollment/
+recovery capabilities. Those boundaries remain independently protected.
+
+The earlier TCP control reached the live listener from Windows and then an
+ordinary guest process, with distinct accepts observed. It remains a failure
+against the original guest-exclusion criterion, not a retroactive pass. It used
+no TLS or authentication and establishes neither LAN exposure nor authentication
+compromise. A fresh integrated run must evaluate the amended matrix.
+
+This decision changes the disposable test contract only. It does not authorize
+settings, trust-store or heavy-execution changes and does not select a real-data,
+supported-installation, production or replicated exposure boundary. Review that
+boundary separately before supported installation. The original diagnostic
+contract and historical observations retain their scope.
+
 ## Alternatives and reasons
 
-| Option | Assessment for this proposal |
+These alternatives evaluate the original accepted diagnostic transport and key
+delivery decision of 2026-10-22. The authenticated-development extension above
+was accepted separately on 2026-10-27; this table does not qualify that profile.
+
+| Option | Assessment for the original diagnostic decision |
 | --- | --- |
 | Container-loopback listener plus ordinary port publication | Preserves the literal bind rule, but the source material does not establish a complete reachable Windows path. Not a qualified baseline. |
 | Opaque TCP relay to container loopback | Keeps Rust TLS termination; needs another listener/process and bounded buffering, admission, shutdown and keyless relay review. Reconsider if the direct profile cannot meet isolation criteria; no automatic fallback. |

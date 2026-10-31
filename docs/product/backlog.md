@@ -365,13 +365,17 @@ SP-004, decoder, admission and platform records.
   governed by the ADR and [verification plan](../implementation/local-owner-authentication-verification.md).
   Singleton/volatile-session mechanics are local-MVP-only; [B-032/#65](#b-032)
   retains replicated/remote deployment and migration.
-- [ADR-106](../architecture/ADR-106-local-container-transport.md) accepts only the
+- [ADR-106](../architecture/ADR-106-local-container-transport.md) accepts the
   bounded disposable Podman/WSL 2 Linux-backend proof, with Windows MVP clients,
   direct TLS and disposable mounted-secret risks. The agreed
   [PoC TLS profile](../implementation/local-owner-authentication-installation-plan.md#agreed-poc-tls-profile)
   uses a disposable private CA, normal validation and no certificate fees.
   Observed/suspected diagnostic pause requires whole-run invalidation and a fresh
   rerun; this does not qualify supported authentication suspend handling.
+  Its [explicitly accepted authenticated-test extension](../architecture/ADR-106-local-container-transport.md#accepted-authenticated-development-extension-2026-10-27)
+  adds synthetic disposable accounts/sessions/authentication database fixtures;
+  interruption discards that fixture before fresh enrollment. Actual isolation,
+  contract/dependency review and execution/trust permissions remain separate.
 - Apply D-037 recovery, language and agent compatibility constraints now; broader
   recovery, multilingual and agent delivery remain post-MVP. The
   [platform post-mortem](../postmortems/2026-10-21-platform-assumption.md) preserves
@@ -388,19 +392,121 @@ completes T01-T16 or a supported installation.
 
 **Active blockers and next work:**
 
+- The [Windows product-client handoff correction](../implementation/local-owner-authentication-listener.md#windows-product-client-handoff-investigation-2026-10-31)
+  has a detected original-order regression and passing corrected CLI/Chrome
+  lifecycle observations, including cross-client revocation. Shared staged
+  verification passed; current final-head CI is tracked in the PR. External-device
+  ingress exclusion and the remaining profile qualification gates stay open.
+  Late peer-closure failures remain visible;
+  these observations do not complete authentication or supported installation.
+
+- The [owner-login delivery package](../implementation/local-owner-authentication-delivery.md)
+  groups remaining transport, owner state, credential and browser/CLI work in one
+  capability PR with small commits. Its authenticated test profile is explicitly
+  accepted; exact A1 SQL and actual provider qualification retain review/evidence
+  gates. No helper-only merge or current
+  login/authentication qualification is implied.
+  The [A1 storage/capability contract](../implementation/local-owner-authentication-a1.md)
+  has a reviewed [disposable SQL boundary](../../experiments/AUTH-001/storage/README.md):
+  eleven native oracle groups passed for enrollment, authority, credential
+  management and session-audit confirmation; targeted regressions were detected.
+  The [A2 primitive checkpoint](../implementation/local-owner-authentication-a2.md)
+  adds strict normalization, fixed-cost Argon2id and random-secret admission,
+  with independent vectors and detected regressions; these have no HTTP caller.
+  The [Linux database bridge](../implementation/local-owner-authentication-database-bridge.md)
+  now owns dedicated/serving connections and records native TLS loss/cancellation
+  observations. Typed serving transactions preserve password/session capabilities
+  and explicit rollback/commit outcomes; one native roundtrip covers selected
+  write bindings and borrowed-operation cancellation. This does not complete
+  authentication. The [owned coordinator](../implementation/local-owner-authentication-coordinator.md)
+  now has a typed PostgreSQL/TLS journey for bounded jobs/replies, credential
+  issuance, password change, local generation retirement, logout and observed
+  authority loss. Actual HTTP/client/provider integration remains unfinished.
+  A2 now owns hash completion/cancellation and requires typed
+  new-password blocklist admission; its pinned external-corpus tests do not
+  qualify startup file admission or a serving HTTP listener. A prepared closed
+  browser/CLI dispatcher preserves request bounds, strict bootstrap, protected
+  response encoding and retained exchange eligibility. Separate native fixtures
+  now cover protected startup and uncertain-commit consumers; integrated client/
+  provider qualification remains pending. The 64-slot
+  session core now checks publication, expiry, retirement, own-logout retention
+  and owner destruction. The 32-slot pre-session engine now preserves original
+  deadlines and owns single-use claims. The coordinator shares the runtime latch
+  and accounts for jobs and retained replies. Revoke-other audit rollback/retry
+  batches have a native SQL journey. The first-party Windows CLI and Chrome
+  journeys in the [listener record](../implementation/local-owner-authentication-listener.md)
+  remain unqualified. The earlier [native-WSL resource subset](../implementation/local-owner-authentication-container-plan.md#native-wsl-resource-subset-2026-10-30)
+  alone does not qualify mounts, Windows forwarding or the ingress matrix. The accepted
+  [local-caller amendment](../architecture/ADR-106-local-container-transport.md#accepted-local-caller-amendment-2026-10-30)
+  permits untrusted same-PC guest reachability for disposable authenticated tests
+  only; the original TCP isolation failure remains recorded and full product-client
+  and external-peer qualification are still required. Earlier synthetic-
+  corpus and typed-delivery observations remain distinct from actual startup
+  corpus admission and the outstanding product browser/CLI exchanges.
+  The [native startup/file/database subset](../implementation/local-owner-authentication-listener.md#native-startup-and-first-windows-request-2026-10-30)
+  now has bounded observations. The repaired Windows client decodes the rejection
+  envelope, but a live diagnostic returns HTTP 400 with an unidentified admission
+  cause. A controlled TLS comparison confirmed Framework's automatic Expect
+  header and its suppression in the repaired client. That Rust-backed attempt
+  remained unclassified. Subsequent server counters distinguished a native
+  zero-accept reset from a Windows test client's peer-closure failures. A focused
+  regression failed the original TCP-before-peer-TLS closure order; the repair
+  passed Linux checks and a [16-observation explicit-root Windows Python/OpenSSL
+  journey](../implementation/local-owner-authentication-listener.md#corrected-explicit-root-journey),
+  including password change, other-session revocation, restart rejection and
+  logout retry. Earlier failures remain recorded. Product Schannel/Chrome,
+  external LAN exclusion, expiry/drain and complete request/capacity gates remain
+  open; the test-client result does not complete this capability or T01-T16.
+  Further [runtime/expiry subsets](../implementation/local-owner-authentication-listener.md#bounded-connection-pressure-and-authority-loss-2026-10-30)
+  observe excess-connection rejection, explicit-stop cleanup, database-loss
+  suppression, natural runtime termination and controlled-history CLI expiry
+  through real TLS. Browser/product-client, external ingress and complete
+  workload qualification remain open.
+
+  The [sampled Android LAN check](../implementation/local-owner-authentication-listener.md#sampled-android-lan-connection-check-2026-10-31)
+  observed no completed phone TCP connection during one live request, bracketed
+  by successful authenticated loopback controls on the same backend. Earlier
+  inconclusive attempts remain distinct. This qualifies only that sampled path;
+  the full ingress matrix and remaining delivery gates stay open.
+
+  The [complete-request and active-work observations](../implementation/local-owner-authentication-listener.md#complete-request-workload-and-active-work-subsets-2026-10-31)
+  add three bounded dual-hash HTTP samples with process/cgroup memory, overlapping
+  admission and normal shutdown during observed password work. A subsequent
+  [blocked-write stop](../implementation/local-owner-authentication-listener.md#measured-blocked-write-stop-2026-10-31)
+  measured 3.829 seconds directly with rollback-state and resource-release
+  observations; earlier failed external timing observations remain distinct. Six
+  [explicit-root diagnostic certificate cases](../implementation/local-owner-authentication-listener.md#explicit-root-diagnostic-certificate-subset-2026-10-31)
+  do not replace the platform-client certificate matrix or actual browser expiry.
+  One [actual certificate-expiry schedule](../implementation/local-owner-authentication-listener.md#short-lived-owner-certificate-and-held-connection-2026-10-31)
+  also denied a held authenticated request after the detection allowance and
+  released owned runtime/database resources. Other expiry/drain schedules remain
+  unqualified.
+  The [partial Windows certificate campaign](../implementation/local-owner-authentication-listener.md#windows-certificate-campaign-partial-observations-2026-10-31)
+  records valid/renewed acceptance, trust-removed rejection and a failed error-page
+  assertion. Complete platform and actual browser-expiry checks remain in the
+  final user-assisted campaign after automated prerequisites and harness review.
+
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the
   separate rustls deadline.
-  Diagnose the Windows HTTP connection failures reproduced on both baseline and
-  patched Tokio (Medium/P2 reliability follow-up under #40); preserve bounded,
-  sanitized exchange/driver outcomes before changing teardown. The actual Windows
-  default-harness runs differ from README/CI's serial profile; unchanged passing
-  reruns do not qualify the matching serial Windows result. Include pre-mutex
-  fixture setup as a Low/P3 investigation observation; contention is not established.
+  The Medium/P2 Windows component reliability follow-up under #40 now has a
+  [classified post-response shutdown failure and bounded remedy](../implementation/local-owner-authentication-a0.md#controlled-windows-shutdown-investigation-2026-10-27),
+  supported by a failing original regression, a controlled comparison and
+  Windows/Linux tests. Retain earlier failures and their actual harness profiles;
+  their old generic errors cannot all be attributed to this class. Pre-mutex
+  fixture overlap remains a Low/P3 observation, not established contention.
+  Final-source checks/review and the scoped disposition belong to
+  [PR #87](https://github.com/MrQuality/kehila/pull/87).
+  A3 still requires actual Windows-client/Linux-container path qualification;
+  host-only fixtures and passing reruns cannot supply it. Independent reader or
+  schema design does not depend on that qualification.
 - Review/adopt the [Linux reader slice](../implementation/local-owner-authentication-linux-reader-slice.md)
   and its [candidate dependency research](../implementation/local-owner-authentication-linux-files.md#dependency-research-2026-10-26)
   separately from implementation/execution; qualify descriptor reads, protected
   topology, owner/mount mapping and writable-alias exclusion.
+  The [2026-10-27 partial reader observations](../implementation/local-owner-authentication-linux-reader-slice.md#partial-implementation-observations-2026-10-27)
+  cover synthetic Linux tests and five targeted mutations, not provider mounts,
+  all failure oracles or authenticated integration.
 - Complete issuer trust, credential storage/provisioning, renewal, expiry/drain,
   ingress and integrated Windows-client/Linux-backend evidence under the
   [container](../implementation/local-owner-authentication-container-plan.md) and

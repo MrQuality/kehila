@@ -1,0 +1,44 @@
+{
+  "cases": [
+    "atomic_competing_enrollment",
+    "simulated_lost_response_reconciliation",
+    "restricted_capabilities",
+    "binding_verifier_and_audit_constraints",
+    "dedicated_session_lock_and_startup",
+    "post_wait_takeover_fencing"
+  ],
+  "passed": 6,
+  "scope": "A1 enrollment/startup/takeover",
+  "profile": "small-workload",
+  "cgroup_limits_qualified": false,
+  "postgresql": "16.15 (Debian 16.15-1.pgdg12+2)",
+  "engine": "podman version 5.8.3",
+  "python": "3.10.11",
+  "host": "Windows",
+  "source_sha256_lf": {
+    "install.sql": "e6b89f830e7a3d6f80595ae2a8a3ecc6851de540e4727a6b449c2ea1d96e3797",
+    "authority.sql": "98ac46e2309a7acc4ffdcfd44931ecf7ef03da05b0f9327a7ebb49378a960646",
+    "run.py": "00e579d6f7f22b804c4e6f4a5f8738d5df458621ac1fe2fe5500fc41df60f7e6",
+    "enrollment_cases.py": "56c9d5e24b9011f13e751335a3fa86d4bbe5d906f000d79ebc75d90840396a08",
+    "authority_cases.py": "3db31c73a253b59021ef7d63ccf9b6e500a9ad751034b648a33f6e5204e09d2b",
+    "compose.small-workload.yml": "da9a776def3ff28a1c84077733696466be4a7792843610ad017ca6167e6f83db"
+  },
+  "owned_cleanup_confirmed": true,
+  "recorded": "2026-10-27",
+  "unchanged_foundation_and_shared_helpers_revision": "4b4ba4dd18cc7f19a3bd24d7032015cd86b2e0f3",
+  "provider": "Podman/WSL 2",
+  "command": "python experiments/AUTH-001/storage/run.py --podman-machine <owned-machine> --exclusive-podman-machine --profile small-workload",
+  "targeted_mutation": {
+    "change": "Read authority before lock_owner instead of after both lock waits",
+    "observed": "Queued takeover oracle accepted stale authority and failed",
+    "source_restored": true,
+    "restored_groups_passed": 6
+  },
+  "limits": [
+    "SQL enrollment/startup/takeover subset only",
+    "Response loss is simulated",
+    "No cgroup enforcement qualification",
+    "Trusted runtime principal and session acquisition path",
+    "No Rust lock-loss, credential-CAS/recovery, session audit, password or HTTP qualification"
+  ]
+}
