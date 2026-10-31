@@ -348,8 +348,10 @@ was enabled. All owned resources and browser profiles were cleaned up. These
 results establish failed product-client journeys, not a defect in a particular
 network provider or the precise underlying close error.
 
-The correction separates guarded outbound completion from later TLS cleanup as
-described above. The real TLS/PostgreSQL
+The correction at
+[`3eaac16`](https://github.com/MrQuality/kehila/commit/3eaac169b43b224790e9c44bc80f24094028425f)
+separates guarded outbound completion from later TLS cleanup as described above.
+The real TLS/PostgreSQL
 [delivery regression](../../experiments/AUTH-001/src/application/jobs/tests/delivery.rs)
 receives a complete login response, deliberately drops its transport without a
 reciprocal TLS alert, and checks the same credential's subsequent state. Restoring
@@ -401,7 +403,11 @@ Owned blocker/client and fixture cleanup completed. An ordinary request/query
 deadline may have settled that read after stop; this is not evidence of immediate
 SQL cancellation or an exact stop-handler timestamp.
 
-Final shared verification and final-source CI remain pending. External-device
+The normal shared staged verification passed for this correction, including 292
+tooling tests (three documented platform skips), Rust/Go/static checks and the
+required owned-service checks. Hosted CI remains an independent final-head gate;
+its current result is reported in [PR #87](https://github.com/MrQuality/kehila/pull/87).
+External-device
 LAN exclusion, the complete certificate matrix, full traffic, active hashing/write
 drain and complete T01-T16 coverage retain their separate gates. These disposable
 journeys do not qualify supported installation, production adoption or real data.

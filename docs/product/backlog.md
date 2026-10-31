@@ -392,6 +392,14 @@ completes T01-T16 or a supported installation.
 
 **Active blockers and next work:**
 
+- The [Windows product-client handoff correction](../implementation/local-owner-authentication-listener.md#windows-product-client-handoff-investigation-2026-10-31)
+  has a detected original-order regression and passing corrected CLI/Chrome
+  lifecycle observations, including cross-client revocation. Shared staged
+  verification passed; current final-head CI is tracked in the PR. External-device
+  ingress exclusion and the remaining profile qualification gates stay open.
+  Late peer-closure failures remain visible;
+  these observations do not complete authentication or supported installation.
+
 - The [owner-login delivery package](../implementation/local-owner-authentication-delivery.md)
   groups remaining transport, owner state, credential and browser/CLI work in one
   capability PR with small commits. Its authenticated test profile is explicitly

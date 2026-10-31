@@ -61,6 +61,20 @@ and controlled-history CLI expiry over actual TLS/HTTP. Their stated timing,
 workload, test-history and client limitations remain part of the evidence.
 They do not complete browser/product-client, full-load or ingress qualification.
 
+The [product-client handoff correction and Windows journeys](local-owner-authentication-listener.md#windows-product-client-handoff-investigation-2026-10-31)
+now distinguish complete guarded outbound delivery from later TLS cleanup.
+The original order fails the new real-TLS credential-state regression; the
+correction passes. Stock Windows CLI and fresh-profile Chrome lifecycle journeys
+also passed, including an actual cross-client revocation target, password change
+and controlled restart rejection. Peer-close failures remain counted and do not
+establish clean reciprocal TLS closure. The normal shared staged gate passed for
+the correction; current final-head CI is reported in the PR checks. Remaining
+ingress, certificate and workload gates stay open; this is not full T01-T16 or
+supported-installation qualification.
+One positively witnessed blocked SQL read also ended with normal, joined cleanup
+inside a conservative 4.69-second stop-to-exit interval and no authenticated
+success after stop. This does not qualify active hashing, writes or all drain races.
+
 ## Definition of done and evidence
 
 - [x] The bounded disposable authenticated-test profile has its
