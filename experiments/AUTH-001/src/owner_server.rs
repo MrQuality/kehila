@@ -178,15 +178,23 @@ async fn connection(
         if !parts.read_buf.is_empty() {
             return Outcome::Rejected(Rejection::PeerClose);
         }
+        // Hyper has completed the framed HTTP response. Keep the delivery
+        // gate through an explicit final TLS flush; peer shutdown is cleanup,
+        // not evidence that the application received or accepted the reply.
+        if io.flush().await.is_err() {
+            return Outcome::Rejected(Rejection::Http);
+        }
+        let confirmed = match exchange.lock() {
+            Ok(mut retained) => retained
+                .as_mut()
+                .is_none_or(|reply| reply.confirm().is_ok()),
+            Err(_) => false,
+        };
+        if !confirmed {
+            return Outcome::Rejected(Rejection::Http);
+        }
         if let Err(rejection) = io.close().await {
             return Outcome::Rejected(rejection);
-        }
-        let reply = match exchange.lock() {
-            Ok(mut retained) => retained.take(),
-            Err(_) => return Outcome::Rejected(Rejection::Http),
-        };
-        if reply.is_some_and(|reply| reply.confirm().is_err()) {
-            return Outcome::Rejected(Rejection::Http);
         }
         Outcome::Complete
     };

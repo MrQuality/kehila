@@ -1,4 +1,4 @@
-//! Prepared dispatcher, deliberately unconnected to a serving listener.
+//! Owned dispatcher for the disposable listener and in-memory fixtures.
 use super::{json, Admitted, Profile, Route, BODY_LIMIT, PRE_SESSION, SESSION};
 use crate::{
     application::{self, jobs, Credential, LoginKind, Operation, Output},
@@ -32,7 +32,9 @@ impl Exchange {
             Some(Err(error)) => Err(error),
         }
     }
-    pub(crate) fn confirm(mut self) -> Result<(), application::Error> {
+    // Confirmation records outbound completion; ownership/accounting remains
+    // with the transport through its subsequent bounded connection cleanup.
+    pub(crate) fn confirm(&mut self) -> Result<(), application::Error> {
         if let Some(reply) = self.0.as_mut() {
             reply.confirm_exchange()?;
         }

@@ -131,9 +131,14 @@ same-origin, with a restrictive CSP.
 The dispatcher returns an owned exchange guard alongside the encoded response.
 Its outbound gate checks current issued-session eligibility as well as runtime
 liveness/deadline; generation retirement must suppress already-encoded material.
-The future listener must use that gate through outbound delivery and retain the
-guard through observed exchange/cleanup. Merely encoding, polling a body to its
-end or confirming the in-memory fixture does not establish network delivery.
+The listener must use that gate through outbound delivery and retain the
+guard and accounted slot through cleanup. The
+[listener's completion boundary](local-owner-authentication-listener.md#linux-ownership-and-admission)
+requires the completed framed HTTP response, no buffered surplus and a final
+guarded TLS flush before confirming the exchange. Later peer-closure failure is
+distinct from failed outbound delivery. Merely encoding, polling a body to its
+end or confirming the in-memory fixture does not establish network delivery;
+outbound completion does not prove that the client application received it.
 
 Current prepared-source checks passed: four Windows admission tests, Windows
 Clippy, Linux Clippy, and Linux serial regressions (123 unit plus 20 transport;

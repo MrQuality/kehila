@@ -1,5 +1,6 @@
 use super::*;
 use crate::database::tests::{fixture, mark, wait};
+mod delivery;
 mod expiry;
 mod revoke_others;
 mod unknown_commit;
@@ -152,7 +153,8 @@ fn native_owned_login() {
                 .header("content-length", login_body.len())
                 .body(Full::new(Bytes::from_static(login_body)))
                 .unwrap();
-            let (response, exchange) = adapter::handle(wire, &profile, &handle, deadline()).await;
+            let (response, mut exchange) =
+                adapter::handle(wire, &profile, &handle, deadline()).await;
             assert_eq!(response.status(), hyper::StatusCode::OK);
             assert!(!response.headers().contains_key("set-cookie"));
             exchange.check_outbound().unwrap();
@@ -165,7 +167,18 @@ fn native_owned_login() {
             let cli_bearer = Digest::from_encoded(token).unwrap();
             drop(body);
             // In-memory adapter observation, not a TLS/HTTP exchange.
+            let held_capacity = handle.capacity.available_permits();
             exchange.confirm().unwrap();
+            assert_eq!(handle.capacity.available_permits(), held_capacity);
+            drop(exchange);
+            let settled = tokio::time::timeout(
+                WORK_DEADLINE,
+                handle.capacity.clone().acquire_many_owned(CAPACITY as u32),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+            drop(settled);
             assert!(matches!(
                 request(&handle, Operation::State(cli(cli_bearer)))
                     .await
@@ -213,7 +226,8 @@ fn native_owned_login() {
                 .header("content-length", login_body.len())
                 .body(Full::new(Bytes::from_static(login_body)))
                 .unwrap();
-            let (response, retained) = adapter::handle(wire, &profile, &handle, deadline()).await;
+            let (response, mut retained) =
+                adapter::handle(wire, &profile, &handle, deadline()).await;
             assert_eq!(response.status(), hyper::StatusCode::OK);
             let cookie = response.headers()["set-cookie"].to_str().unwrap();
             let token = cookie
@@ -258,6 +272,7 @@ fn native_owned_login() {
             drop(response);
             assert!(retained.check_outbound().is_err());
             assert!(retained.confirm().is_err());
+            drop(retained);
             assert!(matches!(
                 request(&handle, Operation::State(cli(cli_bearer)))
                     .await

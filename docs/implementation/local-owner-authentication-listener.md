@@ -29,15 +29,22 @@ body limits, with a two-second body deadline. The original five-second connectio
 deadline starts at accept and includes scheduling, handshake, HTTP and closure.
 
 The listener retains the accounted coordinator reply through actual TLS writes,
-flushes, reads that may flush TLS records, and closure. It sends and flushes the
-TLS close notification, receives the peer's TLS closure with no surplus data,
-then shuts down TCP. Calling tokio-rustls shutdown first also shuts down the
-underlying transport; that TCP half-close must not precede the peer notification
-which this listener still requires. Each operation checks current
-reply/issued-session eligibility. Bytes already written cannot be recalled.
-Only observed completion with no buffered or subsequent surplus application bytes
-permits exchange confirmation; cancellation/failure drops the retained guard and
-retires unconfirmed issuance.
+flushes, reads that may flush TLS records, and bounded cleanup. After Hyper
+completes the framed HTTP response with no buffered surplus, an explicit final
+TLS flush and exchange confirmation still check current eligibility and the
+original deadline. Failure or cancellation before that boundary retires
+unconfirmed issuance. Confirmation borrows the exchange: its coordinator slot
+and guard remain owned until connection cleanup ends.
+
+TLS closure follows outbound confirmation. The listener sends and flushes its
+close notification, attempts reciprocal peer closure without surplus data, then
+shuts down TCP, within the original connection deadline. Late closure failure is
+still counted, but cannot retroactively retire a confirmed credential. Bytes
+already written cannot be recalled; neither a successful flush nor reciprocal
+TLS closure proves application receipt. A fully sent response lost by a client
+can leave a bounded session until normal expiry; another login cannot replay its
+secret. The independent diagnostic listener retains its existing strict closure
+classification and has no credentials to confirm.
 
 ## Runnable validity and shutdown
 
@@ -199,7 +206,8 @@ HTTP 401 for a wrong password and HTTP 200 for login, followed by HTTP 401 for
 the issued credential's state request. The journey stopped at that failure and
 cleanup completed. A controlled repeat recorded three accepts, three peer-close
 rejections and no completed exchanges, with a normal server exit. The login
-credential was therefore not confirmed; retiring it is required failure behavior.
+credential was therefore not confirmed under that implementation's completion
+rule and was retired.
 This is not a passing login/session journey and does not classify older failures.
 
 A focused real-TLS regression demonstrated that the original shutdown order
@@ -323,3 +331,77 @@ idle deadline, so this does not independently isolate the redundant absolute-onl
 guard. No OS clock, production policy or runtime limit changed. Protected
 startup/provider publication, browser-cookie expiry, product Schannel/Chrome and
 external ingress retain separate gates; this is not a complete T06 pass.
+
+### Windows product-client handoff investigation (2026-10-31)
+
+At pre-correction source `7b0b913`, the stock Windows CLI rejected a wrong
+password, reported successful login, then rejected the issued credential's state
+request. A controlled repeat waited six seconds after login, beyond the
+five-second connection deadline, and still rejected state. Its listener recorded
+two accepts and two peer-close rejections, with no completed exchanges or TLS,
+HTTP-driver, TLS-shutdown or timeout rejections.
+
+Actual Chrome UI testing at the same source reached login HTTP 200, followed by
+HTTP 401 from the session/CSRF bootstrap; the UI remained signed out. Its eight
+connections all ended with peer-close rejections. Ordinary certificate validation
+was enabled. All owned resources and browser profiles were cleaned up. These
+results establish failed product-client journeys, not a defect in a particular
+network provider or the precise underlying close error.
+
+The correction separates guarded outbound completion from later TLS cleanup as
+described above. The real TLS/PostgreSQL
+[delivery regression](../../experiments/AUTH-001/src/application/jobs/tests/delivery.rs)
+receives a complete login response, deliberately drops its transport without a
+reciprocal TLS alert, and checks the same credential's subsequent state. Restoring
+the original confirmation order in an isolated comparison failed that state
+assertion; the correction passed. Both cases released runtime database
+connections and advisory locks. This comparison does not emulate every platform
+close failure.
+
+Linux Clippy with warnings denied and serial standalone suites passed: 132 unit
+tests and 21 transport tests, with ten opt-in unit cases skipped in the normal
+run. The new native delivery case ran separately. The failed runs above remain
+failures at their original source.
+
+### Corrected Windows product-client journeys
+
+The corrected candidate passed the following actual Windows client sequences
+against the disposable Linux authority and PostgreSQL, with normal platform
+certificate verification and the selected issuer pin for the CLI:
+
+| Client observation | Reached result |
+| --- | --- |
+| Stock CLI: 12 sequential steps | Wrong-password rejection, login and active state, password change, old-password rejection, new-password login/state, revoke-other success for an empty target set, stale-session rejection after controlled restart, fresh login/state and audit-confirmed logout. |
+| Chrome 156.0.8078.76: 12 UI checkpoints | Initial signed-out state, wrong-password rejection, login, reload, revoke-other success, initiating session retained after another reload, password change, old-password rejection, new-password login, stale cookie rejected after controlled restart, fresh login and audit-confirmed logout. |
+| Cross-client: three CLI observations during the Chrome journey | A second CLI credential was issued and confirmed active, then denied after browser revocation while the browser remained active. This supplies a real revoke-other target. |
+| Browser cookie/reload checks | The session cookie was Secure, HttpOnly, SameSite=Strict, host-scoped and path `/`; logout removed it. All three reload observations required a new document before checking UI state. |
+| Controlled restart and ownership | The runtime generation advanced by one; both runs ended their owned services and removed temporary profiles/cache. |
+
+These counts describe steps in two bounded journeys, not independent test cases
+or a percentage of completed authentication coverage. The first browser runtime's
+observed cgroup memory peak was 70,053,888 bytes (about 66.8 MiB) under its enforced
+256-MiB limit, with no recorded limit hits or OOM events. This was a small serial
+workload including password replacement, not a full-load/RSS qualification.
+
+The browser/cross-client run accepted 28 connections before restart and eight
+afterward; all 36 ended in the separately counted peer-close rejection, with no
+TLS-handshake, HTTP-driver, TLS-shutdown or timeout rejection. Application
+responses and state transitions passed; reciprocal TLS closure did not. The
+precise underlying platform close error remains unclassified. Connection tasks
+and accounted replies were still joined/released, and no cleanup failure was
+reported. No certificate validation or admission limit was bypassed.
+
+An additional check positively observed an authenticated read blocked in its SQL
+fence before requesting the existing controlled stop. The process exited normally
+and joined owned work within a conservative 4.687-second host interval, including
+control-command and container-wait overhead. The blocker remained held through
+application exit; the pending Windows CLI request produced no authenticated
+success, and runtime database connections and advisory locks were absent afterward.
+Owned blocker/client and fixture cleanup completed. An ordinary request/query
+deadline may have settled that read after stop; this is not evidence of immediate
+SQL cancellation or an exact stop-handler timestamp.
+
+Final shared verification and final-source CI remain pending. External-device
+LAN exclusion, the complete certificate matrix, full traffic, active hashing/write
+drain and complete T01-T16 coverage retain their separate gates. These disposable
+journeys do not qualify supported installation, production adoption or real data.
