@@ -471,14 +471,20 @@ completes T01-T16 or a supported installation.
 
   The [complete-request and active-work observations](../implementation/local-owner-authentication-listener.md#complete-request-workload-and-active-work-subsets-2026-10-31)
   add three bounded dual-hash HTTP samples with process/cgroup memory, overlapping
-  admission and normal shutdown during observed password work. Blocked-write
-  timing remains unresolved; failed observations are retained. Six
+  admission and normal shutdown during observed password work. A subsequent
+  [blocked-write stop](../implementation/local-owner-authentication-listener.md#measured-blocked-write-stop-2026-10-31)
+  measured 3.829 seconds directly with rollback-state and resource-release
+  observations; earlier failed external timing observations remain distinct. Six
   [explicit-root diagnostic certificate cases](../implementation/local-owner-authentication-listener.md#explicit-root-diagnostic-certificate-subset-2026-10-31)
   do not replace the platform-client certificate matrix or actual browser expiry.
   One [actual certificate-expiry schedule](../implementation/local-owner-authentication-listener.md#short-lived-owner-certificate-and-held-connection-2026-10-31)
   also denied a held authenticated request after the detection allowance and
   released owned runtime/database resources. Other expiry/drain schedules remain
   unqualified.
+  The [partial Windows certificate campaign](../implementation/local-owner-authentication-listener.md#windows-certificate-campaign-partial-observations-2026-10-31)
+  records valid/renewed acceptance, trust-removed rejection and a failed error-page
+  assertion. Complete platform and actual browser-expiry checks remain in the
+  final user-assisted campaign after automated prerequisites and harness review.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

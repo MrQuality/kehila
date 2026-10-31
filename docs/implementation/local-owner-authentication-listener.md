@@ -470,7 +470,23 @@ the five-second stop-to-return bound. The test stopped at that unresolved timing
 assertion, so its later rollback/output assertions do not qualify the case.
 The first attempt also needed later listener-release reconciliation; the second
 completed owned cleanup. Neither is reported as a write-drain pass. Direct
-runtime timing remains required without relaxing the limit.
+runtime timing was subsequently observed as recorded below; these earlier
+attempts retain their failed timing assertions.
+
+### Measured blocked-write stop (2026-10-31)
+
+A subsequent run positively observed the password-change statement blocked on
+its audit write. A direct same-process measurement from immediately before stop
+notification through the normal owned-runtime return was 3.829 seconds, below
+the unchanged five-second limit. The external command intervals remain separate
+observations rather than substitutes for that runtime interval.
+
+The blocker stayed held through runtime exit. The pending test client timed out
+without authenticated success; durable verifier revision, authentication
+generation and password-change audit count remained at their original values.
+Runtime database connections and advisory locks were absent afterward, and
+owned cleanup completed. This qualifies that blocked-write stop schedule. It
+does not prove immediate SQL cancellation or every write/cancellation ordering.
 
 ### Explicit-root diagnostic certificate subset (2026-10-31)
 
@@ -508,3 +524,30 @@ does not cover the first second after expiry, every active-hash/write schedule,
 clock jumps, suspend/resume or platform-browser certificate behavior. Earlier
 preparation failures supplied no serving-lifetime evidence; a separate cleanup
 reconciliation after one failed preflight remains distinct from this passed run.
+
+### Windows certificate campaign: partial observations (2026-10-31)
+
+Chrome loaded the expected host-only diagnostic page for the original and a
+distinct renewed certificate using ordinary Windows trust. The CLI transport
+path had a Schannel certificate-policy result of no errors for both. Stock CLI
+requests to the diagnostic endpoint returned an unconfirmed application result,
+so these are certificate-validation observations, not successful login.
+
+After the approved test CA was removed, Schannel reported an issuer-chain error
+with `PartialChain`, and Chrome reported `ERR_CERT_AUTHORITY_INVALID`. Actual
+absence from both Windows Root stores, normal diagnostic exit and owned cleanup
+were verified. Certificate validation was not bypassed.
+
+The wrong-IP attempt reported Schannel's certificate-name mismatch and Chrome's
+`ERR_CERT_COMMON_NAME_INVALID` in headless diagnostic output. The overall attempt
+failed because its assertion expected an error page in the DOM. Chromium's
+[headless command handler](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/headless/command_handler/headless_command_handler.cc)
+reports page-load errors separately from DOM output. The failed attempt and its
+typed rejection remain separate evidence; the corrected assertion requires the
+expected exact error and rejects contradictory success or other network errors.
+
+The complete platform campaign, including cases not reached in that attempt,
+and actual Chrome session expiry remain incomplete. Under the
+[final-verification scheduling rule](../TESTING.md#automated-checks-and-user-assisted-final-verification),
+the remaining user-assisted campaign waits for completed harness preparation,
+review and applicable automated prerequisites.

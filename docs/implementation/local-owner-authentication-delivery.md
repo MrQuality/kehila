@@ -85,15 +85,22 @@ diagnosis of the blocking layer. Earlier inconclusive attempts remain recorded.
 The [complete-request workload and active-work subsets](local-owner-authentication-listener.md#complete-request-workload-and-active-work-subsets-2026-10-31)
 add three measured verification-plus-replacement HTTP requests, process and
 cgroup memory observations, overlapping 200/429 admission, and a normally joined
-stop during observed password work. Blocked-write drain remains unresolved:
-external timing includes notification overhead and does not establish the exact
-runtime bound. The [explicit-root diagnostic certificate subset](local-owner-authentication-listener.md#explicit-root-diagnostic-certificate-subset-2026-10-31)
+stop during observed password work. A later
+[directly measured blocked-write stop](local-owner-authentication-listener.md#measured-blocked-write-stop-2026-10-31)
+returned normally in 3.829 seconds with unchanged durable credentials/audit and
+released database resources; earlier failed external timing observations remain
+recorded. This does not qualify all write/cancellation schedules. The
+[explicit-root diagnostic certificate subset](local-owner-authentication-listener.md#explicit-root-diagnostic-certificate-subset-2026-10-31)
 adds typed client-policy results without qualifying the Schannel/Chrome matrix
 or authenticated browser expiry. These subsets do not complete the delivery.
 The [short-lived certificate observation](local-owner-authentication-listener.md#short-lived-owner-certificate-and-held-connection-2026-10-31)
 also records denial on one held connection after the expiry-detection allowance,
 normal joined exit inside the detection/drain envelope and database-resource
 release. It does not qualify platform-browser expiry or all active-work schedules.
+The [partial Windows certificate campaign](local-owner-authentication-listener.md#windows-certificate-campaign-partial-observations-2026-10-31)
+adds valid/renewed acceptance and trust-removed rejection. A failed DOM-only error
+assertion remains recorded; the complete corrected platform campaign and actual
+Chrome session expiry await the final user-assisted verification stage.
 
 ## Definition of done and evidence
 
