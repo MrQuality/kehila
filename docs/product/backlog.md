@@ -496,6 +496,11 @@ completes T01-T16 or a supported installation.
   path checks and normal public-runtime exit with owned cleanup. It does not
   reproduce or explain the earlier browser cleanup failure; listener inventories
   and actual connection outcomes remain separate evidence.
+  The [stock Windows CLI stalled-body check](../implementation/local-owner-authentication-listener.md#windows-cli-stalled-response-deadline-2026-11-01)
+  now records safe failure in 5.063 seconds, no watchdog intervention or stored
+  credential, owned cleanup and verified temporary-root removal. The bounded
+  owner-login delivery is ready for final maintainer review; broader M1 work
+  and the recorded historical cleanup limitation remain separate.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

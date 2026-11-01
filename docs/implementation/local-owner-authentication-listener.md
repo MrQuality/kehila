@@ -90,8 +90,8 @@ outside any universal erasure claim.
 The bounded BCL JSON reader/writer verifies the complete fixed canonical response
 envelope, including duplicate/unknown metadata and trailing data rejection.
 Response disposal stays registered through body consumption under the request
-deadline; actual TLS negotiation, typed certificate rejection and stalled-body
-cancellation remain unexecuted Windows qualification gates.
+deadline. Actual TLS, certificate-policy and stalled-body observations are
+recorded below with their execution limits.
 
 ## Evidence and limits
 
@@ -669,3 +669,27 @@ The corrected retry used the observed installed utility; both attempts and
 cleanup fit within the original 600-second allowance. No source compilation,
 browser repetition or new trust installation was needed. Other provider modes,
 all external routes, full T01-T16 and supported installation remain unqualified.
+
+### Windows CLI stalled-response deadline (2026-11-01)
+
+The unchanged stock Windows CLI completed a normally verified TLS 1.3 request
+against a controlled loopback fixture. A complete canonical HTTP 401 control
+returned the expected credential-rejection output and exited in 0.157 seconds.
+The next case used the same valid headers and declared 28-byte body, sent only
+nine bytes, and withheld the remaining body until the client terminated the
+connection.
+
+The CLI returned its unconfirmed-result failure in 5.063 seconds from process
+launch. The fixture observed peer termination 4.953 seconds after sending the
+partial response, before its independent ten-second watchdog. Neither client
+nor server watchdog intervened, no credential files were created, and owned
+process, thread, socket and temporary-file cleanup completed. The exact test CA
+was removed and verified absent from both Windows Root stores afterward.
+
+This observes bounded stalled-body failure and owned transport/process release
+under ordinary Schannel verification and the stock issuer pin. Process timing
+includes startup and TLS; it is not an exact internal timer measurement.
+Termination lacked reciprocal TLS close notification. Process exit also closes
+sockets, so the observation does not isolate the disposal callback's causal role
+or prove same-instance request-slot reuse. No authenticated backend, browser or
+database journey was repeated.

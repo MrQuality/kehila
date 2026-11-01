@@ -1,7 +1,7 @@
 # Owner authentication: first capability delivery
 
-Status: delivery scope authorized on 2026-10-27; implementation and qualification
-in progress. Unaccepted contracts below remain Proposed. Related: #40/#49 W2,
+Status: bounded implementation and recorded verification complete; final
+maintainer review remains. Unaccepted contracts remain Proposed. Related: #40/#49 W2,
 B-007/B-020/B-022 and the [authentication verification plan](local-owner-authentication-verification.md).
 
 ## Outcome and merge boundary
@@ -133,11 +133,11 @@ expiry evidence does not become elapsed-TTL or complete T01-T16 qualification.
 
 The checked observations below apply to the bounded disposable profile. They
 do not establish every failure schedule or full T01-T16 qualification. The
-remaining concrete execution item is the Windows CLI stalled-response-body
-deadline check: successful responses and certificate rejection do not prove
-that a partially delivered response is cancelled within the client deadline.
-The prepared check has not yet run. It must preserve ordinary Windows trust and
-observe both a complete-response control and an independently held partial body.
+last concrete execution item, the [Windows CLI stalled-response-body check](local-owner-authentication-listener.md#windows-cli-stalled-response-deadline-2026-11-01),
+now has a complete-response control and an independently held partial-body
+observation under ordinary Windows trust. No identified execution blocker remains
+for this bounded delivery. Final review must retain the historical browser
+cleanup failure, its separate reconciliation and the stated qualification limits.
 
 - [x] The bounded disposable authenticated-test profile has its
   [explicit acceptance](https://github.com/MrQuality/kehila/pull/87#issuecomment-6442532339).
@@ -163,9 +163,9 @@ observe both a complete-response control and an independently held partial body.
   proposed profile limits. Report overruns without silently relaxing limits.
 - [x] The linked evidence records identify source, commands/targets/harness, platform,
   tools/provider, sample/fixture, observed results, failed attempts and limits.
-- [ ] Execute and disposition the actual Windows CLI stalled-response-body
-  deadline check. Source inspection is not an execution pass; exact temporary
-  trust approval and adequate RAM remain prerequisites.
+- [x] Execute and disposition the actual Windows CLI stalled-response-body
+  deadline check, including the complete-response control, peer/process release,
+  no credential publication and verified removal of the temporary trust.
 - [ ] Relevant failure regressions, mandatory commit gates and final-source CI
   pass; no skipped platform case is reported as qualified.
 - [ ] Exact-head source review and dispositions are complete, related records are
