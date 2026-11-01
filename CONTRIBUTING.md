@@ -57,6 +57,23 @@ separate roles defined by the product contracts.
 
 ## Pull requests and review
 
+Keep commits small and focused. Organize PRs around coherent, reviewable delivery
+outcomes, including the tests and documentation needed to assess them. Generic
+line-count thresholds are review signals, not mandatory limits or automatic
+reasons to split a PR. Assess independent contracts, coupling, traceability,
+review effort and verification cost together. Identify generated files, tests
+and documentation separately when explaining a large diff; those files still
+need appropriate review.
+
+Define the objective, included and excluded work, and concrete completion criteria
+before implementation. Reassess scope when a material discovery introduces a new
+subsystem, architectural decision or substantial investigation. Decide whether it
+belongs in the outcome, should be deferred or warrants a separate PR; do not
+silently expand the finish line. Large PRs require an explicit justification and
+a component review map. Avoid splitting tightly coupled work solely to meet a
+line count or duplicating expensive verification without a relevant change or
+failure. Required commit and CI gates still apply.
+
 Apply the [Definition of Done](docs/engineering/DEFINITION-OF-DONE.md), recording
 applicable evidence and justified not-applicable criteria. Link existing
 requirement/decision/backlog IDs and engineering IDs where relevant. Material
