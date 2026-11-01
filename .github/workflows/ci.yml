@@ -9,6 +9,35 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  windows-owner-client:
+    runs-on: windows-2025
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Select verification scope using the commit policy
+        id: scope
+        run: python scripts/ci_scope.py
+      - name: Build and check the experimental Windows owner client
+        if: steps.scope.outputs.scope != 'docs'
+        shell: powershell
+        run: |
+          $output = Join-Path $env:LOCALAPPDATA ('Kehila.Auth001.CI-' + $env:GITHUB_RUN_ID)
+          if (Test-Path -LiteralPath $output) { throw 'Expected a fresh external output directory.' }
+          $owner = [Security.Principal.WindowsIdentity]::GetCurrent().User
+          $security = [Security.AccessControl.DirectorySecurity]::new()
+          $security.SetOwner($owner)
+          $security.SetAccessRuleProtection($true, $false)
+          $security.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new(
+            $owner, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow'))
+          $null = [IO.Directory]::CreateDirectory($output, $security)
+          ./experiments/AUTH-001/clients/windows/build.ps1 -OutputDirectory $output -Test
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 25

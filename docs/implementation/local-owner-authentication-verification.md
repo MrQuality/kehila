@@ -1,12 +1,13 @@
 # Local-owner authentication: proposed verification and delivery plan
 
-Status: A0 host transport subset recorded; authentication verification remains unexecuted. Owner: project maintainer. Recorded: 2026-10-19.
+Status: A0 host transport and the A1 disposable SQL subset recorded; complete authentication qualification remains pending. Owner: project maintainer. Recorded: 2026-10-19; storage update: 2026-10-27.
 Related: [ADR-105](../architecture/ADR-105-local-owner-authentication.md),
 [#40](https://github.com/MrQuality/kehila/issues/40),
 [#49 W2](https://github.com/MrQuality/kehila/issues/49), B-007/B-020/B-022.
 
-This plan makes the proposed password/authority boundary reviewable. It supplies
-no new authentication evidence. The existing worker remains unauthenticated and
+This plan makes the password/authority boundary reviewable. The
+[A1 storage record](../../experiments/AUTH-001/storage/README.md) supplies
+scoped native evidence, not password/session/HTTP qualification. The existing worker remains unauthenticated and
 on the provisional storage path. ADR-105 is Accepted for local MVP; ADR-103 remains independently Proposed.
 All A0-A5/T01-T16 work here qualifies the proposed local-MVP profile only. Its
 single active runtime and volatile session state are not a replicated deployment
@@ -27,6 +28,12 @@ qualification remains separate, and this priority does not change backend placem
 local MVP and authorizes A0, including restart logout and documented local
 availability/audit-loss trade-offs. It accepts no replicated mechanism or ADR-103
 adoption and supplies no authentication evidence.
+
+On 2026-10-27 the maintainer requested completion of the owning PR #87 and
+[explicitly accepted its bounded authenticated-test profile](https://github.com/MrQuality/kehila/pull/87#issuecomment-6442532339).
+This extends ADR-106 to synthetic disposable A1-A3 tests, with complete fixture
+discard and fresh enrollment after interruption. It does not accept production
+adoption, supported installation/suspend, unreviewed contracts or trust changes.
 
 - [ ] Complete bounded A0 dependency/transport proof before adopting runtime choices.
 - [ ] Measure provisional resource/lifetime/hash/deadline settings before support.
@@ -133,7 +140,7 @@ integrity semantics separately; an unrelated failure cannot pass an auth oracle.
 | T03: transport | Real browser/CLI reject wrong/untrusted/expired certificates, wrong SAN/Host/origin and redirects; altered forwarded headers do not choose identity/origin. No supported anonymous worker, search or HTTP downgrade path exists. |
 | T04: browser requests | Reject missing/null/foreign Origin, absent/wrong/stale CSRF, login fixation, hostile form/CORS attempts, duplicate cookies and mixed auth. Inspect actual Secure/HttpOnly/SameSite/Path/no-Domain and no-store behavior. No secrets in URLs, logs or browser persistent storage. |
 | T05: CLI | Missing Origin plus absent/bad bearer denies. Reject browser-kind tokens, Cookie/Origin/Fetch Metadata and duplicate Authorization. Verify Windows ACL/DPAPI ownership and Linux mode/ownership/redirection refusal; password is not persisted. |
-| T06: expiry and bounds | Fake-clock boundaries plus actual restart: idle/absolute limits, no renewal from rejected/public/keepalive requests, no resurrection from stale activity updates, capacity rejection without active-session eviction. Password change retains one hash permit across verify+hash; busy login/management receives 429 with no queue. Login saturation cannot charge the authenticated management bucket, and logout needs neither bucket nor hashing. Cancel/expire between hashes: no second hash or update; expire during hashing: retain ownership until real completion. Measure complete dual-hash latency and process peak memory under the proposed five-second budget; no availability guarantee under sustained local contention. |
+| T06: expiry and bounds | Fake-clock boundaries plus actual restart: idle/absolute limits, no renewal from rejected/public/keepalive requests, no resurrection from stale activity updates, capacity rejection without active-session eviction. The [controlled-history CLI wire subset](local-owner-authentication-listener.md#controlled-history-cli-expiry) connects expired history to an actual TLS/HTTP rejection; it is not a complete T06 pass. Password change retains one hash permit across verify+hash; busy login/management receives 429 with no queue. Login saturation cannot charge the authenticated management bucket, and logout needs neither bucket nor hashing. Cancel/expire between hashes: no second hash or update; expire during hashing: retain ownership until real completion. Measure complete dual-hash latency and process peak memory under the proposed five-second budget; no availability guarantee under sustained local contention. |
 | T07: session revocation | Reach the actual actor barrier: command first can finish before logout; logout first denies queued create/replay. A captured registry reference observes revocation. Repeat password/global generation change, rollback/failure and fresh retry; deleting a registry key without revoking a retained reference is a detected fault. |
 | T08: read/snapshot | Credential/grant/data checks use a fresh consistent snapshot. Logout committed before the snapshot denies even if the registry reference was captured earlier; no stale cached successful verdict. Test both read/revocation orderings and bounded output. Search scopes/hits/aggregates are authorized, with no actor/DB lock spanning search. |
 | T09: runtime takeover | Prove installation shared/exclusive locking before sorted actor and domain locks. Hold an old mutation's shared installation fence: takeover waits through its commit/rollback. Commit takeover first: an old queued mutation/replay/issuance denies after a fresh post-wait generation check. Exercise recovery and reversed multi-actor arguments, aborted startup and unknown takeover commit. Reject stale pre-wait snapshots and lock upgrades. Loss of the advisory connection stops admission/output; fresh old-process read snapshots deny after takeover. Delayed projected reads retain only the declared earlier-snapshot allowance. No silent session reconstruction/reacquisition. |
@@ -190,8 +197,10 @@ CSRF value, with same-origin/custom-header and credential checks; browser proof
 remains required. Neither refinement supplies implementation evidence.
 
 ADR-105 is now Accepted for local MVP, including the declared local availability
-and audit-loss trade-offs; these review refinements remain unexecuted contracts. No complete T01–T16 case is qualified; AUTH-001 records only T03-related transport observations;
-#40/#49 stay open and no runtime/schema/dependency change follows from these edits.
+and audit-loss trade-offs; these review refinements remain unexecuted contracts.
+The PR #64 review edits above were documentation only. Subsequent AUTH-001 work
+records T03-related component transport observations and the separate A1
+SQL boundary subset; no complete T01–T16 case is qualified. #40/#49 stay open.
 
 ## D-037 follow-through
 
@@ -206,3 +215,36 @@ receive stable IDs/codes and a versioned password-normalization boundary distinc
 from domain data. Agent execution (#62) receives a typed actor/credential seam;
 human-owner CLI tokens are not agent identities, delegation or approvals. None of
 these post-MVP features is implemented or accepted as a detailed design here.
+
+## Optional hosted integration tests
+
+On 2026-10-31 the maintainer retained hosted integration testing as a future
+option to reduce development-host resource use. Fly.io is excluded from the
+current testing proposal because recurring compute charges are unacceptable.
+Alternative compute providers will be assessed later. Supabase PostgreSQL remains
+a candidate database service, conditional on compatibility with the eventual
+compute provider and the contracts below; it is not an adopted dependency or
+permission to deploy. This does not change the accepted Windows-client/Linux-
+container local MVP profile or select Supabase Auth.
+
+Before a hosted proof, review its cost/quota, exposure, credentials, synthetic-data
+isolation and cleanup. Check the actual PostgreSQL version, schema/role privileges,
+TLS identity and session ownership. The current AUTH-001 adapter accepts private
+IPv4 addresses only, fixes the database TLS name to `auth-db`, and requires TLS
+1.3; its storage installation requires PostgreSQL 16. A hosted profile therefore
+requires explicit compatibility work rather than substituting a connection URL.
+Preserve the dedicated session advisory lock: prefer a direct PostgreSQL
+connection; any session pooler needs separate verification, and transaction
+pooling cannot preserve the required session ownership.
+
+Hosted application/database results can supplement integration evidence. They
+cannot qualify Windows trust and credential storage, Podman publication and LAN
+isolation, or failure cases requiring control of the PostgreSQL process,
+certificates or operating-system resource limits. Keep controllable disposable
+fixtures for those cases. No hosted compatibility proof has been run.
+
+Provider references (recheck terms before selecting a profile):
+[Fly.io trial](https://docs.fly.io/about/free-trial),
+[Supabase pricing](https://supabase.com/pricing),
+[Supabase PostgreSQL connections](https://supabase.com/docs/guides/database/connecting-to-postgres)
+and [managed database privileges](https://supabase.com/docs/guides/database/postgres/roles-superuser).

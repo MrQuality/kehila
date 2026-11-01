@@ -172,6 +172,104 @@ Windows reliability follow-up, with next review **2026-11-02**. The separate rus
 2026-11-18 deadline remain unchanged. No risk acceptance or authentication
 qualification is implied.
 
+### Windows diagnostic follow-up, 2026-10-27
+
+These are the initial observations before the controlled close-lifetime
+investigation below; they are not its current disposition.
+
+A bounded comparison on the prepared reader candidate, before diagnostic changes,
+ran the documented Windows `--all-targets -- --test-threads=1` profile three times:
+each passed 37 unit and 14 transport tests. The first historical default-target,
+default-harness comparison reproduced the oversized-body failure (13/14 transport
+tests, generic HTTP connection error); that comparison stopped at the failure.
+
+The client now preserves both joined outcomes in a sanitized error: exchange
+request/body failure or completed status/body length, and driver failure with an
+underlying I/O error category when discoverable. It retains no response content
+or raw error chain. A driver failure remains fatal even after a response; an
+exchange failure remains fatal after clean driver completion. Two helper tests
+cover these combinations and body non-disclosure; they do not qualify actual
+Hyper error-chain classification or identify the historical failure's cause.
+
+Three subsequent Windows default-profile runs each passed 39 unit and 14
+transport tests. None reproduced a classified driver failure. This is a bounded
+observation, not a demonstrated repair. No deadline, teardown, network mutex or
+closure assertion was changed. Medium/P2 diagnosis remains open under #40 and
+requires disposition before A3 qualification; preserve the failed attempt above.
+The root dependency/advisory deadlines and shared-verifier follow-up are unchanged.
+
+An additional capture series at committed source `ad24625` was bounded to ten
+default-profile runs, stopping at the first failure. All ten passed 39 unit and
+14 transport tests; no classified failure was captured. The series ended at its
+bound. This leaves the cause unresolved and does not supersede the earlier
+failed run or establish a repair.
+
+### Controlled Windows shutdown investigation, 2026-10-27
+
+Status: bounded close-lifetime remedy implemented and component-tested on Windows
+and Linux. Final-source mandatory checks, review and maintainer disposition are
+recorded in [PR #87](https://github.com/MrQuality/kehila/pull/87).
+
+The third instrumented default-harness run captured a normal two-byte request
+with a complete HTTP 200 response (21 body bytes), followed by Hyper reporting
+shutdown with `ConnectionReset`. The run passed 41 unit and 14/15 transport tests.
+Thus oversized input is not necessary for this reproduced failure. New bounded
+diagnostics distinguish Hyper shutdown from other driver errors and TLS accept,
+HTTP, local TLS shutdown and peer-close rejection on the server. Original
+aggregate rejection and timeout counters remain intact.
+
+A real-TLS boundary matrix of 2/3/32-byte requests passed 30 selected runs
+(90 exchanges). Three additional instrumented full runs also passed; these
+passes did not invalidate the captured failure. A controlled client adapter then
+delayed only underlying TCP shutdown by a requested 10 ms after TLS record
+flushing, reproducing the post-response failure. In a recompiled B/A/B comparison,
+keeping the server read side alive for peer TLS closure passed all three sizes;
+restoring the original immediate drop failed the normal request; restoring the
+candidate passed again. An initial comparison reused the candidate build for
+the intended original variant and was excluded; the corrected comparison
+required a fresh build for each distinct variant. The retained evidence supports
+the tested lifetime intervention, not a packet-level explanation of reset
+generation, a Windows defect or a security-product attribution.
+
+The server now sends its TLS closure, then keeps the same owned connection slot
+until rustls reports peer closure. It rejects one unexpected application byte or
+a read error rather than draining arbitrary data. A silent peer remains owned
+until the existing five-second total connection deadline and then times out;
+the 16-connection limit is unchanged. Local completion now includes peer closure.
+A peer that receives the HTTP response but never reciprocates closure can time
+out instead of being counted complete. TLS 1.3 permits independent read-side
+closure; the former sequence is not established as protocol noncompliance
+([RFC 8446 section 6.1](https://www.rfc-editor.org/rfc/rfc8446.html#section-6.1)).
+
+The real-TLS delayed-shutdown regression failed against the original server before
+the remedy. The candidate passes that case, silent-peer timeout/owned cleanup,
+post-response application-data rejection, missing-close-notify rejection and
+capacity rejection while 16 peers wait for closure. Three Windows default-profile
+runs and the serial all-target profile each passed 41 unit and 20 transport
+tests; warnings-denied clippy passed. An initial full-suite build failed before
+tests while writing an existing incremental cache; the passing series used
+`CARGO_INCREMENTAL=0` with a fresh build cache. The in-memory injected Hyper shutdown
+test validates the diagnostic classifier, not the natural failure's cause.
+Removing the peer-close wait failed the silent-peer regression; suppressing the
+shutdown classification failed its Hyper control. Restoring each mutant passed
+the intended test. Removing the wait also reproduced the delayed client's
+post-response shutdown failure under the final non-incremental build settings;
+restoration passed. These are targeted observations, not a mutation score.
+Ubuntu 22.04 / WSL 2 kernel 6.18.54.1 with Rust/Cargo 1.95.0 passed 51 unit and
+20 transport tests using the serial all-target profile, plus warnings-denied
+clippy. Windows used Rust/Cargo 1.93.0; its final matching serial run also passed
+41 unit and 20 transport tests after the cleanup-helper refinement.
+
+No error was converted to success and no deadline, admission or certificate check
+was relaxed. This is not full Windows, browser, provider or authentication
+qualification. Previous Chrome observations predate this close path and were not
+repeated here; supported installation and A1-A5/T01-T16 gates remain open. Retain
+the historical failures and separate root-advisory/shared-verifier follow-ups.
+Both endpoints in these Windows runs are portable host-only test fixtures, not
+a Windows backend deployment. The intended backend remains a Linux container;
+its actual Windows-client/provider path needs separate evidence. Earlier generic
+failures cannot all be attributed to this captured class from their old records.
+
 ## Remaining authentication dependency candidates
 
 These are API-level reconnaissance on 2026-10-19, not added dependencies or
@@ -278,3 +376,13 @@ suites, an initial ECDSA P-256/SHA-256 certificate profile and exact loopback IP
 SAN. Certificate fees are excluded. The OWASP basis and RFC 9525 naming rationale
 are recorded there. This selects PoC inputs only; tooling/storage selection,
 execution, exact trust changes and broader platform qualification remain gated.
+
+### Buffered surplus input, 2026-10-30
+
+A real TLS regression sent a complete bodyless request and surplus application
+data in one write. The original diagnostic listener reported a completed
+exchange because Hyper had already buffered the surplus bytes; its later socket
+read saw only peer closure. The listener now rejects a nonempty Hyper read buffer
+before treating TLS closure as completion. The Windows regression failed before
+the change and passed afterward. This corrects close classification without
+adding routes or changing the diagnostic listener's loopback/HTTP limits.

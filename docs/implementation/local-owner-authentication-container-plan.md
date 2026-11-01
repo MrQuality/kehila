@@ -1,7 +1,11 @@
 # Remaining A0: bounded Linux-container proof plan
 
 Status: ADR-106 architecture accepted for the bounded disposable proof; executable
-proposal and API/provider qualification remain pending. No execution permission.
+proposal and full API/provider qualification remain pending. Execution permission
+is phase-specific; the bounded resource subset below ran on 2026-10-30.
+The [accepted local-caller amendment](../architecture/ADR-106-local-container-transport.md#accepted-local-caller-amendment-2026-10-30)
+revises guest reachability only for disposable authenticated tests; a fresh
+integrated run remains outstanding.
 Owner: project maintainer. Recorded: 2026-10-22. Related #40/#49 W2;
 [Accepted bounded ADR-106](../architecture/ADR-106-local-container-transport.md),
 [Accepted ADR-105](../architecture/ADR-105-local-owner-authentication.md),
@@ -85,6 +89,16 @@ other attached workload and one explicit IPv4 publication; no publish-all, wildc
 listener, host networking, shared namespaces or TLS proxy. Do not enable/change
 provider networking, firewall or security settings to make the proof pass.
 
+For the accepted authenticated-development extension, the restricted bridge may
+instead contain exactly the authority and its necessary disposable PostgreSQL
+fixture, in separate network namespaces and with separate identities, secrets
+and administrative access. This is related fixture membership, not permission
+for unrelated peers. Publish only the application endpoint; PostgreSQL has no
+publication. Verify the intended TLS/SCRAM connection and independently test
+ordinary guest and unrelated-container TCP access to the live database. A
+completed database TCP connection fails this boundary even if authentication
+later rejects it. Keep the original app-only diagnostic observations distinct.
+
 ### Trusted network configuration
 
 For this separately selected diagnostic profile, require exactly one occurrence
@@ -131,20 +145,44 @@ profile. No mode, forwarding or firewall change is authorized to obtain a pass.
 | --- | --- |
 | Windows browser/CLI to configured loopback port | Positive TLS and diagnostic request; exact public Host/Origin policy. |
 | Windows other IPs, IPv6 loopback and external owned LAN peer | No diagnostic listener reachable. Inspect actual bindings and exercise connections; failed unrelated network setup is not a pass. |
-| Unrelated container on another network / untrusted guest namespace | No direct path to `V:P` or an alternate VM publication. Record topology and distinguish lack of route from successful unintended ingress. |
+| Ordinary same-PC Windows/WSL process or unrelated container, disposable authenticated tests only | May reach the application through existing guest loopback or private `V:P` if reachable; no identity or administrative privilege follows. Record actual paths and enforce the same TLS/request/authentication/admission contract. No additional publication or bridge membership is allowed. |
+| Unrelated container / untrusted guest namespace, original diagnostic profile | Original guest-exclusion criterion remains historical and unchanged: no direct path to `V:P` or an alternate VM publication. It is superseded only for disposable authenticated tests by the amendment above. |
 | Trusted engine/VM administrator | Can defeat network/key restrictions; explicit residual risk, not an isolation success claim. |
 | Ordinary local caller to Windows loopback | May reach TLS; this is not caller authentication. Future routes retain ADR-105 identity checks. |
 
-Here, untrusted guest sources include ordinary nonadministrative guest users/
-processes and unrelated containers, excluding only the explicitly trusted engine/
-VM administrator. Do not choose a convenient isolated namespace as a substitute
-for other reachable guest paths. List actual Windows, VM and container interfaces,
-routes and publications before and after tests. A Windows self-connection to its LAN address does not prove remote
-LAN refusal. An unavailable owned peer/namespace leaves its case unqualified;
-do not create accounts or use external machines implicitly. Any unintended ingress
-blocks qualification. `--internal` or a declaration alone cannot pass this matrix;
-select compatible actual bridge/forwarding controls in the reviewed executable
-proposal, without widening this contract if they fail.
+Untrusted guest sources still include ordinary nonadministrative users/processes
+and unrelated containers; they are not promoted to trusted engine/VM administration.
+For disposable authenticated tests their local application reachability is now
+permitted, including private `V:P` if already reachable. This does not permit key,
+database or administrative access. The exact private bind and restricted bridge
+membership remain configuration requirements, not a claim that other local
+namespaces cannot reach the application.
+
+List actual Windows, VM and container interfaces, routes and publications before
+and after tests; inspect paths through WSL/VM interfaces and alternate provider
+publications as well as Windows. A Windows self-connection to its LAN address
+does not prove remote LAN refusal. An unavailable owned peer leaves that case
+unqualified; do not create accounts or use external machines implicitly. Any
+forbidden external ingress blocks qualification. A cooperating local relay is
+outside this confinement guarantee. `--internal` or a declaration alone cannot
+pass this matrix; no automatic networking or firewall change is authorized.
+
+### TCP topology observation and changed criterion, 2026-10-30
+
+One bounded TCP-only control observed a Windows-loopback connection and then a
+connection from an ordinary guest process with UID/GID 65534, no privileged
+supplementary group and zero effective capabilities. Serial listener accept
+counts advanced to one and then two. This falsified the original guest-exclusion
+criterion. It did not exercise TLS, authentication, private-file admission or a
+LAN peer. UID/capability observations do not prove absence of other host powers.
+Initial network teardown failed; owned resources were subsequently reconciled
+and removal verified. The test distribution was stopped.
+
+The maintainer then explicitly accepted the bounded local-caller amendment.
+Preserve the failed original observation; do not reinterpret it as a successful
+integrated run. Local attack-surface and shared-capacity risks are accepted for
+disposable values only. A fresh run must qualify the revised matrix, protected
+mounts and actual browser/CLI behavior before claiming the capability complete.
 
 ## Key, issuer and file-operation contract
 
@@ -315,3 +353,28 @@ results and confirmed owned cleanup. Partial evidence remains partial. This proo
 does not complete A0's wider dependency/installation/client work or any T01-T16
 case, authorize A1-A5, adopt ADR-103 or qualify production/replicated deployment.
 Record reached subset and remaining gates in #40/#49 and the implementing PR.
+
+## Native WSL resource subset, 2026-10-30
+
+The maintainer approved a separate disposable resource/lifecycle check while
+retaining container limits. A native-systemd Ubuntu 26.04.1 WSL 2 profile with
+distribution-packaged rootless Podman 5.7.0 exposed delegated memory, CPU and PID
+controllers using the systemd cgroup manager. Native boot and those controllers
+survived a distribution restart. An earlier provider had no available controllers
+in the relevant ancestry and rejected the memory limit before workload startup;
+its declaration of cgroup v2 or service delegation alone was insufficient.
+
+The running networkless probe's kernel files reported `memory.max=67108864`,
+`memory.swap.max=0`, `cpu.max=50000 100000` and `pids.max=32`. A fixed 96-MiB
+allocation attempt ended with OOM-killed state and exit 137. The dedicated user
+hierarchy's kernel `oom_kill` counter increased from zero to one, with no competing
+container in that fixture. This demonstrates memory containment for that bounded
+64-MiB case. CPU/PID kernel configuration was inspected; their stress behavior was
+not exercised. The owned container was removed and the provider stopped.
+
+This is a resource/lifecycle subset, not the application-container proof. Protected
+mounts and writable-alias exclusion, assigned-address verification, Windows
+loopback publication, the amended local/external ingress matrix, certificate lifecycle and real browser/
+CLI authentication still require observations on this profile. Neither a new
+distribution nor a successful memory probe inherits the earlier provider's mount
+or forwarding evidence. No resource-limit waiver or production deployment follows.

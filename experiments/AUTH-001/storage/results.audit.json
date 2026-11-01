@@ -1,0 +1,55 @@
+{
+  "cases": [
+    "atomic_competing_enrollment",
+    "simulated_lost_response_reconciliation",
+    "restricted_capabilities",
+    "binding_verifier_and_audit_constraints",
+    "dedicated_session_lock_and_startup",
+    "post_wait_takeover_fencing",
+    "post_wait_credential_cas",
+    "actor_preserving_administrative_recovery",
+    "credential_overflow_and_audit_rollback",
+    "fixed_identity_session_audit_confirmation",
+    "session_audit_failure_and_stale_denial"
+  ],
+  "passed": 11,
+  "scope": "A1 disposable SQL boundary",
+  "profile": "small-workload",
+  "cgroup_limits_qualified": false,
+  "postgresql": "16.15 (Debian 16.15-1.pgdg12+2)",
+  "engine": "podman version 5.8.3",
+  "python": "3.10.11",
+  "host": "Windows",
+  "source_sha256_lf": {
+    "install.sql": "e6b89f830e7a3d6f80595ae2a8a3ecc6851de540e4727a6b449c2ea1d96e3797",
+    "authority.sql": "98ac46e2309a7acc4ffdcfd44931ecf7ef03da05b0f9327a7ebb49378a960646",
+    "management.sql": "c1e69bb11717448a099af8ff37e821e748d6addbeaff21cbdb93172fe5a5d008",
+    "audit.sql": "930f1c38a32ff33699c1bd9311ff05040b46ee735612324463d641599cee25d1",
+    "run.py": "1910a3a6a95f5c099df04765e887177248b5b35e7077eda013afb3506a0ec21f",
+    "enrollment_cases.py": "56c9d5e24b9011f13e751335a3fa86d4bbe5d906f000d79ebc75d90840396a08",
+    "authority_cases.py": "3db31c73a253b59021ef7d63ccf9b6e500a9ad751034b648a33f6e5204e09d2b",
+    "credential_cases.py": "60a72f5c1077836f2166a323250d3fbe2ccdc8c09b95b5a83aa46550099dcda8",
+    "audit_cases.py": "9029caa95fda30d53e29c0328d4ad583a649f9962fd7e5815d07c8f891ca4b9d",
+    "compose.small-workload.yml": "da9a776def3ff28a1c84077733696466be4a7792843610ad017ca6167e6f83db"
+  },
+  "owned_cleanup_confirmed": true,
+  "recorded": "2026-10-27",
+  "unchanged_foundation_and_shared_helpers_revision": "aa2e484789083038b8af1bf23ef2b5a5ca7f9cb0",
+  "provider": "Podman/WSL 2",
+  "command": "python experiments/AUTH-001/storage/run.py --podman-machine <owned-machine> --exclusive-podman-machine --profile small-workload",
+  "targeted_regression": {
+    "change": "Omit stored credential kind from fixed audit comparison",
+    "observed": "Conflicting issuance identity was accepted; expected XX001 oracle failed",
+    "source_restored": true,
+    "restored_groups_passed": 11
+  },
+  "session_audit_fault": "Distinct injected SQLSTATE P0A02; no audit residue; intact retry succeeded",
+  "limits": [
+    "Disposable SQL boundary, not complete A1-A3",
+    "Rust credential eligibility and irreversible local revocation are unimplemented",
+    "Audit confirmation returns no bearer and does not reconstruct credentials",
+    "Response loss is simulated",
+    "Structural history fixture is not domain/codec qualification",
+    "No cgroup enforcement or actual browser/CLI qualification"
+  ]
+}

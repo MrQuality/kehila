@@ -16,6 +16,8 @@ use tokio::{net::TcpListener, sync::oneshot, task::JoinHandle};
 
 #[path = "transport/resources.rs"]
 mod resources;
+#[path = "transport/shutdown.rs"]
+mod shutdown;
 mod support;
 use support::Network;
 
@@ -180,13 +182,21 @@ impl Running {
         }
     }
     async fn finish(self) -> Observations {
-        self.stop.send(()).unwrap();
-        let observed = self.task.await.unwrap().unwrap();
-        let listener = TcpListener::bind(self.address)
-            .await
-            .expect("probe port released");
-        drop(listener);
-        observed
+        self.finish_checked().await.unwrap()
+    }
+    async fn finish_checked(self) -> Result<Observations, &'static str> {
+        let stopped = self.stop.send(()).is_ok();
+        let joined = self.task.await;
+        // Always attempt listener release after joining, even on a server failure.
+        let released = TcpListener::bind(self.address).await.map(drop);
+        let observed = joined
+            .map_err(|_| "server task join failed")?
+            .map_err(|_| "server returned failure")?;
+        released.map_err(|_| "probe port not released")?;
+        if !stopped {
+            return Err("server stopped before stop request");
+        }
+        Ok(observed)
     }
     async fn post(
         &self,
@@ -217,8 +227,14 @@ async fn trusted_ip_san_serves_closed_response() {
     let host = running.address.to_string();
     let result = running
         .post(ca.client(), Some(&format!("https://{host}")), &host)
-        .await
-        .unwrap();
+        .await;
+    let observed = running.finish_checked().await;
+    let result = result.unwrap_or_else(|error| panic!("client={error}; server={observed:?}"));
+    assert!(
+        observed.is_ok(),
+        "client_status={}; server={observed:?}",
+        result.0
+    );
     assert_eq!(
         result,
         (
@@ -226,7 +242,7 @@ async fn trusted_ip_san_serves_closed_response() {
             Bytes::from_static(b"{\"transport\":\"ready\"}")
         )
     );
-    assert_eq!(running.finish().await.accepted, 1);
+    assert_eq!(observed.unwrap().accepted, 1);
 }
 
 #[tokio::test]

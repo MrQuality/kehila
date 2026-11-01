@@ -1,0 +1,10 @@
+{
+  "checked_on": "2026-10-27",
+  "source": "https://api.osv.dev/v1/querybatch",
+  "query_scope": "All registry entries in the selected AUTH-001 Linux-reader lock, including target-specific and test entries; not the root workspace.",
+  "registry_packages": 98,
+  "lockfile_sha256_lf": "c0a7256989fb447c0edfc84328dcf9864a6389250fe7640340fa31119c009d12",
+  "findings": [],
+  "limitations": "Package/version observation only; not source reachability, provider/platform qualification, a minimum-version build or a future clean-graph guarantee.",
+  "historical_queries": "advisories.json"
+}

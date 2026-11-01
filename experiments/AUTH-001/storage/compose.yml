@@ -1,0 +1,21 @@
+# No published port, host mount or persistent data. SQL runs through owned exec.
+services:
+  postgres:
+    image: docker.io/library/postgres@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4
+    labels:
+      purpose: kehila-postgresql-test
+    network_mode: none
+    mem_limit: 256m
+    cpus: 1
+    pids_limit: 128
+    environment:
+      POSTGRES_PASSWORD: disposable-fixture-only
+      POSTGRES_HOST_AUTH_METHOD: reject
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --auth-local=trust --auth-host=reject
+    tmpfs:
+      - /var/lib/postgresql/data:size=256m
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d postgres]
+      interval: 1s
+      timeout: 2s
+      retries: 30
