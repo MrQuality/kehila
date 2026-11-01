@@ -483,11 +483,14 @@ completes T01-T16 or a supported installation.
   unqualified.
   The [partial Windows certificate campaign](../implementation/local-owner-authentication-listener.md#windows-certificate-campaign-partial-observations-2026-10-31)
   records valid/renewed acceptance, trust-removed rejection and a failed error-page
-  assertion. Complete platform and actual browser-expiry checks remain in the
-  final user-assisted campaign after automated prerequisites and harness review.
+  assertion. The [subsequent final campaign](../implementation/local-owner-authentication-listener.md#final-windows-certificate-and-chrome-expiry-observations-2026-11-01)
+  completed six diagnostic certificate-policy cases and actual Chrome
+  constructed idle/absolute expiry observations. Its host-listener cleanup
+  assertion failed; later absence and exact-root removal were verified
+  separately. Full cleanup/lifecycle and elapsed-TTL qualification remain open.
   The [browser-cookie expiry wire prerequisite](../implementation/local-owner-authentication-listener.md#browser-cookie-expiry-wire-prerequisite-2026-11-01)
   now passes constructed idle/absolute histories, the intended mutation failure
-  and restored pass. Actual Chrome expiry remains unqualified.
+  and restored pass. The later Chrome evidence retains its stated scope limits.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

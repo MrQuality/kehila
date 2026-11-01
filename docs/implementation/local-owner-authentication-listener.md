@@ -546,11 +546,12 @@ reports page-load errors separately from DOM output. The failed attempt and its
 typed rejection remain separate evidence; the corrected assertion requires the
 expected exact error and rejects contradictory success or other network errors.
 
-The complete platform campaign, including cases not reached in that attempt,
-and actual Chrome session expiry remain incomplete. Under the
+That attempt did not complete the platform cases or actual Chrome session
+expiry. Under the
 [final-verification scheduling rule](../TESTING.md#automated-checks-and-user-assisted-final-verification),
-the remaining user-assisted campaign waits for completed harness preparation,
-review and applicable automated prerequisites.
+the subsequent campaign below followed completed harness preparation, review
+and applicable automated prerequisites. Its later results do not erase this
+earlier failed assertion.
 
 ### Browser-cookie expiry wire prerequisite (2026-11-01)
 
@@ -577,5 +578,45 @@ lacked Clippy. That failed attempt remains distinct from the completed retry.
 This is a constructed-history browser-cookie wire check with a test-owned
 listener, not an actual Chrome journey, elapsed 30-minute/12-hour qualification,
 public listener lifecycle or complete T15 result. Explicit roots supplied normal
-TLS verification; OS trust was unchanged. Actual Chrome expiry and the remaining
-platform certificate cases stay in the final user-assisted campaign.
+TLS verification; OS trust was unchanged. The subsequent final campaign below
+adds actual Chrome observations without extending this wire fixture's scope.
+
+### Final Windows certificate and Chrome expiry observations (2026-11-01)
+
+The reviewed platform campaign completed six certificate-policy cases with
+ordinary verification and fresh browser profiles. Schannel and Chrome accepted
+the original and distinct renewed leaves. Wrong-IP, expired and untrusted leaves
+produced the expected typed name, date and issuer failures. After removing the
+temporary test root, Schannel reported `PartialChain` and Chrome reported
+`ERR_CERT_AUTHORITY_INVALID`. Root absence from both Windows stores and owned
+diagnostic cleanup were verified. These are diagnostic-endpoint certificate
+observations, not authenticated owner journeys or every TLS configuration.
+
+A separate Chrome 156 journey used the actual browser interface, protected
+Linux startup assets, PostgreSQL and a test-owned listener. For each of the
+constructed idle and absolute histories, login and an actual new-document reload
+preserved the same active cookie and CSRF value. The cookie remained present
+when the expired history was applied. The next new-document reload received
+HTTP 401 from CSRF bootstrap, showed the signed-out interface and cleared the
+session cookie. The UI stopped at bootstrap; this does not claim a subsequent
+expired state-route request. Cookie observations included Secure, HttpOnly,
+SameSite=Strict and Path=/.
+
+The fixture runtime joined normally, durable verifier revision and authentication
+generation remained unchanged, and runtime database connections and advisory locks were
+absent. All 29 browser connections retained peer-close rejection accounting;
+successful application behavior does not establish reciprocal TLS closure.
+
+The browser run failed its final cleanup assertion because the host port was
+still observed after the owned provider stopped. Later inspection found the
+listener absent, with the provider stopped and owned container, secret, network
+and image inventories cleared. The failure triggered exact-root removal;
+verified removal and the subsequent trust-removed negative passed. The original
+cleanup failure remains distinct from that later reconciliation. No blocking
+layer or forwarding mechanism is attributed from these observations.
+
+These results add actual Chrome behavior for constructed expiry histories.
+They do not qualify elapsed 30-minute/12-hour waiting, independent absolute-only
+guard sensitivity, the unmodified public listener lifecycle, all cleanup races,
+full T15, supported installation or M1 completion. Earlier failed campaigns and
+the remaining delivery gates retain their stated dispositions.

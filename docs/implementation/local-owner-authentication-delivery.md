@@ -99,12 +99,17 @@ normal joined exit inside the detection/drain envelope and database-resource
 release. It does not qualify platform-browser expiry or all active-work schedules.
 The [partial Windows certificate campaign](local-owner-authentication-listener.md#windows-certificate-campaign-partial-observations-2026-10-31)
 adds valid/renewed acceptance and trust-removed rejection. A failed DOM-only error
-assertion remains recorded; the complete corrected platform campaign and actual
-Chrome session expiry await the final user-assisted verification stage.
+assertion remains recorded. The [subsequent final campaign](local-owner-authentication-listener.md#final-windows-certificate-and-chrome-expiry-observations-2026-11-01)
+completed the six diagnostic certificate-policy cases and actual Chrome
+constructed idle/absolute expiry observations. The browser run's host-listener
+cleanup assertion failed; later verified absence, exact-root removal and the
+trust-removed negative are separate reconciliation evidence. This does not
+qualify every cleanup schedule, elapsed TTL or the full capability.
 The [browser-cookie expiry wire prerequisite](local-owner-authentication-listener.md#browser-cookie-expiry-wire-prerequisite-2026-11-01)
 now passes constructed idle/absolute histories over real TLS/HTTP, with an
 intended expiry-bypass mutation failure and restored pass. This is an automated
-prerequisite; actual Chrome expiry and final platform qualification remain open.
+prerequisite; the subsequent Chrome observations retain their test-owned
+listener and constructed-history limits.
 
 ## Definition of done and evidence
 
