@@ -551,3 +551,31 @@ and actual Chrome session expiry remain incomplete. Under the
 [final-verification scheduling rule](../TESTING.md#automated-checks-and-user-assisted-final-verification),
 the remaining user-assisted campaign waits for completed harness preparation,
 review and applicable automated prerequisites.
+
+### Browser-cookie expiry wire prerequisite (2026-11-01)
+
+A noninteractive Linux/PostgreSQL fixture exercised the browser-cookie state and
+CSRF bootstrap routes over real TLS/HTTP. Confirmed browser issuance first
+returned active state and a stable CSRF value on repeated bootstrap. Separately
+constructed idle-expired and absolute-expired session histories then returned
+HTTP 401 with the canonical rejection body on both routes. Production clocks
+and expiry-policy constants were unchanged.
+
+The normal fixture passed, an isolated mutation bypassing the idle/absolute
+eligibility guards failed the intended expired-cookie HTTP assertion, and the
+restored normal fixture passed again. The mutation failed at the idle case; it
+does not independently demonstrate sensitivity to an absolute-only guard defect.
+The coordinator joined normally, database connections and advisory locks were
+absent after each case, and owned cleanup completed. Each test application and
+database used an observed 256-MiB memory ceiling with swap disabled.
+
+The fixture build also passed 132 ordinary unit tests and Clippy with warnings
+denied; twelve opt-in tests were skipped in that ordinary run. An earlier build
+attempt passed the same unit suite but stopped because its selected toolchain
+lacked Clippy. That failed attempt remains distinct from the completed retry.
+
+This is a constructed-history browser-cookie wire check with a test-owned
+listener, not an actual Chrome journey, elapsed 30-minute/12-hour qualification,
+public listener lifecycle or complete T15 result. Explicit roots supplied normal
+TLS verification; OS trust was unchanged. Actual Chrome expiry and the remaining
+platform certificate cases stay in the final user-assisted campaign.

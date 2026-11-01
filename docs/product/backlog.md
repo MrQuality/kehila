@@ -485,6 +485,9 @@ completes T01-T16 or a supported installation.
   records valid/renewed acceptance, trust-removed rejection and a failed error-page
   assertion. Complete platform and actual browser-expiry checks remain in the
   final user-assisted campaign after automated prerequisites and harness review.
+  The [browser-cookie expiry wire prerequisite](../implementation/local-owner-authentication-listener.md#browser-cookie-expiry-wire-prerequisite-2026-11-01)
+  now passes constructed idle/absolute histories, the intended mutation failure
+  and restored pass. Actual Chrome expiry remains unqualified.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

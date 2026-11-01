@@ -101,6 +101,10 @@ The [partial Windows certificate campaign](local-owner-authentication-listener.m
 adds valid/renewed acceptance and trust-removed rejection. A failed DOM-only error
 assertion remains recorded; the complete corrected platform campaign and actual
 Chrome session expiry await the final user-assisted verification stage.
+The [browser-cookie expiry wire prerequisite](local-owner-authentication-listener.md#browser-cookie-expiry-wire-prerequisite-2026-11-01)
+now passes constructed idle/absolute histories over real TLS/HTTP, with an
+intended expiry-bypass mutation failure and restored pass. This is an automated
+prerequisite; actual Chrome expiry and final platform qualification remain open.
 
 ## Definition of done and evidence
 
