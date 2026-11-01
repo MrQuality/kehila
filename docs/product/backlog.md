@@ -491,6 +491,11 @@ completes T01-T16 or a supported installation.
   The [browser-cookie expiry wire prerequisite](../implementation/local-owner-authentication-listener.md#browser-cookie-expiry-wire-prerequisite-2026-11-01)
   now passes constructed idle/absolute histories, the intended mutation failure
   and restored pass. The later Chrome evidence retains its stated scope limits.
+  The [selected-profile ingress/release follow-up](../implementation/local-owner-authentication-listener.md#selected-profile-ingress-and-public-runtime-release-2026-11-01)
+  adds nine assigned Windows IPv4/IPv6 connection observations, permitted local
+  path checks and normal public-runtime exit with owned cleanup. It does not
+  reproduce or explain the earlier browser cleanup failure; listener inventories
+  and actual connection outcomes remain separate evidence.
 
 - Resolve the [open advisory follow-ups](../implementation/local-owner-authentication-a0.md#advisory-follow-up),
   including final-source hosted checks/review of the Tokio 1.53.3 patch and the

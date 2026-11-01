@@ -620,3 +620,52 @@ They do not qualify elapsed 30-minute/12-hour waiting, independent absolute-only
 guard sensitivity, the unmodified public listener lifecycle, all cleanup races,
 full T15, supported installation or M1 completion. Earlier failed campaigns and
 the remaining delivery gates retain their stated dispositions.
+
+### Selected-profile ingress and public-runtime release (2026-11-01)
+
+A subsequent noninteractive run reused the unchanged public owner runtime with
+normal explicit-root TLS verification. It inspected the selected WSL 2 NAT
+profile before and after the path checks: Windows addresses/routes, configured
+WSL options, effective networking mode, active firewall settings and container
+publications were recorded. The recorded Windows addresses/routes, configured
+options and firewall settings were unchanged. The application and PostgreSQL
+retained their observed 256-MiB memory ceilings with swap disabled.
+
+Nine Windows connection attempts covered four assigned non-loopback IPv4
+addresses and five IPv6 addresses, including IPv6 loopback. None completed TCP
+using a configured one-second socket timeout. A valid login and same-bearer state
+controls before and after the path checks returned HTTP 200. These are sampled
+connection outcomes against a live control, not universal interface isolation.
+
+Windows attempts to two guest IPv4 addresses and the private application address
+also did not complete TCP using that timeout. An ordinary guest process with
+UID/GID 65534, no supplementary groups and no effective capabilities reached
+guest loopback using normal TLS verification and received canonical HTTP 401
+without credentials. Its direct private-application attempt used a two-second
+timeout and did not complete TCP. This agrees with the accepted local-caller
+amendment: local application reachability is permitted but supplies no identity
+or administrative privilege.
+No trust, network or security-product configuration was changed, and the earlier
+phone observation remains a separate sample rather than a repeated test.
+
+The public runtime exited normally at its runnable-lifetime boundary and joined
+its work. Runtime database connections and advisory locks were absent. Sampled
+loopback TCP connected while the fixture was live, then did not complete during
+probes configured with a 0.35-second timeout after runtime exit, container removal
+and provider stop.
+Owned cleanup and the final separate reconciliation completed. This observes
+that public-runtime lifecycle; it neither reproduces nor repairs the earlier
+test-owned browser fixture's failed cleanup assertion or measures an exact
+release interval for it.
+
+Windows' TCP-listener inventory was empty even in the live observation where
+loopback TCP connected. Inventory and connection outcomes are therefore separate
+oracles; an empty inventory alone is not evidence of application unreachability.
+No forwarding mechanism or security-product cause is established by this result.
+
+An initial attempt stopped before ingress probes because its WSL utility lookup
+used an incorrect path. Its failed result and successful cleanup are preserved.
+The corrected retry used the observed installed utility; both attempts and
+cleanup fit within the original 600-second allowance. No source compilation,
+browser repetition or new trust installation was needed. Other provider modes,
+all external routes, full T01-T16 and supported installation remain unqualified.
