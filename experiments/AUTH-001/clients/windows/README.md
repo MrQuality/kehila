@@ -2,8 +2,10 @@
 
 This is an experimental Windows **client** for the Linux AUTH-001 owner backend.
 It does not select Windows server-key storage or provide a supported installation.
-Source and local file/parser checks are prepared; real TLS, cancellation and
-browser/container journeys remain qualification gates.
+Local file/parser checks and actual Windows TLS/client journeys have recorded
+results. The [owner-listener evidence](../../../../docs/implementation/local-owner-authentication-listener.md)
+and [delivery checklist](../../../../docs/implementation/local-owner-authentication-delivery.md)
+track executed cases, failed attempts and remaining qualification limits.
 
 Use the installed .NET Framework 64-bit compiler through `build.ps1`, with a
 pre-created protected output directory outside the checkout. `-Test` compiles
@@ -34,8 +36,9 @@ controlled disposable automation; it does not enable credential output.
 The transport requires TLS 1.3 and ordinary Windows certificate/IP validation,
 then additionally pins the selected chain root. It disables redirects, proxy,
 ambient credentials and cookies. A five-second request deadline retains owned
-response disposal through body reads; actual stalled-peer behavior must still
-be measured on the selected Windows profile. Headers and response bodies are
+response disposal through body reads. Actual stalled-peer qualification must be
+established by the linked execution evidence, not this source description.
+Headers and response bodies are
 bounded. Only the backend's fixed canonical JSON response encoding is accepted;
 the BCL parser/writer rejects unknown metadata, duplicate fields and trailing
 bytes. This deliberately does not promise compatibility with arbitrary JSON

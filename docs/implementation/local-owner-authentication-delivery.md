@@ -131,11 +131,19 @@ expiry evidence does not become elapsed-TTL or complete T01-T16 qualification.
 
 ## Definition of done and evidence
 
+The checked observations below apply to the bounded disposable profile. They
+do not establish every failure schedule or full T01-T16 qualification. The
+remaining concrete execution item is the Windows CLI stalled-response-body
+deadline check: successful responses and certificate rejection do not prove
+that a partially delivered response is cancelled within the client deadline.
+The prepared check has not yet run. It must preserve ordinary Windows trust and
+observe both a complete-response control and an independently held partial body.
+
 - [x] The bounded disposable authenticated-test profile has its
   [explicit acceptance](https://github.com/MrQuality/kehila/pull/87#issuecomment-6442532339).
 - [x] The disposable A1 SQL, capabilities and transaction contracts have source
   review and native subset evidence before stateful runtime integration.
-- [ ] Rust owns the dedicated PostgreSQL connection, bounded serving work and
+- [x] Bounded observations establish Rust ownership of the PostgreSQL connection, serving work and
   uncertain-outcome cleanup; observed loss suppresses admission and output.
 - [x] Real Linux file admission and selected-provider mount/identity premises
   were observed in the bounded disposable fixture. This does not qualify a
@@ -143,18 +151,21 @@ expiry evidence does not become elapsed-TTL or complete T01-T16 qualification.
 - [x] Disposable one-owner enrollment, simulated lost-response reconciliation,
   narrow serving/admin rights, generation fencing and fixed audit confirmation
   have real PostgreSQL oracles. This does not qualify Rust credential eligibility.
-- [ ] Browser/CLI login, rejection, logout, session expiry/revocation, password
+- [x] Browser/CLI login, rejection, logout, constructed session expiry/revocation, password
   change and stale credentials after restart have applicable actual TLS/HTTP
   evidence. Domain-command and supported-restore cases remain explicitly mapped.
-- [ ] Disposition the existing Medium/P2 Windows HTTP reliability follow-up before
-  A3 qualification. Preserve both exchange and connection-driver outcomes and
+- [x] Record the bounded engineering disposition of the captured Medium/P2
+  Windows HTTP failure classes in the handoff audit above. Preserve both exchange and connection-driver outcomes and
   failed attempts; distinguish the documented serial harness from historical
   default-harness results. An unchanged passing rerun does not settle the cause.
-- [ ] Complete verification-plus-replacement hashing latency, peak memory,
+- [x] Complete verification-plus-replacement hashing latency, peak memory,
   capacity rejection and owned work/connection cleanup are measured against the
   proposed profile limits. Report overruns without silently relaxing limits.
-- [ ] Each evidence record identifies source, commands/targets/harness, platform,
+- [x] The linked evidence records identify source, commands/targets/harness, platform,
   tools/provider, sample/fixture, observed results, failed attempts and limits.
+- [ ] Execute and disposition the actual Windows CLI stalled-response-body
+  deadline check. Source inspection is not an execution pass; exact temporary
+  trust approval and adequate RAM remain prerequisites.
 - [ ] Relevant failure regressions, mandatory commit gates and final-source CI
   pass; no skipped platform case is reported as qualified.
 - [ ] Exact-head source review and dispositions are complete, related records are
