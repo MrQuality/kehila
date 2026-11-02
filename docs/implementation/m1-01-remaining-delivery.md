@@ -100,6 +100,15 @@ this retained plan alone is not execution evidence.
 
 ## Remaining delivery after the first slice
 
+The [2026-11-02 integration contract](authenticated-project-integration.md)
+proposes the next browser-first outcome: authenticated creation and authoritative
+read-back against fresh native PostgreSQL, with prototype data isolated. The
+maintainer selected that direction for design; exact adoption, allocation,
+dependencies and execution retain their gates. [Proposed ADR-107](../architecture/ADR-107-project-creation-intents.md)
+supplies a reviewable allocation candidate, not completed W2 or approved W3.
+This groups relevant work around a product outcome without waiving W4/W7
+replay, retirement, recovery or route-exposure requirements.
+
 These work packages preserve the existing acceptance scope. They establish
 ordering and review gates, not a commitment to one PR per package. Each stateful
 package needs its own bounded plan, negative/failure evidence and maintainer

@@ -126,6 +126,15 @@ must not be claimed by M1 checks.
 <a id="m1-01-remaining-delivery"></a>
 ### M1-01 remaining delivery: successor execution record
 
+**2026-11-02 integration design:** The maintainer selected a browser-first
+authenticated ProjectCreate/read-back journey against fresh native PostgreSQL,
+keeping prototype data isolated. The [integration contract](../implementation/authenticated-project-integration.md)
+and [Proposed ADR-107](../architecture/ADR-107-project-creation-intents.md) record
+source ownership, atomic intent/target reconciliation and acceptance evidence.
+This is design authorization, not ADR-103 adoption, allocation acceptance,
+runtime implementation or supported installation. #40/#41/#49 retain their scope
+and the contract's explicit rollout gates.
+
 Planning [PR #50](https://github.com/MrQuality/kehila/pull/50) merged on 2026-10-14
 at 0c89bfbfd0c20b8556894e4c91c7814d6eacc96c. The successor issue and plan are now
 on main. W1 [PR #51](https://github.com/MrQuality/kehila/pull/51) merged on
