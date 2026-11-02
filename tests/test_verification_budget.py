@@ -35,6 +35,16 @@ class DeadlineTests(IsolatedEnvironmentTests):
                 with budget.work_budget(seconds):
                     self.fail('invalid work budget admitted')
 
+    def test_extended_phase_budget_requires_an_explicit_maximum_and_stays_clamped(self):
+        with self.assertRaises(ValueError):
+            budget.validate_seconds(900)
+        with patch.object(budget.time, 'monotonic', return_value=100):
+            with budget.work_budget(900, maximum=1800):
+                self.assertEqual(budget.command_timeout(1200), 900)
+        for seconds, maximum in ((1801, 1800), (True, 1800), (900, float('inf'))):
+            with self.subTest(seconds=seconds, maximum=maximum), self.assertRaises(ValueError):
+                budget.validate_seconds(seconds, maximum=maximum)
+
     def test_expired_service_work_still_logs_and_tears_down_with_separate_limits(self):
         now = [0]
         runtime = services.ComposeRuntime(['docker', 'compose'], {})
@@ -71,6 +81,34 @@ class DeadlineTests(IsolatedEnvironmentTests):
             with self.subTest(value=value), patch.dict(os.environ, KEHILA_VERIFICATION_DEADLINE=value):
                 with self.assertRaises(ValueError):
                     budget.command_timeout(10)
+
+    def test_machine_override_remains_clamped_by_total_work_deadline(self):
+        with patch.object(budget.time, 'monotonic', return_value=0), \
+                patch.object(services, 'verification_settings', return_value={
+                    'machine_start_seconds': 300, 'machine_stop_seconds': 180}), \
+                patch.object(services, '_machine_lease', return_value=nullcontext()), \
+                patch.object(services, '_machine_info', return_value={'State': 'stopped'}), \
+                patch.object(services, '_machine_connections', return_value=['fixture', 'fixture-root']), \
+                patch.object(services, 'compose_command', return_value=['podman', 'compose']), \
+                patch.object(services.subprocess, 'run') as run:
+            with budget.work_budget(200):
+                with services.managed_runtime('podman', 'fixture', environment={}):
+                    pass
+        self.assertEqual(run.call_args.kwargs['timeout'], 200)
+
+    def test_cleanup_uses_captured_settings_without_reopening_local_file(self):
+        with patch.object(services, 'verification_settings', side_effect=[{
+                'machine_start_seconds': 300, 'machine_stop_seconds': 180},
+                AssertionError('local settings reopened during cleanup')]) as load, \
+                patch.object(services, '_machine_lease', return_value=nullcontext()), \
+                patch.object(services, '_machine_info', side_effect=[{'State': 'stopped'}, {'State': 'running'}]), \
+                patch.object(services, '_machine_connections', return_value=['fixture', 'fixture-root']), \
+                patch.object(services, 'compose_command', return_value=['podman', 'compose']), \
+                patch.object(services.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '')) as run:
+            with services.managed_runtime('podman', 'fixture', environment={}, exclusive=True):
+                pass
+        load.assert_called_once()
+        self.assertEqual(run.call_args.kwargs['timeout'], 180)
 
     def test_expired_work_still_inspects_both_stores_and_stops_the_owned_vm(self):
         now = [0]

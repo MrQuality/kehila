@@ -1,0 +1,181 @@
+"""Container gate routing/ownership checks; no engine is contacted by these tests."""
+from contextlib import contextmanager
+import importlib.util
+import json
+from pathlib import Path
+import subprocess
+import sys
+import unittest
+from unittest.mock import Mock, patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+import container_executor as execution
+import container_verify as coordinator
+import container_source as source
+import test_services as services
+from test_services import ComposeRuntime
+from verification_settings import load
+
+IMAGE = 'sha256:' + 'a' * 64
+IDENTITY = 'b' * 64
+
+
+class ExecutorTests(unittest.TestCase):
+    def executor(self):
+        value = execution.ContainerExecutor(ComposeRuntime(['podman', 'compose'], {}),
+                                            load({}), IMAGE, Path.cwd())
+        value.container = IDENTITY
+        return value
+
+    def test_service_discovery_preserves_full_identity_for_inspection(self):
+        executor = self.executor()
+        def discover(command, **kwargs):
+            identity = IDENTITY if '--no-trunc' in command else IDENTITY[:12]
+            return Mock(stdout=identity)
+        with patch.object(services, 'run', side_effect=discover):
+            identity = services._containers(executor.runtime, 'kehila-test-fixture')[0]
+        executor.engine = Mock(return_value=Mock(stdout=json.dumps([{'Id': IDENTITY}])))
+        self.assertEqual(executor.inspect_container(identity)['Id'], IDENTITY)
+
+    def test_image_inspection_normalizes_ids_without_using_manifest_digest(self):
+        self.assertEqual(execution.inspected_image_id('a' * 64), IMAGE)
+        self.assertEqual(execution.inspected_image_id(IMAGE), IMAGE)
+        for value in ('a' * 12, 'image:tag', None):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                execution.inspected_image_id(value)
+
+    def test_actual_cgroup_limits_are_checked_before_workloads(self):
+        with patch.object(source.Path, 'read_text', side_effect=['2147483648', '512', '100000 100000']):
+            source.verify_limits(2147483648, 512, 1)
+        for memory, pids, cpu in [('max', '512', '100000 100000'),
+                                  ('2147483648', 'max', '100000 100000'),
+                                  ('2147483648', '512', 'max 100000')]:
+            with self.subTest(memory=memory, pids=pids, cpu=cpu), \
+                    patch.object(source.Path, 'read_text', side_effect=[memory, pids, cpu]):
+                with self.assertRaises(ValueError):
+                    source.verify_limits(2147483648, 512, 1)
+
+    def test_mutable_or_missing_image_is_rejected(self):
+        for image in (None, '', 'python:latest', 'sha256:short', 'image@sha256:' + 'a' * 63):
+            with self.subTest(image=image), self.assertRaises(ValueError):
+                execution.image_reference(image)
+
+    def test_remaining_duration_is_translated_not_absolute_host_clock(self):
+        executor = self.executor()
+        executor.engine = Mock()
+        with patch.object(execution, 'command_timeout', return_value=12):
+            executor.execute([sys.executable, 'check.py'], {
+                'KEHILA_TEST_MONGO_URL': 'mongodb://10.1.0.2:27017',
+                'KEHILA_VERIFICATION_DEADLINE': '9999999', 'SECRET': 'never-forward'})
+        args = executor.engine.call_args.args
+        self.assertIn('12', args)
+        self.assertIn('scripts/container_command.py', args)
+        self.assertIn('KEHILA_TEST_MONGO_URL=mongodb://10.1.0.2:27017', args)
+        self.assertFalse(any('SECRET' in value or '9999999' in value for value in args))
+        self.assertEqual(args[-2:], ('python', 'check.py'))
+
+    def test_failed_command_removes_workloads_and_preserves_cleanup_failure(self):
+        executor = self.executor()
+        primary = subprocess.CalledProcessError(3, ['engine', 'exec'])
+        cleanup = OSError('cleanup failed')
+        executor.engine = Mock(side_effect=primary)
+        executor.remove = Mock(side_effect=cleanup)
+        with patch.object(execution, 'command_timeout', return_value=12):
+            with self.assertRaises(subprocess.CalledProcessError) as caught:
+                executor.execute(['cargo', 'test'])
+        self.assertIs(caught.exception, primary)
+        executor.remove.assert_called_once()
+        self.assertEqual(primary._cleanup_failures, (('failed verification runner', cleanup),))
+
+    def test_machine_command_allowance_is_still_clamped_by_remaining_work(self):
+        executor = self.executor()
+        executor.settings = {**executor.settings, 'command_seconds': 900}
+        executor.engine = Mock()
+        with patch.object(execution, 'command_timeout', return_value=37) as remaining:
+            executor.execute(['cargo', 'test'])
+        remaining.assert_called_once_with(900)
+        self.assertIn('37', executor.engine.call_args.args)
+
+    def test_build_network_detachment_is_idempotent(self):
+        executor = self.executor()
+        executor.engine = Mock()
+        executor.finish_builds()
+        executor.finish_builds()
+        self.assertEqual(executor.engine.call_count, 1)
+
+    def test_effective_cpu_quota_must_match(self):
+        executor = self.executor()
+        self.assertTrue(executor.cpu_limit_matches({'NanoCpus': 1000000000}))
+        self.assertTrue(executor.cpu_limit_matches({'CpuQuota': 100000, 'CpuPeriod': 100000}))
+        self.assertFalse(executor.cpu_limit_matches({'CpuQuota': 200000, 'CpuPeriod': 100000}))
+        self.assertFalse(executor.cpu_limit_matches({}))
+
+    def test_foreign_service_network_is_rejected_before_connect(self):
+        executor = self.executor()
+        executor.inspect_container = Mock(return_value={
+            'Config': {'Labels': {'com.docker.compose.project': 'development'}},
+            'NetworkSettings': {'Networks': {'development': {'IPAddress': '10.1.0.2'}}}})
+        executor.engine = Mock()
+        with self.assertRaises(ValueError):
+            with executor.service_network({'nats': IDENTITY}):
+                self.fail('foreign network admitted')
+        executor.engine.assert_not_called()
+
+    def test_disconnect_failure_cannot_replace_live_failure(self):
+        executor = self.executor()
+        executor.inspect_container = Mock(return_value={
+            'Config': {'Labels': {'com.docker.compose.project': 'kehila-test-fixture'}},
+            'NetworkSettings': {'Networks': {'fixture': {'IPAddress': '10.1.0.2'}}}})
+        network = {'Id': 'c' * 64, 'Labels': {'com.docker.compose.project': 'kehila-test-fixture'}}
+        cleanup = OSError('disconnect failed')
+        executor.engine = Mock(side_effect=[Mock(stdout=json.dumps([network])), Mock(), cleanup])
+        primary = RuntimeError('live assertion failed')
+        with self.assertRaises(RuntimeError) as caught:
+            with executor.service_network({'nats': IDENTITY}):
+                raise primary
+        self.assertIs(caught.exception, primary)
+        self.assertEqual(primary._cleanup_failures,
+                         (('verification service network attachment', cleanup),))
+
+
+class MatrixTests(unittest.TestCase):
+    def test_all_commands_use_container_executor_and_serial_internal_endpoints(self):
+        events = []
+        executor = Mock()
+        executor.runtime = object()
+        executor.execute.side_effect = lambda command, *env: events.append(('command', command, env))
+        executor.finish_builds.side_effect = lambda: events.append(('builds-finished',))
+
+        @contextmanager
+        def group(runtime, names):
+            events.append(('start', tuple(names)))
+            yield {name: name for name in names}
+            events.append(('stop', tuple(names)))
+
+        @contextmanager
+        def network(containers):
+            yield {name: '10.1.0.' + str(i + 2) for i, name in enumerate(containers)}
+
+        executor.service_network.side_effect = network
+        args = Mock(docs=False, pure=False)
+        with patch.object(coordinator, 'service_group', group):
+            coordinator.checks(executor, args)
+        lifecycle = [event for event in events if event[0] in {'start', 'stop'}]
+        self.assertEqual(lifecycle, [
+            ('start', ('nats',)), ('stop', ('nats',)),
+            ('start', ('opensearch',)), ('stop', ('opensearch',)),
+            ('start', ('postgres', 'ferretdb')), ('stop', ('postgres', 'ferretdb'))])
+        commands = [event[1] for event in events if event[0] == 'command']
+        self.assertIn(['cargo', 'test', '--locked', '--workspace', '--no-run'], commands)
+        self.assertIn(['cargo', 'test', '--locked', '-p', 'event_dispatcher'], commands)
+        self.assertTrue(any('--build-only' in command for command in commands))
+        self.assertTrue(any('--run-only' in command for command in commands))
+        self.assertTrue(any('scripts/go_test.py' in command for command in commands))
+        self.assertTrue(any('experiments/SP-002/check_seed_oracle.py' in command for command in commands))
+        self.assertTrue(any('experiments/SP-003/check.py' in command for command in commands))
+        first_group = next(i for i, event in enumerate(events) if event[0] == 'start')
+        self.assertTrue(any('--build-only' in event[1] for event in events[:first_group]
+                            if event[0] == 'command'))
+        readies = [command for command in commands if 'scripts/healthcheck.py' in command]
+        self.assertEqual(len(readies), 4)
+        self.assertTrue(all('--host' in command and '127.0.0.1' not in command for command in readies))

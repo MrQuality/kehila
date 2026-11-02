@@ -9,13 +9,20 @@ import argparse
 import os
 import subprocess
 import sys
-import tempfile
+
+# Hook imports must not create artifacts in the checkout.
+sys.dont_write_bytecode = True
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from temp_work import owned_directory
+from cleanup_errors import print_failure
+from verification_settings import load as verification_settings
 
 
-def git(*args):
-    return subprocess.check_output(["git", *args], cwd=ROOT, timeout=30)
+def git(*args, environment=None, input_bytes=None):
+    return subprocess.check_output(["git", *args], cwd=ROOT, timeout=30,
+                                   env=environment, input=input_bytes)
 
 
 def fail(code, message):
@@ -57,50 +64,85 @@ def verification_scope(paths):
     return "pure"
 
 
+def head_commit():
+    try:
+        return git("rev-parse", "--verify", "--quiet", "HEAD^{commit}").strip()
+    except subprocess.CalledProcessError as error:
+        if error.returncode != 1:
+            raise
+        return None  # A genuinely unborn repository has no baseline commit.
+
+
+def supported_tree(tree):
+    entries = git("ls-tree", "-r", "-z", tree.decode("ascii")).split(b"\0")
+    return all(not entry or entry.split(b" ", 1)[0] in (b"100644", b"100755")
+               for entry in entries)
+
+
+def export_source(tree, destination, index):
+    """Export an immutable tree using metadata outside the source payload."""
+    destination, index = Path(destination), Path(index)
+    if (not destination.is_absolute() or not index.is_absolute()
+            or index.exists() or destination == index or destination in index.parents):
+        raise ValueError("Expected a new external snapshot index")
+    destination.mkdir()
+    environment = dict(os.environ, GIT_INDEX_FILE=str(index))
+    git("read-tree", tree.decode("ascii"), environment=environment)
+    git("checkout-index", "--all", "--force", "--prefix=" + destination.as_posix() + "/",
+        environment=environment)
+
+
+def verify_index_and_head(tree, head):
+    if git("write-tree").strip() != tree or head_commit() != head:
+        return fail(3, "Git index or HEAD changed during verification; retry")
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", help="CI: compare this ancestor with checked-out HEAD")
     args = parser.parse_args()
+    head_before = head_commit()
+    tree_before = git("write-tree").strip()
     if args.base:
-        git("rev-parse", "--verify", args.base + "^{commit}")
-        if git("diff", "--cached", "--name-only"):
+        base = git("rev-parse", "--verify", args.base + "^{commit}").strip()
+        if head_before is None or tree_before != git("rev-parse", head_before.decode("ascii") + "^{tree}").strip():
             return fail(3, "CI --base requires the index to match HEAD")
-        diff_args = [args.base, "HEAD"]
     else:
-        diff_args = ["--cached"]
-    changed = git("diff", *diff_args, "--name-only", "--no-renames", "-z").decode("utf-8").split("\0")
+        base = head_before if head_before is not None else git("mktree", input_bytes=b"").strip()
+    changed = git("diff", base.decode("ascii"), tree_before.decode("ascii"),
+                  "--name-only", "--no-renames", "-z").decode("utf-8").split("\0")
     changed = [path for path in changed if path]
+    # Both policy selection and supported-mode validation describe this tree,
+    # rather than consulting a possibly changing real index a second time.
+    if not supported_tree(tree_before):
+        return fail(3, "Symlinks and submodules are unsupported in the verified snapshot")
     if not changed:
         print("No changes to verify")
-        return 0
+        return verify_index_and_head(tree_before, head_before)
     scope = verification_scope(changed)
     if scope == "docs":
         print("Documentation-only change; no test run required")
-        return 0
-    tree_before = git("write-tree")
-    with tempfile.TemporaryDirectory(prefix="kehila-index-") as temporary:
-        snapshot = Path(temporary)
-        git("checkout-index", "--all", "--force", "--prefix=" + snapshot.as_posix() + "/")
-        # Reject symlinks/gitlinks in executable input, including Windows exports
-        # where symlinks may otherwise look like ordinary text files.
-        for entry in git("ls-files", "--stage", "-z").split(b"\0"):
-            if entry and entry.split(b" ", 1)[0] not in (b"100644", b"100755"):
-                return fail(3, "Symlinks and submodules are unsupported in the verified snapshot")
+        return verify_index_and_head(tree_before, head_before)
+    # Validate against the original checkout, before source moves to a snapshot.
+    settings = verification_settings()
+    with owned_directory("kehila-index-") as temporary:
+        snapshot = Path(temporary) / "source"
+        export_source(tree_before, snapshot, Path(temporary) / "index")
+        print("Verification source tree:", tree_before.decode("ascii"), flush=True)
         live = scope == "full"
-        command = [sys.executable, str(snapshot / "scripts/verify.py"), "--timeout", "600"]
+        verifier = "container_verify.py" if os.name == "nt" else "verify.py"
+        allowance = settings['gate_seconds'] if os.name == 'nt' else 600
+        command = [sys.executable, str(snapshot / "scripts" / verifier), "--timeout", str(allowance)]
         if not live:
             command.append("--pure")
-        # Build cache is outside the snapshot; source still comes only from index.
         environment = os.environ.copy()
         environment.setdefault("CARGO_TARGET_DIR", str(ROOT / "target"))
-        try:
-            # The staged verifier owns the 600s work deadline and bounded
-            # teardown. Killing that owner here would bypass resource cleanup.
-            subprocess.run(command, cwd=snapshot, env=environment, check=True)
-        except (OSError, subprocess.SubprocessError) as error:
-            return fail(3, f"Staged verification failed: {error}")
-        if git("write-tree") != tree_before:
-            return fail(3, "Git index changed during verification; retry")
+        # Keep verification failure active while owned cleanup runs.
+        subprocess.run(command, cwd=snapshot, env=environment, check=True)
+        status = verify_index_and_head(tree_before, head_before)
+        if status:
+            return status
     print("Staged snapshot verified")
     return 0
 
@@ -109,4 +151,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
-        sys.exit(fail(3, str(error)))
+        print_failure("VERIFICATION_FAILED", error)
+        sys.exit(3)

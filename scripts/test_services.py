@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 import uuid
 
 from setup_env import compose_command
+from verification_settings import load as verification_settings
 from verification_budget import cleanup_time, command_timeout
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,10 +35,10 @@ class ComposeRuntime:
         return command
 
 
-def run(command, timeout=120, **kwargs):
+def run(command, timeout=120, *, cwd=None, **kwargs):
     timeout = command_timeout(timeout)
     print('TEST RESOURCE:', ' '.join(command), flush=True)
-    return subprocess.run(command, cwd=ROOT, check=True, timeout=timeout, **kwargs)
+    return subprocess.run(command, cwd=ROOT if cwd is None else cwd, check=True, timeout=timeout, **kwargs)
 
 
 def _containers(runtime, project, service=None, include_stopped=False):
@@ -46,7 +47,7 @@ def _containers(runtime, project, service=None, include_stopped=False):
         command += ['--filter', 'label=com.docker.compose.service=' + service]
     if include_stopped:
         command.append('--all')
-    return run([*command, '--format', '{{.ID}}'], capture_output=True,
+    return run([*command, '--no-trunc', '--format', '{{.ID}}'], capture_output=True,
                text=True, timeout=15, env=runtime.environment).stdout.split()
 
 
@@ -82,7 +83,8 @@ def local_runtime(compose, environment):
 
 def _machine_info(name, environment=None, allow_starting=False):
     info = json.loads(run(['podman', 'machine', 'inspect', name],
-                          capture_output=True, text=True, timeout=15, env=environment).stdout)
+                          capture_output=True, text=True, timeout=15, env=environment,
+                          cwd=_account_directory()).stdout)
     states = {'stopped', 'running', 'starting'} if allow_starting else {'stopped', 'running'}
     if (not isinstance(info, list) or len(info) != 1 or not isinstance(info[0], dict)
             or info[0].get('Name') != name
@@ -93,7 +95,8 @@ def _machine_info(name, environment=None, allow_starting=False):
 
 def _machine_connections(name, info, environment=None):
     connections = json.loads(run(['podman', 'system', 'connection', 'list', '--format', 'json'],
-                                 capture_output=True, text=True, timeout=15, env=environment).stdout)
+                                 capture_output=True, text=True, timeout=15, env=environment,
+                                 cwd=_account_directory()).stdout)
     if not isinstance(connections, list) or not all(isinstance(c, dict) for c in connections):
         raise ValueError('Expected the Podman connection inventory')
     ssh = info.get('SSHConfig')
@@ -118,22 +121,27 @@ def _machine_connections(name, info, environment=None):
     return selected
 
 
-def _stop_owned_machine(name, environment=None):
+def _stop_owned_machine(name, environment=None, *, stop_seconds=None):
+    if stop_seconds is None:
+        stop_seconds = verification_settings(environment)["machine_stop_seconds"]
     info = _machine_info(name, environment=environment, allow_starting=True)
     if info['State'] == 'stopped':
         return
     if info['State'] == 'starting':
-        run(['podman', 'machine', 'stop', name], timeout=120, env=environment)
+        run(['podman', 'machine', 'stop', name],
+            timeout=stop_seconds, env=environment, cwd=_account_directory())
         return
     # Both stores share this VM; a concurrent user may have started other work.
     # Query the registered endpoints: `machine ssh` can create a literal NUL
     # known-hosts file in its Windows working directory.
     for connection in _machine_connections(name, info, environment=environment):
         active = run(['podman', '--connection', connection, 'ps', '-q'],
-                     capture_output=True, text=True, timeout=30, env=environment).stdout.strip()
+                     capture_output=True, text=True, timeout=30, env=environment,
+                     cwd=_account_directory()).stdout.strip()
         if active:
             raise RuntimeError('VM exclusive-use contract violated; active containers remain, VM retained')
-    run(['podman', 'machine', 'stop', name], timeout=120, env=environment)
+    run(['podman', 'machine', 'stop', name],
+            timeout=stop_seconds, env=environment, cwd=_account_directory())
 
 
 def validate_runtime(preferred, machine, exclusive=False):
@@ -182,27 +190,28 @@ def _account_directory():
             ole.CoUninitialize()
 
 
-def _machine_lease_path(name):
+def _resource_lease_path(name):
     account = _account_directory()
     if not account.is_absolute():
         raise ValueError('Expected an absolute OS account directory')
     key = hashlib.sha256(name.encode('utf-8')).hexdigest()
+    # Preserve lock identity across versions, including existing machine leases.
     return account / '.kehila-verifier-locks' / ('machine-' + key + '.lock')
 
 
 @contextmanager
-def _machine_lease(name):
+def resource_lease(name, *, description):
     # Keep the inode after unlocking: unlinking it could admit a second owner
     # holding a new inode while another verifier still owns the old one.
-    path = _machine_lease_path(name)
+    path = _resource_lease_path(name)
     directory = path.parent
     directory.mkdir(mode=0o700, exist_ok=True)
     if directory.is_symlink() or directory.resolve() != directory:
-        raise ValueError('Machine lease directory must not be redirected')
+        raise ValueError('Resource lease directory must not be redirected')
     if os.name != 'nt':
         info = directory.stat()
         if info.st_uid != os.getuid() or info.st_mode & 0o077:
-            raise ValueError('Machine lease directory must be private to the OS account')
+            raise ValueError('Resource lease directory must be private to the OS account')
     with path.open('a+b') as lease:
         lease.seek(0)
         if os.name == 'nt':
@@ -216,7 +225,7 @@ def _machine_lease(name):
         try:
             lock()
         except OSError as error:
-            raise RuntimeError('Another verifier owns the requested Podman machine') from error
+            raise RuntimeError('Another verifier owns the ' + description) from error
         try:
             if not lease.read(1):
                 lease.write(b'0')
@@ -225,6 +234,10 @@ def _machine_lease(name):
         finally:
             lease.seek(0)
             unlock()
+
+
+def _machine_lease(name):
+    return resource_lease(name, description='requested Podman machine')
 
 
 @contextmanager
@@ -241,6 +254,7 @@ def _runtime(preferred, machine, environment, exclusive):
     failure = None
     environment = dict(os.environ if environment is None else environment)
     validate_daemon_environment(environment, machine)
+    settings = verification_settings(environment)
     try:
         if machine:
             preferred = 'podman'
@@ -254,7 +268,9 @@ def _runtime(preferred, machine, environment, exclusive):
                 raise ValueError('Exclusive VM use requires an initially stopped machine')
             owned_machine = exclusive and info['State'] == 'stopped'
             if info['State'] == 'stopped':
-                run(['podman', 'machine', 'start', machine], timeout=120, env=environment)
+                run(['podman', 'machine', 'start', machine],
+                    timeout=settings['machine_start_seconds'], env=environment,
+                    cwd=_account_directory())
         compose = compose_command(preferred, environment=environment)
         yield ComposeRuntime(compose, environment) if machine else local_runtime(compose, environment)
     except BaseException as error:
@@ -264,7 +280,8 @@ def _runtime(preferred, machine, environment, exclusive):
         if owned_machine:
             try:
                 with cleanup_time():
-                    _stop_owned_machine(machine, environment=environment)
+                    _stop_owned_machine(machine, environment=environment,
+                                        stop_seconds=settings["machine_stop_seconds"])
             except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as cleanup_error:
                 if failure is not None:
                     retain_cleanup_failure(failure, cleanup_error, 'Podman machine')

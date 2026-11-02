@@ -2,8 +2,8 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Architecture accepted; physical implementation/evidence plan under review; no runs |
-| Owner / assessor | Project maintainer; execution and assessment to be confirmed before starting |
+| Status / outcome | Architecture accepted; native structural subset and shared gate passed; broader allocation pending |
+| Owner / assessor | Project maintainer; structural execution completed, remaining campaign pending |
 | Created / last updated | 2026-10-08 / 2026-11-02 |
 | Tracking issue | [41](https://github.com/MrQuality/kehila/issues/41) |
 | Parent delivery issue | [#27](https://github.com/MrQuality/kehila/issues/27) |
@@ -18,7 +18,7 @@ The maintainer explicitly [accepted ADR-103 and ADR-107 revision 3](https://gith
 for the first authenticated create/read journey. The historical plan below sought
 an architecture choice; that choice is now made. This slice must establish its
 physical contract and failure evidence, not reopen the accepted protocol.
-No native run or successful allocation result is claimed.
+The native structural subset passed; complete allocation qualification remains pending.
 
 **Objective:** verify that one trusted target and permanent operation belong to
 one actor-scoped intent through concurrency, uncertainty and payload retirement.
@@ -69,6 +69,33 @@ and exact-head independent review. #41 stays open until that evidence is reviewe
 architecture acceptance alone completes no #27/#49 delivery. Concrete blocking
 findings trigger only affected plan/schema changes, not a new generic campaign.
 
+### Next adapter design gates
+
+Before implementing the application adapter, record the transaction/API contract
+and exact bounded test schedule under #41/#49. These are remaining obligations,
+not defects established by the structural subset:
+
+- Specify READ COMMITTED statement ordering and installation/actor/core fence
+  ownership, including fresh authorization and lookup after waiting. Commit the
+  mapping, operation and complete creation atomically. Classify named constraints;
+  finish rollback before complete re-entry. Select retry/deadline budgets from
+  relevant measurements rather than inventing fixed attempt counts.
+- Define transport outcomes for equal replay, changed token/content, expired
+  replay, absent reconciliation, temporary contention and unknown commit outcome.
+  Preserve handle/token/content through recovery. An absent lookup cannot promise
+  that another in-flight transaction will not commit. Exact HTTP statuses and
+  payloads remain adapter review decisions; no endpoint is adopted here.
+- Exercise the controlled schedules above with real connections: same-actor
+  fence waits and duplicates, independent actors, target collisions with a winner
+  during rollback/re-entry, rollback versus commit-before-response loss, and lock
+  timeout/cancellation. Check independent final state and owned cleanup.
+- Use independently generated secure-random handle/token values in the first-party
+  client and persist them with exact content before transmission. The server can
+  validate the accepted shape, not prove a hostile client's entropy or determine
+  uniqueness before the transaction. Handle secrecy grants no authority. Define
+  bounded admission and creation-abuse controls before exposing the route; no
+  standalone reservation or arbitrary new numeric quota is introduced here.
+
 **Parent:** #27. Related: #26, #11, #8. Follow-up to SP-002.
 
 ### Original pre-execution plan, 2026-10-08 (retained history)
@@ -89,21 +116,34 @@ Status: planned. Completing this spike will not close #27.
 
 ## Environment and reproduction
 
-Not executed. Use Podman for database/service cases and the public contribution
-and testing guides. Record tools, image pins, scope, timeouts, fixtures, commands,
-barriers and fresh preflight before starting. Experimental artifacts belong in
-`experiments/SP-005/` once needed; no executable prototype is claimed here.
+The [executable structural subset](../../experiments/SP-005/README.md) implements
+the immutable mapping overlay and actual-role SQL oracles. Its native run passed
+on 2026-11-02. This is not a production migration or completed allocation adapter;
+remaining concurrency, uncertainty and authority cases are not discharged.
 
 ## Run summaries
 
-No runs. Expected cases in the plan are planned observations, not test results.
+The native structural run used the documented pinned PostgreSQL image with
+verified limits of 256 MiB, one CPU and 128 PIDs. Role/schema, creation-core
+attribution and mutation-guard oracles passed; owned-container removal completed.
+The runner records source fingerprints and unqualified work.
+
+A later full shared-gate attempt passed its test phases but failed final snapshot
+cleanup with a Windows sharing violation. No commit was created. A provider-only
+observation reproduced blocked removal of its launch directory while running and
+successful removal after shutdown. Lifecycle commands now use a stable account
+directory. The later full containerized shared gate passed, including owned
+runner, service, network, provider and source-snapshot cleanup; see the
+[container verification record](../implementation/container-verification.md).
+The particular historical locking process has not been identified.
 
 ## Conclusion and reuse boundary
 
-ADR-107 revision 3 is now the accepted architecture choice; execution remains
-unqualified. Reuse SP-002 only within its stated
-baseline, role/helper, runtime and fault boundaries. Further experiments must
-resolve this record's stated uncertainty rather than repeat engine feasibility.
+ADR-107 revision 3 is accepted. Only the physical mapping structural subset has
+native evidence; broader allocation execution remains unqualified. Reuse SP-002
+within its documented baseline, role/helper, runtime and fault boundaries.
+Further experiments must resolve the remaining uncertainty rather than repeat
+engine feasibility.
 
 ## Decision and follow-up
 
@@ -114,7 +154,8 @@ coverage; finishing this investigation does not close it.
 
 ## Handoff
 
-Latest work: explicit architectural acceptance and the bounded physical/evidence
-candidate above. Next action: prepare/review exact SQL and harness interfaces,
-then obtain live-resource permission for the bounded native cases. The earlier
-plan and no-run records remain historical; no execution is implied by acceptance.
+Latest work: native structural subset and the full containerized shared gate
+passed. Next: complete required commit gates, exact-head review and CI before
+handoff. Concurrent allocation, uncertain commit and authenticated
+application integration remain later work. Broader machine calibration follows
+this delivery and is not an added completion gate.

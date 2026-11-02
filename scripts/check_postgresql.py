@@ -69,9 +69,9 @@ class DatabaseCheck:
     def __init__(self, podman, container):
         self.podman, self.container = podman, container
 
-    def command(self, *args, input=None):
+    def command(self, *args, input=None, timeout=60):
         return subprocess.run(self.podman + list(args), input=input, capture_output=True,
-                              text=True, encoding='utf-8', timeout=60)
+                              text=True, encoding='utf-8', timeout=timeout)
 
     def sql(self, statement=None, file=None, expected_state=None, expected_message=None,
             user='postgres'):
@@ -96,7 +96,12 @@ class DatabaseCheck:
             require(completed.returncode == 0, completed.stderr)
         return completed.stdout
 
-    def run(self):
+    def prepare_structure(self):
+        """Validate fresh isolation and install structural fixtures; never compile.
+
+        The public full verifier still adds snapshot/codec and integrity probes
+        in run(). This subset makes no production-codec qualification claim.
+        """
         info = self.command('inspect', self.container)
         require(info.returncode == 0, info.stderr)
         validate_container(json.loads(info.stdout)[0])
@@ -120,6 +125,10 @@ class DatabaseCheck:
         tests = ROOT / 'tests/integration'
         self.sql((tests / 'postgresql_foundation.sql').read_text(encoding='utf-8') + '\n' +
                  (tests / 'postgresql_creation.sql').read_text(encoding='utf-8'))
+
+    def run(self):
+        self.prepare_structure()
+        tests = ROOT / 'tests/integration'
         # Use a genuinely separate serving connection, with no administrator session state.
         self.sql("DO $$ BEGIN IF (SELECT array_agg(version ORDER BY version) FROM "
                  "kehila.schema_migrations) IS DISTINCT FROM ARRAY[1] THEN "

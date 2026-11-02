@@ -1,6 +1,7 @@
 """Test-resource ownership must survive startup, test and cleanup failures."""
 from pathlib import Path
 from contextlib import nullcontext
+import hashlib
 import json
 import os
 import tempfile
@@ -15,6 +16,19 @@ import test_services as services
 
 
 class ServiceOwnershipTests(unittest.TestCase):
+    def test_machine_inspection_uses_stable_account_directory(self):
+        stable = Path(tempfile.gettempdir()).resolve()
+        with patch.object(services, '_account_directory', return_value=stable), \
+                patch.object(services.subprocess, 'run', return_value=Mock(
+                    stdout='[{"Name":"fixture","State":"stopped"}]')) as run:
+            services._machine_info('fixture', environment={})
+        self.assertEqual(run.call_args.kwargs['cwd'], stable)
+
+    def test_service_commands_keep_the_source_working_directory(self):
+        with patch.object(services.subprocess, 'run') as run:
+            services.run(['podman', 'compose', '-f', str(services.ROOT / 'docker-compose.yml'), 'config'])
+        self.assertEqual(run.call_args.kwargs['cwd'], services.ROOT)
+
     def test_group_yields_the_verified_container_identity_for_each_service(self):
         with patch.object(services, 'run'), \
                 patch.object(services, '_containers',
@@ -135,7 +149,7 @@ class ServiceOwnershipTests(unittest.TestCase):
             self.assertEqual(services._containers(services.ComposeRuntime(['podman', 'compose'], {}), 'owned', 'nats'), ['abc123'])
             self.assertEqual(run.call_args.args[0], ['podman', 'ps', '--filter',
                 'label=com.docker.compose.project=owned', '--filter',
-                'label=com.docker.compose.service=nats', '--format', '{{.ID}}'])
+                'label=com.docker.compose.service=nats', '--no-trunc', '--format', '{{.ID}}'])
             services._containers(services.ComposeRuntime(['podman', 'compose'], {}), 'owned', include_stopped=True)
             self.assertIn('--all', run.call_args.args[0])
 
@@ -301,8 +315,8 @@ class MachineOwnershipTests(unittest.TestCase):
                 patch.object(services, 'compose_command', return_value=['podman', 'compose']):
             with services.managed_runtime('podman', 'fixture-machine', environment={}, exclusive=True) as compose:
                 self.assertEqual(compose.compose, ['podman', 'compose'])
-            run.assert_called_once_with(['podman', 'machine', 'start', 'fixture-machine'], timeout=120, env={'CONTAINER_CONNECTION': 'fixture-machine'})
-            stop.assert_called_once_with('fixture-machine', environment={'CONTAINER_CONNECTION': 'fixture-machine'})
+            run.assert_called_once_with(['podman', 'machine', 'start', 'fixture-machine'], timeout=120, env={'CONTAINER_CONNECTION': 'fixture-machine'}, cwd=services._account_directory())
+            stop.assert_called_once_with('fixture-machine', environment={'CONTAINER_CONNECTION': 'fixture-machine'}, stop_seconds=120)
 
     def test_already_running_machine_is_never_stopped(self):
         with patch.object(services, '_machine_info', return_value={'State': 'running'}), \
@@ -323,7 +337,7 @@ class MachineOwnershipTests(unittest.TestCase):
             with self.assertRaisesRegex(OSError, 'start failed'):
                 with services.managed_runtime('podman', 'fixture-machine', environment={}, exclusive=True):
                     pass
-            stop.assert_called_once_with('fixture-machine', environment={'CONTAINER_CONNECTION': 'fixture-machine'})
+            stop.assert_called_once_with('fixture-machine', environment={'CONTAINER_CONNECTION': 'fixture-machine'}, stop_seconds=120)
 
     def test_unrelated_container_in_either_store_prevents_machine_stop(self):
         for outputs in (['container'], ['', 'container']):
@@ -343,6 +357,8 @@ class MachineOwnershipTests(unittest.TestCase):
             services._stop_owned_machine('fixture-machine')
         self.assertEqual(run.call_args_list[-1].args[0],
                          ['podman', 'machine', 'stop', 'fixture-machine'])
+        self.assertTrue(all(call.kwargs['cwd'] == services._account_directory()
+                            for call in run.call_args_list))
 
     def test_invalid_machine_or_engine_combination_is_rejected_before_io(self):
         with patch.object(services, 'run') as run:
@@ -377,19 +393,21 @@ except RuntimeError as error:
             self.assertIn('Another verifier owns', result.stdout)
 
     def test_machine_lease_ignores_user_and_temporary_environment_overrides(self):
-        first = services._machine_lease_path('fixture')
+        first = services._resource_lease_path('fixture')
+        # Old and new verifiers must contend on the same existing lock file.
+        self.assertEqual(first.name, 'machine-' + hashlib.sha256(b'fixture').hexdigest() + '.lock')
         overrides = dict.fromkeys(
             ('LOGNAME', 'USER', 'USERNAME', 'TEMP', 'TMP', 'TMPDIR', 'HOME',
              'USERPROFILE', 'LOCALAPPDATA'), 'unrelated-environment-value')
         with patch.dict(os.environ, overrides):
-            self.assertEqual(first, services._machine_lease_path('fixture'))
-        self.assertNotEqual(first, services._machine_lease_path('other-machine'))
+            self.assertEqual(first, services._resource_lease_path('fixture'))
+        self.assertNotEqual(first, services._resource_lease_path('other-machine'))
 
     def test_same_machine_name_has_distinct_leases_for_distinct_account_directories(self):
         with tempfile.TemporaryDirectory() as folder:
             for account in ('first', 'second'):
                 with patch.object(services, '_account_directory', return_value=Path(folder) / account):
-                    path = services._machine_lease_path('fixture')
+                    path = services._resource_lease_path('fixture')
                 if account == 'first':
                     first = path
                 else:

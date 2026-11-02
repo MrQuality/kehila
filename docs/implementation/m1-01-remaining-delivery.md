@@ -317,3 +317,36 @@ observations remain frozen; global identifier narrowing is not authorized.
 Remaining application delivery belongs to #49, with authority/allocation
 contracts in #40/#41. There is no separate pending historical-assessment task.
 ADR-103 and ADR-107 are separately Accepted for the bounded integration; remaining implementation/qualification gates persist.
+
+The [SP-005 structural mapping subset](../spikes/SP-005-project-target-allocation.md#run-summaries)
+now has native PostgreSQL role/schema/guard evidence, and the
+[shared container gate](container-verification.md) passed. This advances W2's
+physical mapping work without completing #41: concurrent retry/collision,
+uncertain commit, current authenticated actor binding and the actual application
+adapter remain separate obligations. W3-W7 are not qualified by the structural
+fixture or by the verification-infrastructure change.
+
+## Operational follow-up from the structural mapping review
+
+The [next adapter design gates](../spikes/SP-005-project-target-allocation.md#next-adapter-design-gates)
+remain under #41/#49 before native route implementation. Verification tooling
+follow-up under #49 includes measured service/provider memory limits, explicit
+disk-cache reclamation policy and ownership-aware recovery after abrupt
+termination; the [current gate limits](container-verification.md) distinguish
+implemented controls from these tasks. No new execution campaign is required by
+recording them.
+
+Before supported real-data use, W7/#49 and #60 retain backup/restore coherence,
+storage-capacity monitoring and retention/privacy decisions. Successful intent
+mappings and operation cores remain permanent under ADR-107, including after
+payload retirement; archival or erasure must not silently permit identity reuse
+or duplicate execution. No archival/partitioning or privacy-erasure mechanism is
+selected. Routine vacuum/index maintenance does not establish capacity or replace
+those decisions.
+
+Before supported schema upgrades, the still-Proposed ADR-108 must settle migration
+exclusion, separate deployment/serving/maintenance privileges and post-migration
+invariant checks. Owner DDL can replace DML guards; administrator auditing and
+external audit assurance are separate operating decisions, not capabilities of
+the SP-005 triggers. The experiment is not a product migration system, and no DDL
+event-trigger mechanism or rolling-upgrade support is adopted by this follow-up.

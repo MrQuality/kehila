@@ -134,6 +134,16 @@ consumers, populated upgrades or online migrations are included. ADR-108/109
 remain Proposed. Earlier dated design-only entries below retain their chronology;
 the new acceptance supersedes their pending labels, not their evidence limits.
 
+**2026-11-02 structural allocation progress:** the
+[SP-005 mapping subset](../spikes/SP-005-project-target-allocation.md#run-summaries)
+passed its native PostgreSQL role/schema/guard oracles. It binds an actor-scoped
+retry handle to the actual creation operation and project without adopting a
+production route. The [shared container verification gate](../implementation/container-verification.md)
+also passed. Concurrent allocation, collision re-entry, uncertain commit,
+current authenticated actor binding and browser create/read integration remain
+unfinished; #41/#40/#49 stay open. Shared-gate success does not qualify those
+allocation contracts or complete M1-01.
+
 **2026-11-02 integration design:** The maintainer selected a browser-first
 authenticated ProjectCreate/read-back journey against fresh native PostgreSQL,
 keeping prototype data isolated. The [integration contract](../implementation/authenticated-project-integration.md)

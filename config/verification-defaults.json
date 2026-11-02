@@ -1,0 +1,16 @@
+{
+  "machine_start_seconds": 120,
+  "machine_stop_seconds": 120,
+  "runner_memory_mib": 2048,
+  "runner_cpus": 1,
+  "runner_pids": 512,
+  "runner_stop_seconds": 120,
+  "runner_image": null,
+  "image_prepare_seconds": 1800,
+  "gate_seconds": 600,
+  "command_seconds": 300,
+  "dependency_prepare_seconds": 1800,
+  "host_available_memory_floor_gib": null,
+  "host_available_memory_warning_gib": null,
+  "host_aggregate_memory_budget_gib": null
+}

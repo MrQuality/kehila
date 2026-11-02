@@ -25,13 +25,17 @@ class GitGateTests(unittest.TestCase):
                                  "GIT_AUTHOR_EMAIL": "test@example.invalid", "GIT_COMMITTER_EMAIL": "test@example.invalid"})
         self.git("init", "-b", "main")
         self.git("config", "core.autocrlf", "false")
-        for relative in (".githooks/pre_commit.py", ".githooks/pre-commit"):
+        for relative in (".githooks/pre_commit.py", ".githooks/pre-commit",
+                         "scripts/temp_work.py", "scripts/cleanup_errors.py",
+                         "scripts/verification_settings.py", "config/verification-defaults.json"):
             self.write(relative, (ROOT / relative).read_text(encoding="utf-8"))
         hook = self.root / ".githooks/pre-commit"
         hook.chmod(hook.stat().st_mode | stat.S_IXUSR)
         self.write("src/pure/value.py", "assert 2 + 2 == 4\n")
         self.write("docs/spec.md", "# Fixture contract\n\nArithmetic is pure.\n")
         self.write("scripts/verify.py", "import subprocess, sys\nassert '--pure' in sys.argv\nsubprocess.run([sys.executable, 'src/pure/value.py'], check=True)\n")
+        # This fixture exercises Git plumbing, not the engine execution contract.
+        self.write("scripts/container_verify.py", "import runpy\nrunpy.run_path('scripts/verify.py', run_name='__main__')\n")
         self.git("add", "--all")
         self.git("update-index", "--chmod=+x", ".githooks/pre-commit")
         tree = self.git("write-tree").stdout.strip()
@@ -55,6 +59,81 @@ class GitGateTests(unittest.TestCase):
     def hook(self):
         return subprocess.run([sys.executable, ".githooks/pre_commit.py"], cwd=self.root,
                               env=self.environment, capture_output=True, text=True, timeout=60)
+
+    def test_checkout_local_override_is_rejected_before_snapshot_verification(self):
+        # Exercise local path policy even when this suite is hosted by CI.
+        self.environment['CI'] = 'false'
+        self.write('local-settings.json', '{"machine_start_seconds": 300}')
+        self.environment['KEHILA_VERIFICATION_CONFIG'] = str(self.root / 'local-settings.json')
+        self.write('src/pure/value.py', 'assert 3 + 3 == 6\n')
+        self.git('add', 'src/pure/value.py')
+        result = self.hook()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('outside the checkout', result.stderr)
+        self.assertNotIn('Staged snapshot verified', result.stdout)
+
+    def test_unsupported_modes_cannot_take_the_documentation_shortcut(self):
+        self.write('docs/unsupported.md', 'link-target')
+        blob = self.git('hash-object', '-w', 'docs/unsupported.md').stdout.strip()
+        commit = self.git('rev-parse', 'HEAD').stdout.strip()
+        for mode, identity in (('120000', blob), ('160000', commit)):
+            with self.subTest(mode=mode):
+                self.git('update-index', '--add', '--cacheinfo',
+                         mode + ',' + identity + ',docs/unsupported.md')
+                result = self.hook()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('unsupported', result.stderr)
+                self.git('update-index', '--force-remove', 'docs/unsupported.md')
+
+    def test_unborn_index_uses_an_immutable_empty_baseline(self):
+        self.write('scripts/verify.py', "print('unborn-snapshot-verified')\n")
+        self.git('add', 'scripts/verify.py')
+        self.git('update-ref', '-d', 'refs/heads/main')
+        result = self.hook()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('unborn-snapshot-verified', result.stdout)
+
+    def test_captured_tree_controls_scope_and_export_during_index_ABA(self):
+        for boundary in ('scope', 'export'):
+            for valid in (True, False):
+                with self.subTest(boundary=boundary, captured_source_valid=valid):
+                    self.write('src/pure/value.py', 'assert ' + str(valid) + '\n')
+                    self.git('add', 'src/pure/value.py')
+                    captured = self.git('write-tree').stdout.strip()
+                    self.write('src/pure/value.py', 'assert ' + str(not valid) + '\n')
+                    self.write('src/io/adapter.rs', '// alternate tree requires full scope\n')
+                    self.git('add', 'src/pure/value.py', 'src/io/adapter.rs')
+                    alternate = self.git('write-tree').stdout.strip()
+                    self.git('read-tree', captured)
+                    script = self.root / 'index-race.py'
+                    script.write_text(f"""import importlib.util, sys
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('gate', Path('.githooks/pre_commit.py'))
+gate = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(gate)
+real_git = gate.git
+boundary = {boundary!r}
+def racing_git(*args, **kwargs):
+    operation = 'diff' if boundary == 'scope' else 'checkout-index'
+    if args[0] == operation:
+        real_git('read-tree', {alternate!r})
+        try:
+            return real_git(*args, **kwargs)
+        finally:
+            real_git('read-tree', {captured!r})
+    return real_git(*args, **kwargs)
+gate.git = racing_git
+sys.argv = ['pre_commit.py']
+sys.exit(gate.main())
+""", encoding='utf-8')
+                    result = subprocess.run([sys.executable, str(script)], cwd=self.root,
+                                            env=self.environment, capture_output=True,
+                                            text=True, timeout=60)
+                    if valid:
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                    else:
+                        self.assertNotEqual(result.returncode, 0)
+                    self.assertEqual(self.git('write-tree').stdout.strip(), captured)
 
     def test_adapter_change_runs_full_suite_and_propagates_failure(self):
         # Check runner arguments and exit propagation without simulating a service.

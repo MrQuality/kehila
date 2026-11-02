@@ -4,6 +4,7 @@ Builds and owns two workers, a Go API, a fault proxy, and one unique collection.
 Requires a running single-host FerretDB at KEHILA_TEST_MONGO_URL (default localhost).
 """
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 import argparse
 import json
 import os
@@ -26,7 +27,7 @@ from live_task_worker import uuid7
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from cleanup_errors import CleanupStack, run_main
+from cleanup_errors import CleanupStack, run_main, retain_cleanup_failure
 from temp_work import owned_directory
 from verification_budget import command_timeout, cleanup_time, DeadlineExceeded
 
@@ -179,28 +180,43 @@ def concurrency(bases):
     print('PASS: 48 competing create/update/retry/reuse pairs across two workers', flush=True)
 
 
+@contextmanager
+def boundary_case(label):
+    try:
+        yield
+    except Exception as error:
+        raise RuntimeError('worker boundary case: ' + label) from error
+
+
 def boundary(base):
     first = mutation()
-    for headers, status in [
-            ({'Content-Type': 'text/plain'}, 415),
-            ({'Content-Type': 'application/json', 'Origin': 'https://example.invalid'}, 403),
-            ({'Content-Type': 'application/json', 'Origin': base}, 403),
-            ({'Content-Type': 'application/json', 'Sec-Fetch-Site': 'cross-site'}, 403),
-            ({'Content-Type': 'application/json', 'Host': 'example.invalid'}, 403)]:
-        assert call(base, '/tasks/forbidden', first, headers)[0] == status
-    assert call(base, '/tasks/forbidden')[0] == 404
-    address = urllib.parse.urlsplit(base)
-    with socket.create_connection((address.hostname, address.port), timeout=command_timeout(6)) as slow:
-        slow.sendall(('POST /tasks/slow HTTP/1.1\r\nHost: ' + address.netloc +
-                      '\r\nContent-Type: application/json\r\nContent-Length: 4096\r\n\r\n{').encode())
-        started = time.monotonic()
-        assert call(base, '/health')[0] == 200
+    for label, headers, status in [
+            ('content type', {'Content-Type': 'text/plain'}, 415),
+            ('foreign origin', {'Content-Type': 'application/json', 'Origin': 'https://example.invalid'}, 403),
+            ('same origin', {'Content-Type': 'application/json', 'Origin': base}, 403),
+            ('fetch site', {'Content-Type': 'application/json', 'Sec-Fetch-Site': 'cross-site'}, 403),
+            ('host', {'Content-Type': 'application/json', 'Host': 'example.invalid'}, 403)]:
+        with boundary_case('rejected POST: ' + label):
+            assert call(base, '/tasks/forbidden', first, headers)[0] == status
+    with boundary_case('read after rejected POSTs'):
         assert call(base, '/tasks/forbidden')[0] == 404
-        assert time.monotonic() - started < 2
-        slow.settimeout(command_timeout(6))
-        assert b'408' in slow.recv(4096).split(b'\r\n', 1)[0]
-        assert time.monotonic() - started < 5
-    assert call(base, '/health')[0] == 200
+    with boundary_case('stalled body exchange'):
+        address = urllib.parse.urlsplit(base)
+        with socket.create_connection((address.hostname, address.port), timeout=command_timeout(6)) as slow:
+            slow.sendall(('POST /tasks/slow HTTP/1.1\r\nHost: ' + address.netloc +
+                          '\r\nContent-Type: application/json\r\nContent-Length: 4096\r\n\r\n{').encode())
+            started = time.monotonic()
+            with boundary_case('health during stalled body'):
+                assert call(base, '/health')[0] == 200
+            with boundary_case('read during stalled body'):
+                assert call(base, '/tasks/forbidden')[0] == 404
+            assert time.monotonic() - started < 2
+            slow.settimeout(command_timeout(6))
+            with boundary_case('stalled body response'):
+                assert b'408' in slow.recv(4096).split(b'\r\n', 1)[0]
+            assert time.monotonic() - started < 5
+    with boundary_case('health after stalled body'):
+        assert call(base, '/health')[0] == 200
     print('PASS: direct-worker guards and stalled-body deadline with concurrent reads', flush=True)
 
 
@@ -235,6 +251,22 @@ def prepare(folder):
                     './go/io/task_api/cmd/task-api'], cwd=ROOT, check=True, timeout=command_timeout(90))
 
 
+def report_process_logs(folder):
+    try:
+        for log_path in sorted(Path(folder).glob('process-*.log')):
+            with log_path.open('rb') as log:
+                log.seek(0, 2)
+                log.seek(max(0, log.tell() - 8192))
+                tail = log.read(8192).decode('utf-8', errors='replace')
+            print('TASK PROCESS DIAGNOSTIC ' + log_path.name + ':\n' + tail,
+                  file=sys.stderr)
+    except OSError as diagnostic_error:
+        try:
+            print('TASK DIAGNOSTIC UNAVAILABLE: ' + str(diagnostic_error), file=sys.stderr)
+        except OSError:
+            pass  # A broken diagnostic stream cannot replace the test failure.
+
+
 def exercise(folder):
     uri = os.environ.get('KEHILA_TEST_MONGO_URL', 'mongodb://127.0.0.1:27017')
     parsed = urllib.parse.urlsplit(uri)
@@ -247,57 +279,66 @@ def exercise(folder):
         raise ValueError('Both task-path executables must be prepared before live verification')
     environment = dict(os.environ, KEHILA_MONGO_URL=uri, KEHILA_TASK_DB='yaja',
                        KEHILA_TASK_COLLECTION='kehila_test_' + uuid.uuid4().hex)
-    with CleanupStack() as owned:
-        # Register cleanup before installation, including partially created indexes.
-        def drop_collection():
-            with cleanup_time():
-                subprocess.run([worker, 'drop-test-collection'], env=environment, check=True, timeout=15)
-        owned.callback(drop_collection, resource="test collection")
-        subprocess.run([worker, 'install-indexes'], env=environment, check=True, timeout=command_timeout(15))
-        proxy = FaultProxy((parsed.hostname, parsed.port or 27017))
-        owned.callback(proxy.close, resource="fault proxy")
-        processes = []
+    try:
+        with CleanupStack() as owned:
+            # Register cleanup before installation, including partially created indexes.
+            def drop_collection():
+                with cleanup_time():
+                    subprocess.run([worker, 'drop-test-collection'], env=environment, check=True, timeout=15)
+            owned.callback(drop_collection, resource="test collection")
+            subprocess.run([worker, 'install-indexes'], env=environment, check=True, timeout=command_timeout(15))
+            proxy = FaultProxy((parsed.hostname, parsed.port or 27017))
+            owned.callback(proxy.close, resource="fault proxy")
+            processes = []
 
-        def launch(command, env):
-            command_timeout(1)
-            log = owned.enter_context(open(Path(folder) / ('process-' + str(len(processes)) + '.log'), 'w+'), resource='process log')
-            process = subprocess.Popen(command, env=env, cwd=ROOT, stdout=log, stderr=log,
-                                       creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
-            owned.callback(stop, process, resource="task-path process")
-            processes.append(process)
-            return process, Path(log.name)
+            def launch(command, env):
+                command_timeout(1)
+                log = owned.enter_context(open(Path(folder) / ('process-' + str(len(processes)) + '.log'), 'w+'), resource='process log')
+                process = subprocess.Popen(command, env=env, cwd=ROOT, stdout=log, stderr=log,
+                                           creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                owned.callback(stop, process, resource="task-path process")
+                processes.append(process)
+                return process, Path(log.name)
 
-        bases = []
-        for index in range(2):
-            worker_env = dict(environment, KEHILA_WORKER_LISTEN_ADDR='127.0.0.1:0')
-            if index == 0:
-                credentials = parsed.netloc.rsplit('@', 1)[0] + '@' if '@' in parsed.netloc else ''
-                worker_env['KEHILA_MONGO_URL'] = urllib.parse.urlunsplit(parsed._replace(
-                    netloc=credentials + '127.0.0.1:' + str(proxy.server_address[1])))
-            process, log_path = launch([worker], worker_env)
-            bases.append(bound_base(log_path, process))
-            wait_ready(bases[-1], processes)
-        concurrency(bases)
-        boundary(bases[0])
-        database_outage(bases, proxy, processes)
-        # Reserve an unserved socket to make search unavailability deterministic.
-        unavailable = owned.enter_context(socket.socket(), resource='reserved search socket')
-        unavailable.bind(('127.0.0.1', 0))
-        process, log_path = launch(
-            [api], dict(environment, KEHILA_LISTEN_ADDR='127.0.0.1:0',
-                        KEHILA_WORKER_URL=bases[0],
-                        KEHILA_SEARCH_URL='http://127.0.0.1:' + str(unavailable.getsockname()[1])))
-        api_base = bound_base(log_path, process)
-        wait_ready(api_base, processes)
-        first = mutation()
-        saved = call(api_base, '/tasks/go-rust', first,
-                     {'Content-Type': 'application/json', 'Origin': api_base,
-                      'Sec-Fetch-Site': 'same-origin'})
-        assert saved == (200, {'id': 'go-rust', 'version': 1, 'sync_token': None}), saved
-        assert call(api_base, '/tasks/go-rust', first) == saved
-        assert call(api_base, '/search/go-rust?min_version=1') == (503, {'error': 'search_unavailable'})
-        assert call(api_base, '/tasks/go-rust')[1]['version'] == 1
-        print('PASS: Go-to-Rust save/replay/read with search unavailable', flush=True)
+            bases = []
+            for index in range(2):
+                worker_env = dict(environment, KEHILA_WORKER_LISTEN_ADDR='127.0.0.1:0')
+                if index == 0:
+                    credentials = parsed.netloc.rsplit('@', 1)[0] + '@' if '@' in parsed.netloc else ''
+                    worker_env['KEHILA_MONGO_URL'] = urllib.parse.urlunsplit(parsed._replace(
+                        netloc=credentials + '127.0.0.1:' + str(proxy.server_address[1])))
+                process, log_path = launch([worker], worker_env)
+                bases.append(bound_base(log_path, process))
+                wait_ready(bases[-1], processes)
+            concurrency(bases)
+            boundary(bases[0])
+            database_outage(bases, proxy, processes)
+            # Reserve an unserved socket to make search unavailability deterministic.
+            unavailable = owned.enter_context(socket.socket(), resource='reserved search socket')
+            unavailable.bind(('127.0.0.1', 0))
+            process, log_path = launch(
+                [api], dict(environment, KEHILA_LISTEN_ADDR='127.0.0.1:0',
+                            KEHILA_WORKER_URL=bases[0],
+                            KEHILA_SEARCH_URL='http://127.0.0.1:' + str(unavailable.getsockname()[1])))
+            api_base = bound_base(log_path, process)
+            wait_ready(api_base, processes)
+            first = mutation()
+            saved = call(api_base, '/tasks/go-rust', first,
+                         {'Content-Type': 'application/json', 'Origin': api_base,
+                          'Sec-Fetch-Site': 'same-origin'})
+            assert saved == (200, {'id': 'go-rust', 'version': 1, 'sync_token': None}), saved
+            assert call(api_base, '/tasks/go-rust', first) == saved
+            assert call(api_base, '/search/go-rust?min_version=1') == (503, {'error': 'search_unavailable'})
+            assert call(api_base, '/tasks/go-rust')[1]['version'] == 1
+            print('PASS: Go-to-Rust save/replay/read with search unavailable', flush=True)
+    except Exception as primary:
+        # Children and log handles have been closed before diagnostics are read.
+        # The invoking verifier owns storage/retention of its captured stderr.
+        try:
+            report_process_logs(folder)
+        except Exception as diagnostic_error:
+            retain_cleanup_failure(primary, diagnostic_error, "task process diagnostics")
+        raise
 
 
 def main():
