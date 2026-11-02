@@ -15,6 +15,19 @@ import test_services as services
 
 
 class ServiceOwnershipTests(unittest.TestCase):
+    def test_machine_inspection_uses_stable_account_directory(self):
+        stable = Path(tempfile.gettempdir()).resolve()
+        with patch.object(services, '_account_directory', return_value=stable), \
+                patch.object(services.subprocess, 'run', return_value=Mock(
+                    stdout='[{"Name":"fixture","State":"stopped"}]')) as run:
+            services._machine_info('fixture', environment={})
+        self.assertEqual(run.call_args.kwargs['cwd'], stable)
+
+    def test_service_commands_keep_the_source_working_directory(self):
+        with patch.object(services.subprocess, 'run') as run:
+            services.run(['podman', 'compose', '-f', str(services.ROOT / 'docker-compose.yml'), 'config'])
+        self.assertEqual(run.call_args.kwargs['cwd'], services.ROOT)
+
     def test_group_yields_the_verified_container_identity_for_each_service(self):
         with patch.object(services, 'run'), \
                 patch.object(services, '_containers',
@@ -135,7 +148,7 @@ class ServiceOwnershipTests(unittest.TestCase):
             self.assertEqual(services._containers(services.ComposeRuntime(['podman', 'compose'], {}), 'owned', 'nats'), ['abc123'])
             self.assertEqual(run.call_args.args[0], ['podman', 'ps', '--filter',
                 'label=com.docker.compose.project=owned', '--filter',
-                'label=com.docker.compose.service=nats', '--format', '{{.ID}}'])
+                'label=com.docker.compose.service=nats', '--no-trunc', '--format', '{{.ID}}'])
             services._containers(services.ComposeRuntime(['podman', 'compose'], {}), 'owned', include_stopped=True)
             self.assertIn('--all', run.call_args.args[0])
 
@@ -301,8 +314,8 @@ class MachineOwnershipTests(unittest.TestCase):
                 patch.object(services, 'compose_command', return_value=['podman', 'compose']):
             with services.managed_runtime('podman', 'fixture-machine', environment={}, exclusive=True) as compose:
                 self.assertEqual(compose.compose, ['podman', 'compose'])
-            run.assert_called_once_with(['podman', 'machine', 'start', 'fixture-machine'], timeout=120, env={'CONTAINER_CONNECTION': 'fixture-machine'})
-            stop.assert_called_once_with('fixture-machine', environment={'CONTAINER_CONNECTION': 'fixture-machine'})
+            run.assert_called_once_with(['podman', 'machine', 'start', 'fixture-machine'], timeout=120, env={'CONTAINER_CONNECTION': 'fixture-machine'}, cwd=services._account_directory())
+            stop.assert_called_once_with('fixture-machine', environment={'CONTAINER_CONNECTION': 'fixture-machine'}, stop_seconds=120)
 
     def test_already_running_machine_is_never_stopped(self):
         with patch.object(services, '_machine_info', return_value={'State': 'running'}), \
@@ -323,7 +336,7 @@ class MachineOwnershipTests(unittest.TestCase):
             with self.assertRaisesRegex(OSError, 'start failed'):
                 with services.managed_runtime('podman', 'fixture-machine', environment={}, exclusive=True):
                     pass
-            stop.assert_called_once_with('fixture-machine', environment={'CONTAINER_CONNECTION': 'fixture-machine'})
+            stop.assert_called_once_with('fixture-machine', environment={'CONTAINER_CONNECTION': 'fixture-machine'}, stop_seconds=120)
 
     def test_unrelated_container_in_either_store_prevents_machine_stop(self):
         for outputs in (['container'], ['', 'container']):
@@ -343,6 +356,8 @@ class MachineOwnershipTests(unittest.TestCase):
             services._stop_owned_machine('fixture-machine')
         self.assertEqual(run.call_args_list[-1].args[0],
                          ['podman', 'machine', 'stop', 'fixture-machine'])
+        self.assertTrue(all(call.kwargs['cwd'] == services._account_directory()
+                            for call in run.call_args_list))
 
     def test_invalid_machine_or_engine_combination_is_rejected_before_io(self):
         with patch.object(services, 'run') as run:

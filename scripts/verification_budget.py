@@ -13,14 +13,16 @@ class DeadlineExceeded(TimeoutError):
     pass
 
 
-def validate_seconds(seconds):
-    if not math.isfinite(seconds) or not 0 < seconds <= 600:
-        raise ValueError('Verification work timeout must be positive and at most 600 seconds')
+def validate_seconds(seconds, *, maximum=600):
+    if (type(seconds) not in (int, float) or type(maximum) not in (int, float)
+            or not math.isfinite(maximum) or maximum <= 0
+            or not math.isfinite(seconds) or not 0 < seconds <= maximum):
+        raise ValueError(f'Verification work timeout must be positive and at most {maximum} seconds')
 
 
 @contextmanager
-def work_budget(seconds):
-    validate_seconds(seconds)
+def work_budget(seconds, *, maximum=600):
+    validate_seconds(seconds, maximum=maximum)
     token = _deadline.set(time.monotonic() + seconds)
     try:
         yield

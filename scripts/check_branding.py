@@ -102,7 +102,7 @@ def source_paths(root):
         path = root / name
         if path.is_file():
             files.append(path)
-    for directory in ("src", "packages", "go", "docs", "scripts", "tests", ".github", "experiments"):
+    for directory in ("src", "packages", "go", "docs", "scripts", "tests", ".github", "experiments", "config", "tools"):
         files.extend(path for path in (root / directory).rglob("*") if path.is_file()
                      and not {"__pycache__", "node_modules", "target", ".git"}.intersection(path.relative_to(root).parts)
                      and (not path.name.startswith(".env") or path.name == ".env.example")

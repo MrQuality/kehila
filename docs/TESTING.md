@@ -138,8 +138,10 @@ the callback suppresses its Python context or supplies its own cause. All
 registered callbacks run. On a successful body, the first cleanup failure is
 primary. The reporter follows unsuppressed Python contexts with cycle/duplicate
 protection; it does not undo deliberate context suppression.
-The verifier owns a 600-second work budget (`--timeout`, positive and at most
-600). Every work command receives the smaller of its own timeout and the
+The native verifier owns a 600-second work budget (`--timeout`, positive and at most
+600). The Windows container lane uses configured finite gate/command allowances,
+with separate explicit dependency preparation; see the container design below.
+Every work command receives the smaller of its own timeout and the
 remaining budget. Resource-owning Python checks (Go tests, SP-002/SP-003 check
 drivers and task-path preparation/execution) receive a same-host monotonic
 deadline through `KEHILA_VERIFICATION_DEADLINE`. Their parent waits while they
@@ -400,6 +402,63 @@ Those tests do not replace the separately recorded native PostgreSQL run.
 the complete bounded history/authority suite at `9919460` on PostgreSQL 16.15 /
 Windows / WSL2 / Podman, including all 52 schedules and confirmed cleanup.
 R04 remains an unchanged historical record; the same qualification limits apply.
+
+Verification provider timeouts are defined in
+[`config/verification-defaults.json`](../config/verification-defaults.json).
+For a machine-specific override, set `KEHILA_VERIFICATION_CONFIG` to an absolute
+JSON file outside the checkout. Settings cover provider start/stop and the
+container runner image, memory, CPU, PID and stop budgets, finite gate/command and
+dependency-preparation allowances, plus optional host
+memory guards for lifecycle controllers; omitted values inherit
+upstream defaults. The [container gate design](implementation/container-verification.md)
+describes the execution boundary and provisioning requirements.
+Unknown or duplicate keys, non-finite/non-positive values and missing files fail
+closed. Machine overrides are rejected in CI. For example:
+
+```json
+{"machine_start_seconds": 240}
+```
+
+This example is a provisional allowance, not a measured startup requirement.
+Effective start/stop settings are captured before machine startup, so changing
+the local file during a run cannot prevent cleanup. Startup still respects the
+remaining total work deadline; a larger startup setting does not extend the
+configured gate. The container lane's `gate_seconds` and `command_seconds` default
+to 600 and 300 respectively. `dependency_prepare_seconds` defaults to 1800 and
+applies only to explicit `--prepare-dependencies`, which must precede pure/full
+container verification. Cleanup retains a separate finite stop budget. The
+30-second snapshot cleanup retry policy is unchanged. Configuring timeouts
+does not waive required checks, resource approvals or the memory floor.
+
+Machine calibration and an inventory of other policy constants remain follow-up
+work after the current delivery: measure startup/stop and phase timings together
+with memory before choosing durable local values. Broader calibration is not a
+prerequisite added to this PR. A longer timeout is not a remedy for an unidentified
+snapshot-directory lock.
+
+Task-path boundary failures report a case label and preserve the underlying
+exception. On failure, the harness emits up to 8 KiB from each owned process log
+after process and log cleanup. A diagnostic-output failure remains attached to
+the original failure. Expected HTTP statuses and stalled-body deadlines remain
+mandatory; a connection reset does not satisfy the expected HTTP 408 response.
+The staged hook retries transient Windows snapshot cleanup locks within a bounded
+budget and preserves verification failures alongside cleanup failures. Scope
+selection and export use the same captured immutable Git tree through a temporary
+index outside the payload. Final real-index and HEAD comparisons still reject a
+changed proposal; a copied-source byte manifest verifies container transfer. Provider
+lifecycle commands use the stable OS account directory, since a shared provider
+may outlive the verifier's staged snapshot. Compose/service commands retain their
+source working directory. A Windows observation reproduced blocked removal of a
+provider's launch directory while running and successful removal after shutdown;
+the specific locking process was not identified. Longer cleanup retries are not
+used to substitute for correct lifetime ownership.
+
+On Windows, the staged hook uses the container verification lane and requires an
+explicit immutable toolchain image in `runner_image` or
+`KEHILA_VERIFICATION_IMAGE`. Host code controls resources and
+source copying; toolchain commands and runtime tests execute in the runner.
+There is no host fallback. The existing Linux CI gate and Windows-client CI job
+remain mandatory. Linux runner results do not qualify Windows-only APIs.
 
 Run unit tests without external services:
 
@@ -698,7 +757,9 @@ shared verification does not execute them or qualify native Linux-host behavior.
 Shared verification commands have a 300-second deadline. Cargo verification on
 Windows has a 450-second deadline: observed workspace runs exceeded 300 seconds
 while individual tests passed. Linux retains the 300-second Cargo deadline. The
-staged hook still has its 600-second overall deadline; a timeout fails verification.
+native staged hook retains its 600-second overall deadline. The container lane
+uses the validated configuration described above, and clamps each command by the
+remaining gate allowance. A timeout fails verification.
 These are tooling execution limits, not product performance requirements.
 
 ## SP-003 replay codec checks

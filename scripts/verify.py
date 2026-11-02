@@ -96,9 +96,7 @@ def main():
         run_checks(args)
 
 
-def run_checks(args):
-    environment = dict(os.environ, CARGO_BUILD_JOBS='1')
-    environment['GOFLAGS'] = (environment.get('GOFLAGS', '') + ' -p=1').strip()
+def check_commands(args):
     commands = [[sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
                 [sys.executable, "scripts/check_branding.py"],
                 [sys.executable, "scripts/check_engineering.py"]]
@@ -113,6 +111,13 @@ def run_checks(args):
         commands += [[sys.executable, "experiments/SP-002/check_seed_oracle.py"],
                      [sys.executable, "experiments/SP-003/check.py"],
                      [sys.executable, "scripts/go_test.py"]]
+    return commands
+
+
+def run_checks(args):
+    environment = dict(os.environ, CARGO_BUILD_JOBS='1')
+    environment['GOFLAGS'] = (environment.get('GOFLAGS', '') + ' -p=1').strip()
+    commands = check_commands(args)
     for command in commands:
         execute(command, environment)
     if not args.pure and not args.docs:
