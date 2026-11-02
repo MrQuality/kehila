@@ -1,7 +1,11 @@
 # ADR-107 - Stable project creation intents
 
-Status: Proposed, revision 3, 2026-11-02. Owner: project maintainer.
-Acceptance: pending; design direction is not protocol acceptance or execution permission.
+Status: Accepted, decision revision 3. Owner: project maintainer. Accepted: 2026-11-02.
+Acceptance: [explicit maintainer decision](https://github.com/MrQuality/kehila/issues/49#issuecomment-6573495351),
+identifying revision 3 at source `5345c9b0eaf51935786d17626ea83245b5f5ab98`.
+Scope: allocation/reconciliation for the bounded fresh-database local integration.
+Physical schema, adapter/dependency review, native evidence and execution permissions
+remain separate. This metadata records acceptance, not a new protocol revision.
 Related: D-029/D-032/D-033/D-034; ADR-103/104/105;
 [#41](https://github.com/MrQuality/kehila/issues/41),
 [#49](https://github.com/MrQuality/kehila/issues/49),
@@ -13,14 +17,13 @@ ProjectCreate requires a trusted ProjectId, but a browser losing the first
 response may never learn that ID. The permanent operation key includes actor,
 family, target and token. Generating a new target on retry can create another
 project while bypassing the original lookup. SP-005 remains planned and supplies
-no accepted allocation mechanism or execution evidence.
+no execution evidence. This record now supplies the accepted mechanism.
 
 The maintainer selected browser-first integration with fresh native PostgreSQL
-and isolated prototype data on 2026-11-02. This record proposes the missing
-allocation contract without changing the version-one command codec or accepting
-ADR-103 production adoption.
+and isolated prototype data on 2026-11-02, then explicitly accepted this allocation
+contract and ADR-103 for that outcome. The version-one command codec is unchanged.
 
-## Proposed decision
+## Decision
 
 Use a browser-generated creation-intent handle as a locator, separate from the
 existing operation token. The backend owns target allocation. Store the mapping
@@ -178,5 +181,5 @@ later storage error as proof an earlier uncertain request did not commit.
 No experiment, native qualification, schema migration or endpoint implementation
 is delivered here. The next bounded experiment plan must state harnesses,
 resource limits, fault barriers and stopping conditions before execution approval.
-Accepting this ADR must identify its exact revision and dispositions; a merged
-design PR alone is not acceptance, #41 completion or production route readiness.
+The explicit acceptance above identifies revision 3; it completes neither #41
+nor production route readiness. A merged proposal was not its acceptance source.

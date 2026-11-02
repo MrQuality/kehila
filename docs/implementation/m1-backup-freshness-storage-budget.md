@@ -29,7 +29,7 @@ This document proposes definitions and future acceptance cases. It supplies no
 new execution evidence, supported installation, recovery-point objective (RPO,
 acceptable data loss) or recovery-time objective (RTO, time to restore service).
 It does not block independently justified authentication/file-admission work.
-ADR-103 production adoption remains Proposed; SP-006 remains a bounded proof.
+ADR-103 is Accepted for the bounded fresh-database local integration; this does not qualify backup/restore, and SP-006 remains a bounded proof.
 
 ## Recovery-point age
 
