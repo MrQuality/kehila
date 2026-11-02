@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Architecture accepted; native structural subset passed; broader allocation and full gate pending |
+| Status / outcome | Architecture accepted; native structural subset and shared gate passed; broader allocation pending |
 | Owner / assessor | Project maintainer; structural execution completed, remaining campaign pending |
 | Created / last updated | 2026-10-08 / 2026-11-02 |
 | Tracking issue | [41](https://github.com/MrQuality/kehila/issues/41) |
