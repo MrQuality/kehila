@@ -62,6 +62,16 @@ class ContainerBoundaryTests(unittest.TestCase):
 
 
 class DatabaseRejectionTests(unittest.TestCase):
+    def test_structural_preparation_does_not_compile_snapshot_bridge(self):
+        database = check.DatabaseCheck(['podman'], 'explicit-disposable')
+        snapshot_phase = Mock()
+        info = json.dumps([ContainerBoundaryTests().valid()])
+        with patch.object(database, 'command', return_value=self.result(0, stdout=info)), \
+                patch.object(database, 'sql'), patch.dict(sys.modules,
+                {'postgresql_snapshots': SimpleNamespace(run=snapshot_phase)}):
+            database.prepare_structure()
+        snapshot_phase.assert_not_called()
+
     def result(self, code, stderr='', stdout=''):
         return subprocess.CompletedProcess([], code, stdout, stderr)
 

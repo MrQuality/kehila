@@ -317,3 +317,11 @@ observations remain frozen; global identifier narrowing is not authorized.
 Remaining application delivery belongs to #49, with authority/allocation
 contracts in #40/#41. There is no separate pending historical-assessment task.
 ADR-103 and ADR-107 are separately Accepted for the bounded integration; remaining implementation/qualification gates persist.
+
+The [SP-005 structural mapping subset](../spikes/SP-005-project-target-allocation.md#run-summaries)
+now has native PostgreSQL role/schema/guard evidence, and the
+[shared container gate](container-verification.md) passed. This advances W2's
+physical mapping work without completing #41: concurrent retry/collision,
+uncertain commit, current authenticated actor binding and the actual application
+adapter remain separate obligations. W3-W7 are not qualified by the structural
+fixture or by the verification-infrastructure change.
