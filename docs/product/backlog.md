@@ -134,6 +134,11 @@ source ownership, atomic intent/target reconciliation and acceptance evidence.
 This is design authorization, not ADR-103 adoption, allocation acceptance,
 runtime implementation or supported installation. #40/#41/#49 retain their scope
 and the contract's explicit rollout gates.
+The [PR #88 clarification record](https://github.com/MrQuality/kehila/pull/88#issuecomment-6569113657)
+adds authenticated browser binding discovery before dependent browser/API work,
+immutable pending retries versus separate creation, visible persistence failures
+and an explicit token-integrity proof for the eventual mapping schema. These
+are design/evidence obligations, not completed runtime or allocation qualification.
 
 Planning [PR #50](https://github.com/MrQuality/kehila/pull/50) merged on 2026-10-14
 at 0c89bfbfd0c20b8556894e4c91c7814d6eacc96c. The successor issue and plan are now

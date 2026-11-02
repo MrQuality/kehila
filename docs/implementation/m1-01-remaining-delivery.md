@@ -108,6 +108,11 @@ dependencies and execution retain their gates. [Proposed ADR-107](../architectur
 supplies a reviewable allocation candidate, not completed W2 or approved W3.
 This groups relevant work around a product outcome without waiving W4/W7
 replay, retirement, recovery or route-exposure requirements.
+The integration contract's revision 3 makes authenticated browser binding discovery
+and its session/CSRF association an explicit prerequisite for browser/API work.
+ADR-107 revision 3 requires the eventual schema to prove token agreement too;
+the existing five-column attribution foreign key alone excludes that field.
+Neither clarification supplies an adopted endpoint/schema or completed W2 evidence.
 
 These work packages preserve the existing acceptance scope. They establish
 ordering and review gates, not a commitment to one PR per package. Each stateful

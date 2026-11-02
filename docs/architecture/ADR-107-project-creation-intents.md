@@ -1,6 +1,6 @@
 # ADR-107 - Stable project creation intents
 
-Status: Proposed, revision 2, 2026-11-02. Owner: project maintainer.
+Status: Proposed, revision 3, 2026-11-02. Owner: project maintainer.
 Acceptance: pending; design direction is not protocol acceptance or execution permission.
 Related: D-029/D-032/D-033/D-034; ADR-103/104/105;
 [#41](https://github.com/MrQuality/kehila/issues/41),
@@ -90,6 +90,15 @@ schema version and restricted grants require review before implementation. The
 serving capability may insert/read it as part of creation, never update/delete it.
 Do not grant extra actor or operation UPDATE privileges to implement its lookup.
 
+The existing native five-column attribution foreign key covers operation core ID,
+family, target kind, project and actor, but excludes the token. Reusing it alone
+cannot prove equality of a separately stored mapping token. The reviewed schema
+must either enforce token agreement with the immutable core through an appropriate
+constraint, or derive the token from that referenced core instead of storing an
+independently inconsistent copy. This is an integrity obligation, not selection
+of physical SQL; verify mismatched-token rejection or impossibility as the actual
+serving role before schema adoption.
+
 The actor fence serializes same-actor cooperating requests. A target collision
 across actors rolls back the entire transaction and retries with a fresh candidate
 only within the reviewed request budget, after generated-envelope admission again.
@@ -161,6 +170,10 @@ admission; all generated envelopes must be admitted before fresh persistence wor
 Review browser persistence failure/reload and reauthentication without silent
 identity replacement. Review same-origin concurrent tabs, bounded local storage,
 and duplicate UI submission separately from server-side concurrency correctness.
+Use the integration contract's authenticated binding-discovery and immutable
+pending-intent lifecycle requirements; raw identity metadata cannot authorize
+requests. Test visible pre-transmission persistence failure without treating a
+later storage error as proof an earlier uncertain request did not commit.
 
 No experiment, native qualification, schema migration or endpoint implementation
 is delivered here. The next bounded experiment plan must state harnesses,
