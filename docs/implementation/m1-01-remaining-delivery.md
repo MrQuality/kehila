@@ -114,6 +114,15 @@ ADR-107 revision 3 requires the eventual schema to prove token agreement too;
 the existing five-column attribution foreign key alone excludes that field.
 Neither clarification supplies an adopted endpoint/schema or completed W2 evidence.
 
+The subsequent [native adoption questions](authenticated-project-integration.md#native-adoption-questions-in-progress)
+extend this assessment in a new unfinished draft: ADR-103's adoption boundary,
+Proposed ADR-108 compatibility/migration exclusion, Proposed ADR-109 event delivery,
+and bounded contention/retry/snapshot/ingress evidence. Further maintainer questions
+and exact decisions remain open; this adds no W2-W7 implementation authorization.
+Additional consumer/producer questions extend the draft's assessment only; event
+requirements, any supported Go boundary, multi-active operation and online
+migration must be decided explicitly rather than inferred from the questions.
+
 These work packages preserve the existing acceptance scope. They establish
 ordering and review gates, not a commitment to one PR per package. Each stateful
 package needs its own bounded plan, negative/failure evidence and maintainer
