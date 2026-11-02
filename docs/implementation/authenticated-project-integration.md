@@ -230,6 +230,34 @@ from the already committed create result. English display is sufficient initiall
 IDs, error codes, codecs and numeric values remain locale independent. Future
 agents require their own credentials/delegation; the owner cookie is no agent API.
 
+## Native adoption questions in progress
+
+On 2026-11-02 the maintainer authorized an initial draft addressing the following
+questions and explicitly left its scope unfinished for further discussion. This
+section extends the adoption assessment; it does not accept ADR-103/107/108/109
+or authorize runtime changes. The source baseline is merge `69115ca805c2997c89476c7dd5153fa21b715ee9`.
+
+| Question | Retained contract / initial proposal | Concrete completion evidence and remaining decision |
+| --- | --- | --- |
+| Concurrent initialization under contention | Shared installation fence before exclusive actor fence; fresh authority and intent lookup after waits; operation-core protection for replay; target uniqueness across actors. Retry only classified transient failures as whole transactions after safe rollback, within one budget; never retry authorization, changed-intent or unexpected integrity failures as success candidates. | Observe same-intent and changed-intent races, cross-actor target collisions, revoke/retire contention, lock timeout/deadlock and cleanup. Select aggregate admission, maximum inflight/waiting work, total request/lock/statement deadlines and retry budget from measured cases; no throughput claim yet. |
+| Constraints change while older workers remain live | Recommend maintenance-only compatibility under Proposed ADR-108. A startup version check cannot exclude already-running writers. | Define and test enforceable migration/writer exclusion and failure recovery before populated upgrade support. Schema version, compiled domain rules, API version and stored codec versions have separate compatibility obligations. |
+| Commit succeeds but NATS is unavailable | PostgreSQL success remains success. Proposed ADR-109 compares durable outbox handoff with CDC; no native event publisher is delivered. | Decide whether the first journey requires an event/consumer; select handoff and verify commit/publish crash gaps, duplicates, backlog admission and restore before enabling dependent features. |
+| Timed-out creation is retried during/after commit | Proposed ADR-107 retains handle/token/exact payload, current authorization, repeated fenced resolution and historical-only reconciliation. Client timeout and absent-at-lookup do not prove rollback. | Barrier-controlled inflight retry, committed-response loss, rollback, collision re-entry, changed content, expiry and restore cases under #41/#49. No new identity on uncertainty. |
+| Initial snapshots cause latency or storage growth | Generate/admit prospective records before DB admission; atomically persist and verify required initial history. State Zero here means trusted revision-one configuration, not arbitrary bulk trees. | Measure generation/encoding, transaction/reload, tail latency, memory, bytes/project, indexes and WAL plus retained history growth. Distinguish retained data from dead-row bloat. Agree budgets; representation changes need separate approval, not post-success snapshot deferral. |
+| Deep/oversized hostile input | Accepted ADR-104 original-byte admission: 1 MiB record, 64 KiB decoded key/string, depth 16, 1,024 entries/collection, 16,384 values; early decoded duplicate rejection. Generated envelopes also bounded. | Actual streaming/misleading-length/limit/escaped-key tests must show zero per-request pool or application-worker admission for rejection. Measure aggregate concurrency and parser/response memory; codec ceilings do not imply zero allocation or bounded total process memory. |
+
+Existing pure/native fixture evidence is regression input, not performance or
+product-route qualification for these cases. Prepare bounded targeted harnesses
+before requesting service/resources or user-assisted execution; this matrix is
+not authorization for another broad campaign.
+
+Before finalizing this draft, resolve the maintenance fence/compatibility contract,
+the first journey's event requirement and delivery mechanism when applicable,
+the operating budgets and any additional maintainer questions. The future
+implementation plan must identify which cases gate its precise claim and retain
+unmet adoption/route/real-data obligations. Do not mark the draft ready or infer
+architectural acceptance because these initial documents exist.
+
 ## Completion and rollout evidence
 
 | Gate | Concrete required evidence | Current disposition |

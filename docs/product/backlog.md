@@ -140,6 +140,15 @@ immutable pending retries versus separate creation, visible persistence failures
 and an explicit token-integrity proof for the eventual mapping schema. These
 are design/evidence obligations, not completed runtime or allocation qualification.
 
+**Native adoption draft, 2026-11-02:** The maintainer authorized initial proposals
+for six operating/failure questions while explicitly keeping scope unfinished.
+See the [adoption matrix](../implementation/authenticated-project-integration.md#native-adoption-questions-in-progress),
+[Proposed ADR-108](../architecture/ADR-108-schema-runtime-compatibility.md) and
+[Proposed ADR-109](../architecture/ADR-109-native-event-delivery.md). Migration
+fencing, event scope/outbox-versus-CDC and measured operating budgets remain open.
+No architecture acceptance, populated upgrade, event publisher or route readiness
+is established. #40/#41/#49 retain their unfinished obligations.
+
 Planning [PR #50](https://github.com/MrQuality/kehila/pull/50) merged on 2026-10-14
 at 0c89bfbfd0c20b8556894e4c91c7814d6eacc96c. The successor issue and plan are now
 on main. W1 [PR #51](https://github.com/MrQuality/kehila/pull/51) merged on

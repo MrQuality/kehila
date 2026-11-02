@@ -46,6 +46,39 @@ must prove exact trusted-result equality and encode/reconstruct saved content.
 Actor authority (#40), target allocation (#41), codecs and replay clock/retry
 handling remain prerequisites for a native route.
 
+## Adoption boundary under review, 2026-11-02
+
+This remains a Proposed fresh-database foundation. The maintainer authorized a
+new draft design PR after asking about contention, mixed-version writers, event
+delivery, uncertain retries, snapshot costs and hostile payloads. Its scope is
+unfinished pending further questions; neither this amendment nor a draft merge
+would accept the architecture or establish implementation/qualification.
+
+The first candidate is a trusted revision-one project/configuration, not an
+arbitrarily large tree initialization. Admission, transaction and stored-record
+bounds are mandatory; their existence establishes no latency or throughput SLO.
+The [integration acceptance matrix](../implementation/authenticated-project-integration.md#native-adoption-questions-in-progress)
+records these six questions, ownership and remaining decisions.
+
+The proposed initial compatibility policy is maintenance-only: no incompatible
+live schema change while old writers can serve. [ADR-108](ADR-108-schema-runtime-compatibility.md)
+owns migration exclusion, writer compatibility and restart admission. Startup
+version visibility alone cannot fence already-running workers. This foundation
+does not supply a populated upgrade, migration runner or rolling deployment.
+
+Authoritative creation remains independent of broker/search responses under
+ADR-102. No native `ProjectCreated` publisher is delivered here. If publication
+becomes a required outcome, a durable handoff from committed state is required;
+the choice between a transactional outbox and CDC remains under review in
+[ADR-109](ADR-109-native-event-delivery.md). Enabling a dependent consumer must
+not precede that delivery contract and evidence. The first journey's event
+requirements remain an explicit product decision, not an inferred exclusion.
+
+Retain ADR-104 edge admission and historical codecs, ADR-105 current authority
+and fence order, and Proposed ADR-107's stable-intent/reconciliation requirements.
+Snapshot optimization cannot defer required initial history until after success
+or silently replace its accepted version-one representations.
+
 ## Alternatives
 
 - Execute Markdown SQL at application startup: rejected for this implementation;
