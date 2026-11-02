@@ -119,6 +119,9 @@ extend this assessment in a new unfinished draft: ADR-103's adoption boundary,
 Proposed ADR-108 compatibility/migration exclusion, Proposed ADR-109 event delivery,
 and bounded contention/retry/snapshot/ingress evidence. Further maintainer questions
 and exact decisions remain open; this adds no W2-W7 implementation authorization.
+Additional consumer/producer questions extend the draft's assessment only; event
+requirements, any supported Go boundary, multi-active operation and online
+migration must be decided explicitly rather than inferred from the questions.
 
 These work packages preserve the existing acceptance scope. They establish
 ordering and review gates, not a commitment to one PR per package. Each stateful

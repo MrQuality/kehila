@@ -148,6 +148,9 @@ See the [adoption matrix](../implementation/authenticated-project-integration.md
 fencing, event scope/outbox-versus-CDC and measured operating budgets remain open.
 No architecture acceptance, populated upgrade, event publisher or route readiness
 is established. #40/#41/#49 retain their unfinished obligations.
+The continuing draft also records additional wire/deployment and event-consumer
+questions: versioned rebuilds, poison/gap handling, backlog admission and effective
+publisher privileges. These are conditional design gates, not new runtime scope.
 
 Planning [PR #50](https://github.com/MrQuality/kehila/pull/50) merged on 2026-10-14
 at 0c89bfbfd0c20b8556894e4c91c7814d6eacc96c. The successor issue and plan are now
