@@ -1,6 +1,6 @@
 # Authenticated project creation: integration contract
 
-Revision: 4, 2026-11-02. Status: Integration implementation plan under review;
+Revision: 5, 2026-11-03. Status: implementation authorized; integrated qualification pending;
 ADR-103 and ADR-107 are Accepted for the bounded outcome below. No implementation or route
 qualification claimed. Owning delivery: [#49](https://github.com/MrQuality/kehila/issues/49),
 with authority [#40](https://github.com/MrQuality/kehila/issues/40) and allocation
@@ -8,7 +8,15 @@ with authority [#40](https://github.com/MrQuality/kehila/issues/40) and allocati
 
 ## Outcome and authority
 
-**Current decision, 2026-11-02:** the maintainer explicitly
+**Current decision, 2026-11-03:** implementation of the integrated outcome is
+authorized, including server-owned pending creations, explicit execution and
+confirmed cancellation under ADR-107 revision 4. The
+[product authority contract](authenticated-project-authority.md) owns the concrete
+implementation and evidence plan. Browser-local storage is not authoritative
+recovery. Local browsers are excluded from the current resource profile; the
+Windows qualification gate is retained while external verification is assessed.
+
+**Preceding architectural decision, 2026-11-02:** the maintainer explicitly
 [accepted ADR-103 and ADR-107 revision 3](https://github.com/MrQuality/kehila/issues/49#issuecomment-6573495351)
 at source `5345c9b0eaf51935786d17626ea83245b5f5ab98` for this fresh-database,
 Windows-browser creation/read-back outcome. This supersedes their earlier pending
@@ -51,7 +59,7 @@ Assessment baseline: source `c95d9c010f3e10f84e8e4f264344cd7518fd8e59`.
 | Browser-first, fresh native database, prototype data isolated | Explicit maintainer design direction, 2026-11-02 | Plan that path; no migration design is inferred. |
 | New native routes belong in the Rust authority | Accepted ADR-105 and D-016 native amendment | No forwarded actor header or anonymous worker/search alternative. |
 | Native physical foundation | ADR-103 Accepted for the bounded integration, 2026-11-02 | Exact auth/allocation/read schema and dependency implementation review remain. |
-| Creation has stable actor/family/target/token identity | Accepted D-032 and ADR-107 revision 3 | Verify physical binding and fault cases under #41 before finalizing adapters. |
+| Creation has stable actor/family/target/token identity | Accepted D-032 and ADR-107, amended by server-owned pending revision 4 | Verify pending lifecycle, physical binding and fault cases under #41 before finalizing adapters. |
 | Existing codecs/schema supply a complete adapter | Contradicted by W3/W7 and inspected source | Implement transaction, admission, reconstruction and startup ownership explicitly. |
 | AUTH-001 evidence transfers unchanged to product source | Unsupported; isolated manifest and experimental modules | Review actual extracted graph, capabilities and changed integration boundaries. |
 | Disposable container approval establishes supported installation | Contradicted by ADR-106 | Keep synthetic development and supported rollout gates separate. |
@@ -125,6 +133,9 @@ their own reviewed migration/version contract before implementation.
 The accepted allocation contract is [ADR-107](../architecture/ADR-107-project-creation-intents.md).
 Its mapping resolves a browser's stable intent to the trusted target. It does
 not replace the accepted complete operation lookup key or authorize any access.
+Execution requires an existing server-owned pending entry and exact immutable
+content agreement. The following creation transaction is not a registration
+endpoint: a missing/cancelled/expired entry cannot fall through to fresh creation.
 
 1. Bound actual transport bytes and parse original JSON with ADR-104's duplicate,
    decoded string/key, depth, collection and node ceilings before per-request
@@ -143,12 +154,14 @@ not replace the accepted complete operation lookup key or authorize any access.
    caller-generated target or display prefix becomes trusted identity.
 4. In either mode enter the ADR-105 installation/actor fence and recheck current credential,
    runtime/auth generations, actor active state and creation permission after waits.
-   Resolve an existing intent before considering fresh persistence. For replay,
+   Resolve the pending entry, require an executable state and exact immutable
+   content agreement before considering fresh persistence. For replay,
    use its stored target and full operation key, current original grants, stored
    codecs and exact typed intent. Never apply current domain rules to historical
    successful content. No Project lock is required merely to replay creation.
 5. For a fresh intent in creation mode, use the prepared result only if authoritative checks agree.
-   Commit allocation mapping, permanent operation, relational project/configuration,
+   Commit pending completion reference, allocation mapping, permanent operation,
+   relational project/configuration,
    matching current grant/event, revision-one snapshots and saved result atomically.
    Reload typed state and compare with the single trusted result; force deferred
    constraints before commit. All errors roll back the entire action.
@@ -181,60 +194,39 @@ No exclusive actor fence spans response delivery, and no search dependency is ne
 
 ## Browser behavior
 
+The 2026-11-03 accepted ADR-107 amendment replaces browser-persistent recovery
+with server-owned pending creation. See the [product authority contract](authenticated-project-authority.md)
+for implementation/review gates. The browser interface remains the intended client,
+but local browser execution is excluded from the selected verification profile.
+
+
 Serve the product page and API at one verified HTTPS origin. Retain independent
 CSRF, strict origin/authority handling, protected cookies and no-store sensitive
 responses. Initial project form fields are name, prefix and estimate unit; trusted
 seed definitions, actor identity and permissions are never client inputs.
 
-Before first transmission, persist a bounded pending-intent record containing its
-handle, operation token and exact form values. Proposed storage is IndexedDB,
-scoped to this origin and the authenticated installation/actor. Never store
-passwords, cookies or CSRF secrets there. Local project metadata is sensitive
-application data: bound retained pending entries and provide explicit discard.
-Failure to persist blocks submission rather than silently losing retry identity.
+Before execution, save immutable versioned form values and server-generated
+identity in an authenticated server-owned pending creation. Saving creates no
+project. Current authorization applies independently to registration, paginated
+list/open, explicit execution, reconciliation and cancellation. Another browser
+can discover/open the same entry after reauthentication; IndexedDB is not required.
+Nothing executes on login, reload or GET. Distinct registrations of equal values
+remain distinct entries. The server cannot recover content it never received.
 
-Before selecting or creating a pending record, the product browser must obtain
-an authenticated, stable installation/actor binding from the authority. The
-current experimental state response reports only active/inactive and cannot
-provide that binding. Its product representation may be opaque; raw IDs and a
-particular endpoint are not required. Associate the binding coherently with the
-same authenticated session and CSRF proof used for submission, and refresh that
-association after reauthentication or session replacement. Missing or mismatched
-binding blocks pending-intent submission. A binding is comparison metadata, never
-a credential, permission grant or trusted caller assertion; the server still
-derives actor identity and current authority independently. The bounded adapter
-plan must define the discovery/proof contract before browser/API implementation.
+Execution echoes the opened immutable values solely as untrusted input for
+original-byte and generated-envelope admission before execution database/worker
+work. Fresh fenced authorization and exact saved-content comparison remain
+mandatory. The echo never overrides authoritative identity/content. Historical
+reconciliation needs no prospective current-domain acceptance and cannot fall
+through to creation. Missing/cancelled/expired entries cannot be reconstructed
+by delayed execution; changed values require a separate explicit registration.
 
-If persistence fails before first transmission, show that creation was not sent
-because its retry identity could not be saved, and offer retrying local persistence
-after site storage becomes available. Never silently submit from volatile state.
-This message cannot be used for an already transmitted uncertain intent: a later
-local storage error does not establish that its earlier request failed to commit.
-
-After a lost response or reload, show the unresolved intent and reconcile with
-exactly the same identity/content after reauthentication when needed. An absent
-result permits a separate explicit creation attempt with that identity, subject
-to fresh preadmission and a repeated fenced lookup. A fresh-acceptance rejection
-does not prove that a previous or concurrent attempt did not commit; retain the
-pending record and offer reconciliation. Do not automatically
-submit pending work at login, replace its token, or relabel an unknown outcome as
-rollback. Deliberate new creation requires a new explicit user action. Discarding
-local retry metadata cannot promise the original transaction did not commit.
-
-Expose two distinct actions:
-
-- **Reconcile or retry pending intent:** retain the immutable original handle,
-  token and exact payload. Reconcile first after uncertainty; an absent result
-  permits the separate creation attempt described above. Editing a separate
-  form draft must not mutate the saved pending record.
-- **Start a separate creation:** require explicit user action and a fresh handle
-  and token. If the user discards an uncertain pending record, warn that its
-  original project may already exist and that another submission may create a
-  second project. Discard is not cancellation or proof of rollback.
-
-Reject a different installation/actor binding; do not send an old owner's pending
-intent using a new owner's authority. Same-origin scripts/XSS can access browser
-metadata; local persistence is not a separate confidentiality boundary.
+Cancellation and execution share serialization. A committed cancellation prevents
+later execution; a committed project cannot be undone by cancellation. Response
+loss retains uncertainty until server reconciliation. Pending quotas, pagination,
+terminal retention and payload handling must be bounded separately from permanent
+successful operation/mapping identity. A browser record or response is not a
+permission grant. Owner/installation binding is derived from current authority.
 
 After confirmed creation, show authoritative read-back and its failure separately
 from the already committed create result. English display is sufficient initially;
@@ -324,10 +316,10 @@ into a replicated gateway, rolling-migration or general messaging-platform deliv
 | Gate | Concrete required evidence | Current disposition |
 | --- | --- | --- |
 | Design and implementation gates | ADR-103 and ADR-107 accepted 2026-11-02; exact auth/allocation/read schema, product graph/MSRV and bounded adapter plan remain | Architectural choices accepted for the bounded outcome; implementation evidence remains pending. |
-| Allocation #41 | Lost responses before/after commit, concurrent identical/changed intents, actor isolation, target collision, tombstone/restore integrity | Planned; no SP-005 run claimed. |
+| Allocation #41 | Lost responses before/after commit, concurrent identical/changed intents, actor isolation, target collision, tombstone/restore integrity | Structural mapping subset passed; concurrency, uncertainty, authenticated authority and application-adapter qualification remain pending. |
 | Ingress | Actual reads with misleading lengths, duplicates/escaped keys and every codec limit; zero pool/application-work admission on rejection; generated-envelope overflow before DB | Required before route exposure. |
 | Authority #40 | Missing/spoofed credentials, wrong scope, current revocation, creation versus replay grants, read snapshot races and post-query expiry | Required on real integrated paths. |
-| Browser binding/lifecycle | Authenticated stable binding associated with session/CSRF, changed-binding rejection, immutable retry versus separate creation, visible pre-transmission persistence failure and retained uncertainty after transmission | Contract before browser/API implementation; actual browser cases before qualification. |
+| Browser binding/lifecycle | Current session/CSRF authority, immutable server-pending discovery across browsers, explicit execution/cancel, changed-owner rejection and retained response uncertainty | Contract before browser/API implementation; actual browser cases before qualification. |
 | Persistence #49 | Actual-role privileges/startup rejection; fault at each write boundary; full typed reload and frozen codec oracles; concurrent/uncertain commit reconciliation | Required; experiment evidence is scoped regression input. |
 | Replay/retirement/recovery | Logical 90-day expiry, permanent no-reexecution identity, gap-free retirement and restored allocation/core/tombstone coherence | Retained W4/W7/D-034 route-exposure gates; no compactor or restore completion inferred. |
 | Development journey | Windows browser -> verified TLS -> Linux container authority -> native create -> fresh authorized read, with all source/profile identities recorded | Synthetic disposable data only; execute only with resource/trust permissions. |

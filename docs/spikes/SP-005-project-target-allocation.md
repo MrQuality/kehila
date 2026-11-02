@@ -159,3 +159,13 @@ passed. Next: complete required commit gates, exact-head review and CI before
 handoff. Concurrent allocation, uncertain commit and authenticated
 application integration remain later work. Broader machine calibration follows
 this delivery and is not an added completion gate.
+
+## Server-owned pending creation amendment, 2026-11-03
+
+The maintainer accepted cross-browser server-owned pending creation and authorized
+its implementation as part of the [product authority delivery](../implementation/authenticated-project-authority.md).
+The earlier immutable successful mapping evidence remains valid for its structural
+scope; it does not qualify the new pending lifecycle. Register/discover/execute/
+cancel, delayed execution after expiry, concurrent cancellation and uncertain
+registration/commit require the actual product/native cases. No IndexedDB recovery
+dependency remains. #41 stays open until its applicable allocation evidence passes.
