@@ -61,6 +61,8 @@ class GitGateTests(unittest.TestCase):
                               env=self.environment, capture_output=True, text=True, timeout=60)
 
     def test_checkout_local_override_is_rejected_before_snapshot_verification(self):
+        # Exercise local path policy even when this suite is hosted by CI.
+        self.environment['CI'] = 'false'
         self.write('local-settings.json', '{"machine_start_seconds": 300}')
         self.environment['KEHILA_VERIFICATION_CONFIG'] = str(self.root / 'local-settings.json')
         self.write('src/pure/value.py', 'assert 3 + 3 == 6\n')
