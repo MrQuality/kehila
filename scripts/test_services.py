@@ -190,11 +190,12 @@ def _account_directory():
             ole.CoUninitialize()
 
 
-def _machine_lease_path(name):
+def _resource_lease_path(name):
     account = _account_directory()
     if not account.is_absolute():
         raise ValueError('Expected an absolute OS account directory')
     key = hashlib.sha256(name.encode('utf-8')).hexdigest()
+    # Preserve lock identity across versions, including existing machine leases.
     return account / '.kehila-verifier-locks' / ('machine-' + key + '.lock')
 
 
@@ -202,15 +203,15 @@ def _machine_lease_path(name):
 def resource_lease(name, *, description):
     # Keep the inode after unlocking: unlinking it could admit a second owner
     # holding a new inode while another verifier still owns the old one.
-    path = _machine_lease_path(name)
+    path = _resource_lease_path(name)
     directory = path.parent
     directory.mkdir(mode=0o700, exist_ok=True)
     if directory.is_symlink() or directory.resolve() != directory:
-        raise ValueError('Machine lease directory must not be redirected')
+        raise ValueError('Resource lease directory must not be redirected')
     if os.name != 'nt':
         info = directory.stat()
         if info.st_uid != os.getuid() or info.st_mode & 0o077:
-            raise ValueError('Machine lease directory must be private to the OS account')
+            raise ValueError('Resource lease directory must be private to the OS account')
     with path.open('a+b') as lease:
         lease.seek(0)
         if os.name == 'nt':

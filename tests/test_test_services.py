@@ -1,6 +1,7 @@
 """Test-resource ownership must survive startup, test and cleanup failures."""
 from pathlib import Path
 from contextlib import nullcontext
+import hashlib
 import json
 import os
 import tempfile
@@ -392,19 +393,21 @@ except RuntimeError as error:
             self.assertIn('Another verifier owns', result.stdout)
 
     def test_machine_lease_ignores_user_and_temporary_environment_overrides(self):
-        first = services._machine_lease_path('fixture')
+        first = services._resource_lease_path('fixture')
+        # Old and new verifiers must contend on the same existing lock file.
+        self.assertEqual(first.name, 'machine-' + hashlib.sha256(b'fixture').hexdigest() + '.lock')
         overrides = dict.fromkeys(
             ('LOGNAME', 'USER', 'USERNAME', 'TEMP', 'TMP', 'TMPDIR', 'HOME',
              'USERPROFILE', 'LOCALAPPDATA'), 'unrelated-environment-value')
         with patch.dict(os.environ, overrides):
-            self.assertEqual(first, services._machine_lease_path('fixture'))
-        self.assertNotEqual(first, services._machine_lease_path('other-machine'))
+            self.assertEqual(first, services._resource_lease_path('fixture'))
+        self.assertNotEqual(first, services._resource_lease_path('other-machine'))
 
     def test_same_machine_name_has_distinct_leases_for_distinct_account_directories(self):
         with tempfile.TemporaryDirectory() as folder:
             for account in ('first', 'second'):
                 with patch.object(services, '_account_directory', return_value=Path(folder) / account):
-                    path = services._machine_lease_path('fixture')
+                    path = services._resource_lease_path('fixture')
                 if account == 'first':
                     first = path
                 else:

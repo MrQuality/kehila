@@ -92,7 +92,7 @@ def export_source(tree, destination, index):
         environment=environment)
 
 
-def unchanged(tree, head):
+def verify_index_and_head(tree, head):
     if git("write-tree").strip() != tree or head_commit() != head:
         return fail(3, "Git index or HEAD changed during verification; retry")
     return 0
@@ -119,11 +119,11 @@ def main():
         return fail(3, "Symlinks and submodules are unsupported in the verified snapshot")
     if not changed:
         print("No changes to verify")
-        return unchanged(tree_before, head_before)
+        return verify_index_and_head(tree_before, head_before)
     scope = verification_scope(changed)
     if scope == "docs":
         print("Documentation-only change; no test run required")
-        return unchanged(tree_before, head_before)
+        return verify_index_and_head(tree_before, head_before)
     # Validate against the original checkout, before source moves to a snapshot.
     settings = verification_settings()
     with owned_directory("kehila-index-") as temporary:
@@ -140,8 +140,9 @@ def main():
         environment.setdefault("CARGO_TARGET_DIR", str(ROOT / "target"))
         # Keep verification failure active while owned cleanup runs.
         subprocess.run(command, cwd=snapshot, env=environment, check=True)
-        if unchanged(tree_before, head_before):
-            return 3
+        status = verify_index_and_head(tree_before, head_before)
+        if status:
+            return status
     print("Staged snapshot verified")
     return 0
 

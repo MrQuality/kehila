@@ -15,7 +15,9 @@ KEYS = {'machine_start_seconds', 'machine_stop_seconds', 'runner_memory_mib',
 
 def immutable_image(value):
     if not isinstance(value, str) or not re.fullmatch(r'(?:[a-zA-Z0-9./:_-]+@)?sha256:[0-9a-f]{64}', value):
-        raise ValueError('Container verification requires an explicit immutable toolchain image')
+        raise ValueError('Container verification requires an explicit immutable toolchain image; '
+                         'set runner_image or KEHILA_VERIFICATION_IMAGE. See '
+                         'docs/implementation/container-verification.md#image-preparation-and-invocation')
     return value
 
 
