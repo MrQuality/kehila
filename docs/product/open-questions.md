@@ -48,7 +48,7 @@ retains dependency/certificate proof, provisional-limit measurement and separate
 reviewed A1-A5 work. Heavy execution and trust-store changes need separate permission.
 The singleton, volatile sessions and loopback profile are local-MVP-only;
 [B-032/#65](backlog.md#b-032) owns replicated deployment and migration. This question
-retains supported-host/operating qualification gaps; ADR-103 remains Proposed.
+retains supported-host/operating qualification gaps. ADR-103 and ADR-107 were explicitly Accepted on 2026-11-02 for the bounded fresh-database integration; those qualification gaps remain.
 
 <a id="q-003"></a>
 ## Q-003 — Resource units and availability calendars

@@ -1,7 +1,7 @@
 # ADR-109 - Durable native event delivery
 
 Status: Proposed, initial draft, 2026-11-02. Owner: project maintainer.
-Acceptance: pending; outbox versus CDC and first-journey event scope remain open.
+Acceptance: pending; outbox versus CDC remains open. The first accepted integration journey excludes lifecycle-event consumers.
 Related: ADR-101/102/103/104; #49, B-022/B-023, B-024/#60;
 [integration questions](../implementation/authenticated-project-integration.md#native-adoption-questions-in-progress).
 
@@ -49,10 +49,10 @@ admission before their persistence attempt, alongside the other generated record
 For CDC, define admitted event reconstruction and retained decoder compatibility.
 Do not introduce an unbounded event serializer as an escape from codec limits.
 
-**Open product decision:** does the first authenticated create/read journey require
+**Original scope question, now resolved for the first journey:** does it require
 an event or consumer? Do not silently make the publisher a prerequisite when no
 consumer is needed, or defer it while claiming an event-dependent feature works.
-Resolve this before final delivery sizing or enabling dependent consumers.
+The subsequent explicit 2026-11-02 integration decision excludes lifecycle-event consumers from the first journey. Delivery selection remains required before enabling later dependent consumers.
 
 ## Additional lifecycle-event questions under review
 

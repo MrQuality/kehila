@@ -1,11 +1,22 @@
 # Authenticated project creation: integration contract
 
-Revision: 3, 2026-11-02. Status: Proposed design; no implementation or route
+Revision: 4, 2026-11-02. Status: Integration implementation plan under review;
+ADR-103 and ADR-107 are Accepted for the bounded outcome below. No implementation or route
 qualification claimed. Owning delivery: [#49](https://github.com/MrQuality/kehila/issues/49),
 with authority [#40](https://github.com/MrQuality/kehila/issues/40) and allocation
 [#41](https://github.com/MrQuality/kehila/issues/41).
 
 ## Outcome and authority
+
+**Current decision, 2026-11-02:** the maintainer explicitly
+[accepted ADR-103 and ADR-107 revision 3](https://github.com/MrQuality/kehila/issues/49#issuecomment-6573495351)
+at source `5345c9b0eaf51935786d17626ea83245b5f5ab98` for this fresh-database,
+Windows-browser creation/read-back outcome. This supersedes their earlier pending
+labels in dated framing records below. #41 physical allocation/reconciliation
+verification precedes adapters. Lifecycle-event consumers, populated upgrades
+and online migrations are excluded from the first journey; ADR-108/109 remain
+Proposed. Exact schema/dependency/implementation reviews, heavy execution, trust
+changes, retirement/restore and route/real-data qualification remain separate.
 
 An owner signs in through the first-party browser on Windows, creates a project
 with its trusted M1V1 configuration, then reloads it through an independently
@@ -39,8 +50,8 @@ Assessment baseline: source `c95d9c010f3e10f84e8e4f264344cd7518fd8e59`.
 | --- | --- | --- |
 | Browser-first, fresh native database, prototype data isolated | Explicit maintainer design direction, 2026-11-02 | Plan that path; no migration design is inferred. |
 | New native routes belong in the Rust authority | Accepted ADR-105 and D-016 native amendment | No forwarded actor header or anonymous worker/search alternative. |
-| Native physical foundation is adopted for product service | Unresolved; ADR-103 remains Proposed | Obtain exact adoption/schema decision before dependent product implementation. |
-| Creation has stable actor/family/target/token identity | Accepted D-032; allocation unresolved in SP-005/#41 | Review ADR-107 and verify fault cases before finalizing adapter interfaces. |
+| Native physical foundation | ADR-103 Accepted for the bounded integration, 2026-11-02 | Exact auth/allocation/read schema and dependency implementation review remain. |
+| Creation has stable actor/family/target/token identity | Accepted D-032 and ADR-107 revision 3 | Verify physical binding and fault cases under #41 before finalizing adapters. |
 | Existing codecs/schema supply a complete adapter | Contradicted by W3/W7 and inspected source | Implement transaction, admission, reconstruction and startup ownership explicitly. |
 | AUTH-001 evidence transfers unchanged to product source | Unsupported; isolated manifest and experimental modules | Review actual extracted graph, capabilities and changed integration boundaries. |
 | Disposable container approval establishes supported installation | Contradicted by ADR-106 | Keep synthetic development and supported rollout gates separate. |
@@ -104,14 +115,14 @@ not run schema changes. A runtime login cannot repair its own privileges.
 Order installation fencing before actor locking, as required by ADR-105; preserve
 generation rechecks after waits and owned connection cleanup on cancellation.
 
-ADR-103 remains Proposed. The next acceptance packet must identify the exact
+ADR-103 is Accepted for the bounded integration. The next implementation packet must identify the exact
 baseline plus proposed auth/allocation/read schema changes, not ask whether
 native PostgreSQL is desirable in general. Product SQL and function changes require
 their own reviewed migration/version contract before implementation.
 
 ## Creation, replay and reads
 
-The proposed allocation contract is [ADR-107](../architecture/ADR-107-project-creation-intents.md).
+The accepted allocation contract is [ADR-107](../architecture/ADR-107-project-creation-intents.md).
 Its mapping resolves a browser's stable intent to the trusted target. It does
 not replace the accepted complete operation lookup key or authorize any access.
 
@@ -234,15 +245,16 @@ agents require their own credentials/delegation; the owner cookie is no agent AP
 
 On 2026-11-02 the maintainer authorized an initial draft addressing the following
 questions and explicitly left its scope unfinished for further discussion. This
-section extends the adoption assessment; it does not accept ADR-103/107/108/109
-or authorize runtime changes. The source baseline is merge `69115ca805c2997c89476c7dd5153fa21b715ee9`.
+section historically extended the adoption assessment without accepting those
+ADRs. The later explicit decision above accepts only ADR-103/107 for the bounded
+outcome. Its original source baseline is merge `69115ca805c2997c89476c7dd5153fa21b715ee9`.
 
 | Question | Retained contract / initial proposal | Concrete completion evidence and remaining decision |
 | --- | --- | --- |
 | Concurrent initialization under contention | Shared installation fence before exclusive actor fence; fresh authority and intent lookup after waits; operation-core protection for replay; target uniqueness across actors. Retry only classified transient failures as whole transactions after safe rollback, within one budget; never retry authorization, changed-intent or unexpected integrity failures as success candidates. | Observe same-intent and changed-intent races, cross-actor target collisions, revoke/retire contention, lock timeout/deadlock and cleanup. Select aggregate admission, maximum inflight/waiting work, total request/lock/statement deadlines and retry budget from measured cases; no throughput claim yet. |
 | Constraints change while older workers remain live | Recommend maintenance-only compatibility under Proposed ADR-108. A startup version check cannot exclude already-running writers. | Define and test enforceable migration/writer exclusion and failure recovery before populated upgrade support. Schema version, compiled domain rules, API version and stored codec versions have separate compatibility obligations. |
-| Commit succeeds but NATS is unavailable | PostgreSQL success remains success. Proposed ADR-109 compares durable outbox handoff with CDC; no native event publisher is delivered. | Decide whether the first journey requires an event/consumer; select handoff and verify commit/publish crash gaps, duplicates, backlog admission and restore before enabling dependent features. |
-| Timed-out creation is retried during/after commit | Proposed ADR-107 retains handle/token/exact payload, current authorization, repeated fenced resolution and historical-only reconciliation. Client timeout and absent-at-lookup do not prove rollback. | Barrier-controlled inflight retry, committed-response loss, rollback, collision re-entry, changed content, expiry and restore cases under #41/#49. No new identity on uncertainty. |
+| Commit succeeds but NATS is unavailable | PostgreSQL success remains success. Proposed ADR-109 compares durable outbox handoff with CDC; no native event publisher is delivered. | Event consumers are excluded from the accepted first journey; select handoff and verify commit/publish crash gaps, duplicates, backlog admission and restore before later dependent features. |
+| Timed-out creation is retried during/after commit | Accepted ADR-107 retains handle/token/exact payload, current authorization, repeated fenced resolution and historical-only reconciliation. Client timeout and absent-at-lookup do not prove rollback. | Barrier-controlled inflight retry, committed-response loss, rollback, collision re-entry, changed content, expiry and restore cases under #41/#49. No new identity on uncertainty. |
 | Initial snapshots cause latency or storage growth | Generate/admit prospective records before DB admission; atomically persist and verify required initial history. State Zero here means trusted revision-one configuration, not arbitrary bulk trees. | Measure generation/encoding, transaction/reload, tail latency, memory, bytes/project, indexes and WAL plus retained history growth. Distinguish retained data from dead-row bloat. Agree budgets; representation changes need separate approval, not post-success snapshot deferral. |
 | Deep/oversized hostile input | Accepted ADR-104 original-byte admission: 1 MiB record, 64 KiB decoded key/string, depth 16, 1,024 entries/collection, 16,384 values; early decoded duplicate rejection. Generated envelopes also bounded. | Actual streaming/misleading-length/limit/escaped-key tests must show zero per-request pool or application-worker admission for rejection. Measure aggregate concurrency and parser/response memory; codec ceilings do not imply zero allocation or bounded total process memory. |
 
@@ -251,8 +263,8 @@ product-route qualification for these cases. Prepare bounded targeted harnesses
 before requesting service/resources or user-assisted execution; this matrix is
 not authorization for another broad campaign.
 
-Before finalizing this draft, resolve the maintenance fence/compatibility contract,
-the first journey's event requirement and delivery mechanism when applicable,
+Before enabling the affected later capabilities, resolve the maintenance fence/compatibility contract
+and event delivery mechanism when applicable,
 the operating budgets and any additional maintainer questions. The future
 implementation plan must identify which cases gate its precise claim and retain
 unmet adoption/route/real-data obligations. Do not mark the draft ready or infer
@@ -311,7 +323,7 @@ into a replicated gateway, rolling-migration or general messaging-platform deliv
 
 | Gate | Concrete required evidence | Current disposition |
 | --- | --- | --- |
-| Design adoption | Exact ADR-103/schema disposition, ADR-107 decision, reviewed product graph/MSRV and bounded adapter plan | Pending; this PR supplies a proposal only. |
+| Design and implementation gates | ADR-103 and ADR-107 accepted 2026-11-02; exact auth/allocation/read schema, product graph/MSRV and bounded adapter plan remain | Architectural choices accepted for the bounded outcome; implementation evidence remains pending. |
 | Allocation #41 | Lost responses before/after commit, concurrent identical/changed intents, actor isolation, target collision, tombstone/restore integrity | Planned; no SP-005 run claimed. |
 | Ingress | Actual reads with misleading lengths, duplicates/escaped keys and every codec limit; zero pool/application-work admission on rejection; generated-envelope overflow before DB | Required before route exposure. |
 | Authority #40 | Missing/spoofed credentials, wrong scope, current revocation, creation versus replay grants, read snapshot races and post-query expiry | Required on real integrated paths. |

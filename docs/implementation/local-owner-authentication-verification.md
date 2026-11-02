@@ -8,7 +8,7 @@ Related: [ADR-105](../architecture/ADR-105-local-owner-authentication.md),
 This plan makes the password/authority boundary reviewable. The
 [A1 storage record](../../experiments/AUTH-001/storage/README.md) supplies
 scoped native evidence, not password/session/HTTP qualification. The existing worker remains unauthenticated and
-on the provisional storage path. ADR-105 is Accepted for local MVP; ADR-103 remains independently Proposed.
+on the provisional storage path. ADR-105 is Accepted for local MVP; ADR-103 was separately accepted on 2026-11-02 for the bounded fresh-database integration; qualification remains separate.
 All A0-A5/T01-T16 work here qualifies the proposed local-MVP profile only. Its
 single active runtime and volatile session state are not a replicated deployment
 design. [B-032/#65](https://github.com/MrQuality/kehila/issues/65) owns the required

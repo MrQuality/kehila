@@ -126,6 +126,14 @@ must not be claimed by M1 checks.
 <a id="m1-01-remaining-delivery"></a>
 ### M1-01 remaining delivery: successor execution record
 
+**Current architectural disposition, 2026-11-02:** the maintainer explicitly
+[accepted ADR-103 and ADR-107 revision 3](https://github.com/MrQuality/kehila/issues/49#issuecomment-6573495351)
+for fresh native PostgreSQL and stable intents in the authenticated Windows-browser
+create/read journey. #41 implementation/evidence comes first; no lifecycle-event
+consumers, populated upgrades or online migrations are included. ADR-108/109
+remain Proposed. Earlier dated design-only entries below retain their chronology;
+the new acceptance supersedes their pending labels, not their evidence limits.
+
 **2026-11-02 integration design:** The maintainer selected a browser-first
 authenticated ProjectCreate/read-back journey against fresh native PostgreSQL,
 keeping prototype data isolated. The [integration contract](../implementation/authenticated-project-integration.md)
@@ -168,7 +176,7 @@ no product milestone and makes no completion claim.
 [PR #46](https://github.com/MrQuality/kehila/pull/46) delivered the native SQL
 foundation; [PR #48](https://github.com/MrQuality/kehila/pull/48) delivered the pure
 production codecs tracked by #47. [ADR-104](../architecture/ADR-104-project-create-codecs.md)
-is Accepted; ADR-103 remains Proposed for production adoption. Native application
+is Accepted; ADR-103 and ADR-107 were explicitly Accepted on 2026-11-02 for the bounded fresh-database integration. Native application
 persistence and supported routes remain absent. W1 supplies the
 separate project snapshot codec required by ADR-104, with actual JSONB round-trip
 verification. W1 was explicitly approved on 2026-10-13; its

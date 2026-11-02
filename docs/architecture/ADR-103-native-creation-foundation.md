@@ -1,8 +1,13 @@
 # ADR-103 - Native creation storage foundation
 
-Status: Proposed. Owner: project maintainer. Recorded: 2026-10-10.
-Acceptance: Production adoption pending maintainer review. Local implementation
-and testing were authorized on 2026-10-10; that does not establish route readiness.
+Status: Accepted for the bounded fresh-database local integration.
+Owner: project maintainer. Recorded: 2026-10-10. Accepted: 2026-11-02.
+Acceptance: [explicit maintainer decision](https://github.com/MrQuality/kehila/issues/49#issuecomment-6573495351),
+identifying this record at source `5345c9b0eaf51935786d17626ea83245b5f5ab98`.
+This accepts the foundation for authenticated Windows-browser project creation
+and independent read-back with prototype data isolated, not route qualification,
+populated upgrades or real-data use. Detailed schema/dependency and execution
+gates remain. The 2026-10-10 local implementation/testing authorization is historical.
 Related: [ADR-102](ADR-102-postgresql-transactions.md), #26/B-005, #39,
 [implementation plan](../implementation/issue-26-postgresql-foundation.md),
 [storage specification](M1-project-create-storage.md).
@@ -46,13 +51,14 @@ must prove exact trusted-result equality and encode/reconstruct saved content.
 Actor authority (#40), target allocation (#41), codecs and replay clock/retry
 handling remain prerequisites for a native route.
 
-## Adoption boundary under review, 2026-11-02
+## Bounded adoption and remaining gates, 2026-11-02
 
-This remains a Proposed fresh-database foundation. The maintainer authorized a
+The foundation is now Accepted for the bounded outcome above. Previously the maintainer authorized a
 new draft design PR after asking about contention, mixed-version writers, event
 delivery, uncertain retries, snapshot costs and hostile payloads. Its scope is
-unfinished pending further questions; neither this amendment nor a draft merge
-would accept the architecture or establish implementation/qualification.
+unfinished pending further questions. That draft and its merge did not themselves
+accept the architecture; the subsequent explicit decision above does. No
+implementation/qualification claim follows from acceptance.
 
 The first candidate is a trusted revision-one project/configuration, not an
 arbitrarily large tree initialization. Admission, transaction and stored-record
@@ -71,11 +77,11 @@ ADR-102. No native `ProjectCreated` publisher is delivered here. If publication
 becomes a required outcome, a durable handoff from committed state is required;
 the choice between a transactional outbox and CDC remains under review in
 [ADR-109](ADR-109-native-event-delivery.md). Enabling a dependent consumer must
-not precede that delivery contract and evidence. The first journey's event
-requirements remain an explicit product decision, not an inferred exclusion.
+not precede that delivery contract and evidence. The accepted first journey excludes
+lifecycle-event consumers; the later delivery mechanism remains undecided.
 
 Retain ADR-104 edge admission and historical codecs, ADR-105 current authority
-and fence order, and Proposed ADR-107's stable-intent/reconciliation requirements.
+and fence order, and Accepted ADR-107's stable-intent/reconciliation requirements.
 Snapshot optimization cannot defer required initial history until after success
 or silently replace its accepted version-one representations.
 
@@ -112,5 +118,6 @@ checks. PostgreSQL 16.15 verification on Windows with a Linux container passed
 installation rollback, role separation, structural constraints and a payload
 identity mutation regression. Shared staged checks also passed. Native Linux-host
 execution, hosted native CI, integrated retries, compaction, restore and load
-qualification remain unverified. Review this record with the local foundation
-before accepting production adoption; do not equate schema execution with M1 readiness.
+qualification remain unverified. The explicit acceptance above supplies the scoped
+architectural decision, not this remaining implementation/qualification evidence;
+do not equate schema execution or acceptance with M1 readiness.

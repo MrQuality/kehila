@@ -30,7 +30,7 @@ Their Host/origin/loopback checks do not identify an owner or authenticate a pee
 | Rust authority boundary; one active instance for local MVP only | Terminate HTTPS, verify identity, enforce domain authority and mediate search within the Rust service. The local MVP singleton is not a final replica-count constraint; the boundary is accepted and implementation remains subject to scoped gates. |
 | Local-MVP opaque browser/CLI sessions | Tokens carry no permissions. This profile keeps sessions in memory and ends them on restart; it does not supply multi-replica session continuity. |
 | Local administrative enrollment/recovery | No public first-owner claim/reset endpoint. Recovery preserves the actor and history, replaces the password and revokes sessions. |
-| Separate implementation gates | Certificate trust, dependency choices, schema/capabilities and negative/native tests need evidence before support. ADR-103 remains Proposed. |
+| Separate implementation gates | Certificate trust, dependency choices, schema/capabilities and negative/native tests need evidence before support. ADR-103 was later accepted separately on 2026-11-02 for the bounded fresh-database integration. |
 
 ## Decision — accepted for the local MVP
 

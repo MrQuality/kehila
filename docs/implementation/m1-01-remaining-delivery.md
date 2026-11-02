@@ -2,7 +2,7 @@
 
 Status: W1 implementation approved by explicit maintainer instruction on
 2026-10-13 and merged in PR #51 on 2026-10-14, as tracked by [#49](https://github.com/MrQuality/kehila/issues/49#issuecomment-6154165059).
-Later work packages and ADR-103 production adoption retain separate review gates.
+Later work packages retain review/evidence gates; ADR-103 and ADR-107 were separately accepted on 2026-11-02 for the bounded local integration.
 
 Planning [PR #50](https://github.com/MrQuality/kehila/pull/50) merged into main on
 2026-10-14 at 0c89bfbfd0c20b8556894e4c91c7814d6eacc96c. Implementation
@@ -35,8 +35,8 @@ limitations. [SP-002](../spikes/SP-002-postgresql-project-create.md) and
 transaction direction. [ADR-104](../architecture/ADR-104-project-create-codecs.md)
 was explicitly Accepted on 2026-10-13, with its
 [approval record](https://github.com/MrQuality/kehila/pull/48#issuecomment-6151468708).
-[ADR-103](../architecture/ADR-103-native-creation-foundation.md) remains Proposed
-for production adoption. This plan accepts no additional architecture or product
+[ADR-103](../architecture/ADR-103-native-creation-foundation.md) is now Accepted
+for the bounded fresh-database integration by the explicit 2026-11-02 decision. This plan accepts no additional architecture or product
 decision. The running worker remains on FerretDB; no native application adapter
 or supported configurable-model persistence path is implemented.
 
@@ -103,9 +103,10 @@ this retained plan alone is not execution evidence.
 The [2026-11-02 integration contract](authenticated-project-integration.md)
 proposes the next browser-first outcome: authenticated creation and authoritative
 read-back against fresh native PostgreSQL, with prototype data isolated. The
-maintainer selected that direction for design; exact adoption, allocation,
-dependencies and execution retain their gates. [Proposed ADR-107](../architecture/ADR-107-project-creation-intents.md)
-supplies a reviewable allocation candidate, not completed W2 or approved W3.
+maintainer selected that direction and then accepted ADR-103/107 for the bounded
+integration. Physical schema, dependencies and execution retain their gates.
+[ADR-107, now Accepted](../architecture/ADR-107-project-creation-intents.md)
+supplies the allocation protocol, not completed W2 evidence or a qualified W3 adapter.
 This groups relevant work around a product outcome without waiving W4/W7
 replay, retirement, recovery or route-exposure requirements.
 The integration contract's revision 3 makes authenticated browser binding discovery
@@ -235,6 +236,12 @@ A whole-creation admission API remains part of the separately reviewed W3 plan.
 
 ### ADR-103 disposition gate
 
+**Current disposition:** satisfied by the [explicit 2026-11-02 acceptance](https://github.com/MrQuality/kehila/issues/49#issuecomment-6573495351)
+of ADR-103 and ADR-107 for fresh native Windows-browser creation/read-back.
+The following paragraph preserves the earlier gate and W1 boundary; it is no
+longer a request to repeat that architectural decision. Physical schema, drivers,
+bounded implementation plans and relevant verification remain separate gates.
+
 Request separate maintainer review of ADR-103 before W3's production adoption,
 using the foundation, role/integrity evidence, known platform/upgrade limitations
 and proposed application use. The outcome may be acceptance, amendment or
@@ -258,7 +265,7 @@ adoption and the later gates remain pending.
 | Row/pair coherence | Medium / P1 | W1 tests explicit relationships; W3 must enforce them on real transactional persistence/read verification. Keep historical envelope decoding separate. |
 | Shared mapping and project preflight | Medium / P1 | W1 shares project encoding/decoding and validates strings before tree construction. |
 | Dependency ordering | Medium / P2 | W1-W7 expose prerequisites and exit evidence; later plans must split work into focused, reviewable PRs. |
-| ADR-103 production-adoption disposition | Low / P2 | Separate maintainer gate before W3 production adoption; status remains Proposed. |
+| ADR-103 production-adoption disposition | Low / P2 | Satisfied for the bounded fresh-database local integration on 2026-11-02; schema/dependency and evidence gates remain. |
 | JSONB text size expansion | Medium / P1 | W1 must measure near-limit associated configuration round trips and resolve bounded admission/read compatibility. W1 measured the snapshot boundary; whole-creation saved-result compatibility remains an explicit W3 gate. No ceiling change is authorized. |
 | Codec-valid versus SQL-storable strings | Medium / P2 | W1 records codec preservation versus JSONB NUL rejection; W3 admission checks generated content before database admission without narrowing historical decode. |
 
@@ -309,4 +316,4 @@ recommendation and PR #48 delivers the production codec. Historical experiment
 observations remain frozen; global identifier narrowing is not authorized.
 Remaining application delivery belongs to #49, with authority/allocation
 contracts in #40/#41. There is no separate pending historical-assessment task.
-ADR-103 retains its separately Proposed status.
+ADR-103 and ADR-107 are separately Accepted for the bounded integration; remaining implementation/qualification gates persist.
