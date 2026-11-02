@@ -258,6 +258,55 @@ implementation plan must identify which cases gate its precise claim and retain
 unmet adoption/route/real-data obligations. Do not mark the draft ready or infer
 architectural acceptance because these initial documents exist.
 
+## Additional questions: wire, deployment and consumer boundaries
+
+The maintainer subsequently added eleven questions. They extend this draft's
+assessment, including consumer behavior and broker privileges; they do not add
+those subsystems to the authorized implementation outcome or finish this PR's
+scope. Event-facing details live in Proposed ADR-109; active-load migration
+alternatives live in Proposed ADR-108. The following distinctions constrain the
+remaining design and verification work:
+
+- **Concurrent gateways and identical tokens:** operation identity is scoped,
+  never derived from arrival time. A retry needs the same authenticated actor,
+  intent handle, token and exact payload. Token equality alone with a distinct
+  intent/target intentionally does not mean the same operation under ADR-107.
+  Repeated requests serialize at the authority/database fences and repeat lookup;
+  unique-key/candidate collisions are typed outcomes with bounded whole-transaction
+  handling, never unwrap/panic paths. Random IDs do not make collision impossible.
+  The local MVP still has one active Rust authority. Multiple active authorities
+  need #65's replacement session/fencing/budget contract; extra gateways cannot
+  silently adopt that unsupported profile.
+- **Disconnected or partially committed intent:** the mapping, creation state,
+  initial history and result commit together; a known rollback leaves none of that
+  accepted action. A lost response is an unknown observation, not a third partially
+  committed business state. Reconcile the original identity under current authority;
+  an absent lookup cannot prove another inflight request will not commit. Incoherent
+  committed records fail closed as corruption and need a reviewed recovery path,
+  not an automatic new allocation. Required event handoff follows ADR-109's chosen
+  durable protocol, rather than being inferred from client acknowledgement.
+- **Pure-codec CPU and memory:** ADR-104 bounds actual bytes, nesting, values,
+  collections and strings, including original duplicate detection. The current
+  implementation builds a tree and may use escaped-string scratch. Its resource
+  limits do not prove a hard elapsed-time bound or whole-process heap cap. Prepare
+  adversarial CPU/peak-memory measurements and aggregate ingress limits. An async
+  timeout cannot preempt arbitrary synchronous decoding; account for owned work
+  until completion. A hard execution deadline would require an explicitly reviewed
+  cooperative budget or isolation mechanism, not a deadline wrapper alone.
+- **Go/Rust field parity:** the accepted native path terminates at Rust; no new
+  Go decode/remarshal hop is selected. The legacy Go mutation route forwards bounded
+  raw bytes. If a future supported boundary uses both languages, define one versioned
+  wire contract with exact case-sensitive fields and per-field missing/null/unknown
+  policy, then test both adapters against the same raw-byte positive/negative golden
+  corpus. Include escaped duplicates, trailing data, numeric extremes, enum tags and
+  Unicode. Reject information-losing parsing before canonical validation; generated
+  schemas and round trips alone do not prove parity. Do not change frozen legacy
+  behavior or version-one records by applying new struct defaults retroactively.
+
+Before final scope acceptance, specify which event consumers and language boundaries
+are actually required. The new questions cannot silently turn the first local journey
+into a replicated gateway, rolling-migration or general messaging-platform delivery.
+
 ## Completion and rollout evidence
 
 | Gate | Concrete required evidence | Current disposition |

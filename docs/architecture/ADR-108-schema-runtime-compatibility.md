@@ -49,6 +49,21 @@ one matching integer cannot be assumed to establish them all.
 
 ## Alternatives
 
+The additional question about ingestion during migration does not establish a
+lock-free upgrade requirement or replace this maintenance-only recommendation.
+PostgreSQL DDL takes locks. Where an eventual online profile is required, evaluate
+expand/contract changes, bounded batched backfills, applicable `NOT VALID` followed
+by validation, and concurrent index construction. These reduce some blocking;
+they do not eliminate table locks, incompatible-writer risks or resource costs.
+Concurrent index creation also has transaction restrictions and failure cleanup
+that a generic all-in-one migration transaction cannot hide. Define lock-acquisition
+deadlines, workload controls, compatibility and recovery per operation before
+claiming online support. An ingestion queue cannot make unlimited upstream writes
+safe during an arbitrarily long maintenance window.
+
+References: [PostgreSQL 16 ALTER TABLE](https://www.postgresql.org/docs/16/sql-altertable.html)
+and [CREATE INDEX](https://www.postgresql.org/docs/16/sql-createindex.html).
+
 - Startup-only version check: useful readiness input but cannot exclude old
   processes already running when migration begins.
 - Let changed constraints reject old workers: catches some invalid writes but
