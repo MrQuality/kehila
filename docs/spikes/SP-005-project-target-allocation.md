@@ -69,6 +69,33 @@ and exact-head independent review. #41 stays open until that evidence is reviewe
 architecture acceptance alone completes no #27/#49 delivery. Concrete blocking
 findings trigger only affected plan/schema changes, not a new generic campaign.
 
+### Next adapter design gates
+
+Before implementing the application adapter, record the transaction/API contract
+and exact bounded test schedule under #41/#49. These are remaining obligations,
+not defects established by the structural subset:
+
+- Specify READ COMMITTED statement ordering and installation/actor/core fence
+  ownership, including fresh authorization and lookup after waiting. Commit the
+  mapping, operation and complete creation atomically. Classify named constraints;
+  finish rollback before complete re-entry. Select retry/deadline budgets from
+  relevant measurements rather than inventing fixed attempt counts.
+- Define transport outcomes for equal replay, changed token/content, expired
+  replay, absent reconciliation, temporary contention and unknown commit outcome.
+  Preserve handle/token/content through recovery. An absent lookup cannot promise
+  that another in-flight transaction will not commit. Exact HTTP statuses and
+  payloads remain adapter review decisions; no endpoint is adopted here.
+- Exercise the controlled schedules above with real connections: same-actor
+  fence waits and duplicates, independent actors, target collisions with a winner
+  during rollback/re-entry, rollback versus commit-before-response loss, and lock
+  timeout/cancellation. Check independent final state and owned cleanup.
+- Use independently generated secure-random handle/token values in the first-party
+  client and persist them with exact content before transmission. The server can
+  validate the accepted shape, not prove a hostile client's entropy or determine
+  uniqueness before the transaction. Handle secrecy grants no authority. Define
+  bounded admission and creation-abuse controls before exposing the route; no
+  standalone reservation or arbitrary new numeric quota is introduced here.
+
 **Parent:** #27. Related: #26, #11, #8. Follow-up to SP-002.
 
 ### Original pre-execution plan, 2026-10-08 (retained history)

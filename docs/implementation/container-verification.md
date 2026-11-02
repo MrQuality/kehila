@@ -232,6 +232,43 @@ condition. Controllers may report it while enforcing an explicitly approved
 aggregate budget and operating-system low-memory signal; they must distinguish
 warnings from stop events. These observations do not establish a hard memory cap.
 
+The committed coordinator does not monitor host RAM or act on these host guard
+settings itself. A supervising lifecycle controller must implement the selected
+warning/stop policy; configuring a value alone does not activate enforcement.
+The runner's memory limit excludes the provider, host helpers and service
+containers. The current Compose services have no individual container memory
+ceilings; OpenSearch's configured Java heap is not a total-process ceiling.
+Measure each serial service group's footprint and provider overhead before
+choosing service limits and a host reserve with headroom. Those measurements and
+limits remain verification-tooling follow-up, not established capacity evidence.
+If a supervising controller stops a run for resource pressure, preserve the
+failure and perform owned cleanup; skipped phases cannot qualify the gate.
+Required local and hosted checks remain mandatory. Moving checks from a local
+workstation to CI requires an explicit policy change; lack of safe local headroom
+does not authorize skipping them or using a host-workload fallback.
+
+## Recovery after abrupt termination
+
+Ordinary failure cleanup cannot guarantee release after a forced process kill,
+host crash or reboot. No automatic orphan reconciler is implemented. Before the
+next run after such an interruption, inventory containers and networks in the
+same Podman connection. Inspect runner/build-network ownership through
+`org.kehila.verification-owner` and service ownership through the exact unique
+Compose project and `com.docker.compose.project` labels. A prefix or age alone is
+not proof of abandonment. Establish that the owning verifier has exited and its
+leases are free; if ownership cannot be established, report the ambiguity rather
+than removing resources. Do not delete lease files to force access.
+
+For a proven abandoned run, remove only inspected owned containers by their full
+IDs, then remove its exact networks after checking attached containers. Preserve
+intentionally persistent dependency volumes and unrelated workloads. A provider
+may be shared; abandoned resources do not authorize stopping it. Engine/Compose
+errors currently surface port and subnet allocation failures; there is no
+specialized collision recovery or global network-pool repair. The development
+Compose services publish their configured ports even though the runner publishes
+no worker/API ports. An explicit ownership-aware recovery command and preflight
+inventory remain tooling follow-up; blanket pruning is not the recovery policy.
+
 ## Prepared dependency cache
 
 Run the coordinator's explicit `--prepare-dependencies` mode before a pure/full
@@ -249,6 +286,14 @@ ownership, driver, absence of host redirection and the effective runner mount ar
 checked. A host lease serializes preparation and verification using the same
 cache. The cache is writable, trusted local input for this verifier; it is not a
 shared cache for untrusted jobs, credentials or arbitrary Cargo configuration.
+The host does not cryptographically attest the volume's contents before mounting
+it. Labels establish expected local ownership, and the readiness witness records
+completed preparation; neither proves dependency provenance or absence of local
+tampering. Do not reuse a cache suspected of corruption or compromise. After all
+users release the relevant lease, inspect and remove only that exact volume using
+the non-forced procedure below, then explicitly prepare it again from reviewed
+inputs. Rebuilding is not remediation for a compromised host or poisoned upstream
+input. Cache integrity checks and independent CI remain separate assurances.
 
 Verification requires an existing, prepared cache. Cargo and Go dependency
 resolution are set offline, and the build network is disconnected before the
@@ -272,3 +317,16 @@ usage; this cache has no disk-capacity guarantee and requires explicit reclamati
 Preparation and verification timings must be reported separately, including
 cleanup. Time allowances are provisional operating policy until measured on the
 chosen machine; extending one does not convert a previous timeout into a pass.
+
+## Review follow-up verification, 2026-11-02
+
+Commit `343d5cc` clarified hook status reporting, image setup diagnostics and
+generic resource-lease naming while preserving the existing lock-file identity.
+Its mandatory containerized hook passed 348 Python tests with two platform skips,
+the shared Rust/Go/oracle and live-service phases, and owned cleanup. The measured
+process took 271.14 seconds through supervisor cleanup. Sampled VM/helper working
+sets peaked at 4.70 GiB; minimum available host RAM was 1.01 GiB. The reserve warning
+was observed, with no aggregate-budget or OS low-memory stop. The provider was
+confirmed stopped. These measurements describe this run, not a safe universal
+reserve or a worst-case memory guarantee. No SP-005 allocation, browser, restore
+or abrupt-termination recovery qualification was added by this gate.
