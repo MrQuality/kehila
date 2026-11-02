@@ -1,6 +1,6 @@
 # Authenticated project creation: integration contract
 
-Revision: 2, 2026-11-02. Status: Proposed design; no implementation or route
+Revision: 3, 2026-11-02. Status: Proposed design; no implementation or route
 qualification claimed. Owning delivery: [#49](https://github.com/MrQuality/kehila/issues/49),
 with authority [#40](https://github.com/MrQuality/kehila/issues/40) and allocation
 [#41](https://github.com/MrQuality/kehila/issues/41).
@@ -182,6 +182,24 @@ passwords, cookies or CSRF secrets there. Local project metadata is sensitive
 application data: bound retained pending entries and provide explicit discard.
 Failure to persist blocks submission rather than silently losing retry identity.
 
+Before selecting or creating a pending record, the product browser must obtain
+an authenticated, stable installation/actor binding from the authority. The
+current experimental state response reports only active/inactive and cannot
+provide that binding. Its product representation may be opaque; raw IDs and a
+particular endpoint are not required. Associate the binding coherently with the
+same authenticated session and CSRF proof used for submission, and refresh that
+association after reauthentication or session replacement. Missing or mismatched
+binding blocks pending-intent submission. A binding is comparison metadata, never
+a credential, permission grant or trusted caller assertion; the server still
+derives actor identity and current authority independently. The bounded adapter
+plan must define the discovery/proof contract before browser/API implementation.
+
+If persistence fails before first transmission, show that creation was not sent
+because its retry identity could not be saved, and offer retrying local persistence
+after site storage becomes available. Never silently submit from volatile state.
+This message cannot be used for an already transmitted uncertain intent: a later
+local storage error does not establish that its earlier request failed to commit.
+
 After a lost response or reload, show the unresolved intent and reconcile with
 exactly the same identity/content after reauthentication when needed. An absent
 result permits a separate explicit creation attempt with that identity, subject
@@ -191,6 +209,18 @@ pending record and offer reconciliation. Do not automatically
 submit pending work at login, replace its token, or relabel an unknown outcome as
 rollback. Deliberate new creation requires a new explicit user action. Discarding
 local retry metadata cannot promise the original transaction did not commit.
+
+Expose two distinct actions:
+
+- **Reconcile or retry pending intent:** retain the immutable original handle,
+  token and exact payload. Reconcile first after uncertainty; an absent result
+  permits the separate creation attempt described above. Editing a separate
+  form draft must not mutate the saved pending record.
+- **Start a separate creation:** require explicit user action and a fresh handle
+  and token. If the user discards an uncertain pending record, warn that its
+  original project may already exist and that another submission may create a
+  second project. Discard is not cancellation or proof of rollback.
+
 Reject a different installation/actor binding; do not send an old owner's pending
 intent using a new owner's authority. Same-origin scripts/XSS can access browser
 metadata; local persistence is not a separate confidentiality boundary.
@@ -208,6 +238,7 @@ agents require their own credentials/delegation; the owner cookie is no agent AP
 | Allocation #41 | Lost responses before/after commit, concurrent identical/changed intents, actor isolation, target collision, tombstone/restore integrity | Planned; no SP-005 run claimed. |
 | Ingress | Actual reads with misleading lengths, duplicates/escaped keys and every codec limit; zero pool/application-work admission on rejection; generated-envelope overflow before DB | Required before route exposure. |
 | Authority #40 | Missing/spoofed credentials, wrong scope, current revocation, creation versus replay grants, read snapshot races and post-query expiry | Required on real integrated paths. |
+| Browser binding/lifecycle | Authenticated stable binding associated with session/CSRF, changed-binding rejection, immutable retry versus separate creation, visible pre-transmission persistence failure and retained uncertainty after transmission | Contract before browser/API implementation; actual browser cases before qualification. |
 | Persistence #49 | Actual-role privileges/startup rejection; fault at each write boundary; full typed reload and frozen codec oracles; concurrent/uncertain commit reconciliation | Required; experiment evidence is scoped regression input. |
 | Replay/retirement/recovery | Logical 90-day expiry, permanent no-reexecution identity, gap-free retirement and restored allocation/core/tombstone coherence | Retained W4/W7/D-034 route-exposure gates; no compactor or restore completion inferred. |
 | Development journey | Windows browser -> verified TLS -> Linux container authority -> native create -> fresh authorized read, with all source/profile identities recorded | Synthetic disposable data only; execute only with resource/trust permissions. |
@@ -243,6 +274,12 @@ is separate; product graph review is required; ADR-106 does not authorize suppor
 installation; restore/retirement remain rollout gates. These constraints are carried
 above. The author subsequently read live #41/#49 and confirmed their open scope;
 historical progress text is not a new acceptance decision.
+
+The [PR #88 follow-up reminder](https://github.com/MrQuality/kehila/pull/88#issuecomment-6569113657)
+records the maintainer-authorized contract clarifications: authenticated browser
+binding discovery, explicit pending/separate creation actions, visible persistence
+failure and token integrity in the future schema. Revision 3 incorporates these
+without accepting an endpoint, schema, runtime implementation or either Proposed ADR.
 
 Before publication, record the final candidate/revision checked, validator findings
 and dispositions, actual documentation checks, and exact-head technical review in
