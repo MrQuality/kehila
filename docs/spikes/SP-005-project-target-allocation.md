@@ -162,7 +162,8 @@ schedules and the shared containerized gate passed in separately recorded runs.
 Keep required commit gates, exact-head review and CI before handoff. Product
 uncertain commit and authenticated application integration have their own
 [verification record](../implementation/project-authority-verification.md).
-Windows browser qualification remains outstanding. Broader machine calibration
+Windows browser qualification is explicitly deferred from this delivery and
+remains unqualified. Broader machine calibration
 is not an added completion gate.
 
 ## Server-owned pending creation amendment, 2026-11-03

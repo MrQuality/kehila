@@ -1,8 +1,8 @@
 # Authenticated project creation: integration contract
 
-Revision: 5, 2026-11-03. Status: implementation authorized; integrated qualification pending;
-ADR-103 and ADR-107 are Accepted for the bounded outcome below. No implementation or route
-qualification claimed. Owning delivery: [#49](https://github.com/MrQuality/kehila/issues/49),
+Revision: 6, 2026-11-03. Status: implementation authorized; scoped native evidence recorded;
+final-head gates pending. ADR-103 and ADR-107 are Accepted for the bounded outcome below.
+Actual browser qualification is deferred. Owning delivery: [#49](https://github.com/MrQuality/kehila/issues/49),
 with authority [#40](https://github.com/MrQuality/kehila/issues/40) and allocation
 [#41](https://github.com/MrQuality/kehila/issues/41).
 
@@ -13,8 +13,10 @@ authorized, including server-owned pending creations, explicit execution and
 confirmed cancellation under ADR-107 revision 4. The
 [product authority contract](authenticated-project-authority.md) owns the concrete
 implementation and evidence plan. Browser-local storage is not authoritative
-recovery. Local browsers are excluded from the current resource profile; the
-Windows qualification gate is retained while external verification is assessed.
+recovery. The maintainer subsequently removed Chrome/Edge execution from this
+goal's completion criteria and deferred future automation discussion. The intended
+browser client and recovery behavior remain; actual browser qualification is
+unfulfilled and no longer blocks this delivery. No browser/trust action is implied.
 
 **Preceding architectural decision, 2026-11-02:** the maintainer explicitly
 [accepted ADR-103 and ADR-107 revision 3](https://github.com/MrQuality/kehila/issues/49#issuecomment-6573495351)
@@ -196,8 +198,9 @@ No exclusive actor fence spans response delivery, and no search dependency is ne
 
 The 2026-11-03 accepted ADR-107 amendment replaces browser-persistent recovery
 with server-owned pending creation. See the [product authority contract](authenticated-project-authority.md)
-for implementation/review gates. The browser interface remains the intended client,
-but local browser execution is excluded from the selected verification profile.
+for implementation/review gates. The browser interface remains the intended client.
+Actual Chrome/Edge execution is explicitly deferred from this goal; source,
+simulated-DOM and owner HTTP checks retain their distinct evidence limits.
 
 
 Serve the product page and API at one verified HTTPS origin. Retain independent
@@ -313,16 +316,20 @@ into a replicated gateway, rolling-migration or general messaging-platform deliv
 
 ## Completion and rollout evidence
 
+Executed subsets and failures are maintained in the
+[authority verification record](project-authority-verification.md). The matrix
+separates current delivery gates from later browser and supported-rollout evidence.
+
 | Gate | Concrete required evidence | Current disposition |
 | --- | --- | --- |
-| Design and implementation gates | ADR-103 and ADR-107 accepted 2026-11-02; exact auth/allocation/read schema, product graph/MSRV and bounded adapter plan remain | Architectural choices accepted for the bounded outcome; implementation evidence remains pending. |
-| Allocation #41 | Lost responses before/after commit, concurrent identical/changed intents, actor isolation, target collision, tombstone/restore integrity | Structural mapping subset passed; concurrency, uncertainty, authenticated authority and application-adapter qualification remain pending. |
+| Design and implementation gates | ADR-103 and ADR-107 accepted 2026-11-02; exact auth/allocation/read schema, product graph/MSRV and bounded adapter plan | Architectural choices accepted; scoped implementation observations recorded; final-head gates remain. |
+| Allocation #41 | Lost responses before/after commit, concurrent identical/changed intents, actor isolation, target collision, tombstone/restore integrity | Fixture-actor database and product-native subsets are recorded separately; broader #41 remains open. |
 | Ingress | Actual reads with misleading lengths, duplicates/escaped keys and every codec limit; zero pool/application-work admission on rejection; generated-envelope overflow before DB | Required before route exposure. |
 | Authority #40 | Missing/spoofed credentials, wrong scope, current revocation, creation versus replay grants, read snapshot races and post-query expiry | Required on real integrated paths. |
-| Browser binding/lifecycle | Current session/CSRF authority, immutable server-pending discovery across browsers, explicit execution/cancel, changed-owner rejection and retained response uncertainty | Contract before browser/API implementation; actual browser cases before qualification. |
+| Browser binding/lifecycle | Current session/CSRF authority, immutable server-pending discovery across browsers, explicit execution/cancel, changed-owner rejection and retained response uncertainty | API/source checks remain in scope. Actual Chrome/Edge execution is explicitly deferred from this delivery and remains unqualified. |
 | Persistence #49 | Actual-role privileges/startup rejection; fault at each write boundary; full typed reload and frozen codec oracles; concurrent/uncertain commit reconciliation | Required; experiment evidence is scoped regression input. |
 | Replay/retirement/recovery | Logical 90-day expiry, permanent no-reexecution identity, gap-free retirement and restored allocation/core/tombstone coherence | Retained W4/W7/D-034 route-exposure gates; no compactor or restore completion inferred. |
-| Development journey | Windows browser -> verified TLS -> Linux container authority -> native create -> fresh authorized read, with all source/profile identities recorded | Synthetic disposable data only; execute only with resource/trust permissions. |
+| Development journey | Windows browser -> verified TLS -> Linux container authority -> native create -> fresh authorized read, with all source/profile identities recorded | The native HTTP/TLS path is in this delivery; the actual Windows-browser leg is explicitly deferred. Synthetic disposable data only; no supported-use claim. |
 | Supported rollout | Explicit supported networking/secrets/startup/interrupt policy; no anonymous alternate route; applicable restart/restore/durability and operating limits | ADR-106 alone is insufficient; installer/real-data gates remain unfulfilled. |
 
 Resource preparation must retain bounded HTTP, hashing, registry, database,

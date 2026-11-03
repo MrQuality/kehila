@@ -2,7 +2,9 @@
 
 Status: implementation in progress. The maintainer authorized this one-PR outcome
 on 2026-11-03 after accepting server-owned pending creations as an ADR-107 amendment.
-No integrated runtime or browser qualification is claimed by this plan.
+Scoped runtime observations are recorded in the
+[verification record](project-authority-verification.md); browser qualification
+is not claimed by this plan.
 Owners: #49, authentication #40 and allocation #41.
 
 ## Outcome and boundaries
@@ -104,8 +106,14 @@ one compiler job and external generated secrets/logs/build outputs. Required hoo
 CI and exact-head review remain. Preserve failures, diagnose ordinary defects and
 repeat affected cases/controls without weakening checks.
 
-Local browser execution is excluded from this resource profile. Assess hosted or
-separate-machine browser checks without unapproved deployment, exposure or cost.
-Linux browser results do not qualify the original Windows Chrome/Edge journey.
-Keep draft while any agreed gate is missing; source/API checks or skipped browser
-cases cannot replace that gate.
+On 2026-11-03 the maintainer explicitly removed Chrome/Edge execution from this
+goal's completion criteria and deferred discussion of Playwright/Selenium
+automation to future work. The interface and server-owned recovery contracts
+remain; actual browser behavior is unqualified. This is a scope deferral, not a
+passed browser check. It authorizes no browser launch, automation dependency,
+deployment or TLS trust change. Hosted/separate-machine browser investigation is
+also outside this delivery's finish line.
+
+Required native/API evidence, mandatory commit/CI gates and exact-head independent
+review remain. Keep draft until those remaining gates pass; then the PR may become
+ready for review under the maintainer's standing delivery instruction. Do not merge.

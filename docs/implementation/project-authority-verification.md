@@ -294,11 +294,14 @@ Chrome/Edge behavior. End-to-end multi-actor HTTP remains post-MVP #65.
 ## Remaining delivery gates
 
 - Execute the new CI job against the proposed head.
-- Complete the intended Windows Chrome/Edge journey with normal TLS validation.
-  Local browsers are excluded from the current resource profile. A hosted or
-  separate-machine route still needs its concrete execution/trust authorization.
 - Pass required commit/CI gates and independent review of the exact proposed head.
+
+On 2026-11-03 the maintainer explicitly deferred Chrome/Edge execution outside
+this goal and reserved Playwright/Selenium integration automation for future
+discussion. Browser behavior remains unqualified; the deferral is not a passed
+check. No browser, trust installation or external deployment is authorized here.
 
 The legacy Go API/worker remains a separate unauthenticated prototype path.
 Authentication in this authority does not grant or protect operations through
-that legacy path. The PR remains draft while agreed delivery gates are unfinished.
+that legacy path. The PR remains draft while the remaining agreed gates are
+unfinished; deferred browser execution does not block its review readiness.
