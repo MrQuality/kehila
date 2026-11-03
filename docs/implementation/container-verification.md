@@ -436,3 +436,13 @@ methods with nine subcase errors. That supervisory phase remains failed with its
 cleanup record; it was not rerun or relabelled as a pass. Later checks and the
 single authorized diagnostic CI attempt are recorded against their actual heads
 in the PR. A nonreproduction cannot establish a cause or fix the original failure.
+
+### Maintainer disposition, 2026-11-03
+
+The maintainer explicitly waived the earlier `auth-unknown` CI failure as a
+merge-blocking uncertainty after subsequent runs did not reproduce it. No further
+investigation or reproduction campaign is required for PR #92. The failed run and
+its unknown cause remain historical evidence; this waiver neither converts it
+into a pass nor establishes a root-cause fix. A new failure must be assessed on
+its own evidence rather than covered by this disposition. Required checks on
+subsequent changes remain mandatory. This waiver does not authorize merging.
