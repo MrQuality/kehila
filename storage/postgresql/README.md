@@ -6,6 +6,8 @@ It provides permanent operation identity, expiring replay payloads, attributed
 project/configuration/history rows and a restricted creation capability.
 It does not provide an authenticated native application route or migrate the
 existing FerretDB task path. See the [implementation plan](../../docs/implementation/issue-26-postgresql-foundation.md).
+The separate authenticated product profile below extends this shared foundation
+for the bounded fresh-database local integration.
 
 ## Installation and ownership
 
@@ -13,7 +15,7 @@ Use PostgreSQL 16 with UTF8 encoding in a fresh dedicated database, with normal
 durability settings enabled. From the repository root, run
 `psql -X -v ON_ERROR_STOP=1 -f storage/postgresql/install.sql`
 as a deployment administrator able to create roles and assume the new owner role.
-The installer and all three SQL fragments must remain together. It is tested
+Keep the installer, shared foundation body and referenced SQL fragments together. It is tested
 using the database superuser; the serving application must never use that account.
 
 Installation is one transaction, including cluster-wide role creation. It fails
@@ -45,6 +47,49 @@ end-user permission boundary: actor authentication, permission evaluation and
 stable creation-target allocation remain #40/#41 prerequisites. No compactor
 capability is granted. An owner can retire payloads structurally, but expiry
 authorization, trusted clock behavior and bounded compaction remain adapter work.
+
+## Fresh authenticated product profile
+
+`install_product.sql` installs the shared foundation and the `kehila_auth` schema
+in one transaction, recording schema versions 1 and 2. It requires a fresh
+dedicated database and unused capability role names. It is not an upgrade from
+`install.sql`, a supported installer or a repair procedure.
+
+The product profile adds separate NOLOGIN administration and runtime capabilities,
+immutable installed-owner binding, credential/runtime generations and append-only
+management audit records. A deployment administrator provisions the runtime login
+separately. Runtime cannot enroll/recover the owner, migrate its schema, change
+actors or retire successful replay payloads.
+
+Pending creation rows belong to the installed owner pair. They retain immutable
+request identity and preserve the prepared form until its terminal/retirement
+path erases it, with bounded preparation lifetime/quota and descending-ID
+discovery. Explicit cancellation is terminal. Successful completion binds pending
+state to one permanent intent/core/project tuple through deferred constraints;
+new native creation cannot commit while omitting that mapping. Retiring content
+does not remove the successful identity or permit reexecution.
+
+Each SQL creation function fences the current installation and actor before
+authoritative lookup or writes.
+Independent reads require a fresh read-only repeatable-read authority snapshot;
+creation permission is distinct from read permission. These are trusted-backend
+SQL capabilities, not end-user SQL accounts. HTTP authentication, exact codec
+reconstruction, transaction ownership and transport eligibility remain application
+responsibilities.
+
+The structural fixture driver is
+`python scripts/check_project_pending.py --disposable-container <disposable-name>`
+with optional `--podman-connection`. It requires the isolated pinned PostgreSQL
+profile below, owns no service lifecycle and refuses existing product state.
+It checks installation rollback/reinstallation, real runtime-role capabilities,
+pending/mapping constraints, quotas, page bounds, read authority and selected
+startup-profile denials. Its synthetic verifier and placeholder payloads do not
+qualify password behavior, typed creation, concurrency, browsers or recovery.
+
+The application delivery follows the
+[authority contract](../../docs/implementation/authenticated-project-authority.md).
+The baseline `install.sql` and its existing structural fixtures remain available;
+neither installer exposes or authenticates the legacy Go/FerretDB path.
 
 ## Integrity and representations
 

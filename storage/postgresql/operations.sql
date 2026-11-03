@@ -1,4 +1,4 @@
--- Native PostgreSQL 16 baseline. Installed only through install.sql.
+-- Native PostgreSQL 16 baseline. Included by the fresh baseline/product installers.
 
 CREATE DOMAIN kehila.ident AS text COLLATE "C"
   CHECK (octet_length(VALUE) BETWEEN 1 AND 128);
