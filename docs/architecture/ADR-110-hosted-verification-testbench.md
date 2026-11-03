@@ -100,6 +100,23 @@ certificate bypass, wildcard listener or forwarding-header trust is proposed.
 Normal TLS validation must pass in each actual browser profile; explicitly set
 WebDriver `acceptInsecureCerts=false` and verify that setting is effective.
 
+The certificate's `iPAddress` SAN contains `127.0.0.1`, without a port; TLS IP
+matching follows [RFC 9525 section 6.4](https://www.rfc-editor.org/rfc/rfc9525.html#section-6.4).
+The application's `startup.rs` derives the public origin from its listener port,
+and `http_auth.rs` checks exact Host/Origin. Therefore the browser-facing port
+and configured authority listener port must agree for this unchanged product.
+A connector's intermediate overlay port may differ if its mapping is explicit;
+certificate IP matching is not the reason for application port agreement.
+
+Before dispatch, the selected local helper must bind and retain ownership of
+the exact loopback endpoint through preparation and attachment. Probe-and-close
+only observes availability; it does not reserve a port during hosted queueing.
+Do not forward application traffic before peer/source admission completes. On
+lost ownership or a collision, fail that attempt; a different endpoint requires
+fresh admitted session parameters. Qualify Windows and WSL paths under the
+selected networking mode rather than requiring NAT and mirrored mode to behave
+identically.
+
 Use a dedicated bench network policy. Permit only the selected local connector
 identity to the selected session peer and port; deny new reverse connections and
 other destinations. Return traffic on that connection remains necessary. Remove
@@ -143,6 +160,17 @@ its disposable leaf key/certificate; it cannot mint new trusted certificates.
 Fresh session trust must not silently reuse earlier development trust. Changing
 issuer placement or scope requires an explicit decision before live admission.
 
+Select the confidential delivery mechanism before transferring a leaf key,
+fixture password or enrollment credential. Its contract must identify the sender
+and recipient, authenticate the intended session/run attempt, protect transit and
+storage, reject replay or delivery to another session, and reconcile interrupted
+delivery and cleanup. A public descriptor or workflow-dispatch input cannot
+carry a secret. GitHub's repository/environment/organization secret scopes do
+not themselves establish a single-run delivery protocol; ordinary environment
+variables are not an encrypted transport. Keep the issuer signing key outside
+the transfer. The mechanism remains a pre-use admission decision, not a claimed
+existing confidential channel.
+
 Before implementation admission, select the enforcement mechanism for session
 expiry. The required behavior is: stop new local attachments and existing streams
 at the approved deadline; stop the remote listener/backend; expire enrolled
@@ -169,6 +197,16 @@ and driver versions/paths, isolated profiles and local-only driver endpoints.
 No runtime auto-download/update, broad WebDriver listener or remote browser
 control endpoint is admitted. WSL headless execution does not need WSLg display;
 WSLg is relevant to headed Linux checks.
+
+For each actual browser/OS combination, specify the trust store and inherited
+trust sources, the exact certificate and scope added, and removal/reconciliation
+after normal exit and interruption. A fresh browser profile does not alone prove
+trust isolation: [Chromium on Linux](https://chromium.googlesource.com/chromium/src/+/main/docs/linux/cert_management.md)
+uses a shared NSS database. Require positive validation in the selected browser,
+negative TLS controls, and evidence that ordinary browser environments gain no
+unintended trust. Deleting a profile cannot substitute for removing trust from
+a different store. No host-wide or browser-specific trust operation is authorized
+by this proposal.
 
 Playwright offers stronger integrated test/trace ergonomics, but its Firefox
 requires patches and is not branded Firefox. That is valid engine evidence,
