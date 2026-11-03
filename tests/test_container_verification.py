@@ -168,6 +168,9 @@ class MatrixTests(unittest.TestCase):
             ('start', ('postgres', 'ferretdb')), ('stop', ('postgres', 'ferretdb'))])
         commands = [event[1] for event in events if event[0] == 'command']
         self.assertIn(['cargo', 'test', '--locked', '--workspace', '--no-run'], commands)
+        native_build = ('command', ['cargo', 'test', '--release', '--offline', '--locked',
+            '-p', 'kehila_authority', '--lib', '--no-run'], ())
+        self.assertLess(events.index(native_build), events.index(('builds-finished',)))
         self.assertIn(['cargo', 'test', '--locked', '-p', 'event_dispatcher'], commands)
         self.assertTrue(any('--build-only' in command for command in commands))
         self.assertTrue(any('--run-only' in command for command in commands))
@@ -191,5 +194,5 @@ class MatrixTests(unittest.TestCase):
         executor.verify_source.side_effect = lambda: events.append(('source',))
         with patch.object(coordinator, 'native_authority', lambda _: events.append(('native',))):
             coordinator.checks(executor, Mock(native_authority=True, docs=False, pure=False))
-        self.assertEqual(events, [('command', ['cargo', 'test', '--locked', '-p',
+        self.assertEqual(events, [('command', ['cargo', 'test', '--release', '--offline', '--locked', '-p',
             'kehila_authority', '--lib', '--no-run']), ('disconnect',), ('native',), ('source',)])

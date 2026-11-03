@@ -19,6 +19,10 @@ from verification_budget import command_timeout
 
 ROOT = Path(__file__).resolve().parents[1]
 WORK = Path('/work/native-authority')
+# Operating-deadline qualification uses optimized code; ordinary debug tests
+# remain in the shared matrix. Preparation and execution must select one profile.
+NATIVE_TEST_COMMAND = ('cargo', 'test', '--release', '--offline', '--locked',
+                       '-p', 'kehila_authority', '--lib')
 TEST = 'coordinator::jobs::tests::project::native_project_creation_and_reconciliation'
 CLOCK_TEST = 'coordinator::jobs::tests::project::clock::native_clock_retention_and_authority'
 RESTORE_TEST = 'coordinator::jobs::tests::project::restored::native_restored_coherence'
@@ -156,8 +160,8 @@ def journey(seconds, mode='journey'):
         prepared.write(b'\n'.join(fields) + b'\n')
     incoming_path.chmod(0o600)
     with incoming_path.open('rb') as incoming, (WORK / (mode + '.log')).open('xb') as output:
-        result = subprocess.run(['cargo', 'test', '--offline', '--locked', '-p',
-            'kehila_authority', '--lib', test, '--', '--ignored', '--exact', '--nocapture'],
+        result = subprocess.run([*NATIVE_TEST_COMMAND, test,
+            '--', '--ignored', '--exact', '--nocapture'],
             cwd=ROOT, env=environment, stdin=incoming, stdout=output, stderr=output,
             timeout=command_timeout(seconds))
     with (WORK / (mode + '.log')).open('rb') as log:

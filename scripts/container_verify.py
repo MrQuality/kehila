@@ -13,6 +13,7 @@ from verification_budget import validate_seconds, work_budget
 from verification_settings import load
 from verify import check_commands
 from container_native import check as native_authority
+from native_authority_fixture import NATIVE_TEST_COMMAND
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,7 +31,7 @@ def prepare_dependencies(executor, seconds):
 
 def checks(executor, args):
     if getattr(args, 'native_authority', False):
-        executor.execute(['cargo', 'test', '--locked', '-p', 'kehila_authority', '--lib', '--no-run'])
+        executor.execute([*NATIVE_TEST_COMMAND, '--no-run'])
         executor.finish_builds()
         native_authority(executor)
         executor.verify_source()
@@ -40,6 +41,7 @@ def checks(executor, args):
     if args.docs or args.pure:
         return
     executor.execute([sys.executable, 'tests/integration/task_path.py', '--build-only', '/work/task-path'])
+    executor.execute([*NATIVE_TEST_COMMAND, '--no-run'])
     executor.finish_builds()
     native_authority(executor)
     executor.verify_source()

@@ -446,3 +446,40 @@ its unknown cause remain historical evidence; this waiver neither converts it
 into a pass nor establishes a root-cause fix. A new failure must be assessed on
 its own evidence rather than covered by this disposition. Required checks on
 subsequent changes remain mandatory. This waiver does not authorize merging.
+
+### Native operating-deadline profile repair, 2026-11-03
+
+The separate [CI attempt at `11407ac`](https://github.com/MrQuality/kehila/actions/runs/41657253544)
+passed five native modes and then failed `auth-unknown`. Its bounded metadata
+located the panic at the request helper's five-second observer, after completed
+login operations of approximately 2.8 seconds each. Password change is next in
+the inspected fixture. This supports timing pressure as a hypothesis; it does
+not establish either hash duration, database/commit progress or the original
+historical failure's cause. The earlier waiver does not cover this new attempt.
+
+The harness was running unoptimized Cargo test binaries against an operating
+deadline whose recorded qualification used optimized code. ADR-105 originally
+selected five seconds as a provisional design bound, not a measured universal
+latency limit. Later [complete release-profile requests](local-owner-authentication-listener.md#complete-request-workload-and-active-work-subsets-2026-10-31)
+took 0.375, 0.391 and 0.390 seconds for verification, replacement hashing,
+database commit and response closure. Those small samples support their recorded
+profile, not arbitrary hardware, unoptimized code or sustained contention.
+
+Native fixture preparation and execution now share an explicit
+`cargo test --release --offline --locked -p kehila_authority --lib` prefix.
+Both native-only and full verification prebuild those tests before starting the
+native database; compilation is not counted as a runtime journey. Exact ignored
+test selection, fault hooks, state/cleanup observers, Argon2 cost, admission and
+five-second product/observer deadlines remain unchanged. Ordinary debug tests
+remain in the shared matrix. Release builds change optimization and debug/overflow
+checking defaults, so they complement those debug tests rather than replace them.
+
+Extending only the observer would not extend the product's capped deadline.
+Extending the product deadline would change request latency and how long admitted
+work retains capacity and reply/database eligibility; transport/client deadlines
+would also need coherent review. Neither change is justified by this evidence.
+Optimized compilation adds time and separate build artifacts; existing resource
+and enclosing verification limits still apply. Subprocess-boundary regression
+checks cover the profile, preparation ordering and retained exact test selection.
+Actual follow-up results remain bound to their recorded commit in PR #92; the
+failed attempts above are not retrospectively converted into passes.

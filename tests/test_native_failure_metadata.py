@@ -14,6 +14,24 @@ import native_authority_fixture as fixture
 
 
 class FailureMetadataTests(unittest.TestCase):
+    def test_real_journey_uses_optimized_profile_and_retains_exact_selection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            (work / 'controls').mkdir()
+            (work / 'input').write_bytes(b'a\nb\nc\nd\ne\n')
+
+            def cargo(command, **kwargs):
+                self.assertEqual(command, ['cargo', 'test', '--release', '--offline', '--locked',
+                    '-p', 'kehila_authority', '--lib', fixture.SPECS['auth-unknown'][0],
+                    '--', '--ignored', '--exact', '--nocapture'])
+                kwargs['stdout'].write(b'test result: ok. 1 passed; 0 failed;\n')
+                (work / 'controls/passed').touch()
+                return SimpleNamespace(returncode=0)
+
+            with patch.object(fixture, 'WORK', work), \
+                    patch.object(fixture.subprocess, 'run', side_effect=cargo):
+                fixture.journey(1, 'auth-unknown')
+
     def test_only_known_labels_and_public_source_locations_are_emitted(self):
         text = ('password=DO_NOT_EMIT bearer=DO_NOT_EMIT\n'
                 'owned_job private_label elapsed_us=42\n'
