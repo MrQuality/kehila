@@ -22,6 +22,74 @@ async fn attempts(handle: &Handle, expected: usize) {
     .await
     .unwrap();
 }
+pub(super) async fn mutex_wait_expiry(
+    handle: &Handle,
+    browser: &Browser,
+    entry: &Value,
+    endpoint: &crate::postgres::Endpoint,
+) {
+    let admin = crate::postgres::tests::fixture_admin::Admin::connect(endpoint).await;
+    evidence::settled(handle).await;
+    let before = evidence::snapshot(&admin).await;
+    let admissions = handle.live.probe.snapshot();
+    let engine = handle.engine.upgrade().unwrap();
+    let database = engine.database.lock().await;
+    // A deliberately shorter caller budget exercises expiry, not a latency SLO.
+    // Hold the mutex until the reply arrives; releasing it first masks this path.
+    let mut receiver = handle
+        .submit(
+            Operation::Project {
+                credential: admission::credential(browser),
+                command: crate::project::Command::Cancel(
+                    entry["request_id"].as_str().unwrap().parse().unwrap(),
+                ),
+            },
+            Instant::now() + Duration::from_secs(1),
+        )
+        .unwrap();
+    attempts(handle, admissions.native_mutex_attempts + 1).await;
+    assert!(matches!(
+        receiver.try_recv(),
+        Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+    ));
+    let response = tokio::time::timeout(WORK_DEADLINE, receiver)
+        .await
+        .unwrap()
+        .unwrap();
+    // result() rejects all expired replies and could hide a stored success.
+    assert!(matches!(&response.result, Err(Error::Unavailable)));
+    let after = handle.live.probe.snapshot();
+    assert_eq!(after.executions, admissions.executions + 1);
+    assert_eq!(
+        after.native_mutex_attempts,
+        admissions.native_mutex_attempts + 1
+    );
+    assert_eq!(
+        after.database_ownership_entries,
+        admissions.database_ownership_entries
+    );
+    assert_eq!(after.preparations, admissions.preparations);
+    assert_eq!(after.workers, admissions.workers);
+    assert_eq!(evidence::snapshot(&admin).await, before);
+    drop(response);
+    evidence::settled(handle).await;
+    assert!(handle.live.is_live());
+    drop(database);
+    drop(engine);
+    let (status, reopened) = project(
+        handle,
+        browser,
+        "open",
+        json!({"request_id":entry["request_id"]}),
+    )
+    .await;
+    assert_eq!(status, 200);
+    assert_eq!(&reopened["entry"], entry);
+    assert_eq!(reopened["entry"]["state"], "prepared");
+    assert!(handle.live.is_live());
+    admin.close().await;
+}
+
 pub(super) async fn execution_wins(
     handle: &Handle,
     first: &Browser,

@@ -172,6 +172,7 @@ fn native_project_creation_and_reconciliation() {
             authorization::owner_binding(&endpoint).await;
             admission::ingress(&handle, &first, entry).await;
             admission::receiver_drop_and_capacity(&handle, &first, entry).await;
+            competing::mutex_wait_expiry(&handle, &first, entry, &endpoint).await;
             let mut changed = execute(entry);
             changed["name"] = json!("different");
             assert_eq!(project(&handle, &first, "execute", changed).await.0, 409);

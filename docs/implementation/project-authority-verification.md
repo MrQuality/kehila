@@ -301,6 +301,40 @@ changing replay eligibility or introducing configurable retention. Validation
 for this follow-up is recorded against its actual commit in PR #92; earlier
 runtime observations above retain their original source and scope.
 
+## Shutdown disposition and database-mutex expiry
+
+The maintainer approved a focused follow-up after `729e644`. A controlled native
+pre-fix journey observed an owned execution panic before SQL, successful cleanup
+and an incorrectly successful owner result. Its failure stopped the journey
+before the named-constraint case; that attempt does not qualify the later case.
+
+Scoped fatal execution and native-integrity causes now survive intentional
+cleanup. Regressions require the owned panic and an actual named SQLSTATE `23514`
+constraint with confirmed rollback to retain failure status after independent
+state, capacity, connection and advisory-lock cleanup. Unit checks separately
+cover decoded integrity, ordinary rejection, first-cause retention and the
+unchanged first shutdown deadline. Other existing stop policies are unchanged.
+
+The required local gate at `029b9db` passed the scoped shutdown regressions,
+ordinary debug checks, all eleven provisioned native modes and shared integration
+checks. It took 531.282 seconds through cleanup, peaked at 4.931 GiB sampled
+aggregate memory and retained at least 2.968 GiB available RAM, with no resource
+warning or stop. The initially stopped provider was stopped afterward. That
+commit does not contain the mutex-expiry regression below and supplies no hosted
+CI result for a later head.
+
+The mutex-wait regression holds the database guard until a valid cancellation
+request's shorter original deadline expires. It checks the stored error, no SQL
+admission or authoritative mutation, reservation recovery and continued liveness
+before releasing the guard, followed by fresh authorized HTTP access. Its explicit
+mutex-attempt observation prevents pre-execution expiry from counting as coverage.
+The shorter test budget selects a failure path, not a latency SLO.
+
+Actual qualification results are recorded against their committed heads in
+PR #92. These assertions and the earlier failed journey do not qualify a later
+source revision by themselves; retain the original failed evidence and distinguish
+each required gate from its passed subsets.
+
 ## Remaining delivery gates
 
 - Execute the new CI job against the proposed head.
