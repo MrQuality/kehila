@@ -256,6 +256,50 @@ explicit preparation of admitted stock executables/drivers and an isolated
 automation environment before qualification. A Windows binary invoked through
 WSL would not fill that missing Linux-client evidence.
 
+### SP-007-R05: Windows browser preparation and failed observer, 2026-11-04
+
+An isolated Windows automation environment was prepared with Selenium 4.52.0,
+ChromeDriver 156.0.8078.80 and GeckoDriver 0.37.1. Eighteen selected Python wheels
+were checked against exact PyPI release hashes; official driver archives were
+checked against retained hashes and provider digests where available. Offline
+installation retained license notices. Scoped independent review supported
+unchanged private research use, including the relevant non-default license terms;
+it did not clear supported redistribution or the full browser/driver dependency
+closure. An OSV snapshot returned no matches for the queried Python package
+versions; it does not establish absence of vulnerabilities or driver/browser
+advisory clearance. No project dependency manifest or system Python changed.
+
+Review found that Selenium environment variables can override an explicit driver
+path. The probe cleared those overrides and checked the selected artifact path
+before launch. It used a fresh profile, added no sandbox-disabling options and
+requested `acceptInsecureCerts=false`, under a bounded process owner. This is not
+an executed sandbox-isolation qualification.
+
+The first Chrome attempt **failed at the socket-observation/admission stage**
+after a successful WebDriver session initialization and before its DOM case.
+The outer attempt duration was 6.312 seconds.
+The recorded capabilities identified Windows Chrome 156.0.8078.80 with
+`acceptInsecureCerts=false`. The ownership query returned no matching listener.
+Normal driver cleanup returned without errors and the outer process owner joined.
+The Firefox case was not run, and no browser or TLS case is counted as passed.
+
+Two smaller driver-only controls then observed a responding status endpoint and
+live selected process. CIM and .NET listener queries returned no matching row.
+A final system-netstat control, with readiness checks before/after, observed an
+owned established loopback connection but no matching listening row. This
+establishes reachable local HTTP and partial driver startup; it does not prove
+the complete socket ownership/confinement invariant. The underlying visibility
+cause remains unresolved; no PID-indirection, observation-lag or security-product
+explanation is established. Driver-only controls completed and no test driver
+remained in the final inventory.
+
+The failed attempt and diagnostic controls are retained separately. Investigation
+stopped after the final bounded control: removing the confinement precondition
+to obtain a DOM pass would change the agreed harness contract. No browser
+security setting was relaxed, no certificate was imported and no Tailscale
+enrollment occurred. The Windows browser preparation milestone is incomplete;
+WSL browser/driver installation and strict-TLS/product qualification remain open.
+
 ### Current case disposition and next observations
 
 | Scope | Evidence / status | Next decisive observation |
@@ -265,7 +309,7 @@ WSL would not fill that missing Linux-client evidence.
 | B2 Live isolation | Blocked on account/policy/identity admission | Inspect effective account policy and exact peer ownership before enrollment |
 | C1 Confidential bootstrap | Source findings constrain the candidate; unexecuted | Select/review actual protected delivery and test wrong-run/replay/interruption |
 | D1 Lifetime enforcement | Startup/Close ordering finding; unexecuted | Inspect an actual supervised mechanism and exercise active-stream/owner/outage cases |
-| E1 Stock browsers | R04 preflight exposes missing automation/Linux tooling | Prepare pinned browser/driver environment and exact trust approval; then strict-TLS matrix |
+| E1 Stock browsers | R04 preflight; R05 Windows preparation failed its listener-observation admission, with no DOM/TLS pass | Resolve endpoint observability without weakening confinement; prepare actual Linux clients and exact trust approval before qualification |
 | F1 WAN/product relief | Blocked on B-E | Real Windows/WSL journeys and matched resource observations |
 
 The complete A-F objective is unfinished. Public source has no credential-bearing
@@ -287,6 +331,12 @@ their durations must not be summed as elapsed wall time. Fine-grained research,
 review and waiting time is unmeasured. No failed capacity or compiler workload
 occurred in these attempts; corrected authoring/review findings are not fabricated
 runtime failures. Raw diagnostics remain separate from sanitized public results.
+
+Later Windows browser preparation stopped at a failed socket-observation
+admission before DOM execution. Separate driver-only controls narrowed the gap
+without establishing its cause or weakening the invariant. This is a harness/
+environment evidence limitation, not a demonstrated product defect. That failed
+attempt remains visible alongside the passing capacity/build observations.
 
 Next owned follow-up: the bench operator prepares actual client/driver admission
 and confidentiality/lifecycle probes; the maintainer retains account, trust,
