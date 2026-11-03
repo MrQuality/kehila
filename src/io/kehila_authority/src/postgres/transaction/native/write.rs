@@ -1,4 +1,5 @@
 use super::*;
+use task_contract::operation::REPLAY_PERIOD_MS;
 use task_contract::{project_create::SeedProfile, work_item::Phase};
 
 pub(super) fn phase(value: Phase) -> &'static str {
@@ -63,7 +64,7 @@ impl Fenced<'_, SessionProof> {
         // hashing or entropy work follows this replay-origin sampling point.
         let origin = self.trusted_millis().await?;
         let deadline = origin
-            .checked_add(7_776_000_000)
+            .checked_add(REPLAY_PERIOD_MS)
             .ok_or(NativeError::Integrity)?
             .to_string();
         let origin = origin.to_string();

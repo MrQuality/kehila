@@ -4,7 +4,7 @@ use project_create_codec::{
 };
 use task_contract::project_create::{ProjectCreateCommand, ProjectCreateResult};
 use task_contract::{
-    operation::{check_replay_window, OperationError},
+    operation::{check_replay_window, OperationError, REPLAY_PERIOD_MS},
     work_item::ProjectId,
 };
 
@@ -98,7 +98,7 @@ impl Fenced<'_, SessionProof> {
             || get::<String>(core, 7)? != pending.token
             || get::<String>(core, 10)? != "project_create"
             || get::<i32>(core, 11)? != 1
-            || origin.checked_add(7_776_000_000) != Some(deadline)
+            || origin.checked_add(REPLAY_PERIOD_MS) != Some(deadline)
             || pending.form.is_none() != retired
         {
             return Err(NativeError::Integrity);

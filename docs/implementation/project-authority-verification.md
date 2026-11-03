@@ -291,6 +291,16 @@ These are database transactions with fixture actors and placeholder payloads.
 They neither add a second HTTP owner nor establish typed product creation or
 Chrome/Edge behavior. End-to-end multi-actor HTTP remains post-MVP #65.
 
+## Replay-duration maintenance
+
+Project persistence and replay integrity validation both use the existing pure
+contract's `task_contract::operation::REPLAY_PERIOD_MS`. Its value remains exactly
+90 days; checked deadline arithmetic and PostgreSQL's independently enforced
+interval are unchanged. This removes duplicate Rust policy literals without
+changing replay eligibility or introducing configurable retention. Validation
+for this follow-up is recorded against its actual commit in PR #92; earlier
+runtime observations above retain their original source and scope.
+
 ## Remaining delivery gates
 
 - Execute the new CI job against the proposed head.
