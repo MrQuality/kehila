@@ -194,6 +194,107 @@ Do not replace these cases with synthetic-model passes or declare all spikes
 complete. Next independent work: publish the reviewed capacity checkpoint,
 inspect its actual hosted run and perform the bounded compile-only probe.
 
+### SP-007-R02: hosted capacity observation, 2026-11-04
+
+[Capacity run](https://github.com/MrQuality/kehila/actions/runs/41733034777),
+source `442da7bb61806e3860a91c033895955e85de718c`: admission and capacity
+jobs passed. All four phases returned zero without sampling errors; the final
+residual-container assertion passed. This was one hosted attempt, without an
+explicit restored project cache. Observed system memory total was 15.61 GiB.
+
+| Phase | Seconds | Samples | Minimum available system GiB | Storage GiB before / minimum / after |
+| --- | --- | --- | --- | --- |
+| Image preparation | 63.051 | 65 | 13.329 | 85.561 / 77.948 / 81.450 |
+| Pinned database pull | 5.841 | 7 | 13.396 | 81.450 / 80.956 / 81.010 |
+| Locked dependencies | 18.899 | 20 | 13.510 | 81.010 / 80.822 / 80.830 |
+| Native fixture through owned cleanup | 200.612 | 202 | 13.864 | 80.830 / 80.541 / 80.830 |
+
+These are the collector's one-second sampled system/filesystem observations,
+rounded to three decimals; they are not process RSS, container peaks, general
+hardware guarantees or an integrated browser-session measurement. Actual free
+disk exceeded the documented minimum for this allocation; do not assume every
+future runner will expose that amount. CPU count was not measured by this probe.
+The workload's one-job build policy and existing container limits were retained.
+
+Conclusion for A1/A2: standard hosted capacity supported this current native
+fixture and preparation attempt with substantial sampled memory headroom. A
+longer remotely attached session, WAN path and matched local memory comparison
+remain unqualified. No paid runner/VM is justified by this observation alone.
+
+### SP-007-R03: compile-only connector candidate, 2026-11-04
+
+`tailscale.com v1.104.5`, Go 1.27.3 and Linux amd64 toolchain container:
+module resolution and `go mod verify` passed. Linux/amd64 and Windows/amd64 API
+surface builds both passed with cgo disabled. Linux ELF and Windows PE signature
+checks passed; neither binary executed and no node started or enrolled.
+Resolution took 111.11 seconds, verification 2.81, Linux build 112.61, Windows
+build 112.89 and inventory 97.36; the full controller span was 451.83 seconds
+including setup/export/cleanup. The owned build container was removed and the
+idle provider stopped. No general host toolchain upgrade occurred.
+
+The module graph inventory contained 610 modules including the probe; the Linux
+package list contained 567 entries including standard-library packages. The
+graph count is not a count of linked runtime dependencies. Probe artifacts were
+approximately 29.1/29.3 decimal MB for Linux/Windows; this is not a complete helper
+footprint or its runtime memory. These preliminary local API results lack a
+versioned public reproduction harness and do not qualify a supported dependency.
+Complete transitive license/advisory review and actual platform/runtime isolation
+remain outstanding before adoption. The top-level upstream license is BSD-3-Clause;
+that does not establish every transitive package's license.
+
+### SP-007-R04: client tooling preflight, 2026-11-04
+
+Windows executable metadata identified stock Chrome 156.0.8078.80 and Firefox
+159.0. Neither WebDriver executable was found on the inspected Windows PATH;
+Selenium was absent from the selected Python interpreter. These are scoped
+discovery results, not a claim that no alternate installation exists.
+
+The selected WSL Ubuntu environment reported Python 3.10.12 and no Chrome,
+Firefox, Chromium, ChromeDriver, GeckoDriver or NSS `certutil` on its PATH.
+No browser, driver or trust-store installation occurred. E therefore requires
+explicit preparation of admitted stock executables/drivers and an isolated
+automation environment before qualification. A Windows binary invoked through
+WSL would not fill that missing Linux-client evidence.
+
+### Current case disposition and next observations
+
+| Scope | Evidence / status | Next decisive observation |
+| --- | --- | --- |
+| A1/A2 Current hosted fixture capacity | Passed R02 with stated measurement limits | Reuse within this source/tool/workload boundary; actual remote session remains separate |
+| B1 API build | Preliminary R03 build support | Review and version a reproducible actual helper; qualify Windows/WSL runtime |
+| B2 Live isolation | Blocked on account/policy/identity admission | Inspect effective account policy and exact peer ownership before enrollment |
+| C1 Confidential bootstrap | Source findings constrain the candidate; unexecuted | Select/review actual protected delivery and test wrong-run/replay/interruption |
+| D1 Lifetime enforcement | Startup/Close ordering finding; unexecuted | Inspect an actual supervised mechanism and exercise active-stream/owner/outage cases |
+| E1 Stock browsers | R04 preflight exposes missing automation/Linux tooling | Prepare pinned browser/driver environment and exact trust approval; then strict-TLS matrix |
+| F1 WAN/product relief | Blocked on B-E | Real Windows/WSL journeys and matched resource observations |
+
+The complete A-F objective is unfinished. Public source has no credential-bearing
+workflow or new local connector runtime. Review of the capacity checkpoint at
+`442da7b` found no remaining substantive findings; normal CI and later research
+record review must be assessed at their actual source revisions.
+
+### Proportional checkpoint retrospective
+
+The current milestone delivers measured hosted-fixture feasibility and preliminary
+cross-platform build evidence, not a working remote bench. The duplicate-trigger
+defect was found during component review and repaired before hosted execution;
+no avoided runtime/cost total is claimed. Tooling preflight and API source review
+exposed concrete preparation/lifetime constraints before trust or enrollment.
+
+Local gate, hosted phases and connector phases have the durations recorded above.
+Hosted capacity, normal CI, connector builds and documentation/review overlapped;
+their durations must not be summed as elapsed wall time. Fine-grained research,
+review and waiting time is unmeasured. No failed capacity or compiler workload
+occurred in these attempts; corrected authoring/review findings are not fabricated
+runtime failures. Raw diagnostics remain separate from sanitized public results.
+
+Next owned follow-up: the bench operator prepares actual client/driver admission
+and confidentiality/lifecycle probes; the maintainer retains account, trust,
+vendor/budget and architecture decisions. Recheck the next documentation-only
+push's cheap admission job to observe that capacity is skipped. This is a targeted
+workflow control, not another general qualification campaign. Full research closure
+and process-effectiveness claims remain premature.
+
 ## Risks, review and reuse
 
 [ADR-110's risk dossier](../implementation/hosted-verification-testbench.md)

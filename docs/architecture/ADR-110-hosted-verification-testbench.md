@@ -18,8 +18,11 @@ Move backend compilation and service-backed verification away from a
 memory-constrained development machine while preserving real Windows and Linux
 browser testing. Use standard GitHub-hosted Linux capacity first; reconsider
 paid runners or a cloud VM when observed capacity or operating costs justify it.
-The requested deliverable is research, a design proposal and a risk management
-plan for review. It introduces no executable changes.
+The initial deliverable was research, a design proposal and a risk management
+plan for review, without executable changes. The maintainer subsequently
+requested bounded feasibility experiments; [SP-007](../spikes/SP-007-hosted-testbench.md)
+records that separate research scope and actual evidence. Experimental code does
+not implement or accept this proposed architecture.
 
 The proposed Linux frontend is the existing backend-served web interface in a
 Linux Firefox or Google Chrome process running under WSL. A Windows browser

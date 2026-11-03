@@ -136,7 +136,7 @@ browser journeys, then separately accepted gate migration. Do not split tightly
 coupled producer/consumer changes just to satisfy a line count. Queue existing CI
 at the first coherent checkpoint; no generic extra qualification campaign.
 
-## Review and delivery record
+## Original design milestone review and delivery record
 
 Authorized scope: research and a Proposed design/risk PR. Completion criteria:
 source-backed alternatives and recommendation; Windows/WSL/code-change map;
