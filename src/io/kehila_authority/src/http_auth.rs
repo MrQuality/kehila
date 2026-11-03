@@ -24,6 +24,7 @@ pub(crate) enum Route {
     Logout(Kind),
     Password(Kind),
     RevokeOthers(Kind),
+    Project(crate::native_ingress::Route),
 }
 
 pub(crate) struct Admitted {
@@ -174,6 +175,13 @@ impl Profile {
             (&Method::POST, "/auth/cli/revoke-others") => {
                 (Route::RevokeOthers(Kind::Cli), Kind::Cli, true)
             }
+            (&Method::POST, path) if path.starts_with("/projects/") => (
+                Route::Project(
+                    crate::native_ingress::Route::from_path(path).ok_or(StatusCode::NOT_FOUND)?,
+                ),
+                Kind::Browser,
+                true,
+            ),
             _ => return Err(StatusCode::NOT_FOUND),
         };
         let length = match one(request, "content-length")? {
@@ -234,6 +242,7 @@ impl Profile {
                     | Route::Logout(_)
                     | Route::Password(_)
                     | Route::RevokeOthers(_)
+                    | Route::Project(_)
                         if cookies.session.is_some() => {}
                     _ => return Err(StatusCode::UNAUTHORIZED),
                 }

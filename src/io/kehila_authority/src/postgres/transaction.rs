@@ -3,8 +3,11 @@
 use super::*;
 use crate::session::Kind;
 use tokio_postgres::{types::ToSql, Transaction};
+mod native;
+pub(crate) use native::{Current, NativeError, Pending, Replay, State as PendingState};
 
 const FENCE: &str = "SELECT installation_id::text, owner_actor_id::text, runtime_generation::text, auth_generation::text, verifier_revision::text FROM kehila_auth.fence($1::text::kehila.ident, $2::text::kehila.u64, $3::text::kehila.u64, $4::text::kehila.u64)";
+const READ_AUTHORITY: &str = "SELECT installation_id::text, owner_actor_id::text, runtime_generation::text, auth_generation::text, verifier_revision::text FROM kehila_auth.read_authority($1::text::kehila.ident, $2::text::kehila.u64, $3::text::kehila.u64)";
 const ISSUE: &str = "SELECT kehila_auth.audit_issue($1::text::kehila.ident, $2::text::kehila.u64, $3::text::kehila.u64, $4::text::kehila.u64, $5::text::kehila_auth.public_id, $6::text)";
 const LOGOUT: &str = "SELECT kehila_auth.audit_logout($1::text::kehila.ident, $2::text::kehila.u64, $3::text::kehila.u64, $4::text::kehila_auth.public_id, $5::text)";
 const REVOKE: &str = "SELECT kehila_auth.audit_revoke($1::text::kehila.ident, $2::text::kehila.u64, $3::text::kehila.u64, $4::text::kehila.u64, $5::text::kehila_auth.public_id, $6::text, $7::text::kehila_auth.public_id)";
@@ -21,6 +24,7 @@ enum Expected<'a> {
 
 pub(crate) enum PasswordProof {}
 pub(crate) enum SessionProof {}
+pub(crate) enum ReadProof {}
 
 pub(crate) struct Fenced<'a, P> {
     proof: std::marker::PhantomData<fn() -> P>,
@@ -34,6 +38,73 @@ pub(crate) struct Fenced<'a, P> {
 }
 
 impl Database {
+    pub(crate) async fn read_snapshot(
+        &mut self,
+        installation: &str,
+        runtime: u64,
+        authentication: u64,
+        deadline: Instant,
+    ) -> Result<Fenced<'_, ReadProof>, DbError> {
+        if !self.live.is_live() || Instant::now() >= deadline {
+            return Err(DbError::Unavailable);
+        }
+        let pending = PendingOperation::new(self.live.clone());
+        let started = self.authority.as_ref().ok_or(DbError::Unavailable)?;
+        #[cfg(test)]
+        let lose_confirmation = self.lose_confirmation.clone();
+        let transaction = timeout_at(
+            TokioInstant::from_std(deadline),
+            self.serving
+                .as_mut()
+                .ok_or(DbError::Unavailable)?
+                .build_transaction()
+                .isolation_level(IsolationLevel::RepeatableRead)
+                .read_only(true)
+                .start(),
+        )
+        .await
+        .map_err(|_| DbError::Expired)?
+        .map_err(query_error)?;
+        let row = query(
+            &transaction,
+            &pending.live,
+            deadline,
+            READ_AUTHORITY,
+            &[
+                &installation,
+                &runtime.to_string(),
+                &authentication.to_string(),
+            ],
+        )
+        .await;
+        let checked = row.and_then(|row| authority(&row)).and_then(|fresh| {
+            if fresh.installation != started.installation
+                || fresh.owner != started.owner
+                || fresh.runtime != started.runtime
+            {
+                pending.live.stop();
+                Err(DbError::Unavailable)
+            } else {
+                Ok(fresh)
+            }
+        });
+        match checked {
+            Ok(authority) => Ok(Fenced {
+                proof: std::marker::PhantomData,
+                transaction: Some(transaction),
+                authority,
+                pending,
+                deadline,
+                failed: false,
+                #[cfg(test)]
+                lose_confirmation,
+            }),
+            Err(error) => {
+                rollback(transaction, pending).await?;
+                Err(error)
+            }
+        }
+    }
     // These constructors preserve how the caller established eligibility.
     // Session-only fencing never upgrades a fresh revision into password proof.
     pub(crate) async fn fenced_password(
@@ -84,10 +155,7 @@ impl Database {
         };
         let runtime = runtime.to_string();
         let authentication = authentication.to_string();
-        let pending = PendingOperation {
-            live: self.live.clone(),
-            completed: false,
-        };
+        let pending = PendingOperation::new(self.live.clone());
         let started = self.authority.as_ref().ok_or(DbError::Unavailable)?;
         #[cfg(test)]
         let lose_confirmation = self.lose_confirmation.clone();
@@ -196,10 +264,7 @@ impl<P> Fenced<'_, P> {
         // Mark unavailable before yielding. Dropping just this borrowed method
         // must stop admission even when the transaction wrapper itself survives.
         self.failed = true;
-        let mut operation = PendingOperation {
-            live: self.pending.live.clone(),
-            completed: false,
-        };
+        let mut operation = PendingOperation::new(self.pending.live.clone());
         let result = query(
             self.transaction.as_ref().ok_or(DbError::Unavailable)?,
             &self.pending.live,
@@ -211,6 +276,40 @@ impl<P> Fenced<'_, P> {
         operation.completed = true; // The outcome was actually observed.
         self.failed = result.is_err();
         result
+    }
+
+    // Fixed native query methods supply bounded SQL result sets. Keeping this
+    // private prevents application callers from acquiring arbitrary SQL access.
+    async fn rows(
+        &mut self,
+        sql: &str,
+        parameters: &[&(dyn ToSql + Sync)],
+    ) -> Result<Vec<Row>, DbError> {
+        if self.failed || !self.pending.live.is_live() || Instant::now() >= self.deadline {
+            return Err(DbError::Unavailable);
+        }
+        self.failed = true;
+        let mut operation = PendingOperation::new(self.pending.live.clone());
+        let rows = timeout_at(
+            TokioInstant::from_std(self.deadline),
+            self.transaction
+                .as_ref()
+                .ok_or(DbError::Unavailable)?
+                .query(sql, parameters),
+        )
+        .await
+        .map_err(|_| DbError::Expired)
+        .and_then(|result| result.map_err(query_error));
+        operation.completed = true;
+        let rows = rows.and_then(|rows| {
+            if !self.pending.live.is_live() || Instant::now() >= self.deadline {
+                Err(DbError::Expired)
+            } else {
+                Ok(rows)
+            }
+        });
+        self.failed = rows.is_err();
+        rows
     }
 
     fn confirmed(&mut self, row: Row) -> Result<(), DbError> {

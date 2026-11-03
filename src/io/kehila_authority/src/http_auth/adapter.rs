@@ -11,6 +11,7 @@ use hyper::{
     header::{self, HeaderValue},
     Request, Response, StatusCode,
 };
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::time::{timeout_at, Instant as TokioInstant};
 use zeroize::Zeroizing;
@@ -24,6 +25,7 @@ impl Exchange {
     pub(crate) fn check_outbound(&self) -> Result<(), coordinator::Error> {
         match self.0.as_ref().map(jobs::Response::result) {
             Some(Ok(Output::Issued(delivery))) => delivery.material().map(|_| ()),
+            Some(Ok(Output::Project(delivery))) => delivery.check(),
             None
             | Some(Ok(_))
             | Some(Err(
@@ -52,15 +54,31 @@ impl Exchange {
     }
 }
 
-struct WipedBytes(Zeroizing<Vec<u8>>);
+enum WipedBytes {
+    Owned(Zeroizing<Vec<u8>>),
+    Shared(Arc<Zeroizing<Vec<u8>>>),
+}
+impl From<Zeroizing<Vec<u8>>> for WipedBytes {
+    fn from(value: Zeroizing<Vec<u8>>) -> Self {
+        Self::Owned(value)
+    }
+}
+impl From<Arc<Zeroizing<Vec<u8>>>> for WipedBytes {
+    fn from(value: Arc<Zeroizing<Vec<u8>>>) -> Self {
+        Self::Shared(value)
+    }
+}
 impl AsRef<[u8]> for WipedBytes {
     fn as_ref(&self) -> &[u8] {
-        self.0.as_slice()
+        match self {
+            Self::Owned(value) => value.as_slice(),
+            Self::Shared(value) => value.as_slice(),
+        }
     }
 }
 
-fn response(status: StatusCode, body: Zeroizing<Vec<u8>>) -> Response<Full<Bytes>> {
-    let mut response = Response::new(Full::new(Bytes::from_owner(WipedBytes(body))));
+fn response(status: StatusCode, body: impl Into<WipedBytes>) -> Response<Full<Bytes>> {
+    let mut response = Response::new(Full::new(Bytes::from_owner(body.into())));
     *response.status_mut() = status;
     for (name, value) in [
         (header::CONNECTION, "close"),
@@ -171,6 +189,15 @@ fn app_status(error: coordinator::Error) -> StatusCode {
         coordinator::Error::Unavailable
         | coordinator::Error::AuditUnconfirmed
         | coordinator::Error::OtherAuditUnconfirmed => StatusCode::SERVICE_UNAVAILABLE,
+        coordinator::Error::Project(failure) => match failure {
+            crate::project::Failure::Forbidden => StatusCode::FORBIDDEN,
+            crate::project::Failure::Absent => StatusCode::NOT_FOUND,
+            crate::project::Failure::Conflict => StatusCode::CONFLICT,
+            crate::project::Failure::Expired | crate::project::Failure::Cancelled => {
+                StatusCode::GONE
+            }
+            crate::project::Failure::OutcomeUnknown => StatusCode::SERVICE_UNAVAILABLE,
+        },
     }
 }
 
@@ -178,6 +205,23 @@ fn application_failure(
     error: coordinator::Error,
     browser: bool,
 ) -> (Response<Full<Bytes>>, Exchange) {
+    if let coordinator::Error::Project(failure) = error {
+        let code = match failure {
+            crate::project::Failure::Forbidden => "forbidden",
+            crate::project::Failure::Absent => "not_found",
+            crate::project::Failure::Conflict => "intent_conflict",
+            crate::project::Failure::Expired => "pending_expired",
+            crate::project::Failure::Cancelled => "pending_cancelled",
+            crate::project::Failure::OutcomeUnknown => "outcome_unknown",
+        };
+        return (
+            response(
+                app_status(error),
+                Zeroizing::new(format!("{{\"error\":\"{code}\"}}").into_bytes()),
+            ),
+            Exchange(None),
+        );
+    }
     failure(
         app_status(error),
         browser && error == coordinator::Error::UnknownCredential,
@@ -260,6 +304,14 @@ fn encode(
             ))
         }
         (_, Err(error)) => return Err(error),
+        (Route::Project(_), Ok(Output::Project(delivery))) => {
+            let material = delivery.material()?;
+            return Ok(response(
+                StatusCode::from_u16(material.status)
+                    .map_err(|_| coordinator::Error::Unavailable)?,
+                material.body,
+            ));
+        }
         (Route::PreSession | Route::Csrf, Ok(Output::PreSession { bearer, csrf })) => {
             secret_field(&mut body, b"csrf", csrf);
             if let Some(bearer) = bearer {
@@ -333,7 +385,8 @@ pub(crate) async fn handle<B: Body<Data = Bytes> + Unpin>(
     jobs: &jobs::Handle,
     deadline: Instant,
 ) -> (Response<Full<Bytes>>, Exchange) {
-    let browser = request.uri().path().starts_with("/auth/browser/");
+    let browser = request.uri().path().starts_with("/auth/browser/")
+        || request.uri().path().starts_with("/projects/");
     if Instant::now() >= deadline {
         return failure(StatusCode::REQUEST_TIMEOUT, false);
     }
@@ -345,14 +398,47 @@ pub(crate) async fn handle<B: Body<Data = Bytes> + Unpin>(
         Ok(body) => body,
         Err(status) => return failure(status, false),
     };
-    let operation = match admitted.operation(&body) {
-        Ok(operation) => operation,
-        Err(status) => return failure(status, false),
-    };
-    drop(body);
-    let receiver = match jobs.submit(operation, deadline) {
-        Ok(receiver) => receiver,
-        Err(error) => return application_failure(error, browser),
+    let receiver = match admitted.route {
+        Route::Project(route) => {
+            let input = match crate::native_ingress::decode(route, &body) {
+                Ok(input) => input,
+                Err(_) => return failure(StatusCode::BAD_REQUEST, false),
+            };
+            drop(body);
+            let Some(bearer) = admitted.bearer else {
+                return failure(StatusCode::UNAUTHORIZED, false);
+            };
+            let credential = Credential {
+                bearer,
+                kind: Kind::Browser,
+                csrf: admitted.csrf,
+            };
+            let preparation = match jobs.prepare_project(credential, input, deadline) {
+                Ok(preparation) => preparation,
+                Err(error) => return application_failure(error, true),
+            };
+            // Dropping only this receiver cannot abandon tracked entropy work.
+            let prepared = match timeout_at(TokioInstant::from_std(deadline), preparation).await {
+                Ok(Ok(Ok(prepared))) => prepared,
+                Ok(Ok(Err(error))) => return application_failure(error, true),
+                _ => return failure(StatusCode::SERVICE_UNAVAILABLE, false),
+            };
+            match jobs.submit_project(prepared) {
+                Ok(receiver) => receiver,
+                Err(error) => return application_failure(error, true),
+            }
+        }
+        _ => {
+            let operation = match admitted.operation(&body) {
+                Ok(operation) => operation,
+                Err(status) => return failure(status, false),
+            };
+            drop(body);
+            match jobs.submit(operation, deadline) {
+                Ok(receiver) => receiver,
+                Err(error) => return application_failure(error, browser),
+            }
+        }
     };
     // Timeout drops only the reply receiver. The owned manager retains the real
     // database/hash future and its permit until completion and join.

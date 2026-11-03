@@ -6,10 +6,14 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::sync::watch;
+#[cfg(test)]
+pub(crate) mod probe;
 
 pub(crate) struct RuntimeLiveness {
     state: watch::Sender<bool>,
     stop_deadline: OnceLock<Instant>,
+    #[cfg(test)]
+    pub(crate) probe: probe::Probe,
 }
 
 impl RuntimeLiveness {
@@ -18,6 +22,8 @@ impl RuntimeLiveness {
         Arc::new(Self {
             state: watch::channel(true).0,
             stop_deadline: OnceLock::new(),
+            #[cfg(test)]
+            probe: probe::Probe::default(),
         })
     }
 

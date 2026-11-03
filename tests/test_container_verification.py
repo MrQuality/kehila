@@ -157,8 +157,9 @@ class MatrixTests(unittest.TestCase):
             yield {name: '10.1.0.' + str(i + 2) for i, name in enumerate(containers)}
 
         executor.service_network.side_effect = network
-        args = Mock(docs=False, pure=False)
-        with patch.object(coordinator, 'service_group', group):
+        args = Mock(docs=False, pure=False, native_authority=False)
+        with patch.object(coordinator, 'service_group', group), \
+                patch.object(coordinator, 'native_authority', lambda _: events.append(('native',))):
             coordinator.checks(executor, args)
         lifecycle = [event for event in events if event[0] in {'start', 'stop'}]
         self.assertEqual(lifecycle, [
@@ -174,8 +175,21 @@ class MatrixTests(unittest.TestCase):
         self.assertTrue(any('experiments/SP-002/check_seed_oracle.py' in command for command in commands))
         self.assertTrue(any('experiments/SP-003/check.py' in command for command in commands))
         first_group = next(i for i, event in enumerate(events) if event[0] == 'start')
+        self.assertLess(events.index(('builds-finished',)), events.index(('native',)))
+        self.assertLess(events.index(('native',)), first_group)
         self.assertTrue(any('--build-only' in event[1] for event in events[:first_group]
                             if event[0] == 'command'))
         readies = [command for command in commands if 'scripts/healthcheck.py' in command]
         self.assertEqual(len(readies), 4)
         self.assertTrue(all('--host' in command and '127.0.0.1' not in command for command in readies))
+
+    def test_native_only_mode_still_compiles_and_disconnects_before_fixture(self):
+        events = []
+        executor = Mock()
+        executor.execute.side_effect = lambda command: events.append(('command', command))
+        executor.finish_builds.side_effect = lambda: events.append(('disconnect',))
+        executor.verify_source.side_effect = lambda: events.append(('source',))
+        with patch.object(coordinator, 'native_authority', lambda _: events.append(('native',))):
+            coordinator.checks(executor, Mock(native_authority=True, docs=False, pure=False))
+        self.assertEqual(events, [('command', ['cargo', 'test', '--locked', '-p',
+            'kehila_authority', '--lib', '--no-run']), ('disconnect',), ('native',), ('source',)])

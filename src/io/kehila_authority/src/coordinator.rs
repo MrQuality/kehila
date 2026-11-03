@@ -23,6 +23,8 @@ use zeroize::Zeroizing;
 
 pub(crate) mod jobs;
 mod management;
+mod project;
+pub(crate) use project::ProjectDelivery;
 
 const WORK_DEADLINE: Duration = Duration::from_secs(5);
 
@@ -35,6 +37,7 @@ pub(crate) enum Error {
     Unavailable,
     AuditUnconfirmed,
     OtherAuditUnconfirmed,
+    Project(crate::project::Failure),
 }
 
 pub(crate) enum LoginKind {
@@ -66,6 +69,10 @@ pub(crate) enum Operation {
         credential: Credential,
         password: NormalizedPassword,
     },
+    Project {
+        credential: Credential,
+        command: crate::project::Command,
+    },
 }
 
 pub(crate) enum Output {
@@ -83,6 +90,7 @@ pub(crate) enum Output {
     OthersRevoked {
         count: usize,
     },
+    Project(ProjectDelivery),
 }
 
 // The adapter retains this through its observed exchange outcome. Channel
@@ -603,6 +611,10 @@ impl Engine {
                 self.password(credential, current, replacement, deadline)
                     .await
             }
+            Operation::Project {
+                credential,
+                command,
+            } => self.project(credential, command, deadline).await,
         }
     }
 }

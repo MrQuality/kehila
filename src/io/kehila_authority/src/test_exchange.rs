@@ -50,11 +50,37 @@ pub fn client_config(
     config.alpn_protocols = vec![b"http/1.1".to_vec()];
     Ok(Arc::new(config))
 }
-pub async fn request(
+pub(crate) async fn request_with_headers(
     address: SocketAddr,
     config: Arc<ClientConfig>,
     name: ServerName<'static>,
     request: Request<Full<Bytes>>,
+) -> io::Result<(StatusCode, hyper::HeaderMap, Bytes)> {
+    let headers = Arc::new(std::sync::Mutex::new(None));
+    let (status, body) = request_inner(
+        address,
+        config,
+        name,
+        request,
+        crate::project::wire::MAX_WIRE_BYTES,
+        Some(headers.clone()),
+    )
+    .await?;
+    let captured = headers
+        .lock()
+        .map_err(|_| io_error("test headers unavailable"))?
+        .take()
+        .ok_or_else(|| io_error("test headers missing"))?;
+    Ok((status, captured, body))
+}
+
+async fn request_inner(
+    address: SocketAddr,
+    config: Arc<ClientConfig>,
+    name: ServerName<'static>,
+    request: Request<Full<Bytes>>,
+    limit: usize,
+    headers: Option<Arc<std::sync::Mutex<Option<hyper::HeaderMap>>>>,
 ) -> io::Result<(StatusCode, Bytes)> {
     require_localhost(address)?;
     timeout(CONNECTION_DEADLINE, async {
@@ -70,7 +96,13 @@ pub async fn request(
                     .await
                     .map_err(|_| diagnostics::ExchangeFailure::Request)?;
                 let status = response.status();
-                let body = Limited::new(response.into_body(), 1024)
+                if let Some(headers) = headers {
+                    *headers
+                        .lock()
+                        .map_err(|_| diagnostics::ExchangeFailure::Request)? =
+                        Some(response.headers().clone());
+                }
+                let body = Limited::new(response.into_body(), limit)
                     .collect()
                     .await
                     .map_err(|_| diagnostics::ExchangeFailure::Body)?

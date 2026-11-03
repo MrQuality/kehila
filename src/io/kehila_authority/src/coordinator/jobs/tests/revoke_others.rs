@@ -27,6 +27,8 @@ fn native_revoke_others() {
         .build()
         .unwrap()
         .block_on(async {
+            let admin = crate::postgres::tests::fixture_admin::Admin::connect(&endpoint).await;
+            admin.client().batch_execute("SET ROLE kehila_owner; CREATE FUNCTION kehila_native_fixture.reject_revocation() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $$ BEGIN RAISE EXCEPTION 'owned revocation audit fault' USING ERRCODE='PZ002'; END $$; REVOKE ALL ON FUNCTION kehila_native_fixture.reject_revocation() FROM PUBLIC; CREATE TRIGGER native_revoke_fault BEFORE INSERT ON kehila_auth.management_events FOR EACH ROW WHEN (NEW.event_kind='session_revoke') EXECUTE FUNCTION kehila_native_fixture.reject_revocation(); RESET ROLE").await.unwrap();
             let database = Database::start(
                 &endpoint,
                 installation,
@@ -42,6 +44,20 @@ fn native_revoke_others() {
             let running = tokio::spawn(owner.run());
             let initiator = login(&handle).await;
             let other = login(&handle).await;
+            // Check the rejected password before retaining a deadline-bound
+            // browser reply across the separate successful revocation work.
+            assert!(matches!(
+                request(&handle, revoke(initiator, "a wrong owner password"))
+                    .await
+                    .result(),
+                Err(Error::Unauthorized)
+            ));
+            assert!(matches!(
+                request(&handle, Operation::State(cli(other)))
+                    .await
+                    .result(),
+                Ok(Output::State { active: true, .. })
+            ));
             let pre = request(&handle, Operation::PreSession(None)).await;
             let Output::PreSession {
                 bearer: Some(bearer),
@@ -63,18 +79,7 @@ fn native_revoke_others() {
                 },
             )
             .await;
-            assert!(matches!(
-                request(&handle, revoke(initiator, "a wrong owner password"))
-                    .await
-                    .result(),
-                Err(Error::Unauthorized)
-            ));
-            assert!(matches!(
-                request(&handle, Operation::State(cli(other)))
-                    .await
-                    .result(),
-                Ok(Output::State { active: true, .. })
-            ));
+
 
             // The fixture rejects the first SQL audit. Every selected local target
             // remains revoked, while the confirmed rollback preserves this runtime.
@@ -105,7 +110,8 @@ fn native_revoke_others() {
             drop(retained);
             let later = login(&handle).await;
             mark(&controls, "retry-ready");
-            wait(&controls, "retry-go").await;
+            assert_eq!(admin.client().query_one("SELECT count(*) FROM kehila_auth.management_events WHERE event_kind='session_revoke'", &[]).await.unwrap().get::<_,i64>(0),0);
+            admin.client().batch_execute("SET ROLE kehila_owner; DROP TRIGGER native_revoke_fault ON kehila_auth.management_events; DROP FUNCTION kehila_native_fixture.reject_revocation(); RESET ROLE").await.unwrap();
 
             // Retrying the pending batch cannot select a later login.
             assert!(matches!(
@@ -151,6 +157,7 @@ fn native_revoke_others() {
             ));
             assert!(!handle.live.is_live());
             running.await.unwrap().unwrap();
+            admin.close().await;
             mark(&controls, "passed");
         });
 }

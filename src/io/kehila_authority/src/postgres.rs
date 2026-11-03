@@ -31,6 +31,7 @@ pub(crate) enum DbError {
     Unavailable,
     UnknownCommit,
     Rejected(String),
+    Constraint { code: String, name: String },
 }
 
 // No Debug/Clone/serialization: driver configuration can copy passwords, so
@@ -85,6 +86,16 @@ struct PendingOperation {
     live: Arc<RuntimeLiveness>,
     completed: bool,
 }
+impl PendingOperation {
+    fn new(live: Arc<RuntimeLiveness>) -> Self {
+        #[cfg(test)]
+        live.probe.record(crate::lifecycle::probe::Stage::Database);
+        Self {
+            live,
+            completed: false,
+        }
+    }
+}
 impl Drop for PendingOperation {
     fn drop(&mut self) {
         if !self.completed {
@@ -94,6 +105,17 @@ impl Drop for PendingOperation {
 }
 
 impl Endpoint {
+    #[cfg(test)]
+    pub(crate) fn copied_fixture_database(&self, name: &str) -> Self {
+        assert_eq!(name, "kehila_native_restored");
+        Self::new(
+            self.address,
+            name.to_owned(),
+            Zeroizing::new(self.password.to_vec()),
+            self.root.to_vec(),
+        )
+        .unwrap()
+    }
     pub(crate) fn new(
         address: SocketAddr,
         database: String,
@@ -228,6 +250,7 @@ impl Database {
             .batch_execute("SET ROLE kehila_auth_runtime")
             .await
             .map_err(query_error)?;
+        validate_product_profile(self.serving.as_ref().ok_or(DbError::Unavailable)?).await?;
         let client = self.dedicated.as_mut().ok_or(DbError::Unavailable)?;
         client
             .batch_execute("SET ROLE kehila_auth_runtime")
@@ -290,10 +313,7 @@ impl Database {
         }
         // Abandonment cannot make a busy connection reusable. This first
         // profile stops the runtime; its owner must subsequently close/join.
-        let mut pending = PendingOperation {
-            live: self.live.clone(),
-            completed: false,
-        };
+        let mut pending = PendingOperation::new(self.live.clone());
         let parameters: [&(dyn tokio_postgres::types::ToSql + Sync); 1] = [&self.installation];
         let query = self
             .serving
@@ -383,6 +403,31 @@ impl Database {
     }
 }
 
+async fn validate_product_profile(client: &Client) -> Result<(), DbError> {
+    let versions = client
+        .query(
+            "SELECT version FROM kehila.schema_migrations ORDER BY version LIMIT 3",
+            &[],
+        )
+        .await
+        .map_err(query_error)?;
+    if versions.len() != 2
+        || versions[0].try_get::<_, i32>(0).map_err(query_error)? != 1
+        || versions[1].try_get::<_, i32>(0).map_err(query_error)? != 2
+    {
+        return Err(DbError::Invalid);
+    }
+    let row = client
+        .query_one(include_str!("postgres/profile.sql"), &[])
+        .await
+        .map_err(query_error)?;
+    if row.try_get::<_, bool>(0).map_err(query_error)? {
+        Ok(())
+    } else {
+        Err(DbError::Invalid)
+    }
+}
+
 impl Drop for Database {
     fn drop(&mut self) {
         self.live.stop();
@@ -395,9 +440,16 @@ impl Drop for Database {
 }
 
 fn query_error(error: tokio_postgres::Error) -> DbError {
-    error.code().map_or(DbError::Unavailable, |code| {
-        DbError::Rejected(code.code().to_owned())
-    })
+    match error.as_db_error() {
+        Some(database) => match database.constraint() {
+            Some(name) => DbError::Constraint {
+                code: database.code().code().to_owned(),
+                name: name.to_owned(),
+            },
+            None => DbError::Rejected(database.code().code().to_owned()),
+        },
+        None => DbError::Unavailable,
+    }
 }
 fn identifier(value: &str) -> bool {
     !value.is_empty() && value.len() <= 128 && !value.contains('\0')
@@ -426,6 +478,7 @@ fn authority(row: &Row) -> Result<Authority, DbError> {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    pub(crate) mod fixture_admin;
     use super::*;
     use std::{
         io::Read,
@@ -450,9 +503,25 @@ pub(crate) mod tests {
             .decode_mut(encoded, &mut root)
             .unwrap();
         root.truncate(length);
+        let database = match std::env::var("KEHILA_NATIVE_FIXTURE_DATABASE") {
+            Err(std::env::VarError::NotPresent) => "postgres".to_owned(),
+            Ok(value)
+                if matches!(
+                    value.as_str(),
+                    "native_auth_owned"
+                        | "native_auth_revoke"
+                        | "native_auth_fenced"
+                        | "native_auth_read"
+                        | "native_auth_lifetime"
+                ) =>
+            {
+                value
+            }
+            _ => panic!("unknown disposable authentication fixture database"),
+        };
         let endpoint = Endpoint::new(
             fields[0].parse().unwrap(),
-            "postgres".to_owned(),
+            database,
             Zeroizing::new(fields[1].as_bytes().to_vec()),
             root,
         )
@@ -481,17 +550,6 @@ pub(crate) mod tests {
             .unwrap();
     }
 
-    pub(crate) async fn wait(directory: &Path, name: &str) {
-        let deadline = TokioInstant::now() + Duration::from_secs(15);
-        while !directory.join(name).is_file() {
-            assert!(
-                TokioInstant::now() < deadline,
-                "fixture coordination deadline exceeded"
-            );
-            tokio::time::sleep(Duration::from_millis(20)).await;
-        }
-    }
-
     #[test]
     #[ignore = "requires the explicitly provisioned disposable PostgreSQL TLS fixture"]
     fn native_lifetime() {
@@ -501,6 +559,8 @@ pub(crate) mod tests {
             .build()
             .unwrap()
             .block_on(async {
+                let admin = fixture_admin::Admin::connect(&endpoint).await;
+                admin.client().batch_execute("SET ROLE kehila_owner; UPDATE kehila_auth.owner_credentials SET auth_generation=9223372036854775808,verifier_revision=18446744073709551615; RESET ROLE").await.unwrap();
                 let mut database = Database::start(
                     &endpoint,
                     installation,
@@ -528,6 +588,7 @@ pub(crate) mod tests {
                 assert!(denied.code().is_some_and(|code| code.code() == "42501"));
                 assert!(database.is_live());
                 mark(&controls, "ready");
+                admin.terminate_authority().await;
                 let outcome = timeout_at(
                     TokioInstant::now() + Duration::from_secs(15),
                     database.driver_exit(),
@@ -545,6 +606,7 @@ pub(crate) mod tests {
                 let shutdown = database.shutdown().await;
                 assert_eq!(shutdown.joined, 1); // The failed driver was already joined.
                 assert!(!shutdown.aborted);
+                admin.close().await;
                 mark(&controls, "passed");
             });
     }
@@ -558,6 +620,7 @@ pub(crate) mod tests {
             .build()
             .unwrap()
             .block_on(async {
+                let admin = fixture_admin::Admin::connect(&endpoint).await;
                 let mut database = Database::start(
                     &endpoint,
                     installation,
@@ -567,13 +630,19 @@ pub(crate) mod tests {
                 .await
                 .unwrap();
                 mark(&controls, "ready");
-                wait(&controls, "start-read").await;
+                admin
+                    .client()
+                    .batch_execute(
+                        "BEGIN; LOCK TABLE kehila_auth.owner_credentials IN ACCESS EXCLUSIVE MODE",
+                    )
+                    .await
+                    .unwrap();
                 {
                     let request = database.credentials(Instant::now() + Duration::from_secs(5));
                     tokio::pin!(request);
                     tokio::select! {
                         _ = &mut request => panic!("fixture did not hold the read"),
-                        () = wait(&controls, "cancel-read") => {}
+                        () = admin.serving_blocked_by_me() => {}
                     }
                 }
                 assert!(!database.is_live());
@@ -584,10 +653,11 @@ pub(crate) mod tests {
                     Err(DbError::Unavailable)
                 ));
                 mark(&controls, "cancelled");
-                wait(&controls, "released").await;
+                admin.client().batch_execute("ROLLBACK").await.unwrap();
                 let shutdown = database.shutdown().await;
                 assert_eq!(shutdown.joined, 2);
                 assert!(!shutdown.aborted);
+                admin.close().await;
                 mark(&controls, "passed");
             });
     }

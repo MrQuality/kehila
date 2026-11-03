@@ -12,6 +12,7 @@ from test_services import managed_runtime, service_group, validate_daemon_enviro
 from verification_budget import validate_seconds, work_budget
 from verification_settings import load
 from verify import check_commands
+from container_native import check as native_authority
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,12 +29,20 @@ def prepare_dependencies(executor, seconds):
 
 
 def checks(executor, args):
+    if getattr(args, 'native_authority', False):
+        executor.execute(['cargo', 'test', '--locked', '-p', 'kehila_authority', '--lib', '--no-run'])
+        executor.finish_builds()
+        native_authority(executor)
+        executor.verify_source()
+        return
     for command in check_commands(args):
         executor.execute(command)
     if args.docs or args.pure:
         return
     executor.execute([sys.executable, 'tests/integration/task_path.py', '--build-only', '/work/task-path'])
     executor.finish_builds()
+    native_authority(executor)
+    executor.verify_source()
     with service_group(executor.runtime, ['nats']) as containers:
         with executor.service_network(containers) as addresses:
             host = addresses['nats']
@@ -54,6 +63,7 @@ def checks(executor, args):
                                   '--wait', '180', '--services', name])
             executor.execute([sys.executable, 'tests/integration/task_path.py', '--run-only', '/work/task-path'],
                              {'KEHILA_TEST_MONGO_URL': 'mongodb://' + addresses['ferretdb'] + ':27017'})
+    executor.verify_source()
 
 
 def main():
@@ -62,6 +72,8 @@ def main():
     modes.add_argument('--docs', action='store_true')
     modes.add_argument('--pure', action='store_true')
     modes.add_argument('--prepare-dependencies', action='store_true')
+    modes.add_argument('--native-authority', action='store_true',
+                       help='Only compile and run the real native PostgreSQL/HTTP/TLS product fixture')
     parser.add_argument('--timeout', type=float)
     parser.add_argument('--ownership-file', type=Path,
                         default=os.environ.get('KEHILA_VERIFICATION_OWNERSHIP_FILE'),

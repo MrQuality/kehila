@@ -18,7 +18,7 @@ use std::{
     thread::{self, JoinHandle},
     time::Instant,
 };
-use tokio::sync::oneshot;
+use tokio::sync::{oneshot, OwnedSemaphorePermit};
 
 #[cfg(target_os = "linux")]
 pub(crate) struct LoginSecrets {
@@ -55,6 +55,18 @@ fn random_salt() -> Result<[u8; 16], HashError> {
         .fill(&mut salt)
         .map_err(|_| HashError::Unavailable)?;
     Ok(salt)
+}
+
+fn project_key(control: &Control) -> Result<String, HashError> {
+    salted_stage(control, random_salt, |bytes| {
+        let mut encoded = String::with_capacity(32);
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        for byte in bytes {
+            encoded.push(HEX[usize::from(byte >> 4)] as char);
+            encoded.push(HEX[usize::from(byte & 15)] as char);
+        }
+        Ok(encoded)
+    })
 }
 
 fn salted_stage<T>(
@@ -106,11 +118,24 @@ struct Control {
 struct Active {
     cancelled: Arc<AtomicBool>,
     thread: JoinHandle<()>,
+    _admission: Option<Arc<OwnedSemaphorePermit>>,
 }
 pub(crate) struct Worker {
     live: Arc<RuntimeLiveness>,
     active: Option<Active>,
     stopped: bool,
+    #[cfg(test)]
+    exit_hold: Option<ExitHold>,
+}
+#[cfg(test)]
+struct ExitHold {
+    published: oneshot::Sender<()>,
+    release: std::sync::mpsc::Receiver<()>,
+}
+#[cfg(test)]
+pub(crate) struct ThreadExitGate {
+    pub(crate) published: oneshot::Receiver<()>,
+    pub(crate) release: std::sync::mpsc::Sender<()>,
 }
 pub(crate) struct Pending<T> {
     receiver: Option<oneshot::Receiver<Result<T, WorkerError>>>,
@@ -127,6 +152,65 @@ impl Control {
     }
 }
 impl Worker {
+    #[cfg(test)]
+    pub(crate) fn hold_next_thread_exit_for_test(&mut self) -> ThreadExitGate {
+        assert!(self.active.is_none() && self.exit_hold.is_none());
+        let (published, observed) = oneshot::channel();
+        let (release, held) = std::sync::mpsc::channel();
+        self.exit_hold = Some(ExitHold {
+            published,
+            release: held,
+        });
+        ThreadExitGate {
+            published: observed,
+            release,
+        }
+    }
+    fn retain_preparation_admission(
+        &mut self,
+        permit: Arc<OwnedSemaphorePermit>,
+    ) -> Result<(), WorkerError> {
+        // The same reservation remains owned after result publication, including
+        // when its preparation future is cancelled before the OS thread exits.
+        let Some(active) = self.active.as_mut() else {
+            self.live.stop();
+            return Err(WorkerError::Unavailable);
+        };
+        if active._admission.is_some() {
+            self.live.stop();
+            return Err(WorkerError::Unavailable);
+        }
+        active._admission = Some(permit);
+        Ok(())
+    }
+
+    pub(crate) fn pending_identity(
+        &mut self,
+        deadline: Instant,
+        permit: Arc<OwnedSemaphorePermit>,
+    ) -> Result<HashPending<(String, String)>, WorkerError> {
+        let pending = self.start(deadline, |control| {
+            Ok((project_key(control)?, project_key(control)?))
+        })?;
+        self.retain_preparation_admission(permit)?;
+        Ok(pending)
+    }
+
+    pub(crate) fn project_identities(
+        &mut self,
+        deadline: Instant,
+        permit: Arc<OwnedSemaphorePermit>,
+    ) -> Result<HashPending<[String; 3]>, WorkerError> {
+        let pending = self.start(deadline, |control| {
+            Ok([
+                project_key(control)?,
+                project_key(control)?,
+                project_key(control)?,
+            ])
+        })?;
+        self.retain_preparation_admission(permit)?;
+        Ok(pending)
+    }
     #[cfg(target_os = "linux")]
     pub(crate) fn public_id(
         &mut self,
@@ -191,6 +275,8 @@ impl Worker {
             live,
             active: None,
             stopped: false,
+            #[cfg(test)]
+            exit_hold: None,
         }
     }
 
@@ -286,6 +372,8 @@ impl Worker {
             deadline,
         };
         let (sender, receiver) = oneshot::channel();
+        #[cfg(test)]
+        let hold = self.exit_hold.take();
         let job = Box::new(move || {
             let result = if control.allowed() {
                 let value = work(&control);
@@ -300,12 +388,26 @@ impl Worker {
             // A cancelled receiver discards and drops the owned result; it does
             // not stop this thread or release its owner's capacity early.
             let _ = sender.send(result);
+            #[cfg(test)]
+            if let Some(hold) = hold {
+                let _ = hold.published.send(());
+                // Dropping the fixture release sender also unblocks this wait.
+                // Result publication has happened; actual thread exit has not.
+                let _ = hold
+                    .release
+                    .recv_timeout(deadline.saturating_duration_since(Instant::now()));
+            }
         });
         let thread = spawn(job).map_err(|_| WorkerError::Unavailable)?;
         self.active = Some(Active {
             cancelled: cancelled.clone(),
             thread,
+            _admission: None,
         });
+        #[cfg(test)]
+        self.live
+            .probe
+            .record(crate::lifecycle::probe::Stage::Worker);
         Ok(Pending {
             receiver: Some(receiver),
             cancelled,
@@ -602,6 +704,39 @@ mod tests {
         fn drop(&mut self) {
             self.0.fetch_add(1, Ordering::SeqCst);
         }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn preparation_capacity_survives_result_publication_until_actual_join() {
+        let mut owner = Worker::new(RuntimeLiveness::new());
+        let capacity = Arc::new(tokio::sync::Semaphore::new(1));
+        let permit = Arc::new(capacity.clone().try_acquire_owned().unwrap());
+        let (release, gate) = mpsc::channel();
+        let pending = owner
+            .start_with(
+                deadline(),
+                |_| 7,
+                move |job| {
+                    Ok(std::thread::spawn(move || {
+                        job(); // Publish the result, but deliberately retain the OS thread.
+                        let _ = gate.recv_timeout(Duration::from_secs(2));
+                    }))
+                },
+            )
+            .unwrap();
+        owner.retain_preparation_admission(permit.clone()).unwrap();
+        drop(permit); // The request's direct reservation no longer exists.
+        assert_eq!(pending.result().await.unwrap(), 7);
+        assert!(!owner.finished());
+        assert_eq!(capacity.available_permits(), 0);
+        assert_eq!(owner.join_completed(), Err(WorkerError::Busy));
+        release.send(()).unwrap();
+        while !owner.finished() {
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        assert_eq!(capacity.available_permits(), 0);
+        owner.join_completed().unwrap();
+        assert_eq!(capacity.available_permits(), 1);
     }
 
     #[tokio::test(flavor = "current_thread")]

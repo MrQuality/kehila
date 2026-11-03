@@ -1,5 +1,5 @@
 use super::*;
-use crate::postgres::tests::{fixture, mark, wait};
+use crate::postgres::tests::{fixture, fixture_admin::Admin, mark};
 
 fn deadline() -> Instant {
     Instant::now() + Duration::from_secs(5)
@@ -14,6 +14,7 @@ fn native_fenced_roundtrip() {
         .build()
         .unwrap()
         .block_on(async {
+            let admin = Admin::connect(&endpoint).await;
             let mut database = Database::start(
                 &endpoint,
                 installation,
@@ -49,7 +50,7 @@ fn native_fenced_roundtrip() {
             // The independent fixture verifies that the actual audit write rolled
             // back before releasing this barrier; a duplicate audit API cannot
             // substitute for inspecting durable absence.
-            wait(&controls, "rollback-observed").await;
+            assert_eq!(admin.client().query_one("SELECT count(*) FROM kehila_auth.management_events WHERE public_id='rolled-back-session'", &[]).await.unwrap().get::<_,i64>(0), 0);
 
             let mut transaction = database.fenced_password(&proof, deadline()).await.unwrap();
             transaction
@@ -104,7 +105,7 @@ fn native_fenced_roundtrip() {
 
             let live = database.liveness();
             mark(&controls, "operation-ready");
-            wait(&controls, "start-operation").await;
+            admin.client().batch_execute("BEGIN; LOCK TABLE kehila_auth.management_events IN ACCESS EXCLUSIVE MODE").await.unwrap();
             let mut transaction = database
                 .fenced_session(
                     &changed.installation,
@@ -119,7 +120,7 @@ fn native_fenced_roundtrip() {
                 tokio::pin!(operation);
                 tokio::select! {
                     _ = &mut operation => panic!("fixture did not hold the audit operation"),
-                    () = wait(&controls, "cancel-operation") => {}
+                    () = admin.serving_blocked_by_me() => {}
                 }
             }
             // The wrapper itself is still alive: its borrowed operation's
@@ -130,11 +131,13 @@ fn native_fenced_roundtrip() {
                 Err(DbError::Unavailable)
             );
             mark(&controls, "operation-cancelled");
-            wait(&controls, "operation-released").await;
+            admin.client().batch_execute("ROLLBACK").await.unwrap();
             assert!(transaction.commit().await.is_err());
             let shutdown = database.shutdown().await;
             assert_eq!(shutdown.joined, 2);
             assert!(!shutdown.aborted);
+            assert_eq!(admin.client().query_one("SELECT count(*) FROM kehila_auth.management_events WHERE public_id IN ('cancelled-logout','must-not-write')", &[]).await.unwrap().get::<_,i64>(0), 0);
+            admin.close().await;
             mark(&controls, "passed");
         });
 }

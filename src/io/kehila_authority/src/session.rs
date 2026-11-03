@@ -485,8 +485,7 @@ impl Session {
                 )
         })
     }
-    #[cfg(test)]
-    fn successful_business(&self, snapshot: &Snapshot, now: Instant) -> bool {
+    pub(crate) fn successful_business(&self, snapshot: &Snapshot, now: Instant) -> bool {
         let Ok(mut state) = self.state.lock() else {
             return false;
         };

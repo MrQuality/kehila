@@ -9,7 +9,7 @@ async fn exchange(
     jobs: jobs::Handle,
     request: hyper::Request<Full<bytes::Bytes>>,
     clean_close: bool,
-) -> (Outcome, hyper::StatusCode, bytes::Bytes) {
+) -> (Outcome, hyper::StatusCode, hyper::HeaderMap, bytes::Bytes) {
     let rcgen::CertifiedKey { cert, signing_key } =
         rcgen::generate_simple_self_signed(vec!["127.0.0.1".into()]).unwrap();
     let acceptor = TlsAcceptor::from(
@@ -47,9 +47,18 @@ async fn exchange(
     request
         .headers_mut()
         .insert("Connection", "close".parse().unwrap());
+    if request
+        .headers()
+        .get("x-kehila-client")
+        .is_some_and(|value| value == "browser")
+    {
+        request
+            .headers_mut()
+            .insert("origin", format!("https://{address}").parse().unwrap());
+    }
     let client = async {
         if clean_close {
-            return crate::request(
+            return crate::test_exchange::request_with_headers(
                 address,
                 client,
                 ServerName::IpAddress(address.ip().into()),
@@ -70,13 +79,14 @@ async fn exchange(
                 .await
                 .map_err(|_| crate::io_error("test HTTP response"))?;
             let status = response.status();
+            let headers = response.headers().clone();
             let body = Limited::new(response.into_body(), 1024)
                 .collect()
                 .await
                 .map_err(|_| crate::io_error("test HTTP body"))?
                 .to_bytes();
             drop(sender);
-            Ok::<_, io::Error>((status, body))
+            Ok::<_, io::Error>((status, headers, body))
         };
         let (reply, parts) = tokio::join!(receive, connection.without_shutdown());
         // The framed response is complete; deliberately close TCP without a
@@ -88,8 +98,20 @@ async fn exchange(
     let (outcome, reply) = timeout(CONNECTION_DEADLINE, async { tokio::join!(server, client) })
         .await
         .unwrap();
-    let (status, body) = reply.unwrap();
-    (outcome, status, body)
+    let (status, headers, body) = reply.unwrap();
+    (outcome, status, headers, body)
+}
+
+/// Actual listener connection/HTTP/TLS, with an explicitly supplied trust root.
+/// Cookie persistence is controlled by the fixture; this is not a browser or
+/// protected-startup/provider-publication qualification.
+pub(crate) async fn browser_exchange(
+    jobs: jobs::Handle,
+    request: hyper::Request<Full<bytes::Bytes>>,
+) -> (hyper::StatusCode, hyper::HeaderMap, bytes::Bytes) {
+    let (outcome, status, headers, body) = exchange(jobs, request, true).await;
+    assert!(matches!(outcome, Outcome::Complete));
+    (status, headers, body)
 }
 
 pub(crate) async fn cli_state(
@@ -103,7 +125,7 @@ pub(crate) async fn cli_state(
         )
         .body(Full::new(bytes::Bytes::new()))
         .unwrap();
-    let (outcome, status, body) = exchange(jobs, request, true).await;
+    let (outcome, status, _, body) = exchange(jobs, request, true).await;
     assert!(matches!(outcome, Outcome::Complete));
     (status, body)
 }
@@ -117,7 +139,7 @@ pub(crate) async fn cli_login_without_peer_close(
             b"{\"password\":\"a fixed test password\"}",
         )))
         .unwrap();
-    let (outcome, status, body) = exchange(jobs, request, false).await;
+    let (outcome, status, _, body) = exchange(jobs, request, false).await;
     assert!(matches!(outcome, Outcome::Rejected(Rejection::PeerClose)));
     (status, body)
 }

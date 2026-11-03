@@ -5,6 +5,9 @@ use tokio::{
 };
 
 const CAPACITY: usize = 16;
+mod preparation;
+mod project;
+use preparation::{Reservation, Tracker};
 
 struct Message {
     operation: Operation,
@@ -23,7 +26,11 @@ impl Response {
     // Borrowing preserves the accounted reply/credential lifetime. Adapters
     // retain Response until their exchange/cleanup finishes.
     pub(crate) fn result(&self) -> Result<&Output, Error> {
-        if let Err(error @ (Error::AuditUnconfirmed | Error::OtherAuditUnconfirmed)) = &self.result
+        if let Err(
+            error @ (Error::AuditUnconfirmed
+            | Error::OtherAuditUnconfirmed
+            | Error::Project(crate::project::Failure::OutcomeUnknown)),
+        ) = &self.result
         {
             return Err(*error);
         }
@@ -37,6 +44,9 @@ impl Response {
         if let Ok(Output::Issued(delivery)) = &mut self.result {
             delivery.confirm_exchange()?;
         }
+        if let Ok(Output::Project(delivery)) = &self.result {
+            delivery.check()?;
+        }
         Ok(())
     }
 }
@@ -46,6 +56,8 @@ pub(crate) struct Handle {
     sender: mpsc::Sender<Message>,
     capacity: Arc<Semaphore>,
     live: Arc<RuntimeLiveness>,
+    engine: std::sync::Weak<Engine>,
+    preparations: Arc<Tracker>,
 }
 impl Handle {
     pub(crate) fn submit(
@@ -53,6 +65,11 @@ impl Handle {
         operation: Operation,
         deadline: Instant,
     ) -> Result<oneshot::Receiver<Response>, Error> {
+        let reservation = self.reserve(deadline)?;
+        self.submit_reserved(operation, reservation)
+    }
+
+    fn reserve(&self, deadline: Instant) -> Result<Reservation, Error> {
         let now = Instant::now();
         if !self.live.is_live() || now >= deadline {
             return Err(Error::Unavailable);
@@ -64,23 +81,39 @@ impl Handle {
                 .try_acquire_owned()
                 .map_err(|_| Error::Busy)?,
         );
+        Ok(Reservation { permit, deadline })
+    }
+
+    fn submit_reserved(
+        &self,
+        operation: Operation,
+        reservation: Reservation,
+    ) -> Result<oneshot::Receiver<Response>, Error> {
+        if !self.live.is_live() || Instant::now() >= reservation.deadline {
+            return Err(Error::Unavailable);
+        }
         let (reply, receiver) = oneshot::channel();
         self.sender
             .try_send(Message {
                 operation,
-                deadline,
+                deadline: reservation.deadline,
                 reply,
-                permit,
+                permit: reservation.permit,
             })
             .map_err(|error| match error {
                 mpsc::error::TrySendError::Full(_) => Error::Busy,
                 mpsc::error::TrySendError::Closed(_) => Error::Unavailable,
             })?;
+        #[cfg(test)]
+        self.live
+            .probe
+            .record(crate::lifecycle::probe::Stage::Execution);
         Ok(receiver)
     }
     pub(crate) fn stop(&self) {
         self.live.stop();
         self.capacity.close();
+        self.preparations.close();
     }
 }
 
@@ -89,6 +122,7 @@ pub(crate) struct Owner {
     receiver: mpsc::Receiver<Message>,
     jobs: JoinSet<()>,
     slots: Vec<(Id, Arc<OwnedSemaphorePermit>)>,
+    preparations: Arc<Tracker>,
 }
 
 impl Owner {
@@ -140,10 +174,13 @@ impl Owner {
             blocklist,
         });
         let (sender, receiver) = mpsc::channel(1);
+        let preparations = Tracker::new();
         let handle = Handle {
             sender,
             capacity: Arc::new(Semaphore::new(CAPACITY)),
             live,
+            engine: Arc::downgrade(&engine),
+            preparations: preparations.clone(),
         };
         Ok((
             handle,
@@ -152,6 +189,7 @@ impl Owner {
                 receiver,
                 jobs: JoinSet::new(),
                 slots,
+                preparations,
             },
         ))
     }
@@ -186,7 +224,8 @@ impl Owner {
                         let mut failure = StopOnAbandonment { live: engine.live.clone(), completed: false };
                         let result = engine.execute(message.operation, message.deadline).await;
                         let result = if engine.check(message.deadline).is_ok()
-                            || matches!(result, Err(Error::AuditUnconfirmed | Error::OtherAuditUnconfirmed)) { result }
+                            || matches!(result, Err(Error::AuditUnconfirmed | Error::OtherAuditUnconfirmed
+                                | Error::Project(crate::project::Failure::OutcomeUnknown))) { result }
                                      else { drop(result); Err(Error::Unavailable) };
                         let _ = message.reply.send(Response { result, deadline: message.deadline,
                             live: engine.live.clone(), _permit: message.permit });
@@ -197,6 +236,7 @@ impl Owner {
             }
         }
         let stop_deadline = self.engine().live.shutdown_deadline();
+        self.preparations.close();
         self.receiver.close();
         // Queued inputs/replies own permits and zeroizing values; draining them
         // never starts work after stop and does not touch an active job future.
@@ -204,6 +244,9 @@ impl Owner {
         while let Some(result) = self.jobs.join_next_with_id().await {
             self.joined(result);
         }
+        #[cfg(test)]
+        self.engine().live.probe.begin_settling();
+        let preparation = self.preparations.settle().await?;
         let engine = Arc::try_unwrap(self.engine.take().ok_or(Error::Unavailable)?)
             .map_err(|_| Error::Unavailable)?;
         let hash = Arc::try_unwrap(engine.hash).map_err(|_| Error::Unavailable)?;
@@ -215,7 +258,12 @@ impl Owner {
         // Keeping Worker here also retains its joining Drop on exceptional exit.
         let hash = worker.shutdown();
         let database = engine.database.into_inner().shutdown().await;
-        if hash.is_err() || database.aborted || database.failed || Instant::now() > stop_deadline {
+        if preparation.failed
+            || hash.is_err()
+            || database.aborted
+            || database.failed
+            || Instant::now() > stop_deadline
+        {
             Err(Error::Unavailable)
         } else {
             Ok(())
@@ -237,6 +285,7 @@ impl Drop for StopOnAbandonment {
 
 impl Drop for Owner {
     fn drop(&mut self) {
+        self.preparations.abort();
         if let Some(engine) = &self.engine {
             engine.live.stop();
         }

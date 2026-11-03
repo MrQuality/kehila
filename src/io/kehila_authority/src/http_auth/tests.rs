@@ -47,6 +47,45 @@ fn bearer(request: &mut Request<()>) {
 }
 
 #[test]
+fn every_project_route_requires_post_browser_cookie_origin_and_csrf_at_the_edge() {
+    for path in [
+        "/projects/binding",
+        "/projects/register",
+        "/projects/list",
+        "/projects/open",
+        "/projects/execute",
+        "/projects/reconcile",
+        "/projects/cancel",
+        "/projects/read",
+    ] {
+        let mut request = browser(Method::POST, path);
+        cookie(&mut request, SESSION);
+        assert!(matches!(
+            profile().admit(&request).unwrap().route,
+            Route::Project(_)
+        ));
+        for name in ["origin", CSRF, "sec-fetch-site", "cookie"] {
+            let mut missing = request.clone();
+            missing.headers_mut().remove(name);
+            assert!(profile().admit(&missing).is_err(), "{path} missing {name}");
+        }
+        let mut native = cli(Method::POST, path);
+        bearer(&mut native);
+        assert!(profile().admit(&native).is_err());
+        assert!(profile().admit(&browser(Method::GET, path)).is_err());
+        let mut anonymous = browser(Method::POST, path);
+        cookie(&mut anonymous, PRE_SESSION);
+        assert!(profile().admit(&anonymous).is_err());
+        let mut duplicate = request.clone();
+        cookie(&mut duplicate, SESSION);
+        assert!(profile().admit(&duplicate).is_err());
+    }
+    assert!(profile()
+        .admit(&browser(Method::POST, "/projects/unknown"))
+        .is_err());
+}
+
+#[test]
 fn explicit_browser_and_cli_routes_admit_only_their_credentials() {
     let mut login = browser(Method::POST, "/auth/browser/login");
     cookie(&mut login, PRE_SESSION);

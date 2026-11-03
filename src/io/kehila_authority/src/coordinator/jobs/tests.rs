@@ -1,7 +1,8 @@
 use super::*;
-use crate::postgres::tests::{fixture, mark, wait};
+use crate::postgres::tests::{fixture, mark};
 mod delivery;
 mod expiry;
+mod project;
 mod revoke_others;
 mod unknown_commit;
 
@@ -20,6 +21,7 @@ async fn request(handle: &Handle, operation: Operation) -> Response {
         Operation::Logout(_) => "logout",
         Operation::Password { .. } => "password_change",
         Operation::RevokeOthers { .. } => "revoke_others",
+        Operation::Project { .. } => "project",
     };
     let started = Instant::now();
     let response =
@@ -353,7 +355,9 @@ fn native_owned_login() {
             // Retain a response across actual authority-connection loss. Both the
             // manager and captured adapter reply must observe the same stop state.
             mark(&controls, "authority-ready");
-            wait(&controls, "authority-lost").await;
+            let admin = crate::postgres::tests::fixture_admin::Admin::connect(&endpoint).await;
+            admin.terminate_authority().await;
+            admin.close().await;
             assert!(running.await.unwrap().is_err());
             assert!(!handle.live.is_live());
             assert!(matches!(response.result(), Err(Error::Unavailable)));

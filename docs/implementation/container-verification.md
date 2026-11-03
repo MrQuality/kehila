@@ -130,6 +130,51 @@ against their returned SHA-256 digests and included Linux amd64 manifests. This
 establishes input identity, not an executed build or minimum-version qualification.
 The current Linux CI toolchain remains a separate required observation.
 
+The product page-state suite additionally requires Node 24.22.2. The image and
+Linux CI use `tools/verification/install_node.py`, which downloads the fixed
+official Linux-amd64 archive over verified HTTPS and verifies its pinned SHA-256
+before copying only the runtime and bundled license to a new external prefix.
+No npm packages or browsers are installed. Full verification runs the deterministic
+page tests before Rust compilation; documentation-only checks do not require Node.
+These simulated-DOM tests do not establish Windows browser or TLS behavior.
+An older retained image without this runtime must be explicitly prepared again;
+adding the command to the matrix does not make an existing image ready.
+The image also installs Clippy explicitly for the pinned Rust toolchain and checks
+its archive identity against that toolchain's retained manifest; the official
+minimal profile does not include it. Tool-version probes establish availability,
+not a successful project lint result.
+
+The container matrix runs the native product PostgreSQL/listener fixture serially
+after compilation and build-network disconnection, before the broker/search/task
+service groups. Its database shares only the runner's loopback namespace, uses a
+pinned PostgreSQL 16 image and bounded tmpfs/memory/CPU/PIDs, and publishes no ports.
+The host lifecycle owner removes that database before its namespace-owning runner.
+Independent queries check durable cardinalities/identity and released authority
+connections/locks. Test secrets and failure diagnostics stay in external storage;
+the serial retention/authority extension uses an explicitly marked disposable
+database and a privileged test connection, separate from the runtime capability.
+It temporarily replaces the database clock with a fixed, owner-controlled test
+function, verifies runtime denial of its controls, restores the original function
+identity/owner/ACL/body and destroys the database during owned cleanup. This tests
+expiry/replay/retirement paths; it does not qualify the production clock body,
+machine clock changes or backup/restore behavior.
+After restoring the production clock, a quiescent synthetic copy is restored into
+a fresh database in the same disposable cluster. Records and captured schema/
+authority properties compare before fresh-authority startup; CHECK expressions
+use PostgreSQL scratch-object reparse with semantic-change negative controls.
+Raw snapshots and the dump contain verifier/audit data and must remain outside
+the checkout and public output. This is a coherence test, not supported recovery
+or exclusion between databases. Selected authentication regressions run serially
+afterward, with the password-changing case last.
+local callers must provide private temporary storage and resource supervision.
+
+`--native-authority` selects just this compiled product fixture after explicit
+`--prepare-dependencies`. The `native-authority` Linux CI job uses the same mode
+with an exact exported source tree and Podman. Ordinary documentation changes
+skip that job's heavy steps. This is a required backend observation, not Windows
+browser, protected-startup, supported installation or external-corpus qualification;
+it does not make the remaining ignored fixtures pass.
+
 After resource approval, build with the chosen engine using
 `tools/verification/Containerfile` and `tools/verification` as its context. Record
 the resulting immutable image ID. Set `runner_image` in the external local settings to that ID for the
