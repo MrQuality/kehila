@@ -238,14 +238,8 @@ pub fn decide_replay<Request: Eq, Result: Clone, Scope>(
             if record.request_fingerprint != request_fingerprint {
                 return ReplayDecision::Reject(OperationError::InvalidReference);
             }
-            let Some(deadline) = record.recorded_at_ms.checked_add(REPLAY_PERIOD_MS) else {
-                return ReplayDecision::Reject(OperationError::InvalidOperation);
-            };
-            if now_ms < record.recorded_at_ms {
-                return ReplayDecision::Reject(OperationError::InvalidOperation);
-            }
-            if now_ms >= deadline {
-                return ReplayDecision::Reject(OperationError::ReplayExpired);
+            if let Err(error) = check_replay_window(record.recorded_at_ms, now_ms) {
+                return ReplayDecision::Reject(error);
             }
             ReplayDecision::Replay(record.success.result.clone())
         }
@@ -259,4 +253,20 @@ pub fn decide_replay<Request: Eq, Result: Clone, Scope>(
             ReplayDecision::Reject(OperationError::ReplayExpired)
         }
     }
+}
+
+/// Check a full record's logical replay interval after identity/content checks.
+/// Tombstones remain expired independently of wall-clock rollback. This helper
+/// establishes neither authorization nor equality with the original request.
+pub fn check_replay_window(recorded_at_ms: u64, now_ms: u64) -> Result<(), OperationError> {
+    let deadline = recorded_at_ms
+        .checked_add(REPLAY_PERIOD_MS)
+        .ok_or(OperationError::InvalidOperation)?;
+    if now_ms < recorded_at_ms {
+        return Err(OperationError::InvalidOperation);
+    }
+    if now_ms >= deadline {
+        return Err(OperationError::ReplayExpired);
+    }
+    Ok(())
 }

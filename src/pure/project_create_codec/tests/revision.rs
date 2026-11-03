@@ -18,6 +18,41 @@ fn result() -> ProjectCreateResult {
 }
 
 #[test]
+fn preparation_native_result_rejects_jsonb_nul_without_changing_history() {
+    let r = result();
+    assert_eq!(
+        decode_result(1, &encode_native_result(&r).unwrap()),
+        Ok(r.clone())
+    );
+    for change in 0..3 {
+        let mut bad = r.clone();
+        match change {
+            0 => bad.project.name.push('\0'),
+            1 => bad.configuration.fields[0].name.push('\0'),
+            _ => bad.configuration.project_id.0.push('\0'),
+        }
+        assert!(encode_result(&bad).is_ok());
+        assert!(encode_native_result(&bad).is_err());
+    }
+}
+
+#[test]
+fn preparation_native_result_reserves_full_envelope_jsonb_whitespace() {
+    let mut r = result();
+    r.configuration.statuses = vec![r.configuration.statuses[0].clone(); 16];
+    for status in &mut r.configuration.statuses {
+        status.name = "x".repeat(65_500);
+    }
+    r.configuration.statuses[15].name.clear();
+    let base = encode_result(&r).unwrap().len();
+    let padding = MAX_RECORD_BYTES - base;
+    assert!(padding < MAX_STRING_BYTES);
+    r.configuration.statuses[15].name = "x".repeat(padding);
+    assert_eq!(encode_result(&r).unwrap().len(), MAX_RECORD_BYTES);
+    assert_eq!(encode_native_result(&r), Err(Error::LimitExceeded));
+}
+
+#[test]
 fn revision_pair_checks_fixed_relationships_separately_from_decode() {
     let r = result();
     let project = encode_project_snapshot(&r.project).unwrap();

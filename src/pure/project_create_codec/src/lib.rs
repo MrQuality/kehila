@@ -72,6 +72,13 @@ pub fn encode_result(result: &ProjectCreateResult) -> Result<Vec<u8>, Error> {
     limits::result(result)?;
     limits::serialize(&v1::encode_result(result))
 }
+
+/// Admit a saved result for bounded PostgreSQL JSONB readback. This does not
+/// establish business acceptance, authority or a transaction outcome.
+pub fn encode_native_result(result: &ProjectCreateResult) -> Result<Vec<u8>, Error> {
+    limits::native_result(result)?;
+    limits::serialize_native(&v1::encode_result(result))
+}
 /// Reconstruct historical configuration without consulting current definitions.
 pub fn decode_snapshot(version: u32, bytes: &[u8]) -> Result<Configuration, Error> {
     v1::decode_snapshot(&stored_json(version, bytes)?).map_err(Error::Malformed)

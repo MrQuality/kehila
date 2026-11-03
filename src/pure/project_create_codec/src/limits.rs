@@ -104,6 +104,14 @@ pub(crate) fn result(result: &ProjectCreateResult) -> Result<(), Error> {
     budget.project(&result.project)?;
     budget.configuration(&result.configuration)
 }
+pub(crate) fn native_result(result: &ProjectCreateResult) -> Result<(), Error> {
+    let mut budget = Budget {
+        native: true,
+        ..Budget::default()
+    };
+    budget.project(&result.project)?;
+    budget.configuration(&result.configuration)
+}
 pub(crate) fn project(p: &Project) -> Result<(), Error> {
     Budget::default().project(p)
 }
