@@ -98,6 +98,29 @@ bounded model. Do not describe the system as linearizable: finite races do not
 prove that property. Cross-record serialization/atomicity is unresolved. Define
 state-machine or model tests before claiming stronger consistency.
 
+### Native project creation: separate database and HTTP evidence
+
+The local MVP retains ADR-105's single installed owner. Qualification must not add
+a second HTTP user merely to satisfy a database concurrency case. The maintainer
+selected the following split for ADR-103/107 project creation:
+
+| Layer | Required observation | Interpretation |
+| --- | --- | --- |
+| SP-005 database transactions | Concurrent creation and target collisions using distinct fixture actors, including rollback and fresh target re-entry | Database allocation/attribution evidence; fixture actors are not authenticated HTTP users. |
+| Owner HTTP and Windows browsers | Same-owner concurrent requests and Chrome/Edge discovery, reopening and explicit execution of the same server-owned pending request | Current-authority/session/CSRF and cross-browser behavior within the accepted local profile. |
+| Later multi-actor HTTP | End-to-end isolation and concurrency between independently authenticated actors | Post-MVP work under [#65](https://github.com/MrQuality/kehila/issues/65); not qualified by either of the preceding layers. |
+
+The three SP-005 fixture-actor transaction schedules passed on 2026-11-03 within
+their structural SQL scope. Actual owner HTTP/TLS observations also exist;
+Windows Chrome/Edge qualification remains outstanding. Retain separate
+source/results and limitations in the
+[authority verification record](../implementation/project-authority-verification.md)
+and the [SP-005 record](../spikes/SP-005-project-target-allocation.md). Structural
+foreign-key rejection alone does not establish concurrent cross-actor allocation;
+simulated browser state or separate HTTP clients do not establish Chrome/Edge
+behavior. The owner-binding rejection remains required independently of the
+positive fixture-actor database cases.
+
 ## Failure hypotheses and dependency behavior
 
 **Status: partially evidenced.** Current tests cover finite worker contention,

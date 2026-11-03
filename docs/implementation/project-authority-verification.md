@@ -257,11 +257,43 @@ sampled aggregate memory and retained at least 3.175 GiB available RAM. It did n
 repeat the seven previously passed native modes or qualify a whole final source
 suite. The earlier failed phase and deadline diagnosis remain preserved.
 
+## Runtime checkpoint mandatory gate
+
+The exact staged runtime checkpoint passed the full mandatory containerized hook
+on 2026-11-03. All eleven provisioned fixture modes passed in that invocation:
+journey, clock, restored, authentication expiry/delivery/unknown confirmation,
+owned login, revoke-others, fenced cancellation, cancelled read and database
+lifetime. Independent final-state/connection/lock observations, source preservation,
+the shared legacy checks and owned cleanup also passed. Ordinary ignored-test
+counts are separate; this invocation does not qualify Windows browsers or repeat
+the separately provisioned corpus/protected-startup observations.
+
+The gate took 502.969 seconds through cleanup, peaked at 4.961 GiB sampled
+aggregate memory and retained at least 1.754 GiB available RAM. The configured
+2-GiB reserve warning fired; neither the aggregate stop nor Windows low-memory
+stop fired. The initially stopped provider was stopped at completion. This is
+checkpoint evidence, not a claim that subsequent source has already passed CI.
+
+## Separate fixture-actor database qualification
+
+SP-005's three fixture-actor transaction schedules passed on 2026-11-03 under
+the maintainer-selected
+[layered split](../engineering/QUALIFICATION.md#native-project-creation-separate-database-and-http-evidence).
+Distinct actors committed distinct targets with identical scoped token/handle
+text; a target loser fully rolled back after typed primary-key rejection and
+re-entered with a fresh target; a waiting creator succeeded after the original
+holder rolled back. Independent observations checked actual blocking, visibility,
+released actor fences and final attribution/cardinality. The
+[SP-005 record](../../experiments/SP-005/README.md#evidence-limits-and-next-cases)
+retains the failed attempts, protocol diagnosis, timings and evidence limits.
+
+These are database transactions with fixture actors and placeholder payloads.
+They neither add a second HTTP owner nor establish typed product creation or
+Chrome/Edge behavior. End-to-end multi-actor HTTP remains post-MVP #65.
+
 ## Remaining delivery gates
 
 - Execute the new CI job against the proposed head.
-- Record SP-005's fixture-actor concurrency and target-collision extension in a
-  separate qualification checkpoint. This does not qualify multi-actor HTTP.
 - Complete the intended Windows Chrome/Edge journey with normal TLS validation.
   Local browsers are excluded from the current resource profile. A hosted or
   separate-machine route still needs its concrete execution/trust authorization.
