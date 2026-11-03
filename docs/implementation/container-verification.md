@@ -410,3 +410,29 @@ The successful phase took 59.063 seconds through cleanup, peaked at 1.353 GiB
 sampled aggregate memory and retained at least 5.227 GiB available RAM, without
 resource warnings/stops. This is local-provider evidence. The affected Podman
 4.9.3 CI execution and required commit/final-head checks remain separate gates.
+
+## Native fixture failure reporting, 2026-11-03
+
+Run [41633004402](https://github.com/MrQuality/kehila/actions/runs/41633004402)
+at `aef8f21` passed five native modes, then failed `auth-unknown`. The wrapper's
+generic completed-Cargo error conflated exit status, success-summary detection
+and required marker detection. Detailed Rust output was not retained as a hosted
+artifact; the underlying assertion/cause remains unknown. The console record is
+retained. Owned CI resources were removed; runner teardown used forced termination,
+which is not evidence of graceful application shutdown or the failure's cause.
+
+After explicit authorization, the reporting-only extension adds a closed failure
+record: mode/stage, Cargo exit, summary/marker Booleans, bounded known-operation
+timings and a panic location only if mapped to known public product source.
+It emits no raw log/assertion text, credentials, environment values or arbitrary
+paths. Metadata is best-effort: construction or stderr failure cannot replace the
+original journey error. Successful tests do not construct or emit this metadata.
+Timeout, decoding and oversized-log exceptions retain their existing separate
+paths; product assertions, deadlines and resource limits are unchanged.
+
+The preimplementation focused check observed the expected missing helper errors,
+but its supervisor incorrectly expected eight tests/errors rather than seven
+methods with nine subcase errors. That supervisory phase remains failed with its
+cleanup record; it was not rerun or relabelled as a pass. Later checks and the
+single authorized diagnostic CI attempt are recorded against their actual heads
+in the PR. A nonreproduction cannot establish a cause or fix the original failure.

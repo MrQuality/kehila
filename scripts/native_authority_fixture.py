@@ -6,12 +6,14 @@ It is not browser, protected-startup, installation or corpus qualification.
 """
 import argparse
 import base64
+import json
 import math
 import os
 from pathlib import Path
 import re
 import secrets
 import subprocess
+import sys
 
 from verification_budget import command_timeout
 
@@ -99,6 +101,36 @@ SPECS = {
 }
 
 
+def failure_metadata(mode, returncode, summary, marker_required, marker_present):
+    # Only closed labels, numeric observations and known public source locations.
+    modes = set(SPECS)
+    labels = {'pre_session', 'pre_csrf', 'login', 'state', 'logout',
+              'password_change', 'revoke_others', 'project'}
+    jobs = []
+    for label, elapsed in re.findall(r'^owned_job ([a-z_]+) elapsed_us=([0-9]{1,12})$',
+                                     summary, re.MULTILINE):
+        if label in labels:
+            jobs.append({'operation': label, 'elapsed_us': int(elapsed)})
+    crate = ROOT / 'src/io/kehila_authority'
+    locations = {}
+    for source in (crate / 'src').rglob('*.rs'):
+        public = source.relative_to(ROOT).as_posix()
+        locations[public] = public
+        locations[source.relative_to(crate).as_posix()] = public
+    panic = None
+    for source, line, column in re.findall(
+            r'panicked at ([^\s:]+\.rs):([0-9]{1,8}):([0-9]{1,8})', summary):
+        if source in locations:
+            panic = {'source': locations[source], 'line': int(line), 'column': int(column)}
+            break
+    return {'event': 'native_fixture_failure', 'stage': 'completed_cargo_result',
+            'mode': mode if mode in modes else 'unknown', 'cargo_exit': returncode,
+            'success_summary': 'test result: ok. 1 passed; 0 failed;' in summary,
+            'marker_required': marker_required, 'marker_present': marker_present,
+            'jobs': jobs[:64], 'jobs_truncated': len(jobs) > 64,
+            'public_panic_location': panic}
+
+
 def journey(seconds, mode='journey'):
     test, marker = SPECS[mode]
     controls = WORK / 'controls'
@@ -135,7 +167,14 @@ def journey(seconds, mode='journey'):
     summary = summary_bytes.decode('utf-8')
     if result.returncode or 'test result: ok. 1 passed; 0 failed;' not in summary \
             or (marker_path is not None and not marker_path.is_file()):
-        raise RuntimeError('Native authority journey failed; external diagnostics retained')
+        failure = RuntimeError('Native authority journey failed; external diagnostics retained')
+        try:
+            print(json.dumps(failure_metadata(mode, result.returncode, summary,
+                marker_path is not None, marker_path is not None and marker_path.is_file())),
+                file=sys.stderr, flush=True)
+        except Exception:
+            pass  # Optional reporting must not replace the primary failure.
+        raise failure from None
     print('PASS: provisioned native fixture ' + mode)
 
 
