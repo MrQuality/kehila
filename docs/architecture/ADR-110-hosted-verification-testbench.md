@@ -138,6 +138,14 @@ fixture identity and client/browser versions. Missing cases are incomplete,
 not passed. Preserve product, harness, transport, capacity, cancellation and
 cleanup failures separately; a successful cleanup cannot clear the first failure.
 
+Record failure cause and stage separately from qualification status. An
+environment, transport or TLS failure that prevents a required case leaves the
+campaign incomplete and blocks a passing verdict; a category label does not
+waive required evidence. An HTTP 4xx/5xx response alone is neither a failure nor
+a pass: expected rejection cases must satisfy their specific response and
+independent state/cleanup oracles. Preserve the first unexpected failure and
+later cleanup failures even if another case or a fresh attempt succeeds.
+
 Admission permits only an explicitly reviewed immutable revision of both the
 workflow and tested source. A maintainer dispatch is not evidence that arbitrary
 PR scripts are trustworthy. No fork/PR job receives enrollment credentials or
@@ -181,6 +189,12 @@ Remote revocation requires a separately protected administrative control path.
 Runner loss, supervisor loss and control-plane outage must remain explicit failure
 states; no hard remote deletion guarantee follows from this design alone.
 The unresolved enforcement choice blocks live session admission, not this PR.
+
+The enforcement contract must name failure domains and the resources each
+controller can actually terminate. Two timers inside the same runner do not
+establish independence from runner failure. Process termination, active-stream
+closure and enrolled-node revocation are separate observations. A cleanup trap
+or an enrollment-key revocation request proves none of the other outcomes.
 
 Use finite preparation, attachment and execution budgets, plus bounded cleanup.
 Proposed initial session ceiling: 30 minutes from readiness, within a separate
@@ -261,6 +275,12 @@ it would not add supported remote product deployment, production ingress,
 replication, upgrades or real-data durability. Authentication, Argon2 settings,
 admission/cancellation and ownership remain unchanged. WAN latency/relay failures
 may invalidate a test environment; do not extend product deadlines to hide them.
+Choose any network-quality admission criterion from representative measurements
+and explicit acceptance; neither a direct-only requirement nor an arbitrary RTT
+cutoff follows from the five-second product budget. A successful preflight also
+cannot guarantee that the path stays direct or healthy throughout the case.
+If quota or provider conditions invalidate admission, stop and request the
+scoped decision; an SSH broker or paid provider must not activate automatically.
 
 The maintainer is asked to decide separately:
 
