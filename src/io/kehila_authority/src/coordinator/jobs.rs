@@ -1,4 +1,5 @@
 use super::*;
+use crate::lifecycle::FatalCause;
 use tokio::{
     sync::{mpsc, oneshot, OwnedSemaphorePermit, Semaphore},
     task::{Id, JoinSet},
@@ -198,14 +199,14 @@ impl Owner {
         let id = match result {
             Ok((id, ())) => id,
             Err(error) => {
-                self.engine().live.stop();
+                self.engine().live.fail(FatalCause::OwnedExecution);
                 error.id()
             }
         };
         if let Some(index) = self.slots.iter().position(|(stored, _)| *stored == id) {
             self.slots.swap_remove(index);
         } else {
-            self.engine().live.stop();
+            self.engine().live.fail(FatalCause::OwnedExecution);
         }
     }
 
@@ -249,6 +250,7 @@ impl Owner {
         let preparation = self.preparations.settle().await?;
         let engine = Arc::try_unwrap(self.engine.take().ok_or(Error::Unavailable)?)
             .map_err(|_| Error::Unavailable)?;
+        let live = engine.live.clone();
         let hash = Arc::try_unwrap(engine.hash).map_err(|_| Error::Unavailable)?;
         let mut worker = hash.into_inner();
         while !worker.finished() {
@@ -258,7 +260,8 @@ impl Owner {
         // Keeping Worker here also retains its joining Drop on exceptional exit.
         let hash = worker.shutdown();
         let database = engine.database.into_inner().shutdown().await;
-        if preparation.failed
+        if live.failure().is_some()
+            || preparation.failed
             || hash.is_err()
             || database.aborted
             || database.failed
@@ -278,7 +281,7 @@ struct StopOnAbandonment {
 impl Drop for StopOnAbandonment {
     fn drop(&mut self) {
         if !self.completed {
-            self.live.stop();
+            self.live.fail(FatalCause::OwnedExecution);
         }
     }
 }

@@ -7,6 +7,7 @@ mod authorization;
 mod clock;
 mod competing;
 mod evidence;
+mod faults;
 mod restored;
 mod write_faults;
 
@@ -337,6 +338,8 @@ fn native_project_creation_and_reconciliation() {
             running.await.unwrap().unwrap();
             admission::stop_and_abort(&endpoint, &installation, &attempt, entry).await;
             competing::lost_registration_and_cancellation(&endpoint, &installation, &attempt).await;
+            faults::execution_panic(&endpoint, &installation, &attempt).await;
+            faults::named_constraint(&endpoint, &installation, &attempt).await;
             mark(&controls, "passed");
         });
 }

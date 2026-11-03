@@ -1,4 +1,5 @@
 use super::*;
+use crate::lifecycle::FatalCause;
 use crate::{
     postgres::transaction::{Current, NativeError, Pending, PendingState, Replay},
     project::{self as domain, Command, Failure},
@@ -101,33 +102,30 @@ fn needs_reconciliation(error: &NativeError) -> bool {
         || matches!(error,NativeError::Database(DbError::Rejected(code)) if code=="P0002")
 }
 
-impl Engine {
-    fn native_error(&self, error: NativeError) -> Error {
-        #[cfg(test)]
-        if let NativeError::Database(DbError::Rejected(code) | DbError::Constraint { code, .. }) =
-            &error
-        {
-            self.live.probe.record_sql_state(code);
-        }
-        match error {
-            NativeError::Rejected(reason) => Error::Project(reason),
-            NativeError::Database(DbError::UnknownCommit) => {
-                Error::Project(Failure::OutcomeUnknown)
-            }
-            NativeError::Database(DbError::Rejected(code)) if code == "55000" => {
-                Error::Unauthorized
-            }
-            NativeError::Database(DbError::Rejected(code)) if code == "42501" => {
-                Error::Project(Failure::Forbidden)
-            }
-            NativeError::Database(DbError::Rejected(code)) if code == "54000" => Error::Busy,
-            NativeError::Integrity | NativeError::Database(DbError::Constraint { .. }) => {
-                self.live.stop();
-                Error::Unavailable
-            }
-            _ => Error::Unavailable,
-        }
+fn native_error(live: &RuntimeLiveness, error: NativeError) -> Error {
+    #[cfg(test)]
+    if let NativeError::Database(DbError::Rejected(code) | DbError::Constraint { code, .. }) =
+        &error
+    {
+        live.probe.record_sql_state(code);
     }
+    match error {
+        NativeError::Rejected(reason) => Error::Project(reason),
+        NativeError::Database(DbError::UnknownCommit) => Error::Project(Failure::OutcomeUnknown),
+        NativeError::Database(DbError::Rejected(code)) if code == "55000" => Error::Unauthorized,
+        NativeError::Database(DbError::Rejected(code)) if code == "42501" => {
+            Error::Project(Failure::Forbidden)
+        }
+        NativeError::Database(DbError::Rejected(code)) if code == "54000" => Error::Busy,
+        NativeError::Integrity | NativeError::Database(DbError::Constraint { .. }) => {
+            live.fail(FatalCause::NativeIntegrity);
+            Error::Unavailable
+        }
+        _ => Error::Unavailable,
+    }
+}
+
+impl Engine {
     fn project_eligibility(
         &self,
         entry: &Session,
@@ -252,7 +250,7 @@ impl Engine {
             .await
             .map_err(|_| Error::Unavailable)?;
         drop(database);
-        let reply = outcome.map_err(|error| self.native_error(error))?;
+        let reply = outcome.map_err(|error| native_error(&self.live, error))?;
         self.project_delivery(entry, fresh, reply, deadline)
     }
 
@@ -327,7 +325,7 @@ impl Engine {
                     .rollback()
                     .await
                     .map_err(|_| Error::Unavailable)?;
-                return Err(self.native_error(error));
+                return Err(native_error(&self.live, error));
             }
         };
         if let Err(error) = self.project_eligibility(&entry, credential, &fresh) {
@@ -340,7 +338,7 @@ impl Engine {
         let authority = transaction
             .commit()
             .await
-            .map_err(|error| self.native_error(NativeError::Database(error)))?;
+            .map_err(|error| native_error(&self.live, NativeError::Database(error)))?;
         drop(database);
         self.project_delivery(entry, snapshot(&authority), reply, deadline)
     }
@@ -422,7 +420,7 @@ impl Engine {
                     let authority = transaction
                         .commit()
                         .await
-                        .map_err(|error| self.native_error(NativeError::Database(error)))?;
+                        .map_err(|error| native_error(&self.live, NativeError::Database(error)))?;
                     drop(database);
                     return self.project_delivery(entry, snapshot(&authority), reply, deadline);
                 }
@@ -449,10 +447,55 @@ impl Engine {
                             .await;
                         continue;
                     }
-                    return Err(self.native_error(error));
+                    return Err(native_error(&self.live, error));
                 }
             }
         }
         Err(Error::Busy)
+    }
+}
+
+#[cfg(test)]
+mod failure_tests {
+    use super::*;
+
+    #[test]
+    fn decoded_integrity_and_named_constraints_retain_fatal_status() {
+        for error in [
+            NativeError::Integrity,
+            NativeError::Database(DbError::Constraint {
+                code: "23514".to_owned(),
+                name: "native_test_constraint".to_owned(),
+            }),
+        ] {
+            let live = RuntimeLiveness::new();
+            assert_eq!(native_error(&live, error), Error::Unavailable);
+            live.stop();
+            assert!(!live.is_live());
+            assert_eq!(live.failure(), Some(FatalCause::NativeIntegrity));
+        }
+    }
+
+    #[test]
+    fn expected_rejections_and_nonconstraint_errors_do_not_become_fatal() {
+        for (error, expected) in [
+            (
+                NativeError::Rejected(Failure::Conflict),
+                Error::Project(Failure::Conflict),
+            ),
+            (
+                NativeError::Database(DbError::Rejected("54000".to_owned())),
+                Error::Busy,
+            ),
+            (
+                NativeError::Database(DbError::Rejected("PZ001".to_owned())),
+                Error::Unavailable,
+            ),
+        ] {
+            let live = RuntimeLiveness::new();
+            assert_eq!(native_error(&live, error), expected);
+            assert!(live.is_live());
+            assert_eq!(live.failure(), None);
+        }
     }
 }

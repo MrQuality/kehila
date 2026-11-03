@@ -9,9 +9,16 @@ use tokio::sync::watch;
 #[cfg(test)]
 pub(crate) mod probe;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum FatalCause {
+    OwnedExecution,
+    NativeIntegrity,
+}
+
 pub(crate) struct RuntimeLiveness {
     state: watch::Sender<bool>,
     stop_deadline: OnceLock<Instant>,
+    failure: OnceLock<FatalCause>,
     #[cfg(test)]
     pub(crate) probe: probe::Probe,
 }
@@ -22,6 +29,7 @@ impl RuntimeLiveness {
         Arc::new(Self {
             state: watch::channel(true).0,
             stop_deadline: OnceLock::new(),
+            failure: OnceLock::new(),
             #[cfg(test)]
             probe: probe::Probe::default(),
         })
@@ -36,6 +44,17 @@ impl RuntimeLiveness {
         self.stop_deadline
             .get_or_init(|| Instant::now() + Duration::from_secs(5));
         self.state.send_replace(false);
+    }
+
+    pub(crate) fn fail(&self, cause: FatalCause) {
+        // Publish the first fault before waking shutdown. Intentional cleanup
+        // may follow, but cannot erase a fault or renew the first stop budget.
+        let _ = self.failure.set(cause);
+        self.stop();
+    }
+
+    pub(crate) fn failure(&self) -> Option<FatalCause> {
+        self.failure.get().copied()
     }
 
     /// Stop and obtain the first stop's budget. Repeated cleanup cannot renew it.
@@ -60,6 +79,20 @@ impl RuntimeLiveness {
 mod tests {
     use super::*;
     use std::{future::Future, task::Poll, time::Duration};
+
+    #[test]
+    fn a_later_fault_promotes_stop_without_clearing_its_first_cause_or_budget() {
+        let live = RuntimeLiveness::new();
+        live.stop();
+        let deadline = live.shutdown_deadline();
+        assert_eq!(live.failure(), None);
+        live.fail(FatalCause::OwnedExecution);
+        live.stop();
+        live.fail(FatalCause::NativeIntegrity);
+        assert_eq!(live.failure(), Some(FatalCause::OwnedExecution));
+        assert_eq!(live.shutdown_deadline(), deadline);
+        assert!(!live.is_live());
+    }
 
     #[tokio::test(flavor = "current_thread")]
     async fn active_and_late_observers_both_see_irreversible_stop() {

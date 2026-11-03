@@ -93,6 +93,17 @@ exit. Do not move OS randomness onto the async executor. No exclusive actor fenc
 spans response delivery. Cancellation must join work or stop an affected authority
 whose completion cannot be proved.
 
+Shutdown reporting distinguishes owned execution failure
+and native integrity/unexpected named-constraint failure from intentional stop.
+Retain the first scoped fatal cause before stopping admission; later intentional
+cleanup cannot clear it or renew the original shutdown budget. After joining owned
+work and database drivers, report the abnormal result even when cleanup succeeds,
+so the listener/daemon failure exit is preserved. This does not reclassify every
+existing stop policy or permit early resource release. A pre-fix native journey
+observed an owned task panic returning success after confirmed cleanup. Follow-up
+qualification must be recorded against its actual head; source presence alone
+does not establish a passed lifecycle check.
+
 ## Evidence and delivery gates
 
 Review controlled native schedules: equal/changed races, independent actors,
