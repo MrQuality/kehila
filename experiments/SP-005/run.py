@@ -46,7 +46,7 @@ def require_marker(output, marker):
                    'native oracle marker missing or duplicated: ' + marker)
 
 
-def run(database):
+def run(database, *, concurrency=False):
     # Owns fresh-container checks and structural baseline; never skip on a marker
     # supplied by a caller or assume an existing database is disposable.
     database.prepare_structure()
@@ -61,12 +61,12 @@ def run(database):
         require_marker(database.sql(statement, user=user), marker)
     database.sql('SELECT * FROM sp005.creation_intents;', user='foundation_untrusted',
                  expected_state='42501', expected_message='permission denied')
-    sources = [*sorted(SOURCE.glob('*.sql')), SOURCE / 'run.py',
+    sources = [*sorted(SOURCE.glob('*.sql')), *sorted(SOURCE.glob('*.py')),
                ROOT / 'scripts/check_postgresql.py',
                ROOT / 'tests/integration/postgresql_foundation.sql',
                ROOT / 'tests/integration/postgresql_creation.sql',
                *sorted((ROOT / 'storage/postgresql').glob('*.sql'))]
-    return {
+    result = {
         'scope': 'SP-005 physical mapping structural subset',
         'outcome': 'passed',
         'platform': platform.system(),
@@ -80,12 +80,22 @@ def run(database):
             'aggregate resources and production schema/dependency adoption',
         ],
     }
+    if concurrency:
+        import asyncio
+        from concurrency import exercise
+        result['concurrency_cases'] = asyncio.run(exercise(database))
+        result['scope'] = 'SP-005 physical mapping and fixture-actor transaction concurrency'
+        result['not_qualified'].remove('concurrent retries/collision re-entry and uncertain commit')
+        result['not_qualified'].append('product allocation adapter concurrency and uncertain commit')
+    return result
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--disposable-container', required=True)
     parser.add_argument('--podman-connection')
+    parser.add_argument('--concurrency', action='store_true',
+                        help='Also run the three bounded fixture-actor transaction schedules')
     parser.add_argument('--timeout', type=float, default=180,
                         help='Total subprocess-work budget, seconds (0, 600]')
     args = parser.parse_args()
@@ -98,7 +108,7 @@ def main():
     podman = ['podman']
     if args.podman_connection:
         podman += ['--connection', args.podman_connection]
-    result = run(MappingCheck(podman, args.disposable_container, args.timeout))
+    result = run(MappingCheck(podman, args.disposable_container, args.timeout), concurrency=args.concurrency)
     print(json.dumps(result, sort_keys=True))
 
 

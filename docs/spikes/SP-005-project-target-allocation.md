@@ -2,9 +2,9 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Architecture accepted; native structural subset and shared gate passed; broader allocation pending |
-| Owner / assessor | Project maintainer; structural execution completed, remaining campaign pending |
-| Created / last updated | 2026-10-08 / 2026-11-02 |
+| Status / outcome | Architecture accepted; native structural and fixture-actor concurrency subsets passed; product/browser gates recorded separately |
+| Owner / assessor | Project maintainer; bounded database execution completed, full allocation qualification pending |
+| Created / last updated | 2026-10-08 / 2026-11-03 |
 | Tracking issue | [41](https://github.com/MrQuality/kehila/issues/41) |
 | Parent delivery issue | [#27](https://github.com/MrQuality/kehila/issues/27) |
 | Prior evidence | [SP-002](SP-002-postgresql-project-create.md) |
@@ -112,14 +112,16 @@ not defects established by the structural subset:
 6. **High-Level Architecture / File Changes:** docs/spikes/SP-005-project-target-allocation.md; bounded experiments/SP-005/ when executed. A prototype allocation table or endpoint is not an accepted product API.
 7. **Verification & Testing Plan:** Synthetic allocation attempts, controlled response-loss barriers, repeated concurrent retries and independent final-state checks. Record scope and exact identity used in every attempt.
 
-Status: planned. Completing this spike will not close #27.
+Historical status: planned. The accepted architecture and executed subsets below
+supersede that planning status; completing this spike will not close #27.
 
 ## Environment and reproduction
 
 The [executable structural subset](../../experiments/SP-005/README.md) implements
 the immutable mapping overlay and actual-role SQL oracles. Its native run passed
 on 2026-11-02. This is not a production migration or completed allocation adapter;
-remaining concurrency, uncertainty and authority cases are not discharged.
+the later fixture-actor concurrency extension is recorded below. Uncertain
+commit and product authority are separate qualification obligations.
 
 ## Run summaries
 
@@ -139,8 +141,9 @@ The particular historical locking process has not been identified.
 
 ## Conclusion and reuse boundary
 
-ADR-107 revision 3 is accepted. Only the physical mapping structural subset has
-native evidence; broader allocation execution remains unqualified. Reuse SP-002
+ADR-107 revision 3 is accepted. The physical mapping structural subset and three
+fixture-actor transaction schedules have native evidence. They do not qualify a
+production allocation adapter or multi-actor HTTP. Reuse SP-002
 within its documented baseline, role/helper, runtime and fault boundaries.
 Further experiments must resolve the remaining uncertainty rather than repeat
 engine feasibility.
@@ -154,8 +157,44 @@ coverage; finishing this investigation does not close it.
 
 ## Handoff
 
-Latest work: native structural subset and the full containerized shared gate
-passed. Next: complete required commit gates, exact-head review and CI before
-handoff. Concurrent allocation, uncertain commit and authenticated
-application integration remain later work. Broader machine calibration follows
-this delivery and is not an added completion gate.
+Latest work: the native structural subset, three fixture-actor transaction
+schedules and the shared containerized gate passed in separately recorded runs.
+Keep required commit gates, exact-head review and CI before handoff. Product
+uncertain commit and authenticated application integration have their own
+[verification record](../implementation/project-authority-verification.md).
+Windows browser qualification is explicitly deferred from this delivery and
+remains unqualified. Broader machine calibration
+is not an added completion gate.
+
+## Server-owned pending creation amendment, 2026-11-03
+
+The maintainer accepted cross-browser server-owned pending creation and authorized
+its implementation as part of the [product authority delivery](../implementation/authenticated-project-authority.md).
+The earlier immutable successful mapping evidence remains valid for its structural
+scope; it does not qualify the new pending lifecycle. Register/discover/execute/
+cancel, delayed execution after expiry, concurrent cancellation and uncertain
+registration/commit require the actual product/native cases. No IndexedDB recovery
+dependency remains. #41 stays open until its applicable allocation evidence passes.
+
+## Fixture-actor concurrency evidence, 2026-11-03
+
+All three opt-in SP-005 schedules passed: distinct targets committed independently
+with identical token/handle text in separate actor scopes; a blocked target loser
+received typed `23505/projects_pkey`, completely rolled back, released its actor
+fence and re-entered with a fresh target; a waiting transaction committed its own
+creation after the original holder rolled back. Independent final observations
+required exact attribution and five new coherent project/core/payload/mapping
+sets. Actor authorization flags were checked after each actor-row lock.
+
+The full phase took 124.407 seconds through cleanup, with a 1.647-GiB sampled
+aggregate peak and 4.804-GiB minimum available RAM. Owned resources were removed
+and the initially stopped provider stopped. Earlier observer/protocol failures
+remain failures; their diagnoses and the remote-stream ordering control are
+described in the [executable record](../../experiments/SP-005/README.md#evidence-limits-and-next-cases).
+
+The maintainer-selected
+[layered split](../engineering/QUALIFICATION.md#native-project-creation-separate-database-and-http-evidence)
+keeps these fixture actors at the database layer. Placeholder snapshot/payload
+bytes do not establish typed M1V1 creation. ADR-105 keeps one installed HTTP
+owner; same-owner Windows Chrome/Edge evidence and post-MVP multi-actor HTTP
+under #65 remain separate.

@@ -1,0 +1,43 @@
+[package]
+name = "kehila_authority"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+task_contract = { path = "../../pure/task_contract" }
+project_create_codec = { path = "../../pure/project_create_codec" }
+argon2 = { version = "=0.6.0", default-features = false, features = ["alloc", "password-hash", "zeroize"] }
+bytes = "=1.12.1"
+data-encoding = { version = "=2.11.1", default-features = false }
+http-body-util = "=0.1.5"
+hyper = { version = "=1.11.1", default-features = false, features = ["server", "http1"] }
+hyper-util = { version = "=0.1.21", default-features = false, features = ["tokio"] }
+pkcs8 = { version = "=0.11.0", default-features = false }
+rustls = { version = "=0.23.46", default-features = false, features = ["std", "ring"] }
+ring = { version = "=0.17.14", default-features = false, features = ["std"] }
+sec1 = { version = "=0.8.0", default-features = false, features = ["der"] }
+serde = { version = "=1.0.229", default-features = false, features = ["derive", "std"] }
+serde_json = { version = "=1.0.154", default-features = false, features = ["std"] }
+subtle = { version = "=2.6.1", default-features = false }
+tokio = { version = "=1.53.3", default-features = false, features = ["macros", "rt", "net", "sync", "time", "io-util", "signal"] }
+tokio-rustls = { version = "=0.26.6", default-features = false, features = ["ring"] }
+unicode-normalization = { version = "=0.1.26", default-features = false }
+x509-cert = { version = "=0.3.0", default-features = false }
+zeroize = { version = "=1.9.1", default-features = false, features = ["alloc"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+rustix = { version = "=1.1.6", default-features = false, features = ["fs", "process", "std"] }
+tokio-postgres = { version = "=0.7.18", default-features = false, features = ["runtime"] }
+tokio-postgres-rustls = { version = "=0.14.0", default-features = false, features = ["ring"] }
+
+[dev-dependencies]
+hyper = { version = "=1.11.1", default-features = false, features = ["client"] }
+rcgen = { version = "=0.14.10", default-features = false, features = ["crypto", "ring"] }
+
+time = { version = "=0.3.55", default-features = false, features = ["std"] }
+
+[lints]
+workspace = true

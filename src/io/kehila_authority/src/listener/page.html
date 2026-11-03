@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kehila projects</title>
+<script src="/owner.js" defer></script>
+<h1>Kehila projects</h1>
+<p>Development profile. Sign in again after a server restart. Saved creation requests belong to the signed-in owner and can be found from another browser.</p>
+<p id="status" role="status" aria-live="polite">Checking this browser session…</p>
+<form id="login" hidden>
+  <label>Owner password <input id="login-password" type="password" autocomplete="current-password" required></label>
+  <button>Sign in</button>
+</form>
+<section id="session" hidden>
+  <h2>Project creation</h2>
+  <p id="project-status" role="status" aria-live="polite"></p>
+  <p><button id="discover" type="button">Refresh saved requests</button>
+    <button id="older" type="button" disabled>Older requests</button>
+    <button id="new-request" type="button">Start a separate request</button></p>
+  <ul id="requests"></ul>
+  <form id="project-form" hidden>
+    <p>Saving records your intent; it does not create a project. Select a saved request and explicitly create it afterward.</p>
+    <p><label>Project name <input id="project-name" required></label></p>
+    <p><label>Task prefix <input id="project-prefix" required></label></p>
+    <p><label>Estimate unit <select id="project-unit"><option value="hours">Hours</option><option value="points">Points</option></select></label></p>
+    <button id="save-request">Save creation request</button>
+  </form>
+  <section id="selected" hidden>
+    <h3>Selected request</h3>
+    <pre id="request-detail"></pre>
+    <button id="identify-save" type="button" hidden>Dismiss the earlier unconfirmed-save warning</button>
+    <p><button id="execute" type="button" disabled>Create this project</button>
+      <button id="reconcile" type="button" disabled>Check creation outcome</button>
+      <button id="cancel" type="button" disabled>Cancel this request</button>
+      <button id="read-project" type="button" disabled>Read current project</button></p>
+    <div id="cancel-confirmation" hidden>
+      <p>Cancel this saved request? An already completed project is preserved.</p>
+      <button id="confirm-cancel" type="button">Confirm cancellation</button>
+      <button id="keep-request" type="button">Keep request</button>
+    </div>
+    <pre id="project-result"></pre>
+  </section>
+  <h2>Session controls</h2>
+  <button id="logout" type="button">Sign out</button>
+  <form id="change">
+    <p><label>Current password <input id="current" type="password" autocomplete="current-password" required></label></p>
+    <p><label>New password <input id="replacement" type="password" autocomplete="new-password" required></label></p>
+    <button>Change password and sign out all sessions</button>
+  </form>
+  <form id="revoke">
+    <p><label>Current password <input id="revoke-password" type="password" autocomplete="current-password" required></label></p>
+    <button>Sign out other sessions</button>
+  </form>
+</section>
+<section id="retiring" hidden>
+  <p>This session is signed out, but its audit is unconfirmed. You can retry the same sign-out or forget the local cookie.</p>
+  <button id="retry" type="button">Retry sign-out audit</button>
+  <details><summary>Forget this browser credential</summary>
+    <p>In Chrome, open the site controls beside the address, choose Cookies and site data, then delete this site's data and reload. This removes the local credential; it does not confirm the sign-out audit.</p>
+  </details>
+</section>
+</html>

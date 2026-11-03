@@ -37,7 +37,19 @@ class CacheTests(unittest.TestCase):
         cache = DependencyCache('a' * 64)
         valid = {'Name': cache.name, 'Driver': 'local', 'Labels': {LABEL: cache.key},
                  'Options': {}, 'Mountpoint': '/engine/volume'}
-        for change in ({'Labels': {}}, {'Options': {'device': '/host'}}, {'Driver': 'plugin'}):
+        for change in (
+                {'Labels': {}}, {'Options': {'device': '/host'}}, {'Driver': 'plugin'},
+                {'Options': {'o': 'uid=0,gid=10001'}},
+                {'Options': {'o': 'uid=10001,gid=0'}},
+                {'Options': {'o': 'uid=10001'}},
+                {'Options': {'o': 'uid=10001,gid=10001,bind'}},
+                {'Options': {'o': 'uid=10001,gid=10001', 'device': '/host'}},
+                {'Options': {'o': 'uid=10001,gid=10001', 'type': 'ext4'}},
+                {'Options': {'o': 'uid=10001,gid=10001', 'UID': '0', 'GID': '10001'}},
+                {'Options': {'o': 'uid=10001,gid=10001', 'UID': '10001', 'GID': '0'}},
+                {'Options': {'o': 'uid=10001,gid=10001', 'UID': '10001'}},
+                {'Options': {'o': 'uid=10001,gid=10001', 'UID': '10001',
+                             'GID': '10001', 'device': '/host'}}):
             with self.subTest(change=change):
                 engine = Mock(side_effect=[Mock(stdout=cache.name),
                     Mock(stdout=json.dumps([{**valid, **change}]))])
@@ -49,12 +61,24 @@ class CacheTests(unittest.TestCase):
     def test_preparation_uses_explicit_volume_owner_and_checks_created_identity(self):
         cache = DependencyCache('a' * 64)
         state = {'Name': cache.name, 'Driver': 'local', 'Labels': {LABEL: cache.key},
-                 'Options': None, 'Mountpoint': '/engine/volume'}
+                 'Options': {'o': 'uid=10001,gid=10001'}, 'Mountpoint': '/engine/volume'}
         engine = Mock(side_effect=[Mock(stdout=''), Mock(), Mock(stdout=json.dumps([state]))])
         self.assertEqual(cache.admit(engine, prepare=True), '/engine/volume')
         create = engine.call_args_list[1].args
-        self.assertIn('--uid=10001', create)
-        self.assertIn('--gid=10001', create)
+        self.assertEqual(create[create.index('--opt') + 1], 'o=uid=10001,gid=10001')
+
+    def test_owned_options_and_legacy_empty_options_admit_without_recreation(self):
+        cache = DependencyCache('a' * 64)
+        for options in (None, {}, {'o': 'uid=10001,gid=10001'},
+                        {'o': 'uid=10001,gid=10001', 'UID': '10001', 'GID': '10001'}):
+            with self.subTest(options=options):
+                state = {'Name': cache.name, 'Driver': 'local',
+                         'Labels': {LABEL: cache.key}, 'Options': options,
+                         'Mountpoint': '/engine/volume'}
+                engine = Mock(side_effect=[Mock(stdout=cache.name),
+                    Mock(stdout=json.dumps([state]))])
+                self.assertEqual(cache.admit(engine, prepare=False), '/engine/volume')
+                self.assertEqual(engine.call_count, 2)
 
     def test_ready_witness_requires_success_and_exact_identity(self):
         with tempfile.TemporaryDirectory() as directory:

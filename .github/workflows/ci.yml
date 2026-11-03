@@ -9,6 +9,47 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  native-authority:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CARGO_BUILD_JOBS: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Select verification scope using the commit policy
+        id: scope
+        run: python scripts/ci_scope.py
+      - name: Export exact public source outside the checkout
+        if: steps.scope.outputs.scope != 'docs'
+        run: |
+          mkdir "$RUNNER_TEMP/native-authority-source"
+          git archive --format=tar HEAD --output "$RUNNER_TEMP/native-authority-source.tar"
+          tar -xf "$RUNNER_TEMP/native-authority-source.tar" -C "$RUNNER_TEMP/native-authority-source"
+      - name: Prepare the explicit Podman toolchain and database images
+        if: steps.scope.outputs.scope != 'docs'
+        run: |
+          podman --version
+          podman build --memory=2g --cpu-period=100000 --cpu-quota=100000 --layers \
+            -f tools/verification/Containerfile -t localhost/kehila-native-verifier tools/verification
+          image=$(podman image inspect localhost/kehila-native-verifier --format '{{.Id}}')
+          image=$(PYTHONPATH="$RUNNER_TEMP/native-authority-source/scripts" python -c \
+            'import sys; from container_executor import inspected_image_id; print(inspected_image_id(sys.argv[1]))' "$image")
+          echo "KEHILA_VERIFICATION_IMAGE=$image" >> "$GITHUB_ENV"
+          podman pull docker.io/library/postgres@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4
+      - name: Prepare locked dependencies explicitly
+        if: steps.scope.outputs.scope != 'docs'
+        run: python "$RUNNER_TEMP/native-authority-source/scripts/container_verify.py" --prepare-dependencies
+      - name: Verify real native PostgreSQL and listener HTTP/TLS
+        if: steps.scope.outputs.scope != 'docs'
+        run: python "$RUNNER_TEMP/native-authority-source/scripts/container_verify.py" --native-authority
   windows-owner-client:
     runs-on: windows-2025
     timeout-minutes: 5
@@ -68,6 +109,11 @@ jobs:
       - name: Install Rust stable
         if: steps.scope.outputs.scope != 'docs'
         run: rustup toolchain install stable --profile minimal --component clippy,rustfmt
+      - name: Install pinned page-test runtime
+        if: steps.scope.outputs.scope != 'docs'
+        run: |
+          python tools/verification/install_node.py --prefix "$RUNNER_TEMP/kehila-node"
+          echo "$RUNNER_TEMP/kehila-node/bin" >> "$GITHUB_PATH"
       - name: Select Rust stable
         if: steps.scope.outputs.scope != 'docs'
         run: rustup default stable

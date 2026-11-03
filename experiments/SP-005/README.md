@@ -3,8 +3,8 @@
 This executable candidate follows Accepted ADR-103/107 and the owning
 [SP-005 plan](../../docs/spikes/SP-005-project-target-allocation.md) under #41.
 It is an isolated structural subset, not a product migration or complete allocation
-adapter. The native structural subset and the shared containerized gate passed;
-broader allocation qualification remains pending.
+adapter. The native structural subset, fixture-actor transaction schedules and
+shared containerized gate have passed within their separately recorded scopes.
 
 ## Schema and trust boundary
 
@@ -34,6 +34,39 @@ does not prove mapping and application creation are accepted atomically.
 `owner.sql` checks immutable DML guards, non-null/key representation and default
 function-execution denial. Untrusted access is checked through a separate login.
 Token equality is a fixture join predicate, not a complete authenticated resolver.
+
+## Fixture-actor transaction schedules
+
+The opt-in `--concurrency` extension adds three database-layer schedules after
+the structural checks. All three passed on 2026-11-03:
+
+- Keep actor A's creation transaction open while actor B commits a distinct target.
+  Both use the same token and handle text in their separate actor scopes.
+- Observe B blocked by A's uncommitted target. Commit A, require B's named
+  `23505/projects_pkey` rejection, confirm complete rollback and actor-fence
+  release, then repeat B's fence/lookup with a fresh target.
+- Observe the same target wait but roll A back. B must commit its own correctly
+  attributed creation; A must leave no operation core.
+
+Two independent `foundation_serving` logins execute the transactions. A separate
+observer checks actual PostgreSQL blocking and final actor/core/project/mapping/
+token tuples. Backend PID, start time and unique application identity distinguish
+participants. Fixed fixture SQL creates the same deliberately small relational
+seed as the existing structural fixture; its placeholder snapshot/payload bytes
+do not qualify production codecs or complete typed M1V1 creation.
+
+Participant commands share the runner's finite work deadline. Process cleanup
+uses the configured runner-stop allowance, releases the lock holder first, joins
+owned clients and preserves a primary failure if cleanup also fails. The caller
+still owns final container removal, including after an uncertain client timeout.
+The default structural-only invocation and its claims remain unchanged.
+
+This extension follows the maintainer-selected
+[qualification split](../../docs/engineering/QUALIFICATION.md#native-project-creation-separate-database-and-http-evidence):
+fixture actors qualify database arbitration, while ADR-105 retains one HTTP
+owner. Chrome/Edge same-owner recovery and later multi-actor HTTP under #65 are
+separate obligations. No second HTTP user or product pending-owner exception is
+introduced.
 
 ## Harness and bounded execution
 
@@ -67,8 +100,9 @@ An explicit `--podman-connection` is supported. No trust change is required for
 container-local psql. Database error assertions require actual SQLSTATE/constraint
 metadata. The harness requires each role oracle's success marker exactly once;
 subprocess failure or missing/duplicated markers cannot establish success. The
-final JSON describes only the structural subset and records source fingerprints
-and unqualified work. Keep raw execution evidence locally outside the checkout.
+final JSON distinguishes structural-only execution from the opt-in concurrency
+extension and records source fingerprints and unqualified work. Keep raw
+execution evidence locally outside the checkout.
 
 ## Evidence limits and next cases
 
@@ -88,8 +122,37 @@ phases and owned cleanup; see the [container verification record](../../docs/imp
 This does not extend the structural SQL evidence to the unimplemented allocation
 contracts below.
 
-This subset supplies no installation/actor fence, current end-user authorization,
-production codec adapter, atomic application creation, concurrent retry/collision
-re-entry, uncertain commit, historical replay/expiry/retirement, supported restore,
-browser route or aggregate capacity evidence. Those remain in #41/#40/#49. Do not
-close SP-005 or finalize dependent application interfaces from this subset alone.
+The concurrency extension passed 18 protocol/runner checks and actual PostgreSQL
+schedules on 2026-11-03. Independent observations found B's committed distinct
+target while A remained uncommitted, the actual target blocker, complete rollback
+and released actor fence after B's typed uniqueness rejection, fresh re-entry,
+and the expected winner after A rolled back. Final checks required five new
+projects with matching cores, payloads and mappings, exact actor/target/token/
+handle attribution, expected child rows and no unmatched mapping.
+
+The full phase, including provider startup and owned cleanup, took 124.407 seconds.
+Sampled aggregate memory peaked at 1.647 GiB; available RAM stayed at or above
+4.804 GiB. No resource warning/stop occurred. The owned database was removed and
+the initially stopped provider was stopped. These are observations, not capacity
+targets. Database limits remained 256 MiB, one CPU and 128 PIDs.
+
+Three earlier attempts failed and remain recorded. The first observer mixed psql
+format feedback with its Boolean result. The second diagnostic expected feedback
+that psql did not emit. The third reached the expected server uniqueness rejection
+but failed client classification. Its exact consumed packet was not retained.
+A subsequent six-trial diagnostic reproduced an error arriving after the client
+acknowledgement marker on the original remote exec channels. Merging stderr into
+stdout inside the container before remote transport preserved ordered diagnostics
+in all three corresponding controls. The harness retains strict SQLSTATE and
+schema/table/constraint checks; a regression rejects a late error packet. Those
+diagnostic controls are not allocation qualification. Cleanup completed after
+each attempt; the later pass does not rewrite the earlier failures.
+
+Fixture actor-row fences are exercised by this extension. It supplies no product
+installation fence, current end-user authorization, production codec adapter,
+complete typed application creation, uncertain commit, historical replay/expiry/
+retirement, supported restore, browser route or aggregate capacity qualification.
+Product observations are recorded separately in the
+[authority verification record](../../docs/implementation/project-authority-verification.md).
+Do not close SP-005 or finalize dependent application interfaces from this subset
+alone; #41/#40/#49 retain their applicable obligations.

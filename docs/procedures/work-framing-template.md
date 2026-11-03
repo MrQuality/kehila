@@ -7,6 +7,8 @@ decision rules. Keep confidential evidence out of public records; link sanitized
 public requirements where available.
 
 - Current stage and one-sentence explanation of authorized work:
+- For material delivery, include/link the [risk, review validity and event fields](engineering-delivery-record.md)
+  within this same record; name applicable layers and omit irrelevant ones with a reason:
 - Intended need and authoritative source, stated independently of the solution:
 - Candidate revision; authorization source, scope and unresolved decisions:
 - Decision this work informs; included work and non-goals:
@@ -34,3 +36,6 @@ Before publication, add:
 - Technical correctness: does it meet specified requirements? Evidence and limits:
 - Publication validator findings/disposition and remaining decisions:
 - Actual checks and their scope; maintainer assessment remains separate:
+- At milestone/large-goal closeout, link the [retrospective](delivery-retrospective-template.md),
+  independent challenge and owned improvement follow-up; distinguish implementation
+  from evidence that the process is effective:

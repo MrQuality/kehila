@@ -186,13 +186,17 @@ pub fn validate_project_create_input(
     if !crate::operation::valid_operation_id(&command.operation_id) {
         return Err(E::InvalidOperation);
     }
-    if command.name.trim().is_empty()
-        || command.name.len() > 256
-        || command.name.chars().any(char::is_control)
-    {
+    validate_project_create_form(&command.name, &command.prefix)
+}
+
+/// Validate the owner-supplied form before trusted identity allocation. This
+/// neither accepts a command nor validates historical persisted representations.
+pub fn validate_project_create_form(name: &str, prefix: &str) -> Result<(), ProjectCreateError> {
+    use ProjectCreateError as E;
+    if name.trim().is_empty() || name.len() > 256 || name.chars().any(char::is_control) {
         return Err(E::InvalidName);
     }
-    if !valid_prefix(&command.prefix) {
+    if !valid_prefix(prefix) {
         return Err(E::InvalidPrefix);
     }
     Ok(())

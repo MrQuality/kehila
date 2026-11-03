@@ -1,17 +1,60 @@
 # ADR-107 - Stable project creation intents
 
-Status: Accepted, decision revision 3. Owner: project maintainer. Accepted: 2026-11-02.
-Acceptance: [explicit maintainer decision](https://github.com/MrQuality/kehila/issues/49#issuecomment-6573495351),
+Status: Accepted behavior, decision revision 4. Owner: project maintainer.
+Revision 4 records the maintainer's explicit 2026-11-03 server-owned pending
+creation decision. Physical implementation and qualification remain separate.
+Previous revision 3 acceptance: [explicit maintainer decision](https://github.com/MrQuality/kehila/issues/49#issuecomment-6573495351),
 identifying revision 3 at source `5345c9b0eaf51935786d17626ea83245b5f5ab98`.
 Scope: allocation/reconciliation for the bounded fresh-database local integration.
 Physical schema, adapter/dependency review, native evidence and execution permissions
-remain separate. This metadata records acceptance, not a new protocol revision.
+remain separate. Revision 4 changes the recovery mechanism described below.
 Related: D-029/D-032/D-033/D-034; ADR-103/104/105;
 [#41](https://github.com/MrQuality/kehila/issues/41),
 [#49](https://github.com/MrQuality/kehila/issues/49),
 [integration contract](../implementation/authenticated-project-integration.md).
 
-## Context
+## Revision 4: server-owned pending creation
+
+The maintainer requires recovery after browser failure or switching between
+Chrome and Edge. Browser persistent storage cannot be the authoritative recovery
+mechanism. Accept a separately committed, owner-scoped pending creation record
+before execution, containing immutable identity and exact versioned form content.
+Saving that record allocates no project and executes no creation.
+
+The authenticated owner can list/open the same entries in another browser. Login,
+GET and reload do not execute pending work. Explicit execution retains the
+accepted atomic project/core/mapping/result transaction and marks the pending
+entry completed in that same transaction. Independent current authority applies
+to registration, discovery, execution, reconciliation, cancellation and read-back.
+
+Cancellation shares execution's serialization boundary: if cancellation commits
+first, execution is denied; if creation committed first, return its project.
+Cancellation cannot undo a committed creation. Unknown responses remain unknown
+until reconciliation. Missing, cancelled or expired entries never fall through
+to implicit reconstruction. Equal form values do not deduplicate registrations.
+Content never received by the server cannot be recovered by this mechanism.
+
+This supersedes revision 3's independently committed reservation prohibition,
+browser-retained identity requirement and no-row claim for unsuccessful pending
+registrations. Successful operation/core/mapping permanence remains unchanged.
+Bound pending capacity, pagination, retention and protected content separately;
+do not reclaim successful identity to satisfy those bounds. No generic drafts,
+background execution or real-data retention mechanism is accepted here.
+
+The [product implementation contract](../implementation/authenticated-project-authority.md)
+defines the concrete review and evidence gates. Execution may echo the server's
+disclosed immutable values as untrusted preparation input, preserving generated
+envelope admission before execution DB/worker work; fenced server comparison is
+still authoritative. Historical reconciliation remains independent of prospective
+current-domain acceptance. The version-one command/result codecs are unchanged.
+
+## Historical revision 3 context and decision
+
+The following revision 3 text is retained for its identity, transaction, replay
+and historical-codec obligations. Revision 4 above controls where it supersedes
+client persistence or independently committed pending-state assumptions.
+
+### Context
 
 ProjectCreate requires a trusted ProjectId, but a browser losing the first
 response may never learn that ID. The permanent operation key includes actor,

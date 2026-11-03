@@ -130,6 +130,51 @@ against their returned SHA-256 digests and included Linux amd64 manifests. This
 establishes input identity, not an executed build or minimum-version qualification.
 The current Linux CI toolchain remains a separate required observation.
 
+The product page-state suite additionally requires Node 24.22.2. The image and
+Linux CI use `tools/verification/install_node.py`, which downloads the fixed
+official Linux-amd64 archive over verified HTTPS and verifies its pinned SHA-256
+before copying only the runtime and bundled license to a new external prefix.
+No npm packages or browsers are installed. Full verification runs the deterministic
+page tests before Rust compilation; documentation-only checks do not require Node.
+These simulated-DOM tests do not establish Windows browser or TLS behavior.
+An older retained image without this runtime must be explicitly prepared again;
+adding the command to the matrix does not make an existing image ready.
+The image also installs Clippy explicitly for the pinned Rust toolchain and checks
+its archive identity against that toolchain's retained manifest; the official
+minimal profile does not include it. Tool-version probes establish availability,
+not a successful project lint result.
+
+The container matrix runs the native product PostgreSQL/listener fixture serially
+after compilation and build-network disconnection, before the broker/search/task
+service groups. Its database shares only the runner's loopback namespace, uses a
+pinned PostgreSQL 16 image and bounded tmpfs/memory/CPU/PIDs, and publishes no ports.
+The host lifecycle owner removes that database before its namespace-owning runner.
+Independent queries check durable cardinalities/identity and released authority
+connections/locks. Test secrets and failure diagnostics stay in external storage;
+the serial retention/authority extension uses an explicitly marked disposable
+database and a privileged test connection, separate from the runtime capability.
+It temporarily replaces the database clock with a fixed, owner-controlled test
+function, verifies runtime denial of its controls, restores the original function
+identity/owner/ACL/body and destroys the database during owned cleanup. This tests
+expiry/replay/retirement paths; it does not qualify the production clock body,
+machine clock changes or backup/restore behavior.
+After restoring the production clock, a quiescent synthetic copy is restored into
+a fresh database in the same disposable cluster. Records and captured schema/
+authority properties compare before fresh-authority startup; CHECK expressions
+use PostgreSQL scratch-object reparse with semantic-change negative controls.
+Raw snapshots and the dump contain verifier/audit data and must remain outside
+the checkout and public output. This is a coherence test, not supported recovery
+or exclusion between databases. Selected authentication regressions run serially
+afterward, with the password-changing case last.
+local callers must provide private temporary storage and resource supervision.
+
+`--native-authority` selects just this compiled product fixture after explicit
+`--prepare-dependencies`. The `native-authority` Linux CI job uses the same mode
+with an exact exported source tree and Podman. Ordinary documentation changes
+skip that job's heavy steps. This is a required backend observation, not Windows
+browser, protected-startup, supported installation or external-corpus qualification;
+it does not make the remaining ignored fixtures pass.
+
 After resource approval, build with the chosen engine using
 `tools/verification/Containerfile` and `tools/verification` as its context. Record
 the resulting immutable image ID. Set `runner_image` in the external local settings to that ID for the
@@ -330,3 +375,111 @@ was observed, with no aggregate-budget or OS low-memory stop. The provider was
 confirmed stopped. These measurements describe this run, not a safe universal
 reserve or a worst-case memory guarantee. No SP-005 allocation, browser, restore
 or abrupt-termination recovery qualification was added by this gate.
+
+## Native CI cache compatibility, 2026-11-03
+
+The first native-authority CI attempt failed during dependency preparation on
+Podman 4.9.3: `volume create` rejected the standalone `--uid` option. Image
+preparation passed, but no native test executed. The failed
+[CI job](https://github.com/MrQuality/kehila/actions/runs/41620517059/job/125864736107)
+remains part of the record; the local application gate does not replace it.
+
+Cache creation now uses the documented
+[ownership-only volume option](https://docs.podman.io/en/v4.9.3/markdown/podman-volume-create.1.html#opt-o-option)
+`--opt o=uid=10001,gid=10001`. Admission retains exact local driver/name/label
+checks and accepts only empty legacy options, the exact ownership-only `o`
+dictionary, or that dictionary with matching explicit `UID`/`GID` strings.
+Wrong or partial ownership, extra mount options, device/type redirects and
+alternative drivers remain rejected. No fallback creation retry is introduced.
+
+The first local probe failed closed because Podman 5.8.7 serialized matching
+explicit `UID`/`GID` fields alongside `o`; it stopped before creating the probe
+container. Evidence was preserved, the temporary volume removed and the provider
+stopped. The corrected admission accepts that exact observed representation.
+
+The affected fresh-volume probe then passed. A network-isolated container with
+128 MiB, one CPU, 64 PIDs, a read-only root and one exact owned-volume mount ran
+as `10001:10001`, observed no effective capabilities and enabled no-new-privileges,
+and checked directory ownership before writing. Its sentinel write/read and file
+ownership checks passed. It used no `chown` or `:U` repair. This establishes the
+normal mounted-volume behavior, not the isolated causal role of one engine option.
+The owned container and temporary volume were removed and the initially stopped
+provider stopped.
+
+The successful phase took 59.063 seconds through cleanup, peaked at 1.353 GiB
+sampled aggregate memory and retained at least 5.227 GiB available RAM, without
+resource warnings/stops. This is local-provider evidence. The affected Podman
+4.9.3 CI execution and required commit/final-head checks remain separate gates.
+
+## Native fixture failure reporting, 2026-11-03
+
+Run [41633004402](https://github.com/MrQuality/kehila/actions/runs/41633004402)
+at `aef8f21` passed five native modes, then failed `auth-unknown`. The wrapper's
+generic completed-Cargo error conflated exit status, success-summary detection
+and required marker detection. Detailed Rust output was not retained as a hosted
+artifact; the underlying assertion/cause remains unknown. The console record is
+retained. Owned CI resources were removed; runner teardown used forced termination,
+which is not evidence of graceful application shutdown or the failure's cause.
+
+After explicit authorization, the reporting-only extension adds a closed failure
+record: mode/stage, Cargo exit, summary/marker Booleans, bounded known-operation
+timings and a panic location only if mapped to known public product source.
+It emits no raw log/assertion text, credentials, environment values or arbitrary
+paths. Metadata is best-effort: construction or stderr failure cannot replace the
+original journey error. Successful tests do not construct or emit this metadata.
+Timeout, decoding and oversized-log exceptions retain their existing separate
+paths; product assertions, deadlines and resource limits are unchanged.
+
+The preimplementation focused check observed the expected missing helper errors,
+but its supervisor incorrectly expected eight tests/errors rather than seven
+methods with nine subcase errors. That supervisory phase remains failed with its
+cleanup record; it was not rerun or relabelled as a pass. Later checks and the
+single authorized diagnostic CI attempt are recorded against their actual heads
+in the PR. A nonreproduction cannot establish a cause or fix the original failure.
+
+### Maintainer disposition, 2026-11-03
+
+The maintainer explicitly waived the earlier `auth-unknown` CI failure as a
+merge-blocking uncertainty after subsequent runs did not reproduce it. No further
+investigation or reproduction campaign is required for PR #92. The failed run and
+its unknown cause remain historical evidence; this waiver neither converts it
+into a pass nor establishes a root-cause fix. A new failure must be assessed on
+its own evidence rather than covered by this disposition. Required checks on
+subsequent changes remain mandatory. This waiver does not authorize merging.
+
+### Native operating-deadline profile repair, 2026-11-03
+
+The separate [CI attempt at `11407ac`](https://github.com/MrQuality/kehila/actions/runs/41657253544)
+passed five native modes and then failed `auth-unknown`. Its bounded metadata
+located the panic at the request helper's five-second observer, after completed
+login operations of approximately 2.8 seconds each. Password change is next in
+the inspected fixture. This supports timing pressure as a hypothesis; it does
+not establish either hash duration, database/commit progress or the original
+historical failure's cause. The earlier waiver does not cover this new attempt.
+
+The harness was running unoptimized Cargo test binaries against an operating
+deadline whose recorded qualification used optimized code. ADR-105 originally
+selected five seconds as a provisional design bound, not a measured universal
+latency limit. Later [complete release-profile requests](local-owner-authentication-listener.md#complete-request-workload-and-active-work-subsets-2026-10-31)
+took 0.375, 0.391 and 0.390 seconds for verification, replacement hashing,
+database commit and response closure. Those small samples support their recorded
+profile, not arbitrary hardware, unoptimized code or sustained contention.
+
+Native fixture preparation and execution now share an explicit
+`cargo test --release --offline --locked -p kehila_authority --lib` prefix.
+Both native-only and full verification prebuild those tests before starting the
+native database; compilation is not counted as a runtime journey. Exact ignored
+test selection, fault hooks, state/cleanup observers, Argon2 cost, admission and
+five-second product/observer deadlines remain unchanged. Ordinary debug tests
+remain in the shared matrix. Release builds change optimization and debug/overflow
+checking defaults, so they complement those debug tests rather than replace them.
+
+Extending only the observer would not extend the product's capped deadline.
+Extending the product deadline would change request latency and how long admitted
+work retains capacity and reply/database eligibility; transport/client deadlines
+would also need coherent review. Neither change is justified by this evidence.
+Optimized compilation adds time and separate build artifacts; existing resource
+and enclosing verification limits still apply. Subprocess-boundary regression
+checks cover the profile, preparation ordering and retained exact test selection.
+Actual follow-up results remain bound to their recorded commit in PR #92; the
+failed attempts above are not retrospectively converted into passes.

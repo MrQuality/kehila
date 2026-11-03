@@ -5,6 +5,27 @@ Status: Implemented for PR review, 2026-10-12. Follows PR #46; related #47,
 Its architectural admission ceilings and downstream contracts are mandatory;
 adapter implementation and integration evidence remain outstanding.
 
+## Native authority support update (2026-11-03)
+
+ADR-103 and ADR-107's behavior are Accepted for the bounded fresh-database local
+integration; the October tracking record below retains its historical status.
+The current delivery adds three pure boundaries needed
+by the [product authority contract](authenticated-project-authority.md):
+
+- Validate an owner-supplied name/prefix before allocating trusted identities,
+  reusing the same rules as complete command validation.
+- Check the logical replay interval after identity/content checks, preserving
+  overflow, backward-clock and expiry behavior. Tombstones remain separate.
+- Encode a complete native saved-result envelope with JSONB-safe strings and
+  the native serialized-size budget, including whitespace expansion.
+
+The ordinary historical result encoder/decoder keeps its existing behavior.
+Native admission does not establish authority, business acceptance or a committed
+transaction. Regression cases distinguish historical NUL preservation from
+rejection of a new native result and check a full envelope at the byte ceiling.
+This pure support change does not itself deliver the application adapter or
+qualify a Windows browser journey. Integration remains under #40/#41/#49.
+
 ## Current execution tracking (2026-10-13)
 
 PR #46 and PR #48 are merged. Remaining M1-01 production delivery now belongs to

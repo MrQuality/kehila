@@ -4,20 +4,27 @@ ARG RUST_IMAGE=docker.io/library/rust@sha256:24707e70a4f1e23d9a7b25202ec43126d28
 ARG PYTHON_IMAGE=docker.io/library/python@sha256:14a4933e6cef421424f7a66d89a3f4eafcbd0d90e0a822251f298e05132dc735
 FROM ${GO_IMAGE} AS go
 FROM ${RUST_IMAGE} AS rust
-# Keep the required formatter explicit; the official minimal profile omits it.
+# Keep required lint/format components explicit; the minimal profile omits them.
 RUN test "$RUST_VERSION" = "1.99.1" \
     && manifest="$RUSTUP_HOME/toolchains/1.99.1-x86_64-unknown-linux-gnu/lib/rustlib/multirust-channel-manifest.toml" \
     && grep -F 'e3b36c4c7ec3486c059d8067ff48787676612007123aad7a4e8ec12c48ee9ba2' "$manifest" \
     && grep -F 'https://static.rust-lang.org/dist/2026-10-15/rustfmt-1.99.1-x86_64-unknown-linux-gnu.tar.xz' "$manifest" \
-    && RUSTUP_DIST_SERVER=https://static.rust-lang.org rustup component add --toolchain 1.99.1 rustfmt \
+    && grep -F '458339712a058e52cc4522ff9ef8b59cd1ea1340312216cd94194c464a3f6dc5' "$manifest" \
+    && grep -F 'https://static.rust-lang.org/dist/2026-10-15/clippy-1.99.1-x86_64-unknown-linux-gnu.tar.xz' "$manifest" \
+    && RUSTUP_DIST_SERVER=https://static.rust-lang.org rustup component add --toolchain 1.99.1 rustfmt clippy \
     && rustup component list --installed --toolchain 1.99.1 \
     && rustfmt +1.99.1 --version \
+    && cargo +1.99.1 clippy --version \
     && sha256sum "$(rustup which --toolchain 1.99.1 rustfmt)"
 FROM ${PYTHON_IMAGE}
+COPY install_node.py /tmp/kehila-install-node.py
+RUN python /tmp/kehila-install-node.py --prefix /opt/kehila-node \
+    && /opt/kehila-node/bin/node --version \
+    && rm /tmp/kehila-install-node.py
 COPY --from=go /usr/local/go /usr/local/go
 COPY --from=rust /usr/local/cargo /usr/local/cargo
 COPY --from=rust /usr/local/rustup /usr/local/rustup
-ENV PATH="/usr/local/cargo/bin:/usr/local/go/bin:${PATH}" \
+ENV PATH="/opt/kehila-node/bin:/usr/local/cargo/bin:/usr/local/go/bin:${PATH}" \
     RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/work/cargo \
     CARGO_TARGET_DIR=/work/target CARGO_BUILD_JOBS=1 GOFLAGS=-p=1 GOTOOLCHAIN=local \
     TMPDIR=/work/temp TEMP=/work/temp TMP=/work/temp \

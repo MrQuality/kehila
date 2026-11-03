@@ -74,6 +74,16 @@ a component review map. Avoid splitting tightly coupled work solely to meet a
 line count or duplicating expensive verification without a relevant change or
 failure. Required commit and CI gates still apply.
 
+The maintainer accepted the [engineering delivery controls](docs/procedures/engineering-delivery.md)
+on 2026-11-03: early risk/environment/harness assessment, layered and revision-bound
+review, coherent publication checkpoints and evidence retention. Use the existing
+task/PR record; exact SOP-003 codification remains Proposed and no semantic CI
+enforcement is implied. At each milestone or large-goal closeout (including
+cancellation/material suspension), complete a proportional
+[retrospective](docs/procedures/delivery-retrospective-template.md) with independent
+challenge and owned follow-up. Coincident boundaries may share one report; routine
+commits do not require another ceremony.
+
 Apply the [Definition of Done](docs/engineering/DEFINITION-OF-DONE.md), recording
 applicable evidence and justified not-applicable criteria. Link existing
 requirement/decision/backlog IDs and engineering IDs where relevant. Material

@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 
 LABEL = 'org.kehila.dependency-cache'
+OWNERSHIP = 'uid=10001,gid=10001'
 
 
 @dataclass(frozen=True)
@@ -40,7 +41,7 @@ class DependencyCache:
             if not prepare:
                 raise ValueError('Dependencies are not prepared; run --prepare-dependencies first')
             # Do not silently adopt a concurrently created or differently owned volume.
-            engine('volume', 'create', '--driver=local', '--uid=10001', '--gid=10001',
+            engine('volume', 'create', '--driver=local', '--opt', 'o=' + OWNERSHIP,
                    '--label', LABEL + '=' + self.key, self.name)
         elif found != [self.name]:
             raise ValueError('Unexpected dependency-cache volume inventory')
@@ -50,6 +51,8 @@ class DependencyCache:
         state = rows[0]
         if (state.get('Name') != self.name or state.get('Driver') != 'local'
                 or state.get('Labels', {}).get(LABEL) != self.key
-                or state.get('Options') not in (None, {})):
+                or state.get('Options') not in (
+                    None, {}, {'o': OWNERSHIP},
+                    {'o': OWNERSHIP, 'UID': '10001', 'GID': '10001'})):
             raise ValueError('Refusing an unowned or redirected dependency cache')
         return state['Mountpoint']

@@ -24,6 +24,12 @@ existing task/issue/PR; do not create a parallel decision registry.
 
 ## Operating path
 
+The maintainer accepted complementary [delivery/risk/review controls](engineering-delivery.md)
+on 2026-11-03. Their source-first risk challenge uses the existing Phase A/B
+context, not another per-commit approval. Their
+[record fields](engineering-delivery-record.md) extend the existing brief; exact
+SOP-002 codification status is unchanged.
+
 Keep the record in the existing task, issue or PR:
 
 1. Complete the [brief](work-framing-template.md) under the
