@@ -3,6 +3,11 @@
 The [test strategy](TEST_STRATEGY.md) describes the proposed long-term quality
 approach. This guide records executable commands, current coverage, and limits.
 
+[ADR-110](architecture/ADR-110-hosted-verification-testbench.md) and its
+[research and risk plan](implementation/hosted-verification-testbench.md) propose
+a hosted Linux-container bench with local Windows/WSL browsers. They activate no
+workflow or transport and do not replace the required local or CI checks below.
+
 For material deliveries, follow the accepted
 [environment/harness admission controls](procedures/engineering-delivery.md#environment-and-harness-admission).
 Check uncertain protocol, classification, permissions, deadline and cleanup mechanisms
