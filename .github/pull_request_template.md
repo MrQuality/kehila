@@ -36,6 +36,13 @@ changes, state why behavioral design rules do not apply. Avoid empty checklists.
 
 ## Applicable procedures
 
+For material delivery, link the existing [risk/review/evidence record](../docs/procedures/engineering-delivery-record.md):
+checkpoint scope, review validity, actual target/harness controls, retained evidence
+and affected reruns. At milestone/large-goal closeout, link the proportional
+[retrospective](../docs/procedures/delivery-retrospective-template.md) and owned follow-up.
+Distinguish accepted manual controls from Proposed exact SOP wording and semantic
+automation that has not been implemented.
+
 Link applicable approved SOPs from the project procedure index and their evidence,
 or explain why none apply. Distinguish proposed procedures from approved ones.
 

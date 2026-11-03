@@ -37,6 +37,10 @@ reason** for criteria unrelated to the change. A checkbox alone is not evidence.
   pass on the final revision; environmental failures are recorded as failures.
 - PR links tests/evidence and future gaps; release qualification links the source
   commit and artifacts when a release is involved.
+- For material deliveries, apply the accepted [layered review/risk controls](../procedures/engineering-delivery.md)
+  with revision-bound evidence. Milestone/large-goal closeout includes a proportional
+  retrospective and independent challenge; routine commits need no separate report.
+  This records accepted controls, not exact SOP-version approval or effectiveness.
 
 Passing these criteria for a bounded component does not qualify an entire maturity
 gate. Release records also need cumulative requirements and framework assessments.
