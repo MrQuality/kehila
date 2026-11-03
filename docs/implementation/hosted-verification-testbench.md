@@ -2,8 +2,12 @@
 
 Status: Proposed design support, 2026-11-03. Owner: project maintainer.
 Decision: [ADR-110](../architecture/ADR-110-hosted-verification-testbench.md).
-This delivery contains documentation only. All probes below are future admission
-or qualification criteria, not executed results or permission to run them.
+The original design milestone contained documentation only. Its probes below
+remain admission or qualification criteria, not executed results. On 2026-11-04
+the maintainer requested completion of the pending feasibility spikes; actual
+experimental scope, permissions, observations and remaining gates are recorded
+separately in [SP-007](../spikes/SP-007-hosted-testbench.md). That research does
+not accept this architecture or change required gates.
 
 ## Research findings and evidence limits
 
