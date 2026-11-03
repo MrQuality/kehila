@@ -375,3 +375,38 @@ was observed, with no aggregate-budget or OS low-memory stop. The provider was
 confirmed stopped. These measurements describe this run, not a safe universal
 reserve or a worst-case memory guarantee. No SP-005 allocation, browser, restore
 or abrupt-termination recovery qualification was added by this gate.
+
+## Native CI cache compatibility, 2026-11-03
+
+The first native-authority CI attempt failed during dependency preparation on
+Podman 4.9.3: `volume create` rejected the standalone `--uid` option. Image
+preparation passed, but no native test executed. The failed
+[CI job](https://github.com/MrQuality/kehila/actions/runs/41620517059/job/125864736107)
+remains part of the record; the local application gate does not replace it.
+
+Cache creation now uses the documented
+[ownership-only volume option](https://docs.podman.io/en/v4.9.3/markdown/podman-volume-create.1.html#opt-o-option)
+`--opt o=uid=10001,gid=10001`. Admission retains exact local driver/name/label
+checks and accepts only empty legacy options, the exact ownership-only `o`
+dictionary, or that dictionary with matching explicit `UID`/`GID` strings.
+Wrong or partial ownership, extra mount options, device/type redirects and
+alternative drivers remain rejected. No fallback creation retry is introduced.
+
+The first local probe failed closed because Podman 5.8.7 serialized matching
+explicit `UID`/`GID` fields alongside `o`; it stopped before creating the probe
+container. Evidence was preserved, the temporary volume removed and the provider
+stopped. The corrected admission accepts that exact observed representation.
+
+The affected fresh-volume probe then passed. A network-isolated container with
+128 MiB, one CPU, 64 PIDs, a read-only root and one exact owned-volume mount ran
+as `10001:10001`, observed no effective capabilities and enabled no-new-privileges,
+and checked directory ownership before writing. Its sentinel write/read and file
+ownership checks passed. It used no `chown` or `:U` repair. This establishes the
+normal mounted-volume behavior, not the isolated causal role of one engine option.
+The owned container and temporary volume were removed and the initially stopped
+provider stopped.
+
+The successful phase took 59.063 seconds through cleanup, peaked at 1.353 GiB
+sampled aggregate memory and retained at least 5.227 GiB available RAM, without
+resource warnings/stops. This is local-provider evidence. The affected Podman
+4.9.3 CI execution and required commit/final-head checks remain separate gates.
