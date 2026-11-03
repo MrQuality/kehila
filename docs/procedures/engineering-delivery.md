@@ -33,6 +33,13 @@ distinguish production code, adopted source, generated locks/notices, tests and 
 
 ## Independent risk challenge
 
+Optional agent entry points are the versioned
+[engineering risk skill](../skills/engineering-risk-assessment/SKILL.md) and
+[Kehila review overlay](../skills/kehila-engineering-review/SKILL.md). They express
+these same rules for agent use; contributors can follow this procedure directly.
+Installing a skill or passing metadata validation does not enforce it or prove
+effective behavior. Preserve user and project policy over conflicting generic rules.
+
 Integrate risk assessment into SOP-002's existing source-first Phase A/B validation.
 Before dependent work, give the challenger the original request, accepted decisions,
 source identities, environment and operating constraints, including contrary
@@ -128,6 +135,8 @@ An independent context challenges causal and effectiveness claims using original
 outcomes and decisive evidence. Reuse the delivery's existing records; do not start
 a new qualification campaign for the retrospective. A single report may cover
 coincident milestone/goal boundaries. Routine commits do not require retrospectives.
+Editing a retrospective or implementing its routine improvements does not itself
+recursively trigger another report; record that work in the existing closeout.
 
 Record outcome versus original/revised scope; commit/publication and decision
 timeline; product, harness, environment and process findings; valid evidence and
