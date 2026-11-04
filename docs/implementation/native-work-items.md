@@ -122,6 +122,27 @@ not substitute for final exact-head composition review.
 
 ## Assessment record
 
+### Existing coverage and required integration delta
+
+Source inspection at `454d960` mapped the following reusable controls. This is
+coverage planning, not a new test execution or proof of native WorkItem behavior.
+
+| Accepted behavior | Existing source control | Missing evidence for this goal |
+| --- | --- | --- |
+| Default workflow/initial status, optional title and sparse edits | `src/pure/task_contract/tests/item_mutation.rs`: `create_uses_default_initial_status_and_allows_an_untitled_item`, `edit_preserves_hidden_values_and_does_not_change_status_or_usage`, configured-title and hidden/duplicate-field cases | Persist/reload both seeded types through the authenticated native authority; verify issued display fallback and unchanged lifecycle from independent database state. |
+| Exact estimates and permanent unit lock | `src/pure/task_contract/tests/project_rules.rs`: exact/zero/absence, unit-lock and sequence-exhaustion cases | Native create/edit/clear persists exact values and monotonic `ever_estimated`, including a competing prepared command with an older project snapshot. |
+| Expected revisions and replay before changed validation | `item_mutation.rs` tests: `stale_create_conflicts_but_recorded_success_replays`, `edit_checks_versions_and_replays_recorded_success`, `recorded_success_replays_before_current_payload_limit` | Same scoped identity replays after later item/project changes; fresh stale commands conflict; neither Execute preparation nor generated-envelope failure can mask completed replay. |
+| Scoped identity, retained original grants and expiry/tombstones | `src/pure/task_contract/tests/operation.rs`: exact ordered content, retained-scope authorization, expiry boundary and no-grace origin cases | Actual item-family cores, exact versioned codecs, role denial, expiry/retirement and preserved locator/target binding with independent SQL observers. |
+| Recovery interface and bounded response decoding | `tests/integration/project_page.test.cjs`: project registration/execution/cancellation uncertainty, binding change, expiry identity and actual response-byte-limit cases | Item-specific interface cases using its eventual accepted protocol. Existing project tests are regression controls only; they do not establish item behavior or actual browser execution. |
+| Native HTTP/TLS, faults, contention and final state | `src/io/kehila_authority/src/coordinator/jobs/tests/project/`: `admission`, `authorization`, `clock`, `competing`, `faults`, `restored`, `write_faults`, `evidence` | Extend a separately reviewed synthetic native fixture for items; retain actual held-lock/commit barriers, complete typed reconstruction and connection/lock cleanup observations. |
+| Exact startup capability rejection | `src/io/kehila_authority/src/postgres/profile.sql` checks current version-two effective privileges and approved functions | Version-three positive and negative profiles, including unexpected function access, broad UPDATE and modified ownership; no whitelist widening without exact review. |
+
+The current `native-authority` CI job skips its workload steps for documentation
+scope (`.github/workflows/ci.yml`). Its green status on this proposal therefore
+does not mean native fixtures executed. Later executable changes must select the
+full applicable gate, with explicit new WorkItem test selection in the native
+fixture and observer; an unchanged project-only mode cannot qualify this goal.
+
 The preceding advisory review was not an implementation acceptance. A separate
 context received the selected user outcome and inspected B-003, domain rules,
 operation retention, native SQL/profile, reads and accepted architecture before
