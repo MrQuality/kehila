@@ -35,6 +35,12 @@ broker-first priority, not the historical R13 observations or live-use gates.
 Dynamic discovery is evaluated separately from public reachability; a hostname
 does not make a private or VPN exit address an incoming endpoint.
 
+The maintainer subsequently requested [Modal/E2B frontend research](../implementation/hosted-testbench-frontend.md)
+as another way to reduce local memory demand. That source assessment supplements
+the six questions below; it does not select a provider, authorize an account or
+replace the Windows/WSL matrix. Research completion is distinct from runtime
+qualification of a hosted frontend.
+
 One research record groups the six coupled questions; the labels below preserve
 their original scope. The separate future exact-staged-tree gate migration is
 excluded. Prototype code is research-only and must not become production or a
@@ -795,12 +801,95 @@ reviewed source, required gates and a bounded external attempt. No interface,
 IPv6, routing, firewall or source-policy fallback is implied. A remains untested
 for incoming connectivity and B remains deferred.
 
+### SP-007-R17: admitted direct endpoint; three TCP timeouts, 2026-11-04
+
+The concrete guest-address repair at
+`8a5c362507d81bbb6811f9b4cdb0923b87902468` passed the required local Podman
+gate: 425 Python tests with two platform skips, remaining shared/native checks,
+owned cleanup and confirmed local VM shutdown. The measured gate took 515.86
+seconds; two-second samples observed a minimum 1.89 GiB available without crossing
+the retained stop floor. These are sampled host values, not attributed workload
+peaks. Independent exact-head review found no unresolved substantive finding.
+
+The [nonpublic admission](https://github.com/MrQuality/kehila/actions/runs/41810663885)
+then passed actual kernel guest-source/interface selection, contained pinned-SSH
+nonce, expiry, removal and residual checks under Podman 4.9.3. No public role or
+artifact was created. Its in-container control still does not establish traffic
+through the host-published loopback port.
+
+GitHub initially showed the prior PR head despite the updated branch. One
+append-only CI-refresh commit, `615a7954e93ef23c022ee03181ba9e46f6eab94e`,
+preserved the exact reviewed source tree
+`578b8c2104a3adbc38f883e0ae7f6e7b2b9a3658`. Branch and PR head reconciled,
+and [full CI](https://github.com/MrQuality/kehila/actions/runs/41814629181)
+passed all three jobs before the public retry. No implementation source or
+required-check policy changed; existing history was not rewritten, and PR status
+was unchanged. The local source-commit gate and nonpublic observations retain
+their identical-tree scope.
+
+A separate [unadmitted negative control](https://github.com/MrQuality/kehila/actions/runs/41813619001)
+concluded **skipped**, with the sole guarded job skipped and zero steps. This
+empirically rejects the concern that this exact all-skipped workflow might
+satisfy the controller's `conclusion == success` predicate. It created no
+listener, configuration or artifact; its owned tag was deleted. This result
+does not establish every workflow/conclusion combination.
+
+At the admitted source, the fresh
+[Linux-to-Windows encryption control](https://github.com/MrQuality/kehila/actions/runs/41815749911)
+passed. The [public owner](https://github.com/MrQuality/kehila/actions/runs/41815903931)
+then passed concrete publication/readiness and returned the authenticated,
+encrypted endpoint descriptor. Actual local SSH made three bounded attempts;
+each reported **TCP connection timed out**. No SSH authentication or host-key
+verification failure was observed. The local result was `reachability=false`;
+the runner recorded zero synthetic responses, despite successful contained nonce
+and expiry controls. The hosted workflow itself succeeded because its owner
+completed admission/lifecycle/cleanup; that success is not a route-test pass.
+
+This is a failed selected local-to-runner endpoint/path observation. It does not
+identify an upstream block, validate egress-as-ingress, settle source-policy/path
+stability or prove all standard runners unreachable. No scan, alternate address,
+port, source-policy relaxation or network/security change followed. Direct A is
+not qualified; reasonable supported endpoint alternatives remain a design/source
+question. Runner-to-local B remains deferred, without automatic fallback.
+
+Owned container removal, expiry, residual absence and final artifact cleanup
+passed. Independent API reads found zero artifacts for both fresh runs, no
+temporary configuration variables or secret and no owned probe tags. Recipient
+and SSH private-key files were absent locally. This fulfills the temporary
+artifact deletion requirement for this experiment; prior ciphertext copies
+cannot be retracted, and the method remains temporary.
+
+The local controller took 305.30 seconds including preparation, hosted waiting
+and cleanup. Its 152 two-second samples observed at least 5.834 GiB available.
+This is sampled whole-host headroom, not browser memory, exact peak consumption
+or a measured offload saving. Raw diagnostics remain excluded from public output.
+
+### SP-007-R18: hosted frontend source assessment, 2026-11-04
+
+The [Modal/E2B assessment](../implementation/hosted-testbench-frontend.md)
+completes the requested source-research comparison: current advertised resources,
+recurring versus one-time credits, stock-browser/CLI scope, costs, lifecycle,
+connectivity, risks and proposed next probes. Modal Starter advertises $30 of
+monthly compute credits, with a payment method required; E2B Hobby's $100 credit
+is one-time. Neither offering establishes a qualified backend path or a supported
+replacement for the development workstation.
+
+Request-first Phase A and candidate/complete-prose Phase B inspected primary
+sources and project contracts. Findings narrowed the recommendation to a bounded
+headless Linux test frontend, distinguished resource requests from limits, and
+separated controller, transport and browser credentials. A provider-neutral
+packaging manifest is independent preparation; provider/account/payment, data,
+network and trust boundaries remain maintainer decisions before dependent use.
+No Modal/E2B account, resource, payment, deployment or runtime probe was created.
+Research/review time is unmeasured and overlapped CI/SSH waiting. The remaining
+A-F objective is not closed by this source assessment.
+
 ### Current case disposition and next observations
 
 | Scope | Evidence / status | Next decisive observation |
 | --- | --- | --- |
 | A1/A2 Current hosted fixture capacity | Passed R02 with stated measurement limits | Reuse within this source/tool/workload boundary; actual remote session remains separate |
-| B1 Transport mechanism | R16 nonpublic admission passed; public wildcard representation rejected before local SSH | Admit a concrete assigned guest bind, then establish actual incoming reachability; B remains deferred |
+| B1 Transport mechanism | R17 concrete admission passed; three actual TCP connection timeouts; no synthetic response | Establish a supported incoming endpoint/path before another admitted attempt; do not infer cause or switch to B automatically |
 | B2 Live isolation | R13 allowed path/12 denials and two gap counterexamples; R14 direct/reverse enforcement distinction; actual boundaries unqualified | Qualify exact server/runner destination restriction, local/session isolation and teardown/non-reuse for the selected direction |
 | C1 Confidential bootstrap | R15 Linux-to-Windows encrypted control and temporary-artifact deletion observed; production contract unqualified | Keep the artifact method temporary; qualify provider ordering, wrong-run/rerun/duplicate-consumer rejection and interruption cleanup before credentials |
 | D1 Lifetime enforcement | R09 overlay candidate retained; R10 local/broker/runner SSH owners proposed; runtime behavior unqualified | Prove active-stream cutoff separately from key expiry and runner/backend death; disposition outage residuals |
@@ -961,6 +1050,23 @@ ingress result. The next bind narrows the interface instead of weakening empty
 mapping admission. Its kernel-assignment and real forwarding observations remain
 pending. Another required source gate took 510.84 seconds, followed by confirmed
 local VM shutdown; individual research/review effort remains unmeasured.
+
+R17 separated successful owner/lifecycle completion from failed external
+reachability. Real TCP timeouts became observable only after repairing admission;
+the earlier stops remain harness failures and are not relabeled network results.
+The CI-refresh commit changed no source and restored the missing provider head
+event/check observation before public execution; its exact cause was not proven.
+The next operator-owned observation is a supported endpoint/path contract, not
+repeated random runners or weaker source/mapping checks. Keep the timeout cause
+unknown until evidence distinguishes the competing network explanations.
+
+R18 challenged a pricing premise before provider setup: a no-fee plan and one-time
+credit are not a recurring free allowance. Independent review also prevented a
+resource request from being described as a hard cost cap and kept hosted Linux
+coverage separate from Windows/WSL. These are specific corrected claims, not
+measured process efficacy or quantified savings. Next observe the selected
+image/resource/network/cleanup admission before any authorized provider probe;
+do not add another live campaign merely to close this research checkpoint.
 
 ## Risks, review and reuse
 
