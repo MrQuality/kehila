@@ -17,8 +17,10 @@ historical comparison evidence; do not activate either transport automatically.
 Base revision: `1ff992c572f8f9abfe0607d4838b95f45514b197`. Primary sources below
 were inspected on 2026-11-04. Local version inventory found Windows OpenSSH
 9.5p2 and Ubuntu OpenSSH 8.9p1. Those are observations of installed clients,
-not proof of all features in current upstream manuals. No SSH connection,
-broker policy canary, network partition or active-stream expiry test ran.
+not proof of all features in current upstream manuals. The later
+[R13 laboratory](../spikes/SP-007-hosted-testbench.md#sp-007-r13-contained-ssh-mechanisms-and-counterexamples-2026-11-04)
+exercised contained Debian OpenSSH 9.2 policy mechanisms and counterexamples.
+No external SSH connection, network partition or deadline-expiry test ran.
 
 | Consequential premise | Status / consequence if false |
 | --- | --- |
@@ -29,11 +31,22 @@ broker policy canary, network partition or active-stream expiry test ran.
 | Removing custom tsnet code removes lifecycle machinery | Unsupported. Endpoint reservation, admission, deadlines, ownership and cleanup still require a coordinator. |
 | Hosted compute makes the whole bench free | Unsupported. Broker hosting, transfer, administration and trust remain separate costs. |
 
-Recommendation: proceed to a harmless, containerized SSH policy laboratory
-before choosing a provider. Prefer a small dedicated broker with one admitted
+Recommendation: retain SSH as the preferred candidate after the first policy
+laboratory. Its observed gaps require independent runner destination restriction,
+broker session isolation and teardown before endpoint reuse. Qualify those
+mitigations before live access. Prefer a small dedicated broker with one admitted
 session at a time initially. That is an operator simplicity proposal, not
 permission to trust other local broker workloads or weaken isolation. A provider
 purchase is premature until restriction and lifetime tests support this design.
+
+The laboratory's permitted byte-forwarding path and 12 policy rejections passed.
+It also demonstrated that changing the reverse destination remained possible
+and that an existing client could reach a replacement endpoint after listener
+port reuse. These are expected counterexamples to an incomplete design, not
+passed isolation guarantees. A controlled stop closed an active stream; no
+absolute deadline or compromised/partitioned-owner behavior was tested. All
+peers shared one isolated container, so these observations do not qualify the
+actual Windows/WSL clients, cross-namespace isolation or a hosted broker.
 
 ## Candidate topology and boundaries
 
@@ -171,10 +184,12 @@ has been tested. The same page lists 16 GiB at USD 96/month: that is a larger
 backend VM example, not a like-for-like broker requirement. Do not equate the
 low broker price with a qualified full alternative bench.
 
-For planning only, estimate 1-2 engineer-days for an isolated policy laboratory
-and 3-7 additional days for reviewed session admission, owners and failure probes,
-excluding provider/trust decisions and existing browser blockers. Confidence is
-low; this is judgment, not measured delivery performance or a commitment.
+The initial planning estimate was 1-2 engineer-days for an isolated policy
+laboratory and 3-7 additional days for reviewed session admission, owners and
+failure probes, excluding provider/trust decisions and existing browser blockers.
+R13 now supplies execution durations; actual authoring/review effort remains
+unmeasured, so it neither confirms nor disproves that effort estimate. The
+remaining estimate has low confidence and is not a delivery commitment.
 OpenTofu can provision a selected VM/firewall after budget acceptance; it does
 not replace session ownership, credential admission or active-stream teardown.
 
@@ -182,24 +197,25 @@ not replace session ownership, credential admission or active-stream teardown.
 
 Likelihood is unknown for these mechanisms. Impact and priority are independent
 of confidence. Primary documentation supports the restriction semantics; the
-proposed mitigations have not run. The bench operator owns experiments; the
+proposed mitigations have not run. R13 observed selected mechanisms and
+counterexamples, not those repairs. The bench operator owns experiments; the
 maintainer accepts hosting, trust, architectural and residual-risk decisions.
 
 | Risk / affected invariant | Impact / priority | Cheapest decisive observation and proposed mitigation | Residual / invalidation |
 | --- | --- | --- | --- |
-| S1 Runner changes reverse destination despite broker listener rule | High / P1 before live credentials | Harmless two-target canary first demonstrates the gap, then verifies an independent runner network boundary denies substitution | Trusted runner supervisor and policy integrity remain; reopen on network/image/rule changes |
-| S2 Wrong session or broker-local process reaches the listener | High / P1 | Two-session and local-process negative canaries; isolate session network and refuse stale endpoint reuse | Broker administration remains trusted; reopen on tenancy/isolation changes |
+| S1 Runner changes reverse destination despite broker listener rule | High / P1 before live credentials | R13 demonstrated the gap. Next verify an independent runner network boundary denies substitution | Trusted runner supervisor and policy integrity remain; reopen on network/image/rule changes |
+| S2 Wrong session or broker-local process reaches the listener | High / P1 | R13 demonstrated stale-client access after endpoint reuse. Next test two-session/local-process isolation and enforced teardown/non-reuse | Broker administration remains trusted; reopen on tenancy/isolation changes |
 | S3 Expiry only prevents login while current traffic survives | High / P1 | Keep a stream active across the deadline; independently observe local/broker closure, new-login rejection and runner cleanup | Partitioned runner death remains unproven; reopen on owner/provider/deadline changes |
 | S4 Local endpoint race or forwarding before admission | High / P1 | Delay dispatch, send early bytes, collide with endpoint ownership and kill the owner; require no admitted traffic or silent rebind | The gate remains a dependency; reopen on process/socket/admission changes |
 | S5 Wrong host, source, recipient or replay receives access | Critical / P1 | Harmless admission canaries with swapped keys, wrong run/source, stale attempts, duplicate delivery and interrupted enrollment | Actual protected bootstrap remains unqualified; reopen on identity/release/channel changes |
 | S6 Added broker operation/cost overwhelms the expected simplification | Medium / P1 before purchase | Measure laboratory setup/cleanup effort and transfer; select provider, region, spend cap and patch owner explicitly | No guaranteed free complete bench or delivery estimate; reopen on prices/usage/provider changes |
 
-Execute the policy laboratory in bounded Podman containers with synthetic keys
-and no product trust or external enrollment. Inspect effective server policy for
-both roles, then test permitted forwarding and denied shell/command/subsystem,
-wildcard, extra-destination, reverse-role and cross-session paths. Version the
-image and effective configuration; do not apply current manual features blindly
-to the installed 8.9/9.5 clients or a future broker server.
+Keep subsequent experiments in bounded Podman containers with synthetic keys
+and no product trust or external enrollment. R13 inspected effective policy and
+exercised selected forwarding/session denials in one container. Next test the
+independent network, admission and lifetime mitigations under their actual
+boundaries. Version the image and effective configuration; do not apply current
+manual features blindly to the installed 8.9/9.5 clients or a future broker server.
 
 Before local execution, admit the actual resource budget and harness cleanup.
 The laboratory establishes policy mechanisms only, not internet reachability,
@@ -217,8 +233,10 @@ Research/review elapsed time was not instrumented; no time-saving claim is made.
 
 Completion of this research checkpoint means a source-backed design comparison,
 dated cost/effort estimates, explicit failure domains and executable experiment
-oracles. It does not mean B-F passed. Next: admit and review the small SSH policy
-laboratory, run harmless controls, then decide whether an actual broker is worth
-provisioning. Final composition review and required documentation checks belong
+oracles and the bounded R13 mechanism observations. It does not mean B-F passed.
+Next: qualify independent runner destination enforcement, broker isolation and
+non-reuse, endpoint admission, recipient binding and actual deadline/failure
+behavior before live access. Decide whether an actual broker is worth provisioning
+with those residuals visible. Final composition review and required documentation checks belong
 to the exact published revision; architectural acceptance remains with the
 maintainer.

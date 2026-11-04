@@ -579,13 +579,88 @@ a data URL is not a positive or negative TLS test. Both Windows campaigns remain
 stopped at their unresolved observer admission. SSH policy execution is the next
 independent experiment, held for reviewed harness and adequate memory headroom.
 
+### SP-007-R13: contained SSH mechanisms and counterexamples, 2026-11-04
+
+One synthetic Podman laboratory exercised both SSH roles and harmless target
+listeners in a single network-isolated container, without host ports, external
+SSH access, application credentials, product trust or a backend. Actual packages
+were Debian 12 `openssh-client`/`openssh-server` version
+`1:9.2p1-2+deb12u10`, with OpenSSL 3.0.22. The base image was pinned; package
+installation was not a locked dependency closure. The actual built image,
+package inventory, effective role policy and bounded case diagnostics were
+retained; no image was published or complete advisory/license clearance claimed.
+This record does not add a reusable contributor SSH harness or required CI job.
+
+Preparation outcomes remain distinct from the final mechanism result:
+
+- Two initial pre-VM admissions refused an author-selected 6.5 GiB estimate.
+  That estimate incorrectly treated configured WSL maximum capacity as necessary
+  startup reservation. Neither refusal started the VM or SSH. The
+  [Microsoft WSL configuration](https://learn.microsoft.com/en-us/windows/wsl/wsl-config)
+  describes the memory limit; it does not establish equivalent startup demand.
+- The revised owner retained the existing 1.5 GiB stop floor and global settings,
+  armed monitoring before exclusively owned startup, and separately admitted the
+  build from observed post-start headroom. Its 5 GiB startup estimate and 4 GiB
+  post-start estimate are experimental allowances, not accepted project policy
+  or hard bounds. The latter includes the 2 GiB warning level, a 512 MiB build
+  allowance and 1.5 GiB for engine/cache/cancellation overhead.
+- The first startup attempt failed on an invalid inventory-template field before
+  image building. A documented JSON query repaired that harness error. The next
+  attempt passed inventory but rejected an unsupported build CPU shorthand before
+  building; installed CLI help established the equivalent quota/period controls.
+  Both attempts observed zero owned residual containers and stopped the owned VM.
+- The first actual SSH run passed the allowed path and wildcard rejection, then
+  failed an overly narrow session-rejection classifier. The client reported a
+  generic channel-open failure while the authenticated broker logged its session
+  limit rejection. The affected repair required fresh, bounded broker evidence
+  of correct-role authentication and exactly one session-limit rejection, plus
+  client channel rejection. A generic connection failure alone remains insufficient.
+  The failed run, successful cleanup and earlier observations remain retained.
+
+After diagnosis and scoped independent review, the affected mechanism attempt
+passed the following observations:
+
+| Observation | Actual result / interpretation |
+| --- | --- |
+| Permitted client-to-runner forwarding | Fresh synthetic bytes returned the selected target's marker |
+| Twelve forbidden operations | Both roles' shell, command and subsystem requests rejected; client reverse forward, runner wildcard/extra listener, runner local destination and client extra/other-session port denied |
+| Reverse destination substitution | The same permitted reverse listener could point at a different runner-side target; broker policy alone did not enforce that destination |
+| Listener endpoint reuse | An existing client connection could reach the replacement target after the reverse listener port was reused; session teardown/non-reuse remains necessary |
+| Controlled client stop with an active stream | Stream closure observed; this is not absolute expiry, outage or compromised-owner qualification |
+
+The engine reported rootful cgroup v2. Build execution used one job, a 512 MiB
+memory/swap-total limit and one CPU via equal quota/period. The runtime's inspected
+configuration was 256 MiB memory/swap-total, no network and no host ports, with
+bounded PIDs and an init process. These configuration observations are not an
+independent proof of peak memory enforcement or total guest/host overhead.
+
+The successful image-build phase took 14.046 seconds; container start/attach took
+4.500 seconds, including a 3.439-second internal case span. The Windows owner
+span was 48.235 seconds including startup, observations, copying and shutdown.
+Earlier package/image caches could be reused; this is not a cold-build benchmark.
+Minimum one-second sampled Windows available memory was 4,504,535,040 bytes
+(about 4.20 GiB), with no floor stop or watcher error. The watcher joined before
+its exclusive lease was released. Direct child cleanup had no errors; the
+created container was removed, the independent owned-label query returned zero
+residuals, and a separate machine observation confirmed stopped state. The built
+image remains a local cache artifact. No offload-saving or hard memory-ceiling
+claim follows.
+
+The two counterexamples support the SSH design's independent destination and
+session-isolation requirements. Their mitigations were not exercised here.
+All participants shared one namespace and Linux SSH implementation; another
+port's rejection does not qualify full cross-session isolation. No actual
+Windows/WSL SSH client, hosted runner connection, broker provider, authenticated
+source/recipient bootstrap, absolute deadline, partition or product TLS was
+qualified. Reuse only within these version/configuration/case boundaries.
+
 ### Current case disposition and next observations
 
 | Scope | Evidence / status | Next decisive observation |
 | --- | --- | --- |
 | A1/A2 Current hosted fixture capacity | Passed R02 with stated measurement limits | Reuse within this source/tool/workload boundary; actual remote session remains separate |
-| B1 Transport mechanism | R03 tsnet build support retained; R10 SSH source comparison, no runtime qualification | Review a bounded SSH policy laboratory and actual version/configuration support |
-| B2 Live isolation | SSH preferred; broker/runner/session boundaries unqualified | Demonstrate permitted path and denied targets, roles, shell and cross-session reach with harmless fixtures before live admission |
+| B1 Transport mechanism | R03 historical tsnet build; R10 SSH source comparison and R13 contained policy/byte-forwarding support | Qualify the selected actual Windows/WSL clients and broker/runner deployment |
+| B2 Live isolation | R13 allowed path/12 denials and two gap counterexamples observed; actual broker/runner/session boundaries unqualified | Demonstrate independent runner destination restriction, broker isolation and teardown/non-reuse before live admission |
 | C1 Confidential bootstrap | R09 attempt-bound protected-environment protocol proposed; no actual channel qualified | Admit workflow/protection/release fixture; demonstrate provider ordering, wrong-run/rerun/duplicate-consumer rejection and interruption cleanup with harmless canaries before credentials |
 | D1 Lifetime enforcement | R09 overlay candidate retained; R10 local/broker/runner SSH owners proposed; runtime behavior unqualified | Prove active-stream cutoff separately from key expiry and runner/backend death; disposition outage residuals |
 | E1 Stock browsers | R05/R07 Windows admission failed and R11 reproduced the observation gap without a driver; R06 WSL Firefox and R12 WSL Chrome owned-listener/DOM passed; TLS remains unqualified | Preserve Windows stop; qualify the separately admitted trust/TLS/product cases after transport and lifecycle harness readiness |
@@ -681,6 +756,27 @@ policy with harmless canaries before provider purchase or credential delivery.
 The next owned SSH run needs adequate memory; available RAM near the existing
 warning threshold is not permission to start an additional VM. Full A-F closure
 remains premature.
+
+R13 exposed a further resource-premise mistake: an author estimate equated WSL
+maximum capacity with startup reservation and prompted unnecessary memory requests.
+Independent challenge corrected the premise without lowering the existing stop
+floor or changing global configuration. Staged observation supported the small
+laboratory under its actual allowances; it does not prove arbitrary future loads
+fit. Earlier refusals remain retained, not relabeled as workload failures.
+
+Inventory-field and build-flag failures also show that installed CLI/schema
+preflight should precede dependent workload preparation. The session classifier
+then demonstrated why a client message alone cannot establish the server's
+policy decision. These were harness/preparation defects, not SSH or product
+defects. Their diagnosed repairs and affected reruns retained failures and
+passed through scoped review. Actual stage durations above exclude unmeasured
+authoring/review time; no general efficiency or savings claim follows.
+
+Next owned follow-up is the mitigated isolation/admission/lifetime experiment,
+not another repetition of the passing mechanism cases. Provider purchase and
+trust remain maintainer decisions. Keep a server-side witness where generic
+client failures would otherwise be misclassified; revalidate affected controls
+on version, policy, namespace or owner changes.
 
 ## Risks, review and reuse
 
