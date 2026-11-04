@@ -182,6 +182,10 @@ variables are not an encrypted transport. Keep the issuer signing key outside
 the transfer. The mechanism remains a pre-use admission decision, not a claimed
 existing confidential channel.
 
+The [attempt-bound environment candidate](../implementation/hosted-verification-testbench.md#confidential-bootstrap-candidate-for-spike-c)
+now specifies an ordering and recipient contract for research. Its provider
+timing, protection and replay claims remain unexecuted admission questions.
+
 Before implementation admission, select the enforcement mechanism for session
 expiry. The required behavior is: stop new local attachments and existing streams
 at the approved deadline; stop the remote listener/backend; expire enrolled

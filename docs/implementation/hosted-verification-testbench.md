@@ -75,6 +75,116 @@ retains relative requests. A demonstrated incompatibility reopens ADR-110 rather
 than justifying silent relaxation. The Windows CLI's DPAPI credentials do not
 become a Linux credential-store design.
 
+## Confidential-bootstrap candidate for spike C
+
+This is a concrete **proposed protocol**, not an existing channel or permission
+to create environments, release secrets or approve deployments. Read-only
+inspection found no configured environment to reuse. Retain backend credentials
+in GitHub secrets; keep the issuer signing key outside the serving fixture.
+
+Recommend one protected environment per run **and attempt**, with one explicitly
+admitted recipient job. [Environment secrets](https://docs.github.com/en/actions/reference/security/secrets)
+are read at job start, unlike repository secrets read at queue time. A single
+bounded bootstrap document keeps credentials and their context in one version;
+its encoded size must fit the provider's 48 KB limit. GitHub cautions against
+structured secrets for automatic log redaction: the candidate therefore requires
+no secret-bearing public output, not confidence in masking parsed fields.
+
+| Binding | Trusted verifier / required comparison |
+| --- | --- |
+| Repository and workflow | Operator verifies provider repository/workflow identity, admitted workflow commit/blob and pinned action/reusable-workflow closure. A protected branch flag is insufficient. |
+| Tested source | Operator admits immutable source SHA/tree separately; neither a branch name nor maintainer dispatch accepts arbitrary test code. |
+| Recipient | Operator checks run ID, attempt, sole job/deployment and environment numeric ID. The job validates the same tuple before enrollment or serving. |
+| Credential purpose | Bundle fixes recipient role, endpoint mapping, expiry and expected local peer; the resolved remote peer is admitted before forwarding. No issuer or administrative credential enters the fixture bundle. |
+| Single use | Protected operator ledger records the attempt, environment, payload version and consumption/cleanup state. No environment or bundle reuse after interruption. |
+
+Proposed ordering:
+
+```mermaid
+sequenceDiagram
+    participant O as Trusted operator
+    participant G as GitHub control plane
+    participant A as Secret-free admission job
+    participant B as Protected backend job
+    O->>G: Dispatch admitted workflow, no secret inputs
+    G->>A: Immutable run and attempt context
+    O->>G: Configure attempt environment, initially no secrets
+    A->>G: Read back required protection and exact environment identity
+    A-->>G: Emit environment name only after admission
+    G-->>O: Backend job pending environment approval
+    O->>G: Stage bound bootstrap secret, revalidate pending recipient
+    O->>G: Approve exact run and environment, if authorized
+    G->>B: Start admitted job with environment secret
+    B->>B: Validate context and deadline before enrollment
+```
+
+1. A trusted local owner first reserves the browser endpoint and records the
+   overall deadline. Dispatch uses a provider-admitted workflow entry point;
+   [registration/default-branch requirements](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_dispatch)
+   still need verification. Claim one unambiguously correlated provider run;
+   never guess the latest run on a branch. This proposal permits no merge to
+   obtain an entry point.
+2. The admission job has only necessary metadata-read permission, no bootstrap
+   environment and no tested code. It cannot provision protections or approve
+   itself; administrative authority stays with the trusted operator.
+   Derive a canonical lower-case environment name from run ID and attempt, never
+   an arbitrary dispatch input. The backend job's environment name depends on
+   the successful admission job's output. GitHub [allows a `needs` expression](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idenvironment)
+   here. Withhold that output until the exact configured environment and approved
+   protections are read back; an absent/unobservable rule fails admission.
+3. The operator configures required reviewers, the exact permitted ref type/name
+   and the accepted administrator-bypass policy before staging any credential.
+   [Auto-created environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments)
+   can lack protection. The delayed-reference ordering must be demonstrated with
+   a harmless canary before real-secret use; YAML dependency structure alone is
+   not executed proof of provider protection-evaluation timing.
+4. Only one backend job may reference that environment. Reject matrices, multiple
+   consumers or an unknown graph. Inspect the pending deployment and all binding
+   fields again, stage one complete secret, then release only the intended run
+   and environment. Freeze means the operator ledger forbids further mutation
+   and other mutating authority is excluded or explicitly admitted; it is not a
+   GitHub environment-immutability guarantee. A sole maintainer's
+   self-review prevention can prevent their own dispatch from proceeding;
+   changing that policy or authorizing an automated release actor is a maintainer
+   decision. An agent must not present its release as human approval.
+5. The [review endpoint](https://docs.github.com/en/rest/actions/workflow-runs#review-pending-deployments-for-a-workflow-run)
+   takes a run and environment IDs, not an attempt. The initial candidate accepts
+   only provider attempt 1. Reject full, partial and job-only reruns before the
+   protected job is dispatched: its predicate checks the current attempt and the
+   upstream admission attempt, so cached `needs` outputs cannot authorize release.
+   A retry needs a fresh dispatch/run ID, environment, bundle and node identities.
+   This also prevents a delayed run-scoped cancellation from targeting a legitimate
+   later attempt under the same run ID. Qualify predicate/protection ordering,
+   stale approval, duplicate consumers and canceled pending jobs with canaries;
+   a name convention or an inside-job check is not pre-delivery proof.
+6. Only a trusted bootstrap step handles the document as data, never interpolated
+   shell code or command-line arguments. It checks context/expiry, writes only
+   approved protected fixture files, and drops unrelated credentials before
+   starting Podman-contained workloads. The fixture receives its leaf key and
+   synthetic password; enrollment material reaches only its connector. Provider
+   secret storage does not hide plaintext from an admitted runner process.
+7. Public progress contains only allowlisted run/source/attempt, admitted deadline
+   times and closed status fields. It carries no peer identity, credential digest
+   or raw diagnostic.
+   Before attachment the operator separately authenticates the actual overlay
+   peer and strict-TLS leaf possession. A job status is not that proof. Missing
+   or ambiguous acknowledgement stops the attempt; never resend or silently
+   resume it. Start a fresh attempt only after reconciliation.
+
+| Interrupted state | Required disposition / remaining exposure |
+| --- | --- |
+| Reserved, no delivery | Stop owned local endpoint and admission job; retain the first failure. |
+| Environment configured or secret staged, no receipt | Reject pending release, cancel the run, reconcile secret/environment and unused enrollment key. Deleting a secret cannot recall a value already read by a job. |
+| Enrolled, not attached | Stop owned connector/backend, revoke enrollment capability and remove the exact recorded nodes; discover ambiguous enrollment through the protected ledger/provider, not hostname-substring deletion. |
+| Cleanup interrupted or observation unavailable | Record unknown cleanup, deny attachment/reuse and invoke the separately protected revoker. Neither a successful API request nor a later fresh attempt clears uncertainty. |
+
+The candidate depends on immutable source admission, observable protection and
+single-recipient ordering. It is not qualified if the provider cannot establish
+those properties. A future canary experiment needs an approved protection and
+workflow fixture. No attempt environment, protected-channel credential transfer
+or deployment release has been executed for this candidate. Earlier credential
+preparation is separate from channel qualification.
+
 ## Risk management plan
 
 Likelihood is unknown unless an observation is stated. Impact and urgency are
@@ -89,7 +199,7 @@ reviewer agreement cannot accept architectural/security tradeoffs.
 | R2 Overlay provides new access to local or unrelated services | Userspace is not an access policy. Source-derived threat; unknown likelihood. | Critical / P1 before local connection | Dedicated identities, effective deny-by-default policy, no reverse listener/proxy, fixed destination. Retain the bound local endpoint across dispatch. Check port collision/lost ownership, remote-originated local connection, DB/engine sockets and other-session peers; bounded isolated network cost. | Transport owner; maintainer accepts policy/vendor boundary. Reopen on policy/tag/connector/network change. |
 | R3 TLS/origin protection is bypassed or trust escapes its approved scope | Exact loopback is enforced today; WebDriver can ignore certificate errors; Chromium Linux can use shared certificate storage. High confidence; unknown likelihood of misconfiguration. | Critical / P1 before browser qualification | Keep Rust TLS and same origin; explicit false bypass capability. Prove intended positive and wrong-CA/IP/issuer/expired-cert negative cases in each browser, actual trust-store scope, no unintended ordinary-browser trust, and exact removal after interruption. Bounded temporary trust work only after exact approval. | Security/harness owner; maintainer controls trust approval. Browser/profile/trust changes invalidate affected evidence. |
 | R4 Access or active streams outlive the session owner | Auth-key expiry and ephemeral GC do not impose active-session expiry; co-located timers share runner failure. High confidence; unknown incident likelihood. | High / P1 before live session | Select trusted supervisor and protected remote revocation path with explicit failure domains. Separately observe stream closure, owned-process termination and enrolled access. Test controller death, runner loss, active-stream expiry, control-plane outage and local restart; medium harness work. Withhold live admission until bounded residual exposure is explicitly accepted. | Transport owner; maintainer accepts outage/expiry residual. Reopen on supervisor, credential or provider semantics. |
-| R5 Descriptor/result is forged, replayed or secret delivery crosses sessions | GitHub authentication does not privatize public artifacts or establish a confidential per-run channel. High confidence; unknown likelihood. | High / P1 before secret use or attachment/publication | No secret descriptor fields; authenticate expected run/attempt/workflow/source and peer. Select confidential delivery; reject stale, replayed or wrong-recipient transfers; reconcile interrupted delivery/cleanup. Exercise collector redaction with synthetic canaries offline. | Evidence/secret-delivery owners; maintainer owns channel acceptance and publication. Channel, schema, collector or storage changes invalidate controls. |
+| R5 Descriptor/result is forged, replayed or secret delivery crosses sessions | GitHub authentication does not privatize public artifacts or establish a confidential per-run channel. High confidence; unknown likelihood. | High / P1 before secret use or attachment/publication | Qualify the [attempt-bound delivery candidate](#confidential-bootstrap-candidate-for-spike-c); authenticate run/attempt/workflow/source and peer, reject reruns/replay/wrong recipients and reconcile partial cleanup. No secret descriptor fields or public bootstrap output. Use harmless canaries before real credentials; provider masking and artifact warnings are insufficient. | Evidence/secret-delivery owners; maintainer owns channel acceptance and publication. Channel, schema, collector or storage changes invalidate controls. |
 | R6 Passing subset or error classification hides a product/harness/cleanup failure | Current reporting has distinct ownership and failure obligations; expected HTTP rejection is case-specific evidence. High source confidence; unknown likelihood. | High / P1 before gate use | Exact case manifest, separate cause/stage and qualification, durable first unexpected failure and independent DB/read-back oracle. Confirm expected rejection can pass its oracle; product failure, missing report, TLS/transport/environment interruption and cleanup failure cannot produce a campaign pass. Low focused cost before browser campaign. | Harness owner; maintainer accepts evidence. Case/oracle/result-contract changes reopen review. |
 | R7 Capacity or WAN delay produces false eligibility claims | Current CI passes do not bound cold disk, relay latency or local RAM. High confidence in gap; workload probability unknown. | Medium / P2 before qualification | Measure both client environments, cold/warm hosted phases and relay path. Preserve deadlines; classify environment failure and retain attempt, not blind retries. Medium compute/time after resource approval. | Verification owner; maintainer selects paid capacity if warranted. Runner/image/region/browser changes invalidate measurements. |
 | R8 Browser label overstates platform coverage | Patched Firefox, Chromium and Windows-launched-from-WSL differ from intended binaries. High source confidence; unknown occurrence. | Medium / P2 before qualification | Record actual executable identity, version, OS, profile and capability; prove JS/cookie/CSRF flow. Fresh fixtures for password/revocation cases. Small sequential matrix. | Browser owner; maintainer accepts support scope. Binary/profile/OS changes require affected checks. |
