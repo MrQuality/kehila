@@ -25,6 +25,7 @@ and retain history. Code evidence cannot silently resolve a product question.
 | [ADR-108: Native schema/runtime compatibility](ADR-108-schema-runtime-compatibility.md) | Proposed initial draft: maintenance-only compatibility recommendation; enforceable migration/writer exclusion and recovery remain unresolved. No populated upgrade or rolling deployment support. |
 | [ADR-109: Durable native event delivery](ADR-109-native-event-delivery.md) | Proposed initial draft: durable handoff obligations, outbox versus CDC remains open; event consumers are excluded from the first journey. No native publisher or broker qualification. |
 | [ADR-110: GitHub hosted verification with local browser clients](ADR-110-hosted-verification-testbench.md) | Proposed: bounded hosted Linux-container bench with local Windows/WSL Chrome and Firefox, isolated transport, lifecycle and risk controls. No implementation, trust change or local-gate replacement is activated. |
+| [ADR-111: Native WorkItem commands and persistence](ADR-111-native-work-items.md) | Proposed: recoverable ItemCreate/ItemEdit commands, explicit owner grants, fresh schema/capabilities and atomic history/replay, with a narrow ADR-104 state-dependent read-preparation amendment. Architectural acceptance and execution gates remain. |
 
 The [browser-first native integration contract](../implementation/authenticated-project-integration.md)
 connects the accepted allocation decision to authentication, creation, authoritative
