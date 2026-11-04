@@ -377,6 +377,64 @@ failure remains retained. Neither pair may proceed by removing the listener
 ownership/confinement check. No certificate, security setting or account state
 was changed.
 
+### SP-007-R08: WSL stock-Chrome preparation and storage admission, 2026-11-04
+
+Preparation selected ordinary Google Chrome 157.0.8103.38 from the official Linux
+package and a matching ChromeDriver. Chrome for Testing was inspected as an
+alternative but was not substituted for ordinary-Chrome evidence. Google's
+signed repository metadata authenticated the browser package; current signed
+Ubuntu security metadata authenticated the missing NSS/NSPR packages. The driver
+came from official version-specific HTTPS metadata/downloads with a retained
+local digest, without an independently verified vendor signature or checksum.
+No Chrome or ChromeDriver executable was launched.
+
+Only the browser application subtree and private dependency files were extracted;
+no package-maintainer scripts, system registration or privileged helper modes
+were installed. The private library versions are NSS `2:3.98-0ubuntu0.22.04.5`
+and NSPR `2:4.35-0ubuntu0.22.04.1`. An isolated verifier-path setup failure and an
+initial extractor rejection of internal NSS links remain retained. The corrected
+extractor used a fresh directory and validated relative links to existing files
+inside it. Artifact-manifest generation needed Linux-native link inspection;
+the earlier host-side inspection failure remains retained. Notices were retained
+for scoped unchanged private research use; this does not establish distribution
+license closure, advisory clearance or permission to exercise bundled DRM/media.
+
+Static inspection covered 107 ELF paths, including the selected executables,
+private libraries and additional bundled components. The unresolved libraries
+were Qt 5/6 dependencies of the two Qt shims. Current primary Chromium source
+describes optional UI-backend selection; the exact release-tag implementation
+was unavailable. This supported considering a bounded headless probe, not a
+claim that the complete browser distribution's dependency graph was resolved.
+
+The prepared harness checks reviewed artifact membership/bytes, matching versions,
+private NSS/NSPR loader selection and actual owned loopback listeners before HTTP
+and after session creation. Seven listener and six startup-parser fixtures passed.
+The first listener-fixture run exposed a parameter-shadowing defect; the fix and
+an unrelated-port rejection case were in place before any executable launch.
+Runtime-candidate review initially supported the bounded case, but a subsequent
+source-first filesystem check invalidated its temporary-storage premise.
+
+[Chromium's temporary-directory implementation](https://raw.githubusercontent.com/chromium/chromium/main/base/files/file_util_posix.cc)
+honors `TMPDIR`; its [process singleton](https://raw.githubusercontent.com/chromium/chromium/main/chrome/browser/process_singleton_posix.cc)
+checks actual POSIX temporary-directory permissions and socket-path suitability.
+An actual nonroot Linux fixture requested mode `0700` on the chosen Windows-backed
+filesystem but observed `0777`. Its representative Unix socket pathname was
+189 bytes, and one `AF_UNIX` bind failed with a path-too-long error. The fixture
+closed its socket and removed the generated temporary directory. These are observed
+**environment-admission failures**, not a Chrome runtime or product failure.
+Windows access controls and the earlier Firefox file-lock pass do not establish
+Chrome's POSIX temporary-directory/socket compatibility. The source inspection
+is version-sensitive; it does not prove the inaccessible exact release's code.
+
+Chrome/driver execution is held. A short, owner-only native-Linux temporary
+directory is a candidate remedy, subject to explicit storage-scope approval and
+actual permission/socket admission. No new storage location, mount setting,
+trust store or browser security setting was changed. Do not waive the checks or
+silently fall back to unrelated temporary storage. Profiles, temporary state,
+diagnostics and trust need separately defined locations and lifetimes in the
+proposed harness. Actual versions, headless DOM, TLS, sandbox behavior and
+integrated Chrome qualification remain unexecuted.
+
 ### Current case disposition and next observations
 
 | Scope | Evidence / status | Next decisive observation |
@@ -386,7 +444,7 @@ was changed.
 | B2 Live isolation | Blocked on account/policy/identity admission | Inspect effective account policy and exact peer ownership before enrollment |
 | C1 Confidential bootstrap | Source findings constrain the candidate; unexecuted | Select/review actual protected delivery and test wrong-run/replay/interruption |
 | D1 Lifetime enforcement | Startup/Close ordering finding; unexecuted | Inspect an actual supervised mechanism and exercise active-stream/owner/outage cases |
-| E1 Stock browsers | R05/R07 Windows Chrome/GeckoDriver listener-observation admission failed; R06 actual WSL Firefox headless/owned-listener/DOM passed; TLS and remaining browser cases are unqualified | Resolve Windows observability; prepare WSL Chrome and exact trust scope, then run the strict-TLS/product matrix |
+| E1 Stock browsers | R05/R07 Windows listener admission failed; R06 WSL Firefox headless/owned-listener/DOM passed; R08 WSL Chrome stopped at filesystem admission before executable launch; TLS remains unqualified | Resolve Windows observability, admit an approved compatible Linux temporary directory and exact trust scope, then run affected client/TLS/product cases |
 | F1 WAN/product relief | Blocked on B-E | Real Windows/WSL journeys and matched resource observations |
 
 The complete A-F objective is unfinished. Public source has no credential-bearing
@@ -428,6 +486,16 @@ independent diagnostic opportunity without reopening the stopped Chrome branch.
 Further Windows execution depends on resolving the observer contract rather than
 repeating a known-unqualified browser case.
 
+Stock-Chrome preparation then exposed a separate temporary-filesystem mismatch
+before any executable launch. Initial harness review covered artifact/library,
+driver ownership and cleanup composition but missed this compatibility premise.
+The later source-first check and pure-OS fixture reopened admission; its negative
+result supersedes the earlier launch disposition. A clean component review and
+passing pure fixtures were insufficient to establish actual environment support.
+No avoided-time total or broad review-effectiveness claim follows. Keep this
+filesystem admission ahead of future client launches and revalidate it on storage,
+mount or browser changes. Preparation/review durations remain unmeasured.
+
 Next owned follow-up: the bench operator prepares actual client/driver admission
 and confidentiality/lifecycle probes; the maintainer retains account, trust,
 vendor/budget and architecture decisions. Recheck the next documentation-only
@@ -438,7 +506,7 @@ and process-effectiveness claims remain premature.
 ## Risks, review and reuse
 
 [ADR-110's risk dossier](../implementation/hosted-verification-testbench.md)
-R1-R10 remains applicable. Account access expansion, identity confusion, secret
+R1-R11 remains applicable. Account access expansion, identity confusion, secret
 misdelivery and lifetime/trust escape retain High/Critical impact, unknown
 likelihood and P1 urgency before dependent work. The bench operator owns probes;
 the maintainer retains vendor, security, budget and architecture acceptance.

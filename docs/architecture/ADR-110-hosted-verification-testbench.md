@@ -215,6 +215,14 @@ No runtime auto-download/update, broad WebDriver listener or remote browser
 control endpoint is admitted. WSL headless execution does not need WSLg display;
 WSLg is relevant to headed Linux checks.
 
+Admit each browser's filesystem requirements separately from executable and
+driver compatibility. [SP-007's Chrome preparation](../spikes/SP-007-hosted-testbench.md#sp-007-r08-wsl-stock-chrome-preparation-and-storage-admission-2026-11-04)
+found that protected Windows-backed storage could still fail Linux POSIX mode
+and Unix socket-path requirements. Propose separate explicit locations and
+lifetimes for profiles, temporary state, diagnostics and trust; qualify actual
+permissions, lock/socket behavior and owned cleanup before launch. A new storage
+boundary needs admission; this proposal does not authorize it or mount changes.
+
 For each actual browser/OS combination, specify the trust store and inherited
 trust sources, the exact certificate and scope added, and removal/reconciliation
 after normal exit and interruption. A fresh browser profile does not alone prove
