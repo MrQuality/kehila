@@ -29,6 +29,8 @@ and [retrospective](#proportional-checkpoint-retrospective). R01-R18 below prese
 the actual sequence, including failures and superseded next-step proposals; they
 do not override this deferral or establish new execution authority. Retained
 fixtures support inspection and reproduction subject to fresh admission.
+The [review dispositions](#review-dispositions-and-deferred-reuse-work) distinguish
+completed documentation improvements from unimplemented fixture requirements.
 
 ## Question, scope and framing
 
@@ -140,6 +142,14 @@ Valid phases are `image`, `database-image`, `dependencies` and `native`; exact
 commands and pinned image inputs are in the workflow. The source export is
 required by `container_verify.py`. On Windows, use the existing Podman lifecycle
 lane for required gates; this Linux sampler is not a Windows resource observer.
+
+After PR #93 closes, this workflow's PR-number guard prevents automatic runs on
+other PRs. The sampler and command sequence remain available for inspection and
+reproduction in a separately admitted Linux environment. The retained workflow
+is the historical executable recipe, not a reusable dispatch interface. A future
+contributor who needs automated reproduction should propose a bounded invocation
+path with source, resource and cleanup admission; do not remove guards simply to
+make the old spike run. No workflow trigger or actor restriction changes here.
 
 Measurements are system `MemTotal` and minimum sampled `MemAvailable`, and free
 bytes on the selected storage filesystem before/minimum/after each phase.
@@ -1088,6 +1098,32 @@ coverage separate from Windows/WSL. These are specific corrected claims, not
 measured process efficacy or quantified savings. Next observe the selected
 image/resource/network/cleanup admission before any authorized provider probe;
 do not add another live campaign merely to close this research checkpoint.
+
+## Review dispositions and deferred reuse work
+
+The maintainer directed a documentation and issue follow-up within PR #93, with
+small commits, no new evaluation PR and no merge or PR status transition. Scope:
+make the deferred handoff discoverable and retain the agreed source findings for
+future contributors. Completion means synchronized documents/issues, applicable
+checks and an independent final-head composition review recorded in the PR;
+it does not mean implementation or A-F qualification. No new live probe is needed.
+
+| Agreed finding | Severity / priority | Disposition in this checkpoint |
+| --- | --- | --- |
+| Shared repository variables/secret are not safe concurrent session state. | High under concurrent use / P1 before concurrent or unattended reuse | Preserve single-operator scope; retain the unresolved ownership/serialization requirement in #95 and the [fixture reuse gates](../implementation/hosted-testbench-direct-ssh.md#retained-fixture-limits-and-gates-before-reuse). No bootstrap redesign implemented. |
+| Persisted intent is not restartable cleanup after forced termination. | Medium / P2 before further operational reuse | Retain recovery and independent final-state requirements in #95 and the same reuse gates. No recovery command implemented; prior completed cleanup evidence remains valid within its original conditions. |
+| The capacity workflow is specific to PR #93. | Low / P3 if automated reproduction is needed | Clarify the workflow lifetime and admitted reproduction path above. Retain research source; no workflow generalization or automatic rerun added. |
+| HTTPS egress discovery is an external dependency unnecessarily shared by nonpublic modes. | Low / P3 if the fixture is reused | Record delayed live-only discovery as an optional simplification in #95. No schema, discovery service or source restriction changed. |
+| Current conclusions need easier navigation amid historical detail. | Low / P3, optional | Add the current-result summary and links near the beginning; preserve R01-R18, the existing A-F table and failures. Cross-link the deferred #94/#95 handoffs from the design documents. |
+
+This is a source-based disposition, not evidence that the unresolved mechanisms
+now work. The author and a separate source-first reviewer challenged the scope
+against the original outcome and current contracts before these changes. Further
+runtime work remains deferred. Preparation/review elapsed time is unmeasured;
+overlapping activity must not be added as wall time. Existing retrospective and
+failure records remain intact. The next effectiveness observation belongs to a
+resumed issue: whether its ownership/recovery and environment admission checks
+identify a defect before dependent live work. No measured saving is claimed.
 
 ## Risks, review and reuse
 

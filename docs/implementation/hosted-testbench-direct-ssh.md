@@ -219,6 +219,40 @@ deletion. The exception does not permit plaintext metadata, product credentials,
 raw diagnostic uploads or a permanent artifact channel. Exact source, harness,
 source restriction and cleanup review remain pre-use gates.
 
+## Retained fixture limits and gates before reuse
+
+The disposable A fixture remains research source, not a supported connector or
+a ready-made implementation of B. The following source findings are retained for
+future contributors in [#95](https://github.com/MrQuality/kehila/issues/95).
+Severity describes consequence; priority names the point before which the work
+is needed. These are unresolved reuse requirements, not fixes delivered here.
+
+| Finding and evidence | Severity / priority | Required disposition before dependent reuse |
+| --- | --- | --- |
+| Shared repository configuration: `client.py` checks and writes fixed variable/secret names with separate API requests. Hosted job concurrency does not serialize local controllers, and ownership checks followed by deletion are not atomic. | High under concurrent use / P1 before concurrent or unattended reuse | Keep the existing single-operator restriction. Select session-scoped bootstrap state or serialization covering the entire controller mutation lifecycle; prove competing writers cannot overwrite or delete each other's state. Choosing OIDC or reversing SSH does not itself solve state ownership. |
+| Forced termination recovery: the controller journals intended ownership, but has no journal-loading/reconciliation command; normal invocation requires fresh storage. Process termination or machine failure can bypass `finally`, leaving configuration, artifacts or local keys for manual recovery. | Medium / P2 before further operational reuse | Define and review recovery from retained ownership records, with bounded reconciliation and independent final-state checks. Preserve conflicts and ambiguous operations for explicit resolution. Do not infer cleanup from a journal or delete resources merely because their names match. |
+| External egress lookup: client preparation queries Cloudflare HTTPS trace even for admission-only mode and the encryption control, although those stages need no public SSH source admission. The live runner also queries this external service. | Low / P3 if the fixture is reused | Consider moving source discovery to live preparation while preserving strict live-source validation. Review producer/consumer schemas together; environment properties or DNS alone do not establish an incoming mapping. |
+
+The first two limits are distinct: serializing live controllers would not recover
+from a dead owner, and a recovery command would not make shared API mutations
+atomic. A future implementation needs focused competing-controller and
+restart/recovery controls before its operational scope expands. No concurrency
+failure or forced-termination recovery was exercised by this documentation update.
+
+For an interrupted existing experiment, stop new launches and preserve its
+external ownership journal and diagnostics. An operator must reconcile the exact
+source/ref/run/attempt and resource ownership before removing owned configuration,
+tags, artifacts and local private keys. Record conflicts, inaccessible APIs and
+uncertain operations as unresolved; do not claim absence from a failed query.
+The current CLI cannot resume that journal automatically. Ordinary Python
+exceptions and normal interruption can execute `finally`; independent container
+leases and job limits are separate controls, not proof of configuration/key cleanup.
+
+The completed R17 run retains its independently observed cleanup result. These
+failure mechanisms do not establish a leak in that run or invalidate unchanged
+capacity, encryption or contained-control evidence. Reassess the selected
+bootstrap, recovery and confinement contracts before using product credentials.
+
 ## Review, limits and next decision
 
 Source-first independent framing separated user intent from broker assumptions.
