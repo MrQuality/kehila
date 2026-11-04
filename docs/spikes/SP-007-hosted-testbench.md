@@ -300,6 +300,64 @@ security setting was relaxed, no certificate was imported and no Tailscale
 enrollment occurred. The Windows browser preparation milestone is incomplete;
 WSL browser/driver installation and strict-TLS/product qualification remain open.
 
+### SP-007-R06: actual WSL Firefox headless admission, 2026-11-04
+
+An actual nonroot WSL Linux client ran the official Firefox 159.0.1 Linux amd64
+distribution with GeckoDriver 0.37.1 and Selenium 4.52.0. Browser bytes matched
+Mozilla's published SHA-512; its detached checksum signature verified against
+the release key obtained from Mozilla. Two earlier verification-command setup
+failures remain retained; they were not browser or signature-validation passes.
+The generic ZIP reader could not inspect the bundled
+[optimized Gecko archive](https://firefox-source-docs.mozilla.org/python/mozpack.html);
+this inspection gap does not establish corruption or complete license closure.
+The complete official bundle and notices were retained, with scoped private-use
+license review before execution.
+
+Preparation used an isolated virtual environment and verified, hash-locked
+Linux-compatible wheels, bootstrapped offline from a separately verified pip
+26.3 wheel. No system package, global Python, repository key or browser trust
+store was changed. The chosen storage uses Windows-derived permissions: the
+approved Windows user was the sole access principal on the directory and a
+WSL-created witness file. Reported Linux mode `0777` was not represented as POSIX
+privacy or separation between Linux users. Cross-process `fcntl`/`flock`
+exclusion controls passed. A disposable unprivileged-user-namespace probe passed;
+this is an OS feature observation, not Firefox sandbox qualification.
+
+Before browser execution, six standard-library fixtures exercised the actual
+listener parser: owned IPv4/IPv6 loopback, wildcard address, foreign inode,
+missing listener and changing process generation. The first fixture attempt
+failed because its mock lacked a path operation; the corrected fixture passed
+without changing the runtime parser. Review also required the final process scan
+to run on failed stages and to reject incomplete observation; both controls were
+in place before the actual client run.
+
+| Actual phase | Seconds | Observed outcome |
+| --- | --- | --- |
+| Portable browser and offline environment preparation | 49.423 | Passed |
+| Main executable library and version preflight | 0.376 | Passed |
+| Firefox driver/listener admission and data-page DOM | 12.271 | Passed |
+| Full controller span through cleanup observation | 62.084 | Passed |
+
+The ELF checks and returned capabilities identified Linux amd64 Firefox 159.0.1.
+The requested `acceptInsecureCerts=false` was returned. A selected-process socket
+inode and stable process generation established one owned loopback listener
+before and after session creation; the test attached to the existing driver
+without starting another service. The data page's initial title and title change
+after a button click matched their oracles. Normal browser/driver cleanup
+reported no errors, the process-group owner joined, and the final scan found no
+matching test processes or visibility failures. The fresh profile remains in
+protected test storage for inspection.
+
+This supports the bounded actual-WSL Firefox headless/driver/DOM path on the
+observed tools and storage. It does not establish TLS rejection/acceptance,
+product flows, WAN behavior, resource savings, WSL Chrome or Windows browser
+qualification. No sandbox-disabling options were added; runtime sandbox
+isolation remains outside the case. The earlier Windows observer failure remains
+unresolved and was not rerun or waived. Actual remotely attached sessions still
+need the account, transport, confidentiality, lifetime and exact trust admissions.
+These local client observations do not yet have a versioned public reproduction
+harness; supported adoption requires a reviewed reproducible client harness.
+
 ### Current case disposition and next observations
 
 | Scope | Evidence / status | Next decisive observation |
@@ -309,7 +367,7 @@ WSL browser/driver installation and strict-TLS/product qualification remain open
 | B2 Live isolation | Blocked on account/policy/identity admission | Inspect effective account policy and exact peer ownership before enrollment |
 | C1 Confidential bootstrap | Source findings constrain the candidate; unexecuted | Select/review actual protected delivery and test wrong-run/replay/interruption |
 | D1 Lifetime enforcement | Startup/Close ordering finding; unexecuted | Inspect an actual supervised mechanism and exercise active-stream/owner/outage cases |
-| E1 Stock browsers | R04 preflight; R05 Windows preparation failed its listener-observation admission, with no DOM/TLS pass | Resolve endpoint observability without weakening confinement; prepare actual Linux clients and exact trust approval before qualification |
+| E1 Stock browsers | R05 Windows listener-observation admission failed; R06 actual WSL Firefox headless/owned-listener/DOM passed; TLS and remaining browser cases are unqualified | Resolve Windows observability; prepare WSL Chrome and exact trust scope, then run the strict-TLS/product matrix |
 | F1 WAN/product relief | Blocked on B-E | Real Windows/WSL journeys and matched resource observations |
 
 The complete A-F objective is unfinished. Public source has no credential-bearing
@@ -338,6 +396,13 @@ without establishing its cause or weakening the invariant. This is a harness/
 environment evidence limitation, not a demonstrated product defect. That failed
 attempt remains visible alongside the passing capacity/build observations.
 
+The subsequent WSL Firefox preparation and data-page case passed with actual
+process/socket observations. Its 62.084-second controller span is recorded
+separately from the earlier local gate, hosted run and connector builds. Setup
+and fixture defects were corrected before client execution; archive-inspection
+limits and earlier failed attempts remain retained. The Linux result
+establishes its own target path and does not resolve the Windows observer gap.
+
 Next owned follow-up: the bench operator prepares actual client/driver admission
 and confidentiality/lifecycle probes; the maintainer retains account, trust,
 vendor/budget and architecture decisions. Recheck the next documentation-only
@@ -358,5 +423,6 @@ Revalidate affected observations on source/workflow, image/toolchain, provider,
 resource policy, workload, connector, account/policy/tag membership or trust-store
 change. A prior pass may be reused only within its inspected conditions.
 Retain the capacity prototype for reproduction; no production adoption or
-required-check promotion is proposed. Final exact-head composition review,
-required checks and a proportional milestone retrospective remain pending.
+required-check promotion is proposed. Record final exact-head composition review
+and required checks at their actual revisions in the PR. Full A-F closure remains
+pending.
