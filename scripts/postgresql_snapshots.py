@@ -58,13 +58,13 @@ def windows_child(command):
                            stderr=sys.stderr.buffer, creationflags=subprocess.CREATE_NO_WINDOW)
 
 
-def bounded(command, data=b'', *, limit=FRAME_LIMIT, timeout=60):
+def bounded(command, data=b'', *, limit=FRAME_LIMIT, timeout=60, scratch_dir=None):
     """One deadline covers parent exit and both pipes; cleanup owns descendants."""
     chunks = [bytearray(), bytearray()]
     changed = threading.Event()
     failures = []
     overflow = threading.Event()
-    with tempfile.TemporaryFile() as source:
+    with tempfile.TemporaryFile(dir=scratch_dir) as source:
         source.write(data)
         source.seek(0)
         options = ({'creationflags': subprocess.CREATE_NO_WINDOW}
@@ -139,6 +139,9 @@ def bounded(command, data=b'', *, limit=FRAME_LIMIT, timeout=60):
                 except OSError as error:
                     cleanup_error = error
             if failure is not None:
+                if isinstance(failure, subprocess.TimeoutExpired):
+                    failure.output = bytes(chunks[0])
+                    failure.stderr = bytes(chunks[1])
                 raise failure from cleanup_error
             if cleanup_error is not None:
                 raise cleanup_error

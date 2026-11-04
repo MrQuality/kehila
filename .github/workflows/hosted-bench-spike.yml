@@ -1,0 +1,111 @@
+name: Hosted bench capacity spike
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - .github/workflows/hosted-bench-spike.yml
+      - experiments/SP-007/**
+      - tests/test_capacity_probe.py
+permissions:
+  contents: read
+concurrency:
+  group: hosted-bench-capacity-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  admission:
+    if: github.event.pull_request.number == 93 && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    outputs:
+      changed: ${{ steps.delta.outputs.changed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Admit experimental-input changes in this event only
+        id: delta
+        env:
+          BEFORE: ${{ github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_AFTER: ${{ github.event.after }}
+          EVENT_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if test "$EVENT_ACTION" = opened; then BEFORE="$BASE"; fi
+          if test "$EVENT_ACTION" = synchronize; then test "$EVENT_AFTER" = "$EVENT_HEAD"; fi
+          [[ "$BEFORE" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EVENT_HEAD" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EVENT_HEAD"
+          git cat-file -e "$BEFORE^{commit}"
+          if git diff --quiet "$BEFORE" "$EVENT_HEAD" -- \
+            .github/workflows/hosted-bench-spike.yml experiments/SP-007 tests/test_capacity_probe.py; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            result=$?
+            test "$result" -eq 1
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+  capacity:
+    needs: admission
+    if: needs.admission.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CARGO_BUILD_JOBS: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Record public source binding and prepare external storage
+        env:
+          EVENT_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EVENT_HEAD"
+          umask 077
+          mkdir "$RUNNER_TEMP/capacity-spike"
+          git archive --format=tar HEAD --output "$RUNNER_TEMP/capacity-spike/source.tar"
+          mkdir "$RUNNER_TEMP/capacity-spike/source"
+          tar -xf "$RUNNER_TEMP/capacity-spike/source.tar" -C "$RUNNER_TEMP/capacity-spike/source"
+          printf 'Source head: %s\nSource tree: %s\nWorkflow SHA: %s\nRun: %s attempt %s\n' \
+            "$EVENT_HEAD" "$(git rev-parse HEAD^{tree})" "$GITHUB_WORKFLOW_SHA" \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_STEP_SUMMARY"
+          podman --version
+          test -z "$(podman ps -aq)"
+      - name: Measure image preparation on the fresh hosted runner
+        run: |
+          python experiments/SP-007/capacity_probe.py image \
+            --output "$RUNNER_TEMP/capacity-spike/image" --storage "$RUNNER_TEMP" -- \
+            podman build --memory=2g --cpu-period=100000 --cpu-quota=100000 --layers \
+            -f tools/verification/Containerfile -t localhost/kehila-capacity-spike tools/verification
+          image=$(podman image inspect localhost/kehila-capacity-spike --format '{{.Id}}')
+          image=$(PYTHONPATH=scripts python -c \
+            'import sys; from container_executor import inspected_image_id; print(inspected_image_id(sys.argv[1]))' "$image")
+          echo "KEHILA_VERIFICATION_IMAGE=$image" >> "$GITHUB_ENV"
+      - name: Measure pinned database preparation
+        run: |
+          python experiments/SP-007/capacity_probe.py database-image \
+            --output "$RUNNER_TEMP/capacity-spike/database-image" --storage "$RUNNER_TEMP" -- \
+            podman pull docker.io/library/postgres@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4
+      - name: Measure locked dependency preparation
+        run: |
+          python experiments/SP-007/capacity_probe.py dependencies \
+            --output "$RUNNER_TEMP/capacity-spike/dependencies" --storage "$RUNNER_TEMP" -- \
+            python "$RUNNER_TEMP/capacity-spike/source/scripts/container_verify.py" --prepare-dependencies
+      - name: Measure native PostgreSQL and HTTP TLS fixture through owned cleanup
+        run: |
+          python experiments/SP-007/capacity_probe.py native \
+            --output "$RUNNER_TEMP/capacity-spike/native" --storage "$RUNNER_TEMP" -- \
+            python "$RUNNER_TEMP/capacity-spike/source/scripts/container_verify.py" --native-authority
+      - name: Check residual containers without deleting unowned resources
+        if: always()
+        run: |
+          count=$(podman ps -aq | wc -l)
+          printf 'Residual container count: %s\n' "$count" >> "$GITHUB_STEP_SUMMARY"
+          test "$count" -eq 0
