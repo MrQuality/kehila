@@ -6,6 +6,7 @@ temporary experiment, not a reusable production session bootstrap.
 """
 import argparse
 import base64
+from contextlib import contextmanager
 import hashlib
 import io
 import ipaddress
@@ -162,6 +163,44 @@ def candidate_address(storage):
     return public_ipv4(fields['ip'])
 
 
+@contextmanager
+def creation_lock(storage):
+    """Serialize engine creation with final removal; process death releases lock."""
+    with (storage / 'creation.lock').open('a+b') as handle:
+        if not handle.tell():
+            handle.write(b'0')
+            handle.flush()
+        handle.seek(0)
+        deadline = time.monotonic() + 35
+        while True:
+            try:
+                if os.name == 'nt':
+                    import msvcrt
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except (BlockingIOError, PermissionError):
+                if time.monotonic() >= deadline:
+                    raise TimeoutError('probe creation lock unavailable')
+                time.sleep(0.05)
+        try:
+            yield
+        finally:
+            handle.seek(0)
+            if os.name == 'nt':
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def write_owners(storage, owners):
+    pending = storage / 'owners.pending'
+    pending.write_text(json.dumps(owners))
+    pending.replace(storage / 'owners.json')
+
+
 def reserve_container(storage, suffix):
     """Persist ownership before invoking the engine, including ambiguous CLI failures."""
     binding = read_json((storage / 'binding.json').read_bytes())
@@ -172,30 +211,58 @@ def reserve_container(storage, suffix):
     manifest = storage / 'owners.json'
     owners = json.loads(manifest.read_bytes()) if manifest.exists() else []
     require(len(owners) < 3 and not any(o['name'] == name for o in owners))
-    owners.append(dict(name=name, label=label))
-    pending = storage / 'owners.pending'
-    pending.write_text(json.dumps(owners))
-    pending.replace(manifest)
+    owners.append(dict(name=name, label=label, pending=True))
+    write_owners(storage, owners)
     return ['--name', name, '--label', 'io.kehila.ssh-probe-owner=' + label]
 
 
+def create_container(storage, suffix, options, image, command=()):
+    with creation_lock(storage):
+        require(not (storage / 'admission.closed').exists())
+        identity = reserve_container(storage, suffix)
+        result = run(['sudo', '-n', 'podman', 'run'] + options + identity + [image] + list(command), storage)
+        owners = json.loads((storage / 'owners.json').read_bytes())
+        owners[-1]['pending'] = False
+        write_owners(storage, owners)
+        return result
+
+
 def remove_containers(storage):
+    with creation_lock(storage):
+        remove_containers_unlocked(storage)
+
+
+def close_and_remove_containers(storage):
+    # Close admission even if lock acquisition/engine cleanup subsequently fails.
+    (storage / 'admission.closed').touch(exist_ok=True)
+    remove_containers(storage)
+
+
+def remove_containers_unlocked(storage):
     manifest = storage / 'owners.json'
     failures = []
-    for owner in json.loads(manifest.read_bytes()) if manifest.exists() else []:
+    owners = json.loads(manifest.read_bytes()) if manifest.exists() else []
+    for owner in owners:
         try:
             name, label = owner['name'], owner['label']
             require(re.fullmatch(r'kehila-ssh-[0-9]+-(policy|control|live)', name)
                     and re.fullmatch(r'[0-9]+:[0-9a-f]{64}', label))
-            query = ['sudo', '-n', 'podman', 'ps', '-aq', '--filter', 'name=^' + name + '$',
+            query = ['sudo', '-n', 'podman', 'ps', '-aq', '--no-trunc', '--filter', 'name=^' + name + '$',
                      '--filter', 'label=io.kehila.ssh-probe-owner=' + label]
             identities = run(query, storage).decode().split()
             require(len(identities) <= 1 and all(re.fullmatch(r'[0-9a-f]{12,64}', x) for x in identities))
+            # An unacknowledged create with no observed resource may still be
+            # pending in the engine. Never turn that uncertainty into final absence.
+            require(identities or not owner.get('pending', False))
+            owner['pending'] = False
             for identity in identities:
                 run(['sudo', '-n', 'podman', 'rm', '--force', identity], storage, timeout=15)
             require(not run(query, storage).strip())
+            owner['pending'] = False
         except Exception:
             failures.append('container_cleanup')
+    if manifest.exists():
+        write_owners(storage, owners)
     require(not failures)
 
 
@@ -217,13 +284,12 @@ def expiry_control(storage, image, mounts, binding):
         ':/etc/ssh/probe_authorized_keys:ro', '--volume', str(storage / 'control_key') +
         ':/etc/ssh/probe_control_key:ro', '--volume', str(storage / 'control_known_hosts') +
         ':/etc/ssh/probe_control_known_hosts:ro']
-    name_options = reserve_container(storage, 'control')
     try:
-        identity = run(['sudo', '-n', 'podman', 'run', '-d', '--network=none',
+        identity = create_container(storage, 'control', ['-d', '--network=none',
             '--memory=256m', '--memory-swap=256m', '--cpus=1', '--pids-limit=128',
-            '--read-only', '--tmpfs', '/run:rw,nosuid,nodev,size=8m'] + control_mounts + name_options +
-            ['--env', 'PROBE_NONCE=' + binding['nonce'], image,
-             'timeout', '--signal=KILL', '8', 'python3', '/opt/probe/service.py'], storage).decode().strip()
+            '--read-only', '--tmpfs', '/run:rw,nosuid,nodev,size=8m'] + control_mounts +
+            ['--env', 'PROBE_NONCE=' + binding['nonce']], image,
+            ['timeout', '--signal=KILL', '8', 'python3', '/opt/probe/service.py']).decode().strip()
         require(re.fullmatch(r'[0-9a-f]{64}', identity))
         command = ['sudo', '-n', 'podman', 'exec', '-i', identity, 'timeout', '--signal=KILL', '3',
             'ssh', '-F', 'none', '-T', '-i', '/etc/ssh/probe_control_key', '-p', '2222',
@@ -273,18 +339,21 @@ def serve(storage):
     engine = ['sudo', '-n', 'podman']
     admit_mount_ownership(storage)
     (storage / 'stage').write_text('image')
-    image = run(engine + ['build', '--quiet', '--memory=1g', '--cpu-period=100000',
+    image_id = storage / 'image-id'
+    require(not image_id.exists())
+    output = run(engine + ['build', '--quiet', '--iidfile', str(image_id), '--memory=1g', '--cpu-period=100000',
         '--cpu-quota=100000', '-f', str(Path(__file__).with_name('Containerfile')),
-        str(Path(__file__).parent)], storage, timeout=240).decode().strip()
+        str(Path(__file__).parent)], storage, timeout=240)
+    (storage / 'image-build.log').write_bytes(output)
+    image = run(['sudo', '-n', 'cat', str(image_id)], storage).decode().strip()
     require(re.fullmatch(r'(sha256:)?[0-9a-f]{64}', image))
     # Effective policy is checked before the container publishes a host port.
     (storage / 'stage').write_text('policy')
     mounts = ['--volume', str(storage / 'host_key') + ':/etc/ssh/probe_host_key:ro',
               '--volume', str(storage / 'authorized_keys') + ':/etc/ssh/probe_authorized_keys:ro']
-    policy_options = reserve_container(storage, 'policy')
-    policy = run(engine + ['run', '--rm', '--network=none', '--read-only',
-                 '--memory=256m', '--memory-swap=256m', '--cpus=1', '--pids-limit=128'] + mounts + policy_options +
-                 [image, '/usr/sbin/sshd', '-T', '-f', '/etc/ssh/probe_config'], storage)
+    policy = create_container(storage, 'policy', ['--rm', '--network=none', '--read-only',
+                 '--memory=256m', '--memory-swap=256m', '--cpus=1', '--pids-limit=128'] + mounts,
+                 image, ['/usr/sbin/sshd', '-T', '-f', '/etc/ssh/probe_config'])
     (storage / 'effective-sshd.txt').write_bytes(policy)
     required = (b'passwordauthentication no', b'kbdinteractiveauthentication no',
                 b'allowtcpforwarding local', b'maxsessions 0',
@@ -292,7 +361,6 @@ def serve(storage):
     require(all(line in policy.splitlines() for line in required))
     (storage / 'stage').write_text('expiry-control')
     expiry_control(storage, image, mounts, binding)
-    name_options = reserve_container(storage, 'live')
     container = None
     started = time.monotonic()
     deadline = int(time.time()) + LEASE
@@ -300,11 +368,11 @@ def serve(storage):
                   container_removed=False, residual_check=False)
     try:
         (storage / 'stage').write_text('listener')
-        container = run(engine + ['run', '--detach', '--read-only',
+        container = create_container(storage, 'live', ['--detach', '--read-only',
             '--memory=256m', '--memory-swap=256m', '--cpus=1', '--pids-limit=128',
             '--tmpfs', '/run:rw,nosuid,nodev,size=8m',
-            '--publish', '0.0.0.0:' + str(PORT) + ':2222'] + mounts + name_options +
-            ['--env', 'PROBE_NONCE=' + binding['nonce'], image], storage).decode().strip()
+            '--publish', '0.0.0.0:' + str(PORT) + ':2222'] + mounts +
+            ['--env', 'PROBE_NONCE=' + binding['nonce']], image).decode().strip()
         require(re.fullmatch(r'[0-9a-f]{64}', container))
         result['container_started'] = True
         # Inspect only our owned container; no address or inspection output enters logs.
@@ -359,7 +427,7 @@ def cleanup(storage):
     """Job-finally fallback; only a recorded container and this run's named artifacts."""
     failures = []
     try:
-        remove_containers(storage)
+        close_and_remove_containers(storage)
     except Exception:
         failures.append('container_cleanup')
     try:

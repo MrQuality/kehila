@@ -55,6 +55,11 @@ guarantee is made that downloaded ciphertext copies can be retracted. A permanen
 return channel remains a design question. Cleanup also removes only the owned
 containers, tags, variables and secret, and deletes local private keys. Raw
 addresses, keys and diagnostics stay outside the checkout and public output.
+Final cleanup permanently closes container admission and serializes removal with
+in-flight creation, so delayed setup cannot create another listener after final
+absence is reported. A lost engine-create response with no observed resource
+remains an explicit cleanup uncertainty; an empty container query alone cannot
+prove the request will never complete. Artifact deletion remains independent.
 
 The base image is digest-pinned; distro OpenSSH packages are resolved at build
 time. This is a limitation of the research fixture, not a locked dependency or

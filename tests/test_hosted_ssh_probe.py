@@ -9,6 +9,7 @@ import unittest
 import zipfile
 import tempfile
 import subprocess
+import threading
 from unittest.mock import patch
 
 SPEC = importlib.util.spec_from_file_location('hosted_ssh_probe',
@@ -103,14 +104,14 @@ class ProbeContractTests(unittest.TestCase):
         self.assertEqual(probe.envelope_from_archive(raw, digest, 'control.der'), b'opaque')
 
     def test_artifact_deletion_survives_container_cleanup_failure(self):
-        with patch.object(probe, 'remove_containers', side_effect=RuntimeError), \
+        with patch.object(probe, 'close_and_remove_containers', side_effect=RuntimeError), \
                 patch.object(probe, 'delete_artifacts') as delete, \
                 patch('builtins.print'), self.assertRaises(ValueError):
             probe.cleanup(Path('synthetic'))
         delete.assert_called_once_with()
 
     def test_both_cleanup_failures_remain_failure(self):
-        with patch.object(probe, 'remove_containers') as remove, \
+        with patch.object(probe, 'close_and_remove_containers') as remove, \
                 patch.object(probe, 'delete_artifacts', side_effect=RuntimeError), \
                 patch('builtins.print'), self.assertRaises(ValueError):
             probe.cleanup(Path('synthetic'))
@@ -141,15 +142,20 @@ class ProbeContractTests(unittest.TestCase):
             (storage / 'binding.json').write_text(json.dumps(binding))
             def engine(command, *_args, **_kwargs):
                 if 'build' in command:
+                    return b'build progress is not image identity'
+                if 'cat' in command:
                     return b'a' * 64
-                if '/usr/sbin/sshd' in command:
+                raise RuntimeError('unexpected engine command')
+            def create(_storage, suffix, *_args):
+                self.assertEqual(_args[1], 'a' * 64)
+                if suffix == 'policy':
                     return (b'passwordauthentication no\nkbdinteractiveauthentication no\n'
                             b'allowtcpforwarding local\nmaxsessions 0\n'
                             b'permitopen 127.0.0.1:31337\npermitlisten none\n')
-                raise subprocess.TimeoutExpired(command, 30)
+                raise subprocess.TimeoutExpired(['synthetic'], 30)
             with patch.object(probe, 'source_binding', return_value=binding), \
                     patch.object(probe, 'candidate_address', return_value='8.8.8.8'), \
-                    patch.object(probe, 'reserve_container', return_value=[]), \
+                    patch.object(probe, 'create_container', side_effect=create), \
                     patch.object(probe, 'admit_mount_ownership'), \
                     patch.object(probe, 'expiry_control'), \
                     patch.object(probe, 'run', side_effect=engine), \
@@ -161,6 +167,67 @@ class ProbeContractTests(unittest.TestCase):
             self.assertEqual(result['failure_stage'], 'listener')
             self.assertEqual(result['failure_class'], 'TimeoutExpired')
             self.assertFalse(result['owner_succeeded'])
+
+    def test_cleanup_during_image_preparation_closes_future_creation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            storage = Path(temporary)
+            binding = self.expected()
+            (storage / 'binding.json').write_text(json.dumps(binding))
+            entered, resume = threading.Event(), threading.Event()
+            late_creates, errors = [], []
+            def engine(command, *_args, **_kwargs):
+                if 'build' in command:
+                    entered.set()
+                    if not resume.wait(2):
+                        raise TimeoutError('test synchronization failed')
+                    return b'a' * 64
+                if 'cat' in command:
+                    return b'a' * 64
+                if '/usr/sbin/sshd' in command:
+                    return (b'passwordauthentication no\nkbdinteractiveauthentication no\n'
+                            b'allowtcpforwarding local\nmaxsessions 0\n'
+                            b'permitopen 127.0.0.1:31337\npermitlisten none\n')
+                if '--detach' in command:
+                    late_creates.append(command)
+                    raise RuntimeError('late listener creation')
+                return b''
+            def owner():
+                try:
+                    probe.serve(storage)
+                except Exception as error:
+                    errors.append(type(error).__name__)
+            with patch.object(probe, 'source_binding', return_value=binding), \
+                    patch.object(probe, 'candidate_address', return_value='8.8.8.8'), \
+                    patch.object(probe, 'admit_mount_ownership'), \
+                    patch.object(probe, 'expiry_control'), \
+                    patch.object(probe, 'run', side_effect=engine), \
+                    patch.object(probe, 'remove_containers'), \
+                    patch.object(probe, 'delete_artifacts'), patch('builtins.print'):
+                worker = threading.Thread(target=owner)
+                worker.start()
+                try:
+                    self.assertTrue(entered.wait(2))
+                    probe.cleanup(storage)
+                finally:
+                    resume.set()
+                    worker.join(3)
+                self.assertFalse(worker.is_alive())
+            self.assertEqual(late_creates, [])
+            self.assertEqual(errors, ['ValueError'])
+
+    def test_unacknowledged_unobserved_creation_cannot_be_claimed_absent(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            storage = Path(temporary)
+            (storage / 'binding.json').write_text(json.dumps(self.expected()))
+            def engine(command, *_args, **_kwargs):
+                if command[3] == 'ps':
+                    return b''
+                raise subprocess.TimeoutExpired(command, 30)
+            with patch.object(probe, 'run', side_effect=engine), self.assertRaises(subprocess.TimeoutExpired):
+                probe.create_container(storage, 'live', [], 'a' * 64)
+            with patch.object(probe, 'run', return_value=b''), self.assertRaises(ValueError):
+                probe.close_and_remove_containers(storage)
+            self.assertTrue((storage / 'admission.closed').exists())
 
 
 
