@@ -28,6 +28,13 @@ or the underlying confinement and lifecycle obligations. A specific private
 native Linux temporary-storage boundary was separately approved for the bounded
 WSL socket/browser probes; no trust, mount or system security change follows.
 
+The maintainer later requested both brokerless SSH connection directions to
+evaluate hosting and maintenance savings. The
+[direct comparison](../implementation/hosted-testbench-direct-ssh.md) supersedes
+broker-first priority, not the historical R13 observations or live-use gates.
+Dynamic discovery is evaluated separately from public reachability; a hostname
+does not make a private or VPN exit address an incoming endpoint.
+
 One research record groups the six coupled questions; the labels below preserve
 their original scope. The separate future exact-staged-tree gate migration is
 excluded. Prototype code is research-only and must not become production or a
@@ -654,13 +661,55 @@ Windows/WSL SSH client, hosted runner connection, broker provider, authenticated
 source/recipient bootstrap, absolute deadline, partition or product TLS was
 qualified. Reuse only within these version/configuration/case boundaries.
 
+### SP-007-R14: brokerless reachability and discovery assessment, 2026-11-04
+
+Research baseline `c1ddaaf674c4a616e0b916801973adf615dc8403`. The maintainer
+requested evaluation of local-to-runner and runner-to-local SSH to avoid rented
+broker cost and operation. Primary-source inspection and an independent
+request-first challenge supported comparing both without presuming either path
+reachable, cheaper overall or selected. The
+[comparison](../implementation/hosted-testbench-direct-ssh.md) records topology,
+restriction/lifetime ownership, conditional costs, risks and proposed probes.
+
+For direct local forwarding, the runner SSH server opens the ultimate application
+destination and can enforce an exact `PermitOpen`, unlike the client-side reverse
+destination in R13. This removes that specific substitution mechanism, not source
+admission, local ownership, strict TLS or lifecycle requirements. GitHub's
+published outbound IP information, guest sudo and larger-runner static-IP feature
+do not establish a per-job public ingress mapping. Standard-runner ingress remains
+unestablished; neither search absence nor an unexecuted probe proves impossibility.
+
+For runner-initiated reverse forwarding, a real incoming route to the local
+receiver is still needed. ISP public IPv4/mapping, compatible IPv6 and VPN-provider
+incoming forwarding are distinct possibilities. Ordinary router rules alone do
+not establish carrier-NAT or provider ingress. R13's reverse-destination and
+endpoint-reuse counterexamples remain relevant; another SSH connection direction
+does not silently qualify their mitigations.
+
+Dynamic DNS provides a stable name, not a static address, incoming mapping or
+active TCP migration. The admitted mapping includes port, host identity, run/
+attempt and lifetime. A short per-session descriptor is a proposed alternative
+to a persistent updater, with its own still-unqualified authenticity, recipient,
+privacy and replay contract. Free DNS can also carry maintenance: the inspected
+No-IP free-hostname policy requires 30-day confirmation. Ordinary web proxying
+or a relay is not the same as DNS-only access, even when SSH uses port 443.
+
+This was an Assessment checkpoint, not runtime qualification. No SSH server,
+internet-facing listener, hosted probe, router/firewall/VPN/DNS setting or paid
+resource was created. No memory-heavy workload was needed. Deployment-specific
+network information stays outside public records. Actual cost, incoming route,
+source/host binding and lifetime remain unresolved. Next: admit an exact short
+canary probe and confidential endpoint exchange, then test only its selected
+address/port and preserve the actual result. A timeout cannot by itself locate
+an upstream block, and a single pass cannot establish all runner/provider paths.
+
 ### Current case disposition and next observations
 
 | Scope | Evidence / status | Next decisive observation |
 | --- | --- | --- |
 | A1/A2 Current hosted fixture capacity | Passed R02 with stated measurement limits | Reuse within this source/tool/workload boundary; actual remote session remains separate |
-| B1 Transport mechanism | R03 historical tsnet build; R10 SSH source comparison and R13 contained policy/byte-forwarding support | Qualify the selected actual Windows/WSL clients and broker/runner deployment |
-| B2 Live isolation | R13 allowed path/12 denials and two gap counterexamples observed; actual broker/runner/session boundaries unqualified | Demonstrate independent runner destination restriction, broker isolation and teardown/non-reuse before live admission |
+| B1 Transport mechanism | R03 historical tsnet build; R13 contained policy/forwarding; R14 both brokerless directions source-assessed | Establish incoming reachability and qualify the actual Windows/WSL client/runner deployment |
+| B2 Live isolation | R13 allowed path/12 denials and two gap counterexamples; R14 direct/reverse enforcement distinction; actual boundaries unqualified | Qualify exact server/runner destination restriction, local/session isolation and teardown/non-reuse for the selected direction |
 | C1 Confidential bootstrap | R09 attempt-bound protected-environment protocol proposed; no actual channel qualified | Admit workflow/protection/release fixture; demonstrate provider ordering, wrong-run/rerun/duplicate-consumer rejection and interruption cleanup with harmless canaries before credentials |
 | D1 Lifetime enforcement | R09 overlay candidate retained; R10 local/broker/runner SSH owners proposed; runtime behavior unqualified | Prove active-stream cutoff separately from key expiry and runner/backend death; disposition outage residuals |
 | E1 Stock browsers | R05/R07 Windows admission failed and R11 reproduced the observation gap without a driver; R06 WSL Firefox and R12 WSL Chrome owned-listener/DOM passed; TLS remains unqualified | Preserve Windows stop; qualify the separately admitted trust/TLS/product cases after transport and lifecycle harness readiness |
@@ -777,6 +826,22 @@ not another repetition of the passing mechanism cases. Provider purchase and
 trust remain maintainer decisions. Keep a server-side witness where generic
 client failures would otherwise be misclassified; revalidate affected controls
 on version, policy, namespace or owner changes.
+
+R14 corrected another proposed-mechanism assumption: SSH's software price did
+not require rented broker infrastructure. The new comparison evaluates the
+maintainer's requested alternatives before any purchase, while retaining their
+reachability and operating costs as unknowns. Direct local forwarding also moves
+destination enforcement to the server, so broker reverse-forward conclusions
+must not be copied onto it without inspecting that changed boundary. This is a
+source-backed design distinction, not executed runner connectivity or a measured
+maintenance saving. Research/review effort is unmeasured.
+
+Next owned follow-up is now the exact brokerless reachability/admission probe,
+followed by the appropriate isolation/lifetime controls rather than another
+passing broker-mechanism run. The operator prepares the bounded fixture and
+private metadata path; the maintainer retains specific public ingress, routing,
+security, trust and cost decisions. No broad network change is requested or
+inferred from research permission.
 
 ## Risks, review and reuse
 
