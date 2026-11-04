@@ -23,6 +23,12 @@ selection. Software price, public reachability and total maintenance are separat
 questions. The historical broker/overlay owner maps are not requirements to buy
 infrastructure or evidence that either direct path is qualified.
 
+The maintainer also requested [Modal/E2B hosted frontend research](hosted-testbench-frontend.md)
+to reduce client-side memory demand. That assessment distinguishes recurring
+credits from a one-time trial, headless Linux automation from an interactive
+workstation, and browser hosting from a qualified backend channel. It proposes
+no provider adoption and does not replace Windows/WSL qualification.
+
 ## Research findings and evidence limits
 
 Research date: 2026-11-03. Repository source baseline:

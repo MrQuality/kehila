@@ -68,6 +68,12 @@ bounded final campaign where they establish behavior headless execution cannot.
 A local browser/WSL still consumes local RAM; backend offload is expected to
 reduce demand substantially, but its size is not yet measured.
 
+The subsequent [hosted frontend assessment](../implementation/hosted-testbench-frontend.md)
+evaluates Modal/E2B for additional Linux browser/harness offload. It is a
+conditional research alternative, with separate billing, data and connectivity
+gates. It does not accept a hosted-only replacement for the Windows/WSL matrix
+or port the experimental Windows CLI.
+
 ### Preserve the application authority through an opaque connection
 
 The maintainer selected SSH as the preferred research candidate on 2026-11-04.
