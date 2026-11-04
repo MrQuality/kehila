@@ -1,0 +1,17 @@
+{
+  "codec_version": 1,
+  "kind": "item_edit_result",
+  "value": {
+    "project": {
+      "id": "p", "name": "project", "prefix": "PR",
+      "configuration_revision": "1", "next_sequence": "2",
+      "archived": false, "estimate_unit": "hours", "ever_estimated": false
+    },
+    "item": {
+      "id": "i", "project_id": "p", "type_id": "task", "workflow_id": "wf",
+      "status_id": "new", "version": "2", "archived": false
+    },
+    "data": { "estimate": null, "values": [] },
+    "phase": "new"
+  }
+}

@@ -1,7 +1,7 @@
 # Native WorkItem delivery
 
-Status: Assessment; refinements and direct-edit recovery choice accepted;
-remaining capability/read-preparation architecture proposed in ADR-111 revision 3.
+Status: Implementation; ADR-111 revision 3 explicitly accepted on 2026-11-04 at
+`80db13c71d60fe9ea53784765c81644952774394`. Full capability and qualification pending.
 Baseline: `d6f8d3f563dbc8f9a242ec5abf779ab8e7142500`, 2026-11-04.
 Owners: M1-02/#27, operations #8, interface #10, authority #40 and storage #49.
 
@@ -36,13 +36,13 @@ permission is inferred from the goal.
 | Item creation and sparse editing have accepted domain rules | Established: B-003 seventh slice; `task_contract::item_mutation`, `project`, `operation`; D-021/023/032/033/034 | Reuse those rules; physical codecs/storage are missing. |
 | Current SQL/profile permits item writes | Contradicted: `operations.sql` creation-only slice guards; `access.sql`; authority `postgres/profile.sql` | Review explicit new capabilities and exact startup profile before implementation. |
 | Current project can still equal its creation snapshot after item writes | Contradicted: native `read.rs` compares the whole Project; create advances sequence and recording estimates changes its monotonic flag | Preserve immutable creation snapshots and stable metadata checks. Proposed ADR-111 revision 3 carries an attributed operational-state chain in permanent item revisions, with indexed head verification. |
-| ADR-107 authorizes recoverable item commands | Contradicted: it explicitly excludes generic drafts | ADR-111 proposes pending creation only. On 2026-11-04 the maintainer explicitly selected direct edits with retained client retry identity; no server-pending edit recovery is inferred. |
-| Every generated item result can be prepared before any database access | Unsupported: result depends on current item/configuration/project state | ADR-111 proposes a narrowly bounded read-preparation exception to ADR-104; no change to creation ingress. |
-| Existing owner profile defines item mutation grants | Unresolved: current serving mapping is creation/read-specific | Propose explicit Read/CreateItem/EditItem mapping with current-grant rechecks, retained scope and revocation fences. |
+| ADR-107 authorizes recoverable item commands | Contradicted: it explicitly excludes generic drafts | Accepted ADR-111 separately supplies pending item creation and the selected direct-edit scope; no server-pending edit recovery is inferred. |
+| Every generated item result can be prepared before any database access | Unsupported for the selected state-dependent approach | Accepted ADR-111 supplies narrowly bounded read preparation under ADR-104; project creation ingress is unchanged. |
+| Existing owner profile defines item mutation grants | Current SQL profile is creation/read-specific; new mapping accepted in ADR-111 | Implement Read/CreateItem/EditItem with current-grant rechecks, retained scope and revocation fences in the reviewed schema/adapter packet. |
 | This goal establishes supported real-data safety | Contradicted: Q-020 and existing qualification limits | Verify this synthetic slice; retain supported backup/restore/install gates. |
 
-The first implementation depends on disposition of
-[ADR-111](../architecture/ADR-111-native-work-items.md). Accepted ADR-103/105/107
+Implementation follows accepted
+[ADR-111 revision 3](../architecture/ADR-111-native-work-items.md). Accepted ADR-103/105/107
 are reused within scope; Proposed ADR-108/109 are not silently adopted.
 
 ## Completion criteria
@@ -104,7 +104,7 @@ not substitute for final exact-head composition review.
 
 | Failure mechanism | Evidence / confidence / likelihood | Impact / priority | Control and next observation | Residual owner / invalidation |
 | --- | --- | --- | --- | --- |
-| Lost response allocates a second item or repeats an edit | Full target is part of accepted scoped operation key; mechanism risk is high confidence, frequency unknown | High / before routes | Immutable creation request or retained exact direct-edit request, original scoped token, atomic successful binding, reconciliation and response-loss barriers | Maintainer accepts remaining ADR-111 scope; revisit on identity/lifecycle changes. |
+| Lost response allocates a second item or repeats an edit | Full target is part of accepted scoped operation key; mechanism risk is high confidence, frequency unknown | High / before routes | Immutable creation request or retained exact direct-edit request, original scoped token, atomic successful binding, reconciliation and response-loss barriers | Author implements accepted ADR-111; review and revalidate on identity/lifecycle changes. |
 | Serving gains arbitrary project/item/auth mutation | Current profile explicitly forbids updates; widening is a confirmed boundary change | High / before SQL adoption | Narrow fixed functions, guarded transitions and exact effective-privilege negatives; no broad UPDATE grant | Maintainer; function owners/signatures or role changes invalidate review. |
 | New item breaks project read or rewrites creation history | Existing full Project equality is inspected source evidence | High / before adapter | Separate current mutation evidence from immutable creation/configuration snapshots; read-after-create/edit and old replay controls | Author/reviewer; current/history reconstruction changes. |
 | Concurrent create/edit/configuration state loses allocation or history | Pure rules require coherent project/configuration/item commit; actual new protocol untested | High / before native routes | Explicit fence order, lock waits and post-wait reads; independent SQL cardinality/history checks | Author; future config writers must join protocol before exposure. |
@@ -126,6 +126,55 @@ not substitute for final exact-head composition review.
 | Regression/delivery | Existing creation/auth modes and relevant shared checks; required staged/CI gates, exact-head review and retained failed attempts. |
 
 ## Assessment record
+
+### First codec component: implementation preparation
+
+The pure `work_item_codec` candidate implements distinct version-one canonical
+create/edit requests, saved results and permanent revision envelopes. It preserves
+scope, ordered sparse actions, exact numeric strings and all typed field values.
+Shared composition reuses the existing raw parser, bounded record writer and
+version-one Project mapping. Canonical request keys are sorted explicitly,
+independently of serde_json map features. The lockfile adds only the local crate;
+no external package versions change.
+
+SQL composition review then found that the candidate history JSON duplicated a
+fresh database-assigned operation ID that is unavailable before write admission.
+The unpublished representation is corrected: the relational revision row owns
+that ID, while the pre-admitted payload keeps actor, configuration, predecessor,
+operational version and accepted result. Reload must verify full relational
+attribution. Write-entry dependency comparison includes operational head identity,
+even when another item's edit leaves sequence/estimate values unchanged.
+The earlier staged candidate is not eligible for execution; capture and review a
+new exact tree after this source correction. No qualifying run had used it.
+
+Component source review identified missing independent result/history fixtures;
+those fixtures and a revision aggregate-boundary control were added and reviewed.
+This is source evidence, not executed qualification. A verification-matrix
+regression first failed because the new crate was omitted from the pure command,
+then passed after selection was corrected; it uses command doubles only.
+
+Initial Rust component diagnostics mistakenly ran on the host, outside the
+required container lane. They are not compliant gate evidence. They retained
+expected unimplemented request/history failures, a cache-resolution stop, a
+compile error, a lint failure and later diagnostic passes separately. The final
+new fixture cases and required containerized gate remain unexecuted. No schema,
+serving route, native WorkItem transaction or browser behavior is qualified.
+
+### Implementation authority, 2026-11-04
+
+The maintainer explicitly accepted ADR-111 revision 3 at `80db13c` and directed
+implementation. This settles the pending item-creation, grants/capabilities,
+operational-witness and ADR-104 amendment decision; do not repeat that approval.
+It does not authorize merging or new runtime/trust changes. Exact representation,
+SQL/capability and harness reviews and required verification remain.
+
+The first implementation packet owns pure WorkItem create/edit request and saved
+result/history representations. It reuses domain rules, frozen Project mapping,
+original-byte JSON admission and existing locked dependencies. New representations
+must preserve exact ordered command content, expected versions, scoped targets,
+historical reconstruction and native byte/NUL/JSONB expansion bounds. No serving
+route or schema capability is introduced by that packet. Later packets retain
+the original full goal and regression/qualification matrix above.
 
 ### Revision 3 direction, 2026-11-04
 

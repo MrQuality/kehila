@@ -7,13 +7,24 @@ use task_contract::project_create::ProjectCreateResult;
 use task_contract::work_item::Configuration;
 
 #[derive(Default)]
-struct Budget {
+/// Aggregate typed-data preflight before constructing a storage-record tree.
+/// Final shape/output checks remain necessary, as do caller domain/SQL checks.
+pub struct RecordBudget {
     strings: usize,
     entries: usize,
     native: bool,
 }
-impl Budget {
-    fn text(&mut self, value: &str) -> Result<(), Error> {
+type Budget = RecordBudget;
+impl RecordBudget {
+    /// Typed preflight before constructing a new native record tree.
+    pub fn native() -> Self {
+        Self {
+            native: true,
+            ..Self::default()
+        }
+    }
+    /// Checks one borrowed string without allocating its encoded representation.
+    pub fn text(&mut self, value: &str) -> Result<(), Error> {
         if self.native && value.contains('\0') {
             return Err(Error::InvalidNativeSnapshot("JSONB cannot store NUL"));
         }
@@ -26,15 +37,19 @@ impl Budget {
         }
         Ok(())
     }
-    fn collection<T>(&mut self, values: &[T]) -> Result<(), Error> {
+    /// Checks collection size before iterating or cloning caller-owned entries.
+    pub fn collection_length(&mut self, length: usize) -> Result<(), Error> {
         self.entries = self
             .entries
-            .checked_add(values.len())
+            .checked_add(length)
             .ok_or(Error::LimitExceeded)?;
-        if values.len() > MAX_COLLECTION_ENTRIES || self.entries > MAX_NODES {
+        if length > MAX_COLLECTION_ENTRIES || self.entries > MAX_NODES {
             return Err(Error::LimitExceeded);
         }
         Ok(())
+    }
+    fn collection<T>(&mut self, values: &[T]) -> Result<(), Error> {
+        self.collection_length(values.len())
     }
     fn project(&mut self, p: &Project) -> Result<(), Error> {
         self.text(&p.id.0)?;
@@ -170,6 +185,73 @@ fn shape(value: &Value, depth: usize, nodes: &mut usize, spaces: &mut usize) -> 
 struct Record {
     bytes: Vec<u8>,
     limit: usize,
+}
+
+pub(crate) fn canonical(value: &Value, native: bool) -> Result<Vec<u8>, Error> {
+    use serde::ser::{SerializeMap, SerializeSeq};
+    struct Sorted<'a>(&'a Value);
+    impl serde::Serialize for Sorted<'_> {
+        fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            match self.0 {
+                Value::Object(object) => {
+                    let mut keys = object.keys().collect::<Vec<_>>();
+                    keys.sort_unstable();
+                    let mut output = serializer.serialize_map(Some(keys.len()))?;
+                    for key in keys {
+                        output.serialize_entry(key, &Sorted(&object[key]))?;
+                    }
+                    output.end()
+                }
+                Value::Array(array) => {
+                    let mut output = serializer.serialize_seq(Some(array.len()))?;
+                    for value in array {
+                        output.serialize_element(&Sorted(value))?;
+                    }
+                    output.end()
+                }
+                scalar => serde::Serialize::serialize(scalar, serializer),
+            }
+        }
+    }
+    fn text(value: &Value, budget: &mut RecordBudget) -> Result<(), Error> {
+        match value {
+            Value::String(s) => budget.text(s),
+            Value::Array(values) => {
+                for value in values {
+                    text(value, budget)?;
+                }
+                Ok(())
+            }
+            Value::Object(values) => {
+                for (key, value) in values {
+                    budget.text(key)?;
+                    text(value, budget)?;
+                }
+                Ok(())
+            }
+            Value::Number(n) if !n.is_i64() && !n.is_u64() => {
+                Err(Error::Malformed("record requires integer JSON scalars"))
+            }
+            _ => Ok(()),
+        }
+    }
+    let mut spaces = 0;
+    shape(value, 0, &mut 0, &mut spaces)?;
+    text(
+        value,
+        &mut RecordBudget {
+            native,
+            ..RecordBudget::default()
+        },
+    )?;
+    let mut record = Record {
+        bytes: Vec::new(),
+        limit: MAX_RECORD_BYTES
+            .checked_sub(if native { spaces } else { 0 })
+            .ok_or(Error::LimitExceeded)?,
+    };
+    serde_json::to_writer(&mut record, &Sorted(value)).map_err(|_| Error::LimitExceeded)?;
+    Ok(record.bytes)
 }
 impl std::io::Write for Record {
     fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {

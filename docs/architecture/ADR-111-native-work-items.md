@@ -1,11 +1,13 @@
 # ADR-111 - Native WorkItem commands and persistence
 
-Status: Proposed, revision 3. Owner: project maintainer. Created: 2026-11-04.
-Authority: on 2026-11-04 the maintainer accepted the proposal-refinement
-recommendations and explicitly selected direct edit saves with retained client
-retry identity. Pending item creation, item grants/capabilities, the operational
-witness and read-preparation amendment remain proposed; these product/refinement
-decisions do not accept that bundle implicitly.
+Status: Accepted, decision revision 3. Owner: project maintainer. Created: 2026-11-04.
+Acceptance: on 2026-11-04 the maintainer explicitly accepted revision 3 at
+`80db13c71d60fe9ea53784765c81644952774394` for implementation, including pending
+ItemCreate recovery, item grants/capabilities, the attributed operational-state
+witness and the scoped ADR-104 read-preparation amendment. Direct edits with
+retained client retry identity were separately selected that day. The decision
+does not authorize merging, new runtime/trust changes or qualification claims.
+Exact SQL, codecs and harness retain implementation review and evidence gates.
 Related: R-001/002/006; D-019/021/023/032/033/034/037; B-003/004/005/006/007;
 [#27](https://github.com/MrQuality/kehila/issues/27),
 [#40](https://github.com/MrQuality/kehila/issues/40),
@@ -26,11 +28,11 @@ project creation codecs and ADR-107 behavior stay unchanged. ADR-108 upgrade and
 ADR-109 delivery designs remain Proposed; no events or populated upgrades enter
 this outcome. The exact SQL, codecs and harness need review after this decision.
 
-## Proposed decision
+## Decision
 
 ### 1. Creation recovery and direct idempotent editing
 
-Propose an owner/project-scoped pending command lifecycle limited to ItemCreate.
+Use an owner/project-scoped pending command lifecycle limited to ItemCreate.
 It is a separate product contract, not implicit adoption of generic drafts under
 ADR-107. Save a creation command before explicit execution. Registration
 commits immutable versioned content and independently generated 128-bit public
@@ -121,7 +123,7 @@ original request deadline; no new independent queue/pool or multi-owner promise.
 
 ### 3. Two-stage admission for state-dependent results
 
-Propose a narrow amendment to ADR-104 Contract 1 for these two WorkItem families.
+Apply the accepted narrow ADR-104 Contract 1 amendment to these two WorkItem families.
 Its original-byte byte/string/depth/node/collection/duplicate checks remain
 mandatory before any database admission or application scheduling. Authentication,
 CSRF/origin and closed endpoint shape remain independent controls.
@@ -153,7 +155,8 @@ uses historical codecs and never needs current-domain preparation. On write
 entry, reauthorize and look up completed identity before mutable comparisons;
 compare the complete trusted dependency set to fresh protected state. A changed
 configuration or item version conflicts. Changes to allocation/estimate project
-state (`next_sequence` or monotonic `ever_estimated`) require full
+state (operational head version/operation, `next_sequence` or monotonic
+`ever_estimated`) require full
 rollback, fresh bounded preparation and full lookup reentry under the same
 immutable command identity and deadline; never continue a failed transaction.
 No arbitrary unlimited retry or automatic semantic rebase is permitted.
@@ -176,7 +179,8 @@ Creation-only routes retain their existing pre-database generated-envelope
 admission. The exception permits only bounded read preparation for item commands;
 generated overflow must still produce zero mutation/write-transaction admission.
 Raw malformed/oversized ingress must produce zero database admission of any kind.
-This boundary change requires explicit maintainer acceptance before implementation.
+The explicit revision-three acceptance above authorizes this bounded change;
+it supplies no runtime qualification or permission to broaden the exception.
 
 ### 4. Fresh storage and capability evolution
 
@@ -223,7 +227,7 @@ review must specify which aggregate/head attribution and constraints establish
 this agreement and the corruption cases they can detect; a cached value alone
 is insufficient evidence of agreement.
 
-#### Proposed bounded operational-state witness
+#### Bounded operational-state witness
 
 Carry the project operational-state chain in the already required permanent item
 revisions, rather than add a separate copy of item history or infer historical
@@ -233,6 +237,11 @@ records project-local operational state version, previous state operation,
 resulting next_sequence and ever_estimated. The current Project holds a checked
 state version/head operation reference. Head advancement and the item revision/
 operation commit in the same transaction.
+Own the fresh database-assigned operation ID in the relational revision row.
+The pre-admitted history payload contains only fields computable from the
+authorized preparation snapshot and command; reload verifies its duplicated
+actor/configuration/head facts against relational attribution. Do not reserve an
+operation ID during read preparation or rewrite admitted JSON after insertion.
 
 Transition guards verify the previous state is the locked current head. Creation
 increments next_sequence exactly once and binds the issued number to its item;
