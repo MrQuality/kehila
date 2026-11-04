@@ -71,9 +71,11 @@ reduce demand substantially, but its size is not yet measured.
 ### Preserve the application authority through an opaque connection
 
 The maintainer selected SSH as the preferred research candidate on 2026-11-04.
-Investigate restricted OpenSSH forwarding through a reachable broker first;
-the [SSH investigation](../implementation/hosted-testbench-ssh.md) specifies
-restriction gaps, cost estimates and decisive experiments. Prior tsnet build
+The later [brokerless investigation](../implementation/hosted-testbench-direct-ssh.md)
+evaluates direct local-to-runner and runner-to-local connections to reduce
+operated infrastructure and cost. A broker is a comparison, not an assumed
+requirement. The [SSH investigation](../implementation/hosted-testbench-ssh.md)
+retains observed restriction gaps and experiments. Prior tsnet build
 evidence remains historical comparison, not the current preferred direction.
 No broker/provider, live topology or automatic fallback is accepted here.
 
@@ -83,7 +85,7 @@ flowchart LR
     L[WSL Linux Chrome or Firefox] --> LL[WSL 127.0.0.1 P]
     WL --> C[Local connector for selected environment]
     LL --> C
-    C -->|Opaque application TLS through restricted SSH broker| R[Runner connector]
+    C -->|Opaque application TLS over selected SSH path| R[Runner-side transport]
     R -->|One fixed private IPv4 and port| A[Rust TLS authority in Podman]
     A --> D[Disposable PostgreSQL]
 ```
@@ -91,10 +93,12 @@ flowchart LR
 Windows and WSL paths run separately; the diagram does not imply shared loopback
 or simultaneous ownership of one port. The local connector binds only the exact
 loopback endpoint and attaches only to the authenticated session mapping. It
-opens no general SOCKS/HTTP proxy, remote shell or network control API. The runner
-initiates a reverse SSH forward toward a session-isolated broker. Its destination
-must be independently restricted to the inspected authority container address/
-port; broker listener restrictions alone cannot enforce that client-side target.
+opens no general SOCKS/HTTP proxy, remote shell or network control API. With a
+direct local forward, a runner SSH server opens and restricts the exact authority
+destination. With a runner-initiated reverse forward, the runner client opens
+that destination and requires independent confinement; local/broker listener
+restrictions alone cannot enforce the client-side target. Reachability and
+ingress acceptance remain distinct for each direction.
 No PostgreSQL, engine socket or arbitrary-destination reach is admitted. A
 TLS-terminating proxy would change the application endpoint and is excluded.
 
@@ -122,17 +126,18 @@ fresh admitted session parameters. Qualify Windows and WSL paths under the
 selected networking mode rather than requiring NAT and mirrored mode to behave
 identically.
 
-Use separate session-bound runner and client identities, narrowly restricted
-broker forwarding policy and a runner network boundary. Deny broker shell/
-command/subsystem access, generic forwarding and cross-session reach. Broker
-loopback alone does not isolate local processes or sessions. Preserve continuous
+Use session-bound identities, narrowly restricted server forwarding policy and
+an inspected destination boundary. Deny server shell/command/subsystem access,
+generic forwarding and cross-session reach. Loopback alone does not isolate
+local processes or sessions. Preserve continuous
 local endpoint ownership with an admission gate; stock SSH is not yet proven to
 inherit a prebound socket. Do not join the whole machine, install a system VPN,
 alter routes/DNS or expose public application ingress as an implicit consequence.
 
-SSH trades the proposed Go/overlay identity machinery for broker hosting,
-patching, host-key authentication and session enforcement. Cost, provider and
-trust remain separate decisions. If confinement or lifecycle cannot be supported,
+SSH replaces the proposed custom overlay transport with versioned SSH policy,
+host-key authentication and session enforcement. Brokerless paths may remove VM
+hosting while adding local ingress or per-job server operation; savings remain
+unmeasured. Cost, provider and trust remain separate decisions. If confinement or lifecycle cannot be supported,
 reconsider the topology; do not broaden access to obtain a pass.
 
 ### Own the session and its evidence
@@ -217,9 +222,10 @@ refines this budget for review: freeze the cutoff before arming completes, so
 readiness receives only the remaining allowance, at most 30 minutes. Clock bounds,
 producer binding, shared-provider failures and preparation exposure remain
 unqualified; this is not an accepted change or a hard remote-stop guarantee.
-For SSH, research local, broker and runner owners separately: broker stream
-termination cannot establish a partitioned runner's process death. SSH key expiry
-and keepalives do not establish the required active-session deadline.
+For SSH, map local and runner owners separately. A broker variant adds a possible
+independent network cutoff point; it still cannot establish a partitioned
+runner's process death. Brokerless paths must not inherit that independent owner
+claim. SSH key expiry and keepalives do not establish the active-session deadline.
 Allow one fresh attempt after diagnosis only through explicit operator choice.
 Discard interrupted fixtures; never automatically replay uncertain mutations.
 
@@ -278,7 +284,9 @@ or treating a browser-session pass as the full gate are rejected shortcuts.
 | --- | --- | --- |
 | Tailscale isolated connector | NAT traversal/relay support; no owned public broker; process-scoped API candidate | Vendor, quota, dependency and cross-platform proof costs; historical alternative, no automatic activation. |
 | Raw WireGuard | Small transport protocol; opaque TCP carried through tunnel | Needs a reachable endpoint or traversal infrastructure; keys/routes/relay operations remain. Retain if vendor dependency is rejected. |
-| OpenSSH forwarding through a broker | Mature forwarding; local loopback and application TLS can remain | Maintainer-preferred research candidate; broker operation, independent destination/session restriction, expiry enforcement and hosting cost remain. |
+| Direct local-to-runner SSH | No operated broker; runner server can enforce exact backend destination | Requested research candidate; standard hosted ingress is unestablished, not proved impossible. |
+| Runner-to-local SSH | No broker or runner ingress needed | Requested research candidate; local public ingress, VPN/ISP mapping, receiver operation and reverse-destination restriction remain. |
+| OpenSSH forwarding through a broker | Mature forwarding; local loopback and application TLS can remain | Comparison only; additional broker operation, independent destination/session restriction, expiry enforcement and hosting cost remain. |
 | Public web tunnel or Funnel | Convenient endpoint discovery | Public ingress and hostname/routing mismatch; TLS-terminating modes violate the selected endpoint. Raw TCP modes exist but do not establish compatible private access. Not selected. |
 | Hosted Linux browser beside backend | Simplest unattended integration, no local bridge | Does not qualify local Windows/WSL paths. Useful complementary lane. |
 | CLI/API only | Lower resource cost and good protocol controls | Misses browser runtime, DOM, cookie and interaction behavior. Complement only. |
@@ -314,9 +322,10 @@ The maintainer is asked to decide separately:
 
 1. Accept the proposed bounded hosted-backend/local-browser topology and stock
    Chrome/Firefox headless-first matrix, with headed cases separately qualified.
-2. SSH investigation is authorized and preferred. Separately select a concrete
-   broker/topology and accept its provider, operating responsibility, trust and
-   spending limit after the policy/lifetime research; no purchase is implied.
+2. SSH and both brokerless directions are authorized research. Separately select
+   a concrete topology and accept its exact ingress, operating responsibility,
+   trust, provider and any spending limit after reachability/policy/lifetime
+   research; no network/security change or purchase is implied.
 3. Accept the lifecycle invariants while requiring a concrete expiry/revocation
    mechanism and trust scope before any live connectivity. Exact issuer/store,
    deadlines, local helper execution and resource approvals remain separate.

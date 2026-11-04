@@ -17,6 +17,12 @@ their source/recipient, confinement and lifetime obligations still apply.
 No Tailscale account access is a prerequisite to independent SSH research, and
 neither transport may activate automatically. No provider has been selected.
 
+The subsequent [brokerless SSH comparison](hosted-testbench-direct-ssh.md)
+evaluates both connection directions and dynamic discovery before rented-broker
+selection. Software price, public reachability and total maintenance are separate
+questions. The historical broker/overlay owner maps are not requirements to buy
+infrastructure or evidence that either direct path is qualified.
+
 ## Research findings and evidence limits
 
 Research date: 2026-11-03. Repository source baseline:
@@ -70,7 +76,7 @@ overhead; no service-wide total bound follows from it.
 | Workflow admission | New separate session workflow; trusted workflow and reviewed immutable source; read-only repository token by default; no secrets in ordinary PR jobs. The existing `ci.yml` is not repurposed into a waiting server. |
 | Hosted fixture | New session lifecycle entry point adjacent to container verification; reuse protected startup/fixture primitives after review, not diagnostic production endpoints or imported experimental application code. Backend/database remain contained and isolated. |
 | Local connector | Test-only helper retains one bound loopback endpoint across dispatch and attachment, then forwards only after admission to one fixed peer destination. No generic proxy/control socket; independent build/dependency review. No production linking to tsnet is proposed. |
-| Runner connector | Raw byte-forwarding endpoint in its own restricted container/network boundary; fixed authority container address/port; no engine socket, host namespace, privileged mode or database forwarding. The SSH candidate initiates a restricted reverse forward and needs independent destination enforcement. |
+| Runner connector | Raw byte-forwarding endpoint in its own restricted container/network boundary; fixed authority container address/port; no engine socket, host namespace, privileged mode or database forwarding. Direct SSH uses runner-server destination enforcement; runner-initiated reverse SSH needs independent client-side destination confinement. |
 | Browser runner | Python WebDriver suite with pre-admitted browser/driver, loopback driver endpoint, fresh protected profile, separately qualified trust store, one worker and no automatic mutation retries. Windows and WSL emit separate results. |
 | Client storage | Separately specify profile, temporary state, diagnostic and trust locations/lifetimes. Admit actual OS ownership/permissions, locks, socket-path limits and cleanup; Windows ACL protection alone does not establish POSIX semantics. New storage boundaries require approval. |
 | Secret delivery | Select authenticated sender/recipient and confidential transit/storage bound to the session and run attempt; reject replay/cross-session delivery and reconcile interruption/cleanup. No secret dispatch input or public artifact; issuer signing key stays outside the transfer. |

@@ -11,8 +11,11 @@ remote session or gate replacement is accepted by this document.
 
 Keep the backend on a GitHub-hosted Linux runner in Podman while actual Windows
 and WSL stock browsers use the existing strict HTTPS application endpoint.
-Research a restricted OpenSSH broker first. Retain tsnet build results as
-historical comparison evidence; do not activate either transport automatically.
+The maintainer subsequently requested both
+[brokerless connection directions](hosted-testbench-direct-ssh.md) to evaluate
+lower maintenance and cost. Investigate those before selecting rented broker
+infrastructure. Retain the broker laboratory and tsnet build results as
+comparison evidence; no topology or transport fallback activates automatically.
 
 Base revision: `1ff992c572f8f9abfe0607d4838b95f45514b197`. Primary sources below
 were inspected on 2026-11-04. Local version inventory found Windows OpenSSH
@@ -31,13 +34,14 @@ No external SSH connection, network partition or deadline-expiry test ran.
 | Removing custom tsnet code removes lifecycle machinery | Unsupported. Endpoint reservation, admission, deadlines, ownership and cleanup still require a coordinator. |
 | Hosted compute makes the whole bench free | Unsupported. Broker hosting, transfer, administration and trust remain separate costs. |
 
-Recommendation: retain SSH as the preferred candidate after the first policy
-laboratory. Its observed gaps require independent runner destination restriction,
-broker session isolation and teardown before endpoint reuse. Qualify those
-mitigations before live access. Prefer a small dedicated broker with one admitted
-session at a time initially. That is an operator simplicity proposal, not
-permission to trust other local broker workloads or weaken isolation. A provider
-purchase is premature until restriction and lifetime tests support this design.
+Recommendation: retain SSH as the preferred transport candidate while comparing
+both direct directions. Direct `-L` can move exact destination enforcement to
+the runner server; runner-initiated `-R` retains the destination restriction gap.
+The broker laboratory's isolation/reuse findings remain valid within its scope,
+but a broker is no longer the assumed next deployment. If one is reconsidered,
+one admitted session at a time is an operator simplicity proposal, not permission
+to trust unrelated local processes. Qualify each selected topology's admission,
+destination, session and lifetime boundaries before live access or purchase.
 
 The laboratory's permitted byte-forwarding path and 12 policy rejections passed.
 It also demonstrated that changing the reverse destination remained possible
@@ -48,7 +52,11 @@ absolute deadline or compromised/partitioned-owner behavior was tested. All
 peers shared one isolated container, so these observations do not qualify the
 actual Windows/WSL clients, cross-namespace isolation or a hosted broker.
 
-## Candidate topology and boundaries
+## Broker candidate topology and boundaries
+
+This retains the topology exercised by R13, not a selected deployment. The
+direct/reverse alternatives and their different enforcement points are in the
+linked brokerless comparison.
 
 ```mermaid
 flowchart LR
@@ -118,7 +126,11 @@ bytes and that a failed attempt cannot attach to another fixture. Releasing a
 reserved port so `ssh -L` can bind it recreates the race; do not call it continuous
 ownership. No inheritance of a prebound socket by stock SSH is established here.
 
-## Bootstrap, deadlines and failure ownership
+## Broker bootstrap, deadlines and failure ownership
+
+This owner map describes the broker variant. The brokerless comparison maps
+its two owners and changed failure domains separately; it does not require a
+third server merely to retain this earlier mechanism proposal.
 
 The authenticated admission record must bind repository, immutable tested source
 and workflow revisions, run and attempt, session nonce, both role public keys,
@@ -170,9 +182,10 @@ by an aggregate preference score.
 
 | Option | Benefits | Costs and disadvantages | Complexity / disposition |
 | --- | --- | --- | --- |
-| Dedicated small SSH broker VM | Mature transport; no Tailscale enrollment or custom Go connector; independent network cutoff location | Internet-facing SSH needs patching, host-key lifecycle, isolation and supervision; an extra hop and paid infrastructure | Medium-high overall; preferred next laboratory target, not selected hosting |
+| Dedicated small SSH broker VM | Mature transport; no Tailscale enrollment or custom Go connector; independent network cutoff location | Internet-facing SSH needs patching, host-key lifecycle, isolation and supervision; an extra hop and paid infrastructure | Medium-high overall; comparison after brokerless evaluation, not selected hosting |
 | Existing suitable reachable SSH host | Potentially no incremental compute charge | No such host is established; sharing creates local-process/session and operational trust questions | Unknown until inspected; do not assume free availability |
-| Direct SSH to the hosted runner | Removes broker operation and extra hop if truly reachable | Reachability and authenticated host-key bootstrap are unestablished; changing to paid/private networking may defeat the assumed cost model | Investigate only with concrete reachability evidence; not the default |
+| Direct SSH to the hosted runner | Removes broker operation/extra hop; runner server can enforce exact `PermitOpen` | Public ingress and authenticated host-key bootstrap are unestablished; special paid networking changes the cost premise | Current requested investigation; qualify ingress before dependent implementation |
+| Runner SSH connection to local receiver | No rented broker or hosted-runner ingress required | Local incoming reachability, receiver patching, network publication, VPN/ISP costs and reverse-destination enforcement remain | Current requested investigation; no receiver or network change accepted |
 | tsnet userspace connector | Traversal/relay facilities and no owned public broker | Custom connector, Go closure, vendor identity/policy and revocation dependencies; runtime still unqualified | Historical alternative; activation requires a new decision |
 | Hosted browsers beside backend | Avoids local transport and local browser memory for unattended cases | Does not qualify the requested Windows/WSL client paths | Complementary lane, not a substitute |
 
@@ -234,9 +247,9 @@ Research/review elapsed time was not instrumented; no time-saving claim is made.
 Completion of this research checkpoint means a source-backed design comparison,
 dated cost/effort estimates, explicit failure domains and executable experiment
 oracles and the bounded R13 mechanism observations. It does not mean B-F passed.
-Next: qualify independent runner destination enforcement, broker isolation and
-non-reuse, endpoint admission, recipient binding and actual deadline/failure
-behavior before live access. Decide whether an actual broker is worth provisioning
-with those residuals visible. Final composition review and required documentation checks belong
+Next: resolve reachability for both brokerless directions, then qualify their
+actual destination/session enforcement, endpoint admission, recipient binding
+and deadline/failure behavior. Reconsider an operated broker only with its
+costs and residuals visible. Final composition review and required documentation checks belong
 to the exact published revision; architectural acceptance remains with the
 maintainer.
