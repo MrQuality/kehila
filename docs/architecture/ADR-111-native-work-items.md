@@ -1,7 +1,11 @@
 # ADR-111 - Native WorkItem commands and persistence
 
-Status: Proposed, revision 2. Owner: project maintainer. Created: 2026-11-04.
-Acceptance: pending; selection of the user outcome does not accept this design.
+Status: Proposed, revision 3. Owner: project maintainer. Created: 2026-11-04.
+Authority: on 2026-11-04 the maintainer accepted the proposal-refinement
+recommendations and explicitly selected direct edit saves with retained client
+retry identity. Pending item creation, item grants/capabilities, the operational
+witness and read-preparation amendment remain proposed; these product/refinement
+decisions do not accept that bundle implicitly.
 Related: R-001/002/006; D-019/021/023/032/033/034/037; B-003/004/005/006/007;
 [#27](https://github.com/MrQuality/kehila/issues/27),
 [#40](https://github.com/MrQuality/kehila/issues/40),
@@ -24,15 +28,15 @@ this outcome. The exact SQL, codecs and harness need review after this decision.
 
 ## Proposed decision
 
-### 1. Immutable recoverable item commands
+### 1. Creation recovery and direct idempotent editing
 
-Add an owner/project-scoped pending command lifecycle limited to ItemCreate and
-ItemEdit. It is a separate product contract, not implicit adoption of generic
-drafts under ADR-107. Save a command before explicit execution. Registration
+Propose an owner/project-scoped pending command lifecycle limited to ItemCreate.
+It is a separate product contract, not implicit adoption of generic drafts under
+ADR-107. Save a creation command before explicit execution. Registration
 commits immutable versioned content and independently generated 128-bit public
 request locator and operation token. For creation, the server also allocates a
 stable random item target in that registration; no item or readable sequence is
-issued yet. Edit targets an existing authorized item. Never trust a caller's
+issued yet. Never trust a caller's
 actor, creation target, grants or supplied seed/configuration as authority.
 
 The pending identity belongs to installation, owner, project and family. Another
@@ -43,8 +47,8 @@ offering another registration. Login, reload, list/open and reconciliation do
 not execute anything. Editing saved content requires a separate explicit command.
 
 Prepared/completed/cancelled/expired states use the same serialization as item
-execution. Cancellation committed first prevents execution; completed edits and
-creates are reported, never undone. Missing or expired requests cannot recreate
+execution. Cancellation committed first prevents execution; completed creations
+are reported, never undone. Missing or expired requests cannot recreate
 their identity. Completion, the permanent operation binding and domain writes
 commit together. Terminal content can be pruned under a bounded pending policy;
 successful installation/owner/project/family/public-locator/target/token/core
@@ -59,6 +63,37 @@ pending and existing items; collisions retry before registration commits.
 An immutable registered target can never adopt another pending or existing item.
 This is not a background queue, generic draft store or automatic conflict rebase.
 
+For ItemEdit, the maintainer selected direct idempotent saves. An edit targets an
+existing authorized item. Before sending, the client generates one bounded opaque
+operation token and retains the exact versioned command bound to installation,
+actor, family, project and item: expected item/configuration versions, ordered
+sparse field actions and estimate Keep/Set/Clear. Store no bearer, cookie or CSRF
+secret with this retry record. A retry retains the token and exact content; it
+never silently rebases onto a newer item or reuses the record under another
+installation/actor. The authority supplies authenticated identity independently.
+Item version alone is not an operation identity.
+
+There is no edit registration, pending-edit cancellation or automatic execution
+on reload. A lost reply leaves that save unknown. The interface retains the
+immutable request, prevents a new save from overwriting unresolved retry state,
+and offers historical-only reconciliation or an explicit retry of that exact
+save. Reconciliation never falls through to execution; absence describes only
+its authorized lookup ordering point, not proof another in-flight save cannot
+commit. Abandoning a client request does not cancel a database write.
+
+Completed edit retries authorize original mutation grants and replay historical
+success before mutable version/domain checks. Logical expiry/tombstones never
+turn a known operation into an unseen save. Recovery after losing the retained
+client token/request, browser loss or switching browsers is outside this edit
+slice; the interface must not claim that loss proves rejection or rollback.
+Server-owned pending-edit recovery would require a later explicit scope decision.
+Retained unresolved edit records have an explicit count/byte bound; the initial
+interface can retain one unresolved save per view and refuse another until that
+save is resolved or explicitly abandoned with its uncertainty disclosed. Retention
+can be volatile; no browser-persistent store or browser-loss guarantee is selected.
+Failure to retain/encode before first transmission is visible and prevents send.
+Failure after transmission never claims rollback or silently creates a new token.
+
 ### 2. Current authority and grants
 
 For this one-owner profile, an active coherent `initial_owner` project grant
@@ -70,13 +105,14 @@ project creation replay still requires its original project-create permission.
 Item operation cores retain distinct `item_create` or `item_edit` required grants,
 policy version one and project/item targets. Replay rechecks that original
 mutation permission, not read permission alone. Historical scope never derives
-from mutable current item content. Registration/open/cancel/reconcile require
-the command family's current project mutation authority; item/list reads require
+from mutable current item content. Creation registration/open/cancel/reconcile
+require CreateItem. Direct edit/reconciliation require EditItem; item/list reads require
 Read. Unauthorized lookups disclose neither saved content nor conflict detail.
 
 Mutations retain installation fence then actor fence, followed by a project row
-lock, pending-command row and existing operation-core share lock, then item row
-where applicable. Acquire no earlier lock after a later one. Re-read grants,
+lock, pending-command row for creation, existing operation-core share lock and
+item row where applicable. Direct edits have no pending-row lock.
+Acquire no earlier lock after a later one. Re-read grants,
 project/configuration and item after waits. All future project configuration and
 grant writers must use compatible fences before their routes are exposed.
 Retirement takes only core/payload locks and never later acquires project/actor
@@ -92,14 +128,16 @@ CSRF/origin and closed endpoint shape remain independent controls.
 
 Unlike trusted project seeding, an item result depends on current database state.
 After edge admission, allow a bounded authorized read-only preparation snapshot
-to materialize the saved immutable command and required project/configuration/
-item state. First resolve its permanent operation binding with current original
+to materialize the saved immutable creation command or admitted direct edit and
+required project/configuration/item state. First resolve its permanent operation
+binding with current original
 mutation grants. Bound stored request/result materialization and historical
 decoding before releasing any data, including on replay and rejection paths.
 A completed success uses stored-version historical replay,
 exact request comparison and expiry before any mutable domain decision or new
 result generation. Logical expiry/retirement never falls through to creation.
-Only a truly unseen executable request proceeds to fresh-state preparation.
+Only a truly unseen executable creation request or direct edit proceeds to
+fresh-state preparation.
 This precedence applies to Execute as well as Reconcile; a separate reconciliation
 endpoint is not a remedy for incorrect Execute replay ordering.
 Preparation cannot create an operation, allocate a readable number or update
@@ -122,6 +160,17 @@ No arbitrary unlimited retry or automatic semantic rebase is permitted.
 An already true `ever_estimated` can never be overwritten from a stale prepared
 result. Every successful/replayed response retains final live-session and
 expiry/revocation eligibility checks.
+
+The adapter review must state finite preparation/write-attempt accounting and
+the outcome on exhaustion, with no renewal of the original deadline or permit.
+Use a provisional containment limit if measurements are not yet available and
+label it accordingly; do not present an arbitrary count/backoff as measured
+capacity. Record separately configuration/item-version conflict, stale operational
+preparation and capacity/deadline exhaustion. A retry releases and confirms
+rollback before reacquisition, repeats full scoped historical lookup and admits
+every regenerated envelope. Any waiting/backoff is cancellation/deadline-aware;
+it must not retain a database guard or transaction. No new independent pool is
+introduced to hide contention in the existing shared capacity.
 
 Creation-only routes retain their existing pre-database generated-envelope
 admission. The exception permits only bounded read preparation for item commands;
@@ -147,7 +196,8 @@ fields later cleared. New edits cannot discard prior values/history.
 Create atomically commits item identity/version one, issued number, project
 next_sequence/monotonic ever_estimated, item history, permanent operation/payload
 and command completion. Edit atomically advances item version, appends history,
-sets ever_estimated if necessary and commits operation/payload/completion. Pure
+sets ever_estimated if necessary and commits operation/payload. ItemCreate also
+commits its pending completion; ItemEdit has no pending completion. Pure
 domain output is the one source of accepted state; reload typed state and compare
 before forcing deferred constraints and COMMIT. All errors roll back the action.
 
@@ -172,6 +222,53 @@ an unbounded scan of all item history on every project read. The exact schema
 review must specify which aggregate/head attribution and constraints establish
 this agreement and the corruption cases they can detect; a cached value alone
 is insufficient evidence of agreement.
+
+#### Proposed bounded operational-state witness
+
+Carry the project operational-state chain in the already required permanent item
+revisions, rather than add a separate copy of item history or infer historical
+estimate use from current items. Its seed is the immutable creation operation/
+snapshot at operational state version zero. Each successful item revision also
+records project-local operational state version, previous state operation,
+resulting next_sequence and ever_estimated. The current Project holds a checked
+state version/head operation reference. Head advancement and the item revision/
+operation commit in the same transaction.
+
+Transition guards verify the previous state is the locked current head. Creation
+increments next_sequence exactly once and binds the issued number to its item;
+editing preserves next_sequence. The new estimate flag equals the previous flag
+OR an estimate present in the accepted item revision, including zero. The witness
+is derived from that persisted revision, not a caller-supplied boolean. Clearing
+the last estimate therefore cannot clear the flag. Foreign keys, unique version/
+operation attribution, append-only guards and restricted head advancement protect
+the chain without allowing serving to rewrite its past or skip predecessors.
+Use a unique project/state-version key and exact operation/revision references;
+the first item successor references the creation operation, later successors
+reference their predecessor item operation in the same project. The head version
+advances for every successful item command, including edits whose operational
+values are unchanged. Immutable revisions cannot be removed by serving.
+Check operational state-version overflow before writes; exhaustion rejects the
+whole command without leaving an item revision, partial head or success record.
+
+A project read verifies stable metadata and configuration against their immutable
+revision snapshots, then resolves its operational head and attributed revision
+through exact indexed keys and compares operational values to the live Project.
+A project/state-version index supplies the latest accepted revision boundary
+without traversing the chain; compare that boundary with the current head to
+detect a regressed head, rather than merely trusting its self-consistent values.
+The creation-only case has no item revisions and retains its seed/head check.
+Do not replace full Project equality with configuration-only equality. Creation
+replay still returns the original creation Project, not the current head.
+
+This provides bounded per-read evidence supported by enforced transition history,
+not a fresh exhaustive audit of all historical rows. Exact SQL review must prove
+head/predecessor/operation/item linkage, bounded payload materialization and the
+queries' actual index paths. Corruption controls cover wrong/missing/regressed
+head, sequence mismatch/duplicate issuance, false estimate unlock and invalid
+attribution. Administrative DDL or arbitrary owner tampering can bypass serving
+guards; supported restore/full integrity auditing remains a separate obligation.
+No constant-time query or protection against every historical corruption is
+claimed from index existence alone.
 
 ### 5. Representation, replay and read/list behavior
 
@@ -198,6 +295,9 @@ cross-page stable snapshot. Full text/field payloads belong to bounded individua
 reads. Cursors carry no authority; each page reauthorizes. Derive phase from the
 referenced status and display title from configured fields, falling back to the
 issued readable ID. Sparse editing changes neither status nor type/workflow.
+Fallback is display-only: individual reads preserve an absent or blank configured
+title field exactly, while summaries derive their display title without writing
+the readable ID into item data. A native fixture must show both views together.
 Pending quota/page/TTL and list-summary limits are explicit containment policy,
 not calibrated capacity or latency guarantees. Exact codec review must demonstrate
 actual request/result/revision and PostgreSQL JSONB expansion bounds; the logical
@@ -205,6 +305,10 @@ actual request/result/revision and PostgreSQL JSONB expansion bounds; the logica
 
 ## Alternatives
 
+- Server-owned pending edits would retain exact edit content across browser loss
+  or switching browsers, with additional registration/storage/execution work. The
+  maintainer selected direct edits with retained client retry identity instead;
+  no equivalent browser-loss guarantee is claimed for the chosen edit path.
 - Browser-held operation/creation identities with success-only server mappings
   reduce pending storage but do not recover a command after browser state loss.
   They also differ from the existing server-recovery product direction. No
@@ -225,7 +329,10 @@ actual request/result/revision and PostgreSQL JSONB expansion bounds; the logica
 - Security: new item authority and narrowly expanded read preparation are real
   changes. Exact functions/profile and new denial-of-service surfaces need
   review. One process still holds combined auth/project/item trust.
-- Performance: mutations serialize by owner/project in this local profile.
+- Performance: mutations using the owner fence serialize across all projects
+  owned by that actor. The current process also serializes serving database
+  access, including reads, through its shared database mutex/connection. A project
+  lock does not establish parallel project throughput in this profile.
   Preparation can repeat on contention within the original deadline. No throughput
   or measured capacity guarantee follows; measure relevant limits before claims.
 - Operations: pending discovery distinguishes unknown from rejected. Cancellation

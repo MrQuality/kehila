@@ -1,6 +1,7 @@
 # Native WorkItem delivery
 
-Status: Assessment; user-selected outcome, architecture proposal awaiting review.
+Status: Assessment; refinements and direct-edit recovery choice accepted;
+remaining capability/read-preparation architecture proposed in ADR-111 revision 3.
 Baseline: `d6f8d3f563dbc8f9a242ec5abf779ab8e7142500`, 2026-11-04.
 Owners: M1-02/#27, operations #8, interface #10, authority #40 and storage #49.
 
@@ -34,8 +35,8 @@ permission is inferred from the goal.
 | Project creation already has product authentication and native persistence | Established: merged PR #92; `src/io/kehila_authority/`; `project-authority-verification.md` | Extend the product authority; do not reimplement the anonymous worker or repeat completed creation work. |
 | Item creation and sparse editing have accepted domain rules | Established: B-003 seventh slice; `task_contract::item_mutation`, `project`, `operation`; D-021/023/032/033/034 | Reuse those rules; physical codecs/storage are missing. |
 | Current SQL/profile permits item writes | Contradicted: `operations.sql` creation-only slice guards; `access.sql`; authority `postgres/profile.sql` | Review explicit new capabilities and exact startup profile before implementation. |
-| Current project can still equal its creation snapshot after item writes | Contradicted: native `read.rs` compares the whole Project; create advances sequence and recording estimates changes its monotonic flag | Preserve immutable creation snapshots; add evidence-backed current-state reconstruction. |
-| ADR-107 authorizes recoverable item commands | Unresolved: it explicitly excludes generic drafts | ADR-111 proposes only immutable create/edit command requests; maintainer acceptance required. |
+| Current project can still equal its creation snapshot after item writes | Contradicted: native `read.rs` compares the whole Project; create advances sequence and recording estimates changes its monotonic flag | Preserve immutable creation snapshots and stable metadata checks. Proposed ADR-111 revision 3 carries an attributed operational-state chain in permanent item revisions, with indexed head verification. |
+| ADR-107 authorizes recoverable item commands | Contradicted: it explicitly excludes generic drafts | ADR-111 proposes pending creation only. On 2026-11-04 the maintainer explicitly selected direct edits with retained client retry identity; no server-pending edit recovery is inferred. |
 | Every generated item result can be prepared before any database access | Unsupported: result depends on current item/configuration/project state | ADR-111 proposes a narrowly bounded read-preparation exception to ADR-104; no change to creation ingress. |
 | Existing owner profile defines item mutation grants | Unresolved: current serving mapping is creation/read-specific | Propose explicit Read/CreateItem/EditItem mapping with current-grant rechecks, retained scope and revocation fences. |
 | This goal establishes supported real-data safety | Contradicted: Q-020 and existing qualification limits | Verify this synthetic slice; retain supported backup/restore/install gates. |
@@ -59,7 +60,8 @@ are reused within scope; Proposed ADR-108/109 are not silently adopted.
    data with expected item version and configuration revision. Ordinary editing
    preserves type/workflow/status/phase. Existing hidden/archived-write and
    required-field rules are not weakened to fit the seeded interface.
-5. Item/project/history/success/request completion commit together. Issued numbers
+5. Item/project/history/success commit together, with pending completion for item
+   creation only. Issued numbers
    never recycle; historical type/workflow/status/field use survives replay
    retirement. Reads establish current state without rewriting history.
 6. Fresh current mutation grants authorize execution and original-scope replay.
@@ -69,9 +71,12 @@ are reused within scope; Proposed ADR-108/109 are not silently adopted.
 7. Individually authorized item reads and a bounded keyset project list use fresh
    coherent snapshots and final live-session checks. Pagination does not claim a
    stable snapshot spanning requests. No unbounded item-field materialization.
-8. The interface supports explicit recoverable commands, cancellation and
-   reconciliation after response loss/restart. It reports conflict/unknown states
-   truthfully. Login, reload and discovery never execute commands.
+8. Creation supports server-owned discovery, explicit execution/cancellation and
+   reconciliation after response loss/restart. Direct edits retain the same client
+   token and exact request through response loss/retries. Browser/client-record
+   loss recovery for edits is excluded by the explicit selected scope. Conflicts
+   do not silently rebase requests or resolve earlier uncertainty. Login, reload
+   and discovery never execute commands.
 9. Source/component, native database/HTTP/TLS, interface, contention, failure and
    restart evidence cover the matrix below. Required hooks/CI and exact-head
    independent review pass; PR is assigned to MrQuality. Actual browser and
@@ -91,7 +96,7 @@ not substitute for final exact-head composition review.
 | Pure representations | Frozen create/edit request fingerprints and historical result/item envelopes; raw duplicate/depth/size boundaries; exact values/order and no mutable historical validation. |
 | SQL/capabilities | Exact fresh schema and function signatures, owners/search paths/PUBLIC revocation, serving effective privileges, named guards and profile rejection. |
 | Composition | Preparation/admission, authorization and lock rechecks, current-project/history agreement, transaction rollback/reentry and response eligibility. |
-| Interface | Configured fields, pending discovery and operation identity, sparse edit intent, bounded decoding and conflict/unknown presentation. Simulated DOM is not browser evidence. |
+| Interface | Configured fields, creation-pending discovery, bound direct-edit retry identity, sparse edit intent, bounded decoding and conflict/unknown presentation. Simulated DOM is not browser evidence. |
 | Native harness | Target/profile/version/role/deadline/resource admission, controlled barriers, independent state and cleanup oracles before runtime campaign. |
 | Final delivery | Exact proposed head, applicable local/CI checks, independent composition review, source/evidence validity and proportional retrospective. |
 
@@ -99,7 +104,7 @@ not substitute for final exact-head composition review.
 
 | Failure mechanism | Evidence / confidence / likelihood | Impact / priority | Control and next observation | Residual owner / invalidation |
 | --- | --- | --- | --- | --- |
-| Lost response allocates a second item or repeats an edit | Full target is part of accepted scoped operation key; mechanism risk is high confidence, frequency unknown | High / before routes | Immutable owner/project/family command identity, explicit execution, atomic successful binding, reconciliation and response-loss barriers | Maintainer accepts ADR-111; revisit on identity/lifecycle changes. |
+| Lost response allocates a second item or repeats an edit | Full target is part of accepted scoped operation key; mechanism risk is high confidence, frequency unknown | High / before routes | Immutable creation request or retained exact direct-edit request, original scoped token, atomic successful binding, reconciliation and response-loss barriers | Maintainer accepts remaining ADR-111 scope; revisit on identity/lifecycle changes. |
 | Serving gains arbitrary project/item/auth mutation | Current profile explicitly forbids updates; widening is a confirmed boundary change | High / before SQL adoption | Narrow fixed functions, guarded transitions and exact effective-privilege negatives; no broad UPDATE grant | Maintainer; function owners/signatures or role changes invalidate review. |
 | New item breaks project read or rewrites creation history | Existing full Project equality is inspected source evidence | High / before adapter | Separate current mutation evidence from immutable creation/configuration snapshots; read-after-create/edit and old replay controls | Author/reviewer; current/history reconstruction changes. |
 | Concurrent create/edit/configuration state loses allocation or history | Pure rules require coherent project/configuration/item commit; actual new protocol untested | High / before native routes | Explicit fence order, lock waits and post-wait reads; independent SQL cardinality/history checks | Author; future config writers must join protocol before exposure. |
@@ -111,16 +116,43 @@ not substitute for final exact-head composition review.
 
 | Group | Required independent observations |
 | --- | --- |
-| Nominal and boundary | Both types; absent/blank/non-ASCII text, exact and over-limit values, estimates absent/zero/max/clear, multiple pages/projects, issued IDs and retained unit lock. |
+| Nominal and boundary | Both types; absent/blank/non-ASCII text, exact and over-limit values, estimates absent/zero/max/clear, multiple pages/projects, issued IDs and retained unit lock. Compare truthful stored title values with display-only readable-ID fallback in the same native fixture. |
 | Authorization | Anonymous/expired/revoked caller, cross-project/request/target mismatch, missing current grant, replay requiring original mutation grants, final-release session check. |
-| Concurrency | Observed waits for same command and distinct creates; unique sequence allocation; equal/changed retries; two edits at one version; execute/cancel ordering; config fence/control with no admin route. |
-| Uncertainty | Lost registration, rollback before commit, committed create/edit before lost acknowledgement, authority restart/new login and original identity reconciliation; discovery never executes. |
-| Integrity/history | Corrupt references/codec/version/value/attribution fail closed; current project read after mutations; creation replay remains original; field/type/workflow/status history and independent relational totals. |
-| Replay lifetime | Constructed clock cases distinguish eligibility from elapsed-time evidence; current grants, expiry, permanent tombstone, changed reuse and gap-free owner retirement; serving cannot retire. |
+| Concurrency | Observed waits for same command and distinct creates; unique sequence allocation; equal/changed retries; two direct edits at one version; creation execute/cancel ordering; config fence/control with no admin route. |
+| Uncertainty | Lost creation registration, rollback before commit, committed create/direct edit before lost acknowledgement, authority restart/new login and original identity reconciliation; discovery never executes. Direct-edit client-record loss is an explicit recovery limit, never proof of rollback. |
+| Integrity/history | Corrupt references/codec/version/value/attribution fail closed; stable Project metadata and operational-head read after mutations; creation replay remains original; zero then clear-last-estimate; false unlock/regressed head/duplicate sequence; field/type/workflow/status history and independent relational totals. |
+| Replay lifetime | Constructed clock cases distinguish eligibility from elapsed-time evidence; current grants, expiry, permanent tombstone, changed reuse and gap-free owner retirement; successful creation locator and operational estimate witness survive pruning/retirement; serving cannot retire. |
 | Admission/lifecycle | Original-byte failures before queues/database, oversized generated envelope before writes, bounded preparation cancellation/deadline and joined jobs/permits; shutdown retains genuine failure. |
 | Regression/delivery | Existing creation/auth modes and relevant shared checks; required staged/CI gates, exact-head review and retained failed attempts. |
 
 ## Assessment record
+
+### Revision 3 direction, 2026-11-04
+
+The maintainer accepted the proposal-refinement recommendations and explicitly
+selected direct edit saves with retained client retry identity. Revision 3 removes
+server-pending edit registration/cancellation and does not claim edit recovery
+after browser/client-record loss. Pending creation recovery remains proposed.
+The original full item create/read/list/edit outcome is unchanged.
+
+The revision states owner-wide mutation and current process-wide serving database
+serialization, preserves stable Project verification, proposes an attributed
+operational-state witness carried by permanent item revisions, and requires exact
+finite retry-work accounting within the original shared capacity/deadline.
+The native matrix adds display-only title fallback, zero then clear-last-estimate,
+false unlock/regressed head and successful locator survival after pruning.
+No fixed retry/backoff/latency numbers or constant-time claims are accepted.
+
+The remaining architectural disposition covers pending ItemCreate, item grants/
+capabilities, the operational witness and the narrow ADR-104 read-preparation
+amendment. Refinement approval and
+the direct-edit product choice are not recorded as acceptance of those unresolved
+mechanisms. Revision 3 source/relevance review and implementation gates remain.
+Independent revision-three source/relevance review found no substantive blocker
+to presenting this proposed bundle. Its clarification requests are incorporated:
+bound unresolved edit retention, fail visibly before transmission if retention
+fails, and reject operational state-version exhaustion atomically. This is source
+review, not SQL/runtime qualification or architectural acceptance.
 
 ### Existing coverage and required integration delta
 
