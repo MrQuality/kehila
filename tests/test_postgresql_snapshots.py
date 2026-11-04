@@ -18,6 +18,23 @@ spec.loader.exec_module(bridge)
 
 
 class ProcessTests(unittest.TestCase):
+    def test_sensitive_stdin_uses_the_explicit_scratch_directory(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(bridge.tempfile, 'TemporaryFile', wraps=tempfile.TemporaryFile) as staging:
+            result = bridge.bounded([sys.executable, '-c',
+                'import sys;sys.stdout.buffer.write(sys.stdin.buffer.read())'],
+                b'synthetic-sensitive-input', scratch_dir=directory)
+            self.assertEqual(result.stdout, b'synthetic-sensitive-input')
+            staging.assert_called_once_with(dir=directory)
+
+    def test_timeout_preserves_bounded_output_after_owned_cleanup(self):
+        with self.assertRaises(subprocess.TimeoutExpired) as captured:
+            bridge.bounded([sys.executable, '-c',
+                'import sys,time;print("out",flush=True);'
+                'print("err",file=sys.stderr,flush=True);time.sleep(30)'], timeout=2)
+        self.assertEqual(captured.exception.stdout.strip(), b'out')
+        self.assertEqual(captured.exception.stderr.strip(), b'err')
+
     def test_bounded_input_output_and_nonzero_exit_are_preserved(self):
         result = bridge.bounded([sys.executable, '-c',
             'import sys;sys.stdout.buffer.write(sys.stdin.buffer.read());sys.exit(7)'], b'exact')

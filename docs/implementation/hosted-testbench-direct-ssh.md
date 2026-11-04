@@ -10,16 +10,23 @@ Status: Proposed research, 2026-11-04. Related:
 The maintainer requested evaluation of both direct connection directions to
 reduce operated infrastructure and recurring cost. This replaces broker-first
 research priority, not the underlying hosted-backend/local-browser outcome.
-Neither direction, public listener nor network/security change is accepted here.
+Neither complete bench topology nor network/security reconfiguration is accepted here.
 Source baseline: `c1ddaaf674c4a616e0b916801973adf615dc8403`.
 
 Evaluate direct local-to-runner SSH first: if ingress works, its server-side
-destination restriction is simpler than a reverse forward. Evaluate runner-to-local
-SSH in parallel against an actual reachable receiver. Both can avoid a rented
+destination restriction is simpler than a reverse forward. The maintainer selected
+a bounded A-only synthetic experiment; defer runner-to-local SSH unless A fails
+and reasonable direct-path alternatives have been investigated. Both can avoid a rented
 broker, but neither is currently qualified as reachable. Do not purchase a broker
 merely because the first investigation used one as its topology example.
 
-The source comparison is complete enough to define the next probes. Internet
+The source comparison is complete enough to define the next probes. The
+[disposable research fixture](../../experiments/hosted_ssh_probe/README.md) prepares
+one control-only encryption run followed by a separately admitted live SSH run.
+The encrypted artifact return channel is explicitly temporary: delete owned
+artifacts after consumption and again at closeout, verify absence, and retain
+cleanup failures. Its admission does not select the permanent bootstrap channel.
+Internet
 connectivity, actual Windows/WSL SSH paths, provider support and the mitigated
 isolation/lifetime contracts remain unexecuted. Read-only local observations
 guide private admission only; no machine addresses/configuration belong here.
@@ -195,10 +202,15 @@ runner target, stale connection/port reuse and interruption. Demonstrate actual
 Windows and WSL paths separately after the contained mechanism is admitted.
 
 Both probes need an admitted confidential endpoint/host-identity exchange before
-execution. Raw addresses, keys and diagnostics must not enter public workflow
-inputs/logs/artifacts. A public egress lookup, open SSH server or firewall change
-is not executed merely to fill an unknown in this comparison. Exact live scope
-remains a pre-use gate; no blanket request for network/security approval is made.
+execution. Raw addresses, private keys and diagnostics must not enter public
+workflow inputs/logs/artifacts. For the selected bounded A experiment only, an
+encrypted descriptor may be returned through a temporary artifact to a fresh
+local-only recipient key. Encryption does not authenticate the producer: bind
+the authenticated workflow/source/run/attempt and archive digest, then check the
+recipient, nonce, expiry and host key. Public ciphertext copies may outlive artifact
+deletion. The exception does not permit plaintext metadata, product credentials,
+raw diagnostic uploads or a permanent artifact channel. Exact source, harness,
+source restriction and cleanup review remain pre-use gates.
 
 ## Review, limits and next decision
 

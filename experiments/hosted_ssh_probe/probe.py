@@ -200,20 +200,68 @@ def remove_containers(storage):
 
 
 def expiry_control(storage, image, mounts, binding):
+    # A distinct disposable key exercises actual authentication without uploading
+    # the admitted operator's private key or broadening the live source policy.
+    run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-C', '',
+         '-f', str(storage / 'control_key')], storage)
+    key = public_key(' '.join((storage / 'control_key.pub').read_text().split()[:2]))
+    (storage / 'control_authorized_keys').write_text(
+        'from="127.0.0.1",restrict,port-forwarding ' + key + '\n')
+    (storage / 'control_authorized_keys').chmod(0o444)
+    host = public_key(' '.join((storage / 'host_key.pub').read_text().split()[:2]))
+    (storage / 'control_known_hosts').write_text('[127.0.0.1]:2222 ' + host + '\n')
+    (storage / 'control_known_hosts').chmod(0o444)
+    run(['sudo', '-n', 'chown', '0:0', str(storage / 'control_key'),
+         str(storage / 'control_authorized_keys')], storage)
+    control_mounts = mounts[:2] + ['--volume', str(storage / 'control_authorized_keys') +
+        ':/etc/ssh/probe_authorized_keys:ro', '--volume', str(storage / 'control_key') +
+        ':/etc/ssh/probe_control_key:ro', '--volume', str(storage / 'control_known_hosts') +
+        ':/etc/ssh/probe_control_known_hosts:ro']
     name_options = reserve_container(storage, 'control')
     try:
         identity = run(['sudo', '-n', 'podman', 'run', '-d', '--network=none',
             '--memory=256m', '--memory-swap=256m', '--cpus=1', '--pids-limit=128',
-            '--read-only', '--tmpfs', '/run:rw,nosuid,nodev,size=8m'] + mounts + name_options +
+            '--read-only', '--tmpfs', '/run:rw,nosuid,nodev,size=8m'] + control_mounts + name_options +
             ['--env', 'PROBE_NONCE=' + binding['nonce'], image,
-             'timeout', '--signal=KILL', '3', 'python3', '/opt/probe/service.py'], storage).decode().strip()
+             'timeout', '--signal=KILL', '8', 'python3', '/opt/probe/service.py'], storage).decode().strip()
         require(re.fullmatch(r'[0-9a-f]{64}', identity))
+        command = ['sudo', '-n', 'podman', 'exec', '-i', identity, 'timeout', '--signal=KILL', '3',
+            'ssh', '-F', 'none', '-T', '-i', '/etc/ssh/probe_control_key', '-p', '2222',
+            '-o', 'BatchMode=yes', '-o', 'IdentitiesOnly=yes', '-o', 'IdentityAgent=none',
+            '-o', 'StrictHostKeyChecking=yes', '-o', 'GlobalKnownHostsFile=none',
+            '-o', 'UserKnownHostsFile=/etc/ssh/probe_control_known_hosts',
+            '-o', 'HostKeyAlgorithms=ssh-ed25519', '-o', 'ConnectTimeout=2',
+            '-W', '127.0.0.1:31337', 'probe@127.0.0.1']
+        # Give the Python/sshd startup a bounded window before testing auth.
+        run(['sudo', '-n', 'podman', 'exec', identity, 'python3', '-c',
+            'import socket,time\n'
+            'for attempt in range(20):\n'
+            ' try: socket.create_connection(("127.0.0.1",2222),.1).close(); break\n'
+            ' except OSError: time.sleep(.05)\n'
+            'else: raise RuntimeError("SSH control not ready")'], storage, timeout=3)
+        request = ('GET /' + binding['nonce'] + ' HTTP/1.0\r\nHost: synthetic\r\n\r\n').encode('ascii')
+        response = run(command, storage, data=request, timeout=4)
+        header, separator, body = response.partition(b'\r\n\r\n')
+        require(separator and header.startswith(b'HTTP/1.0 200 ') and body == binding['nonce'].encode('ascii'))
         # Check the real process tree under the selected engine before public exposure.
-        require(run(['sudo', '-n', 'podman', 'wait', identity], storage, timeout=8).strip() == b'137')
+        require(run(['sudo', '-n', 'podman', 'wait', identity], storage, timeout=12).strip() == b'137')
         state = json.loads(run(['sudo', '-n', 'podman', 'inspect', identity], storage))[0]['State']
         require(not state['Running'] and state['ExitCode'] == 137)
     finally:
-        remove_containers(storage)
+        try:
+            remove_containers(storage)
+        finally:
+            (storage / 'control_key').unlink(missing_ok=True)
+
+
+def admit_mount_ownership(storage):
+    # Rootful bind mounts preserve host UIDs. StrictModes requires root or the
+    # probe account to own authorized_keys; the runner user's UID is neither.
+    run(['sudo', '-n', 'chown', '0:0', str(storage / 'authorized_keys'),
+         str(storage / 'host_key')], storage)
+    for name, mode in (('authorized_keys', 0o444), ('host_key', 0o600)):
+        state = (storage / name).stat()
+        require(state.st_uid == 0 and state.st_gid == 0 and state.st_mode & 0o777 == mode)
 
 
 def serve(storage):
@@ -223,6 +271,7 @@ def serve(storage):
     (storage / 'stage').write_text('candidate')
     address = candidate_address(storage)
     engine = ['sudo', '-n', 'podman']
+    admit_mount_ownership(storage)
     (storage / 'stage').write_text('image')
     image = run(engine + ['build', '--quiet', '--memory=1g', '--cpu-period=100000',
         '--cpu-quota=100000', '-f', str(Path(__file__).with_name('Containerfile')),
@@ -285,6 +334,10 @@ def serve(storage):
         while time.monotonic() - started < LEASE:
             time.sleep(max(0, min(0.25, LEASE - (time.monotonic() - started))))
         result['owner_succeeded'] = True
+    except Exception as error:
+        result['failure_stage'] = (storage / 'stage').read_text()
+        result['failure_class'] = type(error).__name__
+        raise
     finally:
         (storage / 'stage').write_text('cleanup')
         try:
@@ -386,8 +439,9 @@ if __name__ == '__main__':
             result = read_json(result_path.read_bytes()) if result_path.exists() else dict(
                 owner_succeeded=False, container_started=False, descriptor_ready=False,
                 container_removed=False, residual_check=False)
-            result['failure_class'] = type(error).__name__
-            result['failure_stage'] = (storage / 'stage').read_text() if (storage / 'stage').exists() else 'admission'
+            result.setdefault('failure_class', type(error).__name__)
+            result.setdefault('failure_stage', (storage / 'stage').read_text()
+                              if (storage / 'stage').exists() else 'admission')
             write_result(storage, result)
         # Never expose paths, addresses, command args or exception text to Actions.
         print('Synthetic SSH probe stopped; confidential diagnostics retained locally.', file=sys.stderr)

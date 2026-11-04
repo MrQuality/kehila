@@ -8,6 +8,7 @@ from pathlib import Path
 import unittest
 import zipfile
 import tempfile
+import subprocess
 from unittest.mock import patch
 
 SPEC = importlib.util.spec_from_file_location('hosted_ssh_probe',
@@ -132,6 +133,34 @@ class ProbeContractTests(unittest.TestCase):
             with patch.object(probe, 'run', side_effect=engine):
                 probe.remove_containers(storage)
             self.assertTrue(any(command[3] == 'rm' for command in calls))
+
+    def test_owner_cleans_after_lost_creation_response_and_preserves_failure_stage(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            storage = Path(temporary)
+            binding = self.expected()
+            (storage / 'binding.json').write_text(json.dumps(binding))
+            def engine(command, *_args, **_kwargs):
+                if 'build' in command:
+                    return b'a' * 64
+                if '/usr/sbin/sshd' in command:
+                    return (b'passwordauthentication no\nkbdinteractiveauthentication no\n'
+                            b'allowtcpforwarding local\nmaxsessions 0\n'
+                            b'permitopen 127.0.0.1:31337\npermitlisten none\n')
+                raise subprocess.TimeoutExpired(command, 30)
+            with patch.object(probe, 'source_binding', return_value=binding), \
+                    patch.object(probe, 'candidate_address', return_value='8.8.8.8'), \
+                    patch.object(probe, 'reserve_container', return_value=[]), \
+                    patch.object(probe, 'admit_mount_ownership'), \
+                    patch.object(probe, 'expiry_control'), \
+                    patch.object(probe, 'run', side_effect=engine), \
+                    patch.object(probe, 'remove_containers') as remove, \
+                    self.assertRaises(subprocess.TimeoutExpired):
+                probe.serve(storage)
+            remove.assert_called_once_with(storage)
+            result = json.loads((storage / 'result.json').read_bytes())
+            self.assertEqual(result['failure_stage'], 'listener')
+            self.assertEqual(result['failure_class'], 'TimeoutExpired')
+            self.assertFalse(result['owner_succeeded'])
 
 
 

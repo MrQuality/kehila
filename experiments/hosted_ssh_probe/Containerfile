@@ -1,5 +1,5 @@
 FROM docker.io/library/python@sha256:14a4933e6cef421424f7a66d89a3f4eafcbd0d90e0a822251f298e05132dc735
-RUN apt-get update && apt-get install -y --no-install-recommends openssh-server coreutils \
+RUN apt-get update && apt-get install -y --no-install-recommends openssh-server openssh-client coreutils \
     && rm -f /etc/ssh/ssh_host_* \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin probe \
