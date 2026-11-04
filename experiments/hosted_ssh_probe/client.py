@@ -103,6 +103,7 @@ class Experiment:
             client_public_key=public_key(' '.join((self.storage / 'client_key.pub').read_text().split()[:2])))
 
     def launch(self, phase):
+        require(phase in {'control', 'live', 'admission'})
         tag = ('sp007-direct-probe-' + phase + '-' + time.strftime('%Y%m%d%H%M%S', time.gmtime())
                + '-' + secrets.token_hex(8))
         ref = 'refs/tags/' + tag
@@ -350,6 +351,8 @@ def main():
     parser.add_argument('--storage', type=Path, required=True)
     parser.add_argument('--sha', required=True)
     parser.add_argument('--openssl', required=True)
+    parser.add_argument('--admission-only', action='store_true',
+                        help='Run loopback-only hosted admission; never launch external SSH.')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     storage = args.storage.resolve()
@@ -357,28 +360,34 @@ def main():
             and re.fullmatch(r'[0-9a-f]{40}', args.sha))
     storage.mkdir(mode=0o700)
     experiment = Experiment(storage, args.sha, args.openssl)
-    result = dict(control=False, local_ssh=False, runner_response=False, reachability=False)
+    result = dict(admission_only=args.admission_only, admission=False, control=False,
+                  local_ssh=False, runner_response=False, reachability=False)
     try:
         experiment.prepare()
-        control = experiment.launch('control')
-        experiment.receive(control, 'control')
-        require(experiment.wait_complete(control)['conclusion'] == 'success')
-        result['control'] = True
-        print('Linux-to-local encryption control passed; starting bounded SSH experiment.', flush=True)
-        live = experiment.launch('live')
-        descriptor = experiment.receive(live, 'live')
-        result['local_ssh'] = experiment.connect(descriptor)
-        require(experiment.wait_complete(live)['conclusion'] == 'success')
-        logs = experiment.command(['gh', 'run', 'view', str(live), '--repo', REPOSITORY, '--log'])
-        (storage / 'workflow.log').write_bytes(logs)
-        reports = []
-        for line in logs.decode('utf-8').splitlines():
-            start = line.find('{"container_removed":')
-            if start >= 0:
-                reports.append(json.loads(line[start:]))
-        require(len(reports) == 1 and reports[0]['residual_check'])
-        result['runner_response'] = reports[0].get('synthetic_responses', 0) > 0
-        result['reachability'] = result['local_ssh'] and result['runner_response']
+        if args.admission_only:
+            admission = experiment.launch('admission')
+            require(experiment.wait_complete(admission)['conclusion'] == 'success')
+            result['admission'] = True
+        else:
+            control = experiment.launch('control')
+            experiment.receive(control, 'control')
+            require(experiment.wait_complete(control)['conclusion'] == 'success')
+            result['control'] = True
+            print('Linux-to-local encryption control passed; starting bounded SSH experiment.', flush=True)
+            live = experiment.launch('live')
+            descriptor = experiment.receive(live, 'live')
+            result['local_ssh'] = experiment.connect(descriptor)
+            require(experiment.wait_complete(live)['conclusion'] == 'success')
+            logs = experiment.command(['gh', 'run', 'view', str(live), '--repo', REPOSITORY, '--log'])
+            (storage / 'workflow.log').write_bytes(logs)
+            reports = []
+            for line in logs.decode('utf-8').splitlines():
+                start = line.find('{"admission_only":')
+                if start >= 0:
+                    reports.append(json.loads(line[start:]))
+            require(len(reports) == 1 and reports[0]['residual_check'])
+            result['runner_response'] = reports[0].get('synthetic_responses', 0) > 0
+            result['reachability'] = result['local_ssh'] and result['runner_response']
     except Exception as error:
         result['failure_class'] = type(error).__name__
         with (storage / 'failure.log').open('a') as log:
@@ -387,7 +396,8 @@ def main():
         result['cleanup_failures'] = experiment.cleanup()
         (storage / 'result.json').write_text(json.dumps(result, indent=2))
         print(json.dumps(result, sort_keys=True), flush=True)
-    return 0 if result['reachability'] and not result['cleanup_failures'] else 1
+    passed = result['admission'] if args.admission_only else result['reachability']
+    return 0 if passed and not result['cleanup_failures'] else 1
 
 
 if __name__ == '__main__':

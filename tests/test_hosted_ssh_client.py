@@ -18,6 +18,29 @@ finally:
 
 
 class LocalOwnerTests(unittest.TestCase):
+    def test_unknown_phase_is_rejected_before_any_remote_mutation(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+                patch.object(client.shutil, 'which', return_value='/usr/bin/ssh'):
+            experiment = client.Experiment(Path(temporary), 'a' * 40, 'openssl')
+            with patch.object(experiment, 'api') as api, self.assertRaises(ValueError):
+                experiment.launch('unknown')
+            api.assert_not_called()
+
+    def test_admission_only_never_launches_live_and_cleanup_failure_remains_failure(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            storage = Path(temporary) / 'external'
+            arguments = ['client.py', '--storage', str(storage), '--sha', 'a' * 40,
+                         '--openssl', 'openssl', '--admission-only']
+            with patch.object(client.sys, 'argv', arguments), \
+                    patch.object(client, 'Experiment') as constructor, patch('builtins.print'):
+                owner = constructor.return_value
+                owner.wait_complete.return_value = {'conclusion': 'success'}
+                owner.cleanup.return_value = ['artifact_cleanup']
+                self.assertEqual(client.main(), 1)
+            owner.launch.assert_called_once_with('admission')
+            owner.receive.assert_not_called()
+            owner.connect.assert_not_called()
+
     def test_local_artifact_deletion_survives_run_cleanup_failure(self):
         with tempfile.TemporaryDirectory() as temporary, \
                 patch.object(client.shutil, 'which', return_value='/usr/bin/ssh'):

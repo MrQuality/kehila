@@ -703,20 +703,67 @@ canary probe and confidential endpoint exchange, then test only its selected
 address/port and preserve the actual result. A timeout cannot by itself locate
 an upstream block, and a single pass cannot establish all runner/provider paths.
 
+### SP-007-R15: encrypted control passed; listener admission stopped, 2026-11-04
+
+Source `588aa5b60d749b4e69bab40a51840c0868fb470e`; required
+[CI](https://github.com/MrQuality/kehila/actions/runs/41794004876) passed all
+three jobs. The maintainer selected local-to-runner SSH first and admitted a
+temporary encrypted descriptor artifact, with deletion after the experiment.
+This admits the bounded synthetic experiment, not a permanent bootstrap channel
+or either complete bench topology. Runner-to-local remains deferred.
+
+The [encryption-only control](https://github.com/MrQuality/kehila/actions/runs/41795578349)
+passed. The Windows owner verified the authenticated producer/run/source,
+archive digest, successful CMS authenticated decryption and exact recipient,
+nonce and session bindings, then deleted the artifact. The recipient and
+operator SSH private keys remained local. This is one actual Linux-to-Windows
+control, not qualification of production secret delivery or every replay case.
+
+The [live owner](https://github.com/MrQuality/kehila/actions/runs/41795743023)
+stopped during listener admission. Its execution progressed beyond the required
+contained pinned-SSH nonce and eight-second container-expiry checks. The recorded
+result was `container_started=true`, `descriptor_ready=false`,
+`failure_stage=listener`, `failure_class=ValueError`, with zero synthetic
+responses. This establishes a preparation failure after a brief owned public
+publication; no endpoint descriptor was returned and no local SSH connection
+attempt occurred. It does not establish an unreachable route or exhaust A.
+
+The old stage spans inspection, running state, exact mapping equality and
+contained readiness. The retained result does not identify which rejected.
+Do not retroactively call it a port-schema mismatch, provider block or SSH
+authentication failure. Actual engine/package versions were not returned by
+this attempt. The next decisive check is a nonpublic hosted publication/control
+with precise sanitized rejection stages, preserving strict mapping and source
+policy until observed incompatibility supports a change.
+
+Owned container removal and residual absence passed in the producer's result.
+Independent post-run API reads found zero artifacts for both runs and no
+temporary configuration variables or secret. Local private-key files were
+removed. Deletion cannot retract ciphertext copies obtained earlier; the
+temporary channel remains unsuitable as an assumed permanent design.
+
+The local controller took 172.67 seconds including preparation, hosted waiting
+and cleanup. Two-second host samples observed a minimum 6.37 GiB available
+(86 samples). These are sampled system observations, not a guaranteed peak,
+attributed client footprint, matched product workload or measured offload saving.
+Research/review time and individual overlapping phase durations are unmeasured.
+The failed admission and its sanitized report remain retained for comparison.
+
 ### Current case disposition and next observations
 
 | Scope | Evidence / status | Next decisive observation |
 | --- | --- | --- |
 | A1/A2 Current hosted fixture capacity | Passed R02 with stated measurement limits | Reuse within this source/tool/workload boundary; actual remote session remains separate |
-| B1 Transport mechanism | R03 historical tsnet build; R13 contained policy/forwarding; R14 both brokerless directions source-assessed | Establish incoming reachability and qualify the actual Windows/WSL client/runner deployment |
+| B1 Transport mechanism | R13 contained policy/forwarding; R14 brokerless comparison; R15 stopped during listener admission before local SSH | Diagnose the admission oracle nonpublicly, then establish actual incoming reachability; B remains deferred |
 | B2 Live isolation | R13 allowed path/12 denials and two gap counterexamples; R14 direct/reverse enforcement distinction; actual boundaries unqualified | Qualify exact server/runner destination restriction, local/session isolation and teardown/non-reuse for the selected direction |
-| C1 Confidential bootstrap | R09 attempt-bound protected-environment protocol proposed; no actual channel qualified | Admit workflow/protection/release fixture; demonstrate provider ordering, wrong-run/rerun/duplicate-consumer rejection and interruption cleanup with harmless canaries before credentials |
+| C1 Confidential bootstrap | R15 Linux-to-Windows encrypted control and temporary-artifact deletion observed; production contract unqualified | Keep the artifact method temporary; qualify provider ordering, wrong-run/rerun/duplicate-consumer rejection and interruption cleanup before credentials |
 | D1 Lifetime enforcement | R09 overlay candidate retained; R10 local/broker/runner SSH owners proposed; runtime behavior unqualified | Prove active-stream cutoff separately from key expiry and runner/backend death; disposition outage residuals |
 | E1 Stock browsers | R05/R07 Windows admission failed and R11 reproduced the observation gap without a driver; R06 WSL Firefox and R12 WSL Chrome owned-listener/DOM passed; TLS remains unqualified | Preserve Windows stop; qualify the separately admitted trust/TLS/product cases after transport and lifecycle harness readiness |
 | F1 WAN/product relief | Blocked on B-E | Real Windows/WSL journeys and matched resource observations |
 
-The complete A-F objective is unfinished. Public source has no credential-bearing
-workflow or new local connector runtime. Review of the capacity checkpoint at
+The complete A-F objective is unfinished. The disposable SSH research fixture
+uses synthetic bootstrap configuration, not product credentials or a supported
+local connector. Review of the capacity checkpoint at
 `442da7b` found no remaining substantive findings; normal CI and later research
 record review must be assessed at their actual source revisions.
 
@@ -843,6 +890,24 @@ private metadata path; the maintainer retains specific public ingress, routing,
 security, trust and cost decisions. No broad network change is requested or
 inferred from research permission.
 
+R15 demonstrated why broad preparation labels are inadequate for a failed
+admission: the retained report cannot distinguish inspection, state, mapping and
+readiness. The owner stopped before local SSH, preserved the failure and verified
+temporary-data deletion rather than weakening the oracle or declaring A
+unreachable. The next owned improvement is precise sanitized evidence plus a
+nonpublic publication control before another external bind. Its effectiveness
+is still unexecuted. Earlier component review and passing unit tests did not
+establish runtime compatibility; a new successful run must not erase this stop.
+
+Independent composition review also found a delayed-producer cancellation race
+before the first hosted attempt. Admission closure and creation/removal
+serialization repaired it, and the focused regression failed against the prior
+source before passing with the correction. This is evidence of that specific
+failure mechanism and repair, not a general review-efficiency claim. Three
+required source-commit gates took 505.80, 500.84 and 505.73 seconds sequentially;
+these measured execution spans exclude unmeasured authoring/review and subsequent
+hosted waiting. Required gates were retained; no avoided-time saving is claimed.
+
 ## Risks, review and reuse
 
 [ADR-110's risk dossier](../implementation/hosted-verification-testbench.md)
@@ -850,7 +915,9 @@ R1-R11 remains applicable. Account access expansion, identity confusion, secret
 misdelivery and lifetime/trust escape retain High/Critical impact, unknown
 likelihood and P1 urgency before dependent work. The bench operator owns probes;
 the maintainer retains vendor, security, budget and architecture acceptance.
-No policy or trust risk has been accepted by this experiment.
+The narrowly admitted synthetic publication and temporary encrypted return
+artifact do not accept a permanent topology, production bootstrap, new browser
+trust or the remaining architectural residuals.
 
 Revalidate affected observations on source/workflow, image/toolchain, provider,
 resource policy, workload, connector, account/policy/tag membership or trust-store

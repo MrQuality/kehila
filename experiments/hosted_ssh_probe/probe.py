@@ -119,6 +119,9 @@ def source_binding(config):
             and env['GITHUB_SHA'] == config['sha'] == env['GITHUB_WORKFLOW_SHA'])
     require(re.fullmatch(r'refs/tags/sp007-direct-probe-[a-z0-9-]{1,64}', config['ref'])
             and env['GITHUB_REF'] == config['ref'])
+    phase = env['PROBE_PHASE']
+    require(phase in {'control', 'live', 'admission'} and
+            config['ref'].startswith('refs/tags/sp007-direct-probe-' + phase + '-'))
     return dict(version=1, repository='MrQuality/kehila', sha=config['sha'], ref=config['ref'],
                 workflow=WORKFLOW, run_id=env['GITHUB_RUN_ID'], attempt=1,
                 nonce=config['nonce'], recipient_sha256=config['recipient_sha256'])
@@ -266,6 +269,50 @@ def remove_containers_unlocked(storage):
     require(not failures)
 
 
+def admit_listener(storage, container, host, scope):
+    """Observe before asserting; public diagnostics never contain engine strings."""
+    require(host in {'127.0.0.1', '0.0.0.0'} and scope in {'control', 'listener'})
+    (storage / 'stage').write_text(scope + '-inspect')
+    inspection = run(['sudo', '-n', 'podman', 'inspect', container], storage)
+    (storage / (scope + '-inspect.json')).write_bytes(inspection)
+    decoded = json.loads(inspection)
+    require(type(decoded) is list and len(decoded) == 1 and type(decoded[0]) is dict)
+    effective = decoded[0]
+    state = effective.get('State', {})
+    require(type(state) is dict)
+    network = effective.get('NetworkSettings', {})
+    ports = network.get('Ports') if type(network) is dict else None
+    mapping = ports.get('2222/tcp') if type(ports) is dict else None
+    entry = mapping[0] if type(mapping) is list and len(mapping) == 1 and type(mapping[0]) is dict else {}
+    host_value = entry.get('HostIp')
+    host_kind = ({'127.0.0.1': 'loopback', '0.0.0.0': 'wildcard-ipv4', '': 'empty'}.get(host_value, 'other')
+                 if type(host_value) is str else 'invalid')
+    safe = dict(scope=scope, running=state.get('Running') is True,
+        exit_code=state.get('ExitCode') if type(state.get('ExitCode')) is int
+            and 0 <= state['ExitCode'] <= 255 else None,
+        ports_type=type(ports).__name__, mapping_type=type(mapping).__name__,
+        mapping_count=len(mapping) if type(mapping) is list else None,
+        host_kind=host_kind, selected_port_matches=entry.get('HostPort') == str(PORT),
+        port_type=type(entry.get('HostPort')).__name__,
+        mapping_matches=mapping == [{'HostIp': host, 'HostPort': str(PORT)}], ready=False)
+    (storage / 'admission.json').write_text(json.dumps(safe))
+    (storage / 'stage').write_text(scope + '-state')
+    require(safe['running'])
+    (storage / 'stage').write_text(scope + '-mapping')
+    require(safe['mapping_matches'])
+    (storage / 'stage').write_text(scope + '-readiness')
+    run(['sudo', '-n', 'podman', 'exec', container, 'python3', '-c',
+        'import socket,time\n'
+        'for port in (2222,31337):\n'
+        ' for attempt in range(40):\n'
+        '  try: socket.create_connection(("127.0.0.1",port),.1).close(); break\n'
+        '  except OSError: time.sleep(.1)\n'
+        ' else: raise RuntimeError("listener not ready")'], storage, timeout=10)
+    safe['ready'] = True
+    (storage / 'admission.json').write_text(json.dumps(safe))
+    return safe
+
+
 def expiry_control(storage, image, mounts, binding):
     # A distinct disposable key exercises actual authentication without uploading
     # the admitted operator's private key or broadening the live source policy.
@@ -285,12 +332,14 @@ def expiry_control(storage, image, mounts, binding):
         ':/etc/ssh/probe_control_key:ro', '--volume', str(storage / 'control_known_hosts') +
         ':/etc/ssh/probe_control_known_hosts:ro']
     try:
-        identity = create_container(storage, 'control', ['-d', '--network=none',
+        identity = create_container(storage, 'control', ['-d', '--network=bridge',
             '--memory=256m', '--memory-swap=256m', '--cpus=1', '--pids-limit=128',
-            '--read-only', '--tmpfs', '/run:rw,nosuid,nodev,size=8m'] + control_mounts +
+            '--read-only', '--tmpfs', '/run:rw,nosuid,nodev,size=8m',
+            '--publish', '127.0.0.1:' + str(PORT) + ':2222'] + control_mounts +
             ['--env', 'PROBE_NONCE=' + binding['nonce']], image,
-            ['timeout', '--signal=KILL', '8', 'python3', '/opt/probe/service.py']).decode().strip()
+            ['timeout', '--signal=KILL', '20', 'python3', '/opt/probe/service.py']).decode().strip()
         require(re.fullmatch(r'[0-9a-f]{64}', identity))
+        admit_listener(storage, identity, '127.0.0.1', 'control')
         command = ['sudo', '-n', 'podman', 'exec', '-i', identity, 'timeout', '--signal=KILL', '3',
             'ssh', '-F', 'none', '-T', '-i', '/etc/ssh/probe_control_key', '-p', '2222',
             '-o', 'BatchMode=yes', '-o', 'IdentitiesOnly=yes', '-o', 'IdentityAgent=none',
@@ -298,19 +347,14 @@ def expiry_control(storage, image, mounts, binding):
             '-o', 'UserKnownHostsFile=/etc/ssh/probe_control_known_hosts',
             '-o', 'HostKeyAlgorithms=ssh-ed25519', '-o', 'ConnectTimeout=2',
             '-W', '127.0.0.1:31337', 'probe@127.0.0.1']
-        # Give the Python/sshd startup a bounded window before testing auth.
-        run(['sudo', '-n', 'podman', 'exec', identity, 'python3', '-c',
-            'import socket,time\n'
-            'for attempt in range(20):\n'
-            ' try: socket.create_connection(("127.0.0.1",2222),.1).close(); break\n'
-            ' except OSError: time.sleep(.05)\n'
-            'else: raise RuntimeError("SSH control not ready")'], storage, timeout=3)
         request = ('GET /' + binding['nonce'] + ' HTTP/1.0\r\nHost: synthetic\r\n\r\n').encode('ascii')
+        (storage / 'stage').write_text('control-ssh')
         response = run(command, storage, data=request, timeout=4)
         header, separator, body = response.partition(b'\r\n\r\n')
         require(separator and header.startswith(b'HTTP/1.0 200 ') and body == binding['nonce'].encode('ascii'))
         # Check the real process tree under the selected engine before public exposure.
-        require(run(['sudo', '-n', 'podman', 'wait', identity], storage, timeout=12).strip() == b'137')
+        (storage / 'stage').write_text('control-expiry')
+        require(run(['sudo', '-n', 'podman', 'wait', identity], storage, timeout=25).strip() == b'137')
         state = json.loads(run(['sudo', '-n', 'podman', 'inspect', identity], storage))[0]['State']
         require(not state['Running'] and state['ExitCode'] == 137)
     finally:
@@ -318,6 +362,7 @@ def expiry_control(storage, image, mounts, binding):
             remove_containers(storage)
         finally:
             (storage / 'control_key').unlink(missing_ok=True)
+    return dict(ssh_nonce=True, expiry=True, host_loopback_transport_tested=False)
 
 
 def admit_mount_ownership(storage):
@@ -330,13 +375,19 @@ def admit_mount_ownership(storage):
         require(state.st_uid == 0 and state.st_gid == 0 and state.st_mode & 0o777 == mode)
 
 
-def serve(storage):
+def serve(storage, *, admission_only=False):
     """Own the container until expiry; container PID 1 also has its own lease."""
     binding = read_json((storage / 'binding.json').read_bytes())
     require(binding == source_binding(binding))
-    (storage / 'stage').write_text('candidate')
-    address = candidate_address(storage)
+    address = None
+    if not admission_only:
+        (storage / 'stage').write_text('candidate')
+        address = candidate_address(storage)
     engine = ['sudo', '-n', 'podman']
+    (storage / 'stage').write_text('engine-version')
+    version = run(engine + ['--version'], storage).decode('ascii').strip()
+    require(len(version) <= 80 and re.fullmatch(r'podman version [0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?', version))
+    (storage / 'engine-version').write_text(version)
     admit_mount_ownership(storage)
     (storage / 'stage').write_text('image')
     image_id = storage / 'image-id'
@@ -360,12 +411,18 @@ def serve(storage):
                 b'permitopen 127.0.0.1:31337', b'permitlisten none')
     require(all(line in policy.splitlines() for line in required))
     (storage / 'stage').write_text('expiry-control')
-    expiry_control(storage, image, mounts, binding)
+    controls = expiry_control(storage, image, mounts, binding)
+    if admission_only:
+        write_result(storage, dict(admission_only=True, owner_succeeded=True,
+            controls=controls, descriptor_ready=False, container_removed=True,
+            residual_check=True, podman_version=version))
+        return
     container = None
     started = time.monotonic()
     deadline = int(time.time()) + LEASE
-    result = dict(owner_succeeded=False, container_started=False, descriptor_ready=False,
-                  container_removed=False, residual_check=False)
+    result = dict(admission_only=False, owner_succeeded=False, container_started=False,
+                  descriptor_ready=False, container_removed=False, residual_check=False,
+                  controls=controls, podman_version=version)
     try:
         (storage / 'stage').write_text('listener')
         container = create_container(storage, 'live', ['--detach', '--read-only',
@@ -376,20 +433,7 @@ def serve(storage):
         require(re.fullmatch(r'[0-9a-f]{64}', container))
         result['container_started'] = True
         # Inspect only our owned container; no address or inspection output enters logs.
-        inspection = run(engine + ['inspect', container], storage)
-        (storage / 'container-inspect.json').write_bytes(inspection)
-        effective = json.loads(inspection)[0]
-        require(effective['State']['Running'])
-        mapping = effective['NetworkSettings']['Ports']['2222/tcp']
-        require(mapping == [{'HostIp': '0.0.0.0', 'HostPort': str(PORT)}])
-        # Wait for the contained loopback target AND SSH listener without public traffic.
-        run(engine + ['exec', container, 'python3', '-c',
-            'import socket,time\n'
-            'for port in (2222,31337):\n'
-            ' for attempt in range(20):\n'
-            '  try: socket.create_connection(("127.0.0.1",port),.2).close(); break\n'
-            '  except OSError: time.sleep(.1)\n'
-            ' else: raise RuntimeError("listener not ready")'], storage, timeout=8)
+        admit_listener(storage, container, '0.0.0.0', 'listener')
         host_key = public_key(' '.join((storage / 'host_key.pub').read_text().split()[:2]))
         (storage / 'stage').write_text('descriptor')
         descriptor = dict(binding, address=address, port=PORT, host_public_key=host_key,
@@ -464,7 +508,7 @@ def delete_artifacts():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('prepare', 'serve', 'wait', 'finish', 'cleanup'))
+    parser.add_argument('mode', choices=('prepare', 'serve', 'admission', 'wait', 'finish', 'cleanup'))
     parser.add_argument('storage', type=Path)
     args = parser.parse_args()
     storage = args.storage.resolve()
@@ -473,7 +517,11 @@ def main():
     if args.mode == 'prepare':
         prepare(storage)
     elif args.mode == 'serve':
+        require(os.environ['PROBE_PHASE'] == 'live')
         serve(storage)
+    elif args.mode == 'admission':
+        require(os.environ['PROBE_PHASE'] == 'admission')
+        serve(storage, admission_only=True)
     elif args.mode == 'cleanup':
         cleanup(storage)
     elif args.mode == 'finish':
@@ -481,7 +529,8 @@ def main():
             if (storage / 'result.json').exists():
                 result = read_json((storage / 'result.json').read_bytes())
                 print(json.dumps(result, sort_keys=True))
-                require(result['owner_succeeded'] and result['descriptor_ready'] and result['container_removed']
+                require(result['owner_succeeded'] and
+                        (result.get('admission_only') or result['descriptor_ready']) and result['container_removed']
                         and result['residual_check'])
                 return
             time.sleep(3)
@@ -501,7 +550,7 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as error:
-        if len(sys.argv) == 3 and sys.argv[1] == 'serve':
+        if len(sys.argv) == 3 and sys.argv[1] in {'serve', 'admission'}:
             storage = Path(sys.argv[2])
             result_path = storage / 'result.json'
             result = read_json(result_path.read_bytes()) if result_path.exists() else dict(
@@ -510,7 +559,12 @@ if __name__ == '__main__':
             result.setdefault('failure_class', type(error).__name__)
             result.setdefault('failure_stage', (storage / 'stage').read_text()
                               if (storage / 'stage').exists() else 'admission')
+            if (storage / 'admission.json').exists():
+                result['admission'] = read_json((storage / 'admission.json').read_bytes())
+            if (storage / 'engine-version').exists():
+                result['podman_version'] = (storage / 'engine-version').read_text()
             write_result(storage, result)
+            print(json.dumps(result, sort_keys=True))
         # Never expose paths, addresses, command args or exception text to Actions.
         print('Synthetic SSH probe stopped; confidential diagnostics retained locally.', file=sys.stderr)
         sys.exit(1)

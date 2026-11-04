@@ -27,8 +27,8 @@ requiring the new workflow to be merged into the default branch. Neither phase
 changes PR state.
 
 The live job checks the effective SSH policy, actual contained SSH forwarding and
-an eight-second expiry control with no published port before exposing one high
-IPv4 port. Rootful bind-mount ownership is checked explicitly for StrictModes.
+a twenty-second expiry control with loopback-only host publication before exposing
+one high IPv4 port. Rootful bind-mount ownership is checked explicitly for StrictModes.
 The SSH role requires the
 admitted key and exact observed client source, denies sessions and reverse
 forwarding, and permits only the synthetic loopback destination. VPN address
@@ -36,6 +36,14 @@ rotation causes rejection; it does not widen policy. The two-minute container
 lease and host owner are separate controls, not proof of a hard remote deadline
 under host compromise or platform failure. The ten-minute job ceiling is another
 separate limit. An egress-derived endpoint is only a reachability hypothesis.
+
+Use `--admission-only` to stop after the nonpublic hosted control. That mode never
+creates an external listener or uploads a descriptor artifact. The same strict
+inspection and contained-readiness checks serve the loopback and eventual public
+publication, with only the expected bind address differing. Sanitized diagnostics
+identify inspect, state, mapping, readiness, SSH and expiry failures and the actual
+engine version. Raw engine data remains private. The SSH control runs inside the
+container; it does not prove that traffic crossed the host-published loopback port.
 
 At most three local attempts use pinned host identity and five-second execution
 deadlines, followed by the existing separately bounded descendant/pipe cleanup.

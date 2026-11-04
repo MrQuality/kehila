@@ -141,6 +141,8 @@ class ProbeContractTests(unittest.TestCase):
             binding = self.expected()
             (storage / 'binding.json').write_text(json.dumps(binding))
             def engine(command, *_args, **_kwargs):
+                if '--version' in command:
+                    return b'podman version 4.9.3\n'
                 if 'build' in command:
                     return b'build progress is not image identity'
                 if 'cat' in command:
@@ -157,7 +159,7 @@ class ProbeContractTests(unittest.TestCase):
                     patch.object(probe, 'candidate_address', return_value='8.8.8.8'), \
                     patch.object(probe, 'create_container', side_effect=create), \
                     patch.object(probe, 'admit_mount_ownership'), \
-                    patch.object(probe, 'expiry_control'), \
+                    patch.object(probe, 'expiry_control', return_value={'ssh_nonce': True, 'expiry': True}), \
                     patch.object(probe, 'run', side_effect=engine), \
                     patch.object(probe, 'remove_containers') as remove, \
                     self.assertRaises(subprocess.TimeoutExpired):
@@ -176,6 +178,8 @@ class ProbeContractTests(unittest.TestCase):
             entered, resume = threading.Event(), threading.Event()
             late_creates, errors = [], []
             def engine(command, *_args, **_kwargs):
+                if '--version' in command:
+                    return b'podman version 4.9.3\n'
                 if 'build' in command:
                     entered.set()
                     if not resume.wait(2):
@@ -228,6 +232,70 @@ class ProbeContractTests(unittest.TestCase):
             with patch.object(probe, 'run', return_value=b''), self.assertRaises(ValueError):
                 probe.close_and_remove_containers(storage)
             self.assertTrue((storage / 'admission.closed').exists())
+
+    def test_listener_rejections_identify_state_mapping_and_readiness_without_leaking(self):
+        for failure in ('state', 'mapping', 'readiness'):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
+                storage = Path(temporary)
+                inspect = dict(State={'Running': failure != 'state', 'ExitCode': 0,
+                                      'Error': 'synthetic-sensitive-diagnostic'},
+                    NetworkSettings={'Ports': {'2222/tcp': [{'HostIp': '198.51.100.27'
+                        if failure == 'mapping' else '127.0.0.1', 'HostPort': '49152'}]}})
+                responses = [json.dumps([inspect]).encode()]
+                if failure == 'readiness':
+                    responses.append(ValueError('synthetic-sensitive-command-error'))
+                with patch.object(probe, 'run', side_effect=responses), self.assertRaises(ValueError):
+                    probe.admit_listener(storage, 'a' * 64, '127.0.0.1', 'control')
+                self.assertEqual((storage / 'stage').read_text(), 'control-' + failure)
+                safe = (storage / 'admission.json').read_text()
+                self.assertNotIn('198.51.100.27', safe)
+                self.assertNotIn('synthetic-sensitive', safe)
+                self.assertIn('mapping_matches', safe)
+
+    def test_inspect_command_failure_has_its_own_stage(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            storage = Path(temporary)
+            with patch.object(probe, 'run', side_effect=ValueError), self.assertRaises(ValueError):
+                probe.admit_listener(storage, 'a' * 64, '127.0.0.1', 'control')
+            self.assertEqual((storage / 'stage').read_text(), 'control-inspect')
+
+    def test_admission_only_cannot_create_public_listener_or_descriptor(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            storage = Path(temporary)
+            binding = self.expected()
+            (storage / 'binding.json').write_text(json.dumps(binding))
+            policy = (b'passwordauthentication no\nkbdinteractiveauthentication no\n'
+                      b'allowtcpforwarding local\nmaxsessions 0\n'
+                      b'permitopen 127.0.0.1:31337\npermitlisten none\n')
+            def engine(command, *_args, **_kwargs):
+                if '--version' in command:return b'podman version 4.9.3\n'
+                if 'cat' in command:return b'a' * 64
+                return b'build progress'
+            with patch.object(probe, 'source_binding', return_value=binding), \
+                    patch.object(probe, 'candidate_address') as candidate, \
+                    patch.object(probe, 'admit_mount_ownership'), \
+                    patch.object(probe, 'run', side_effect=engine), \
+                    patch.object(probe, 'create_container', return_value=policy) as create, \
+                    patch.object(probe, 'expiry_control', return_value={'ssh_nonce': True, 'expiry': True}):
+                probe.serve(storage, admission_only=True)
+            candidate.assert_not_called()
+            self.assertEqual([c.args[1] for c in create.call_args_list], ['policy'])
+            self.assertFalse((storage / 'descriptor.der').exists())
+            result = json.loads((storage / 'result.json').read_bytes())
+            self.assertTrue(result['admission_only'])
+            self.assertFalse(result['descriptor_ready'])
+
+    def test_dispatch_phase_must_match_the_admitted_tag(self):
+        config = dict(self.expected(), ref='refs/tags/sp007-direct-probe-admission-owned')
+        environment = dict(GITHUB_REPOSITORY='MrQuality/kehila', GITHUB_ACTOR='MrQuality',
+            GITHUB_EVENT_NAME='push', GITHUB_RUN_ATTEMPT='1', GITHUB_SHA='a' * 40,
+            GITHUB_WORKFLOW_SHA='a' * 40, GITHUB_REF=config['ref'], GITHUB_RUN_ID='123',
+            PROBE_PHASE='admission')
+        with patch.dict(probe.os.environ, environment, clear=True):
+            self.assertEqual(probe.source_binding(config)['ref'], config['ref'])
+            probe.os.environ['PROBE_PHASE'] = 'live'
+            with self.assertRaises(ValueError):
+                probe.source_binding(config)
 
 
 

@@ -29,7 +29,7 @@ jobs:
           PROBE_CONFIG: ${{ secrets.SP007_DIRECT_SSH_CONFIG }}
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$PROBE_PHASE" = control || test "$PROBE_PHASE" = live
+          test "$PROBE_PHASE" = control || test "$PROBE_PHASE" = live || test "$PROBE_PHASE" = admission
           umask 077
           python experiments/hosted_ssh_probe/probe.py prepare "$RUNNER_TEMP/direct-ssh"
       - name: Return synthetic Linux encryption control before live exposure
@@ -44,6 +44,9 @@ jobs:
       - name: Bounded control retrieval window
         if: env.PROBE_PHASE == 'control'
         run: sleep 60
+      - name: Nonpublic listener admission only
+        if: env.PROBE_PHASE == 'admission'
+        run: python experiments/hosted_ssh_probe/probe.py admission "$RUNNER_TEMP/direct-ssh"
       - name: Start independently bounded synthetic SSH owner
         if: env.PROBE_PHASE == 'live'
         run: |
@@ -60,7 +63,7 @@ jobs:
           retention-days: 1
           compression-level: 0
       - name: Observe owned expiry and aggregate result
-        if: env.PROBE_PHASE == 'live'
+        if: env.PROBE_PHASE == 'live' || env.PROBE_PHASE == 'admission'
         run: python experiments/hosted_ssh_probe/probe.py finish "$RUNNER_TEMP/direct-ssh"
       - name: Remove owned container and encrypted artifacts
         if: always()
