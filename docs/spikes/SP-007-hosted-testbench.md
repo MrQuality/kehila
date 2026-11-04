@@ -2,12 +2,33 @@
 
 | Field | Value |
 | --- | --- |
-| Status / outcome | Active / no live bench qualification |
+| Status / outcome | Research checkpoint; further evaluations deferred / no live bench qualification |
 | Owner / assessor | Project maintainer; agent executes bounded research and independent review challenges evidence |
 | Created / last updated | 2026-11-04 |
 | Related work | [PR #93](https://github.com/MrQuality/kehila/pull/93), [ADR-110](../architecture/ADR-110-hosted-verification-testbench.md), #40, #41, #49, #71 |
 | Effort limit / stop | One 30-minute hosted capacity attempt; one 45-minute connector build/API investigation. Stop dependent live work at unmet policy, credential, trust, lifecycle or resource admission. Preserve failures before any scoped rerun. |
 | Prior evidence | Existing native CI passed the product fixture; documentation-only CI skipped workloads. Neither measured the proposed bench nor qualified local remote clients. |
+
+## Current result and contributor handoff
+
+The current native fixture ran on standard hosted capacity (R02). The selected
+local-to-runner SSH endpoint failed three TCP connection attempts (R17); its
+fixture admission, encryption controls and cleanup passed within their stated
+scope. The timeout cause is unresolved. No complete remote bench, application
+TLS/browser journey or matched local memory saving is qualified.
+
+Further evaluations are deferred; no near-term execution is planned. Future
+contributors can use [#94](https://github.com/MrQuality/kehila/issues/94) for
+Modal/E2B frontend evaluation and [#95](https://github.com/MrQuality/kehila/issues/95)
+for runner-initiated SSH to the development machine. Both preserve research and
+resume gates, not permission to start experiments. The selected SSH direction B
+remains externally untested. ADR-110 remains Proposed.
+
+Start with the [current A-F disposition](#current-case-disposition-and-next-observations)
+and [retrospective](#proportional-checkpoint-retrospective). R01-R18 below preserve
+the actual sequence, including failures and superseded next-step proposals; they
+do not override this deferral or establish new execution authority. Retained
+fixtures support inspection and reproduction subject to fresh admission.
 
 ## Question, scope and framing
 

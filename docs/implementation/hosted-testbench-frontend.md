@@ -3,6 +3,11 @@
 Status: research proposal, 2026-11-04. Related: [ADR-110](../architecture/ADR-110-hosted-verification-testbench.md),
 [SP-007](../spikes/SP-007-hosted-testbench.md), [PR #93](https://github.com/MrQuality/kehila/pull/93).
 No provider account, payment method, deployment or supported topology is selected.
+Further evaluation is deferred in [#94](https://github.com/MrQuality/kehila/issues/94)
+for future contributors; no near-term work is planned. The comparison below is
+dated source research. Refresh provider terms and obtain the stated operating
+decisions when the maintainer resumes the issue; proposed next steps are not an
+active execution plan.
 
 ## Outcome and decision boundary
 

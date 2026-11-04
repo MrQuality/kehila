@@ -5,6 +5,11 @@ Status: Proposed research, 2026-11-04. Related:
 [SSH mechanisms and risk plan](hosted-testbench-ssh.md),
 [SP-007](../spikes/SP-007-hosted-testbench.md).
 
+Further evaluation is deferred in [#95](https://github.com/MrQuality/kehila/issues/95)
+for future contributors; no near-term work is planned. Local-to-runner A failed
+for the selected external endpoint/path in R17; runner-to-local B remains
+externally untested. See the [current handoff](../spikes/SP-007-hosted-testbench.md#current-result-and-contributor-handoff).
+
 ## Outcome and current recommendation
 
 The maintainer requested evaluation of both direct connection directions to
@@ -13,10 +18,11 @@ research priority, not the underlying hosted-backend/local-browser outcome.
 Neither complete bench topology nor network/security reconfiguration is accepted here.
 Source baseline: `c1ddaaf674c4a616e0b916801973adf615dc8403`.
 
-Evaluate direct local-to-runner SSH first: if ingress works, its server-side
+The original sequence evaluated direct local-to-runner SSH first: if ingress works, its server-side
 destination restriction is simpler than a reverse forward. The maintainer selected
-a bounded A-only synthetic experiment; defer runner-to-local SSH unless A fails
-and reasonable direct-path alternatives have been investigated. Both can avoid a rented
+a bounded A-only synthetic experiment. The later R17 result and issue #95 preserve
+runner-to-local SSH as the deferred next direction, without automatically starting
+it or declaring every A path impossible. Both can avoid a rented
 broker, but neither is currently qualified as reachable. Do not purchase a broker
 merely because the first investigation used one as its topology example.
 
@@ -26,10 +32,11 @@ one control-only encryption run followed by a separately admitted live SSH run.
 The encrypted artifact return channel is explicitly temporary: delete owned
 artifacts after consumption and again at closeout, verify absence, and retain
 cleanup failures. Its admission does not select the permanent bootstrap channel.
-Internet
-connectivity, actual Windows/WSL SSH paths, provider support and the mitigated
-isolation/lifetime contracts remain unexecuted. Read-only local observations
-guide private admission only; no machine addresses/configuration belong here.
+R17 observed three external TCP connection timeouts after successful contained
+controls. It does not establish a supported incoming mapping or identify the
+upstream cause. Actual Windows/WSL session isolation and lifetime, provider
+support and product integration remain unqualified. Machine-specific observations
+guide local admission only; no machine addresses/configuration belong here.
 
 ## Compare the two directions
 
@@ -219,8 +226,10 @@ Its challenge preserved direction-of-connection vs direction-of-data, hostname
 vs address/port, direct-forward enforcement and failure-domain distinctions.
 Research/review effort is unmeasured; no maintenance saving is demonstrated.
 
-No internet-facing listener, SSH connection, router/firewall/VPN/DNS change or
-paid resource was created for this comparison. R13 remains valid only for its
-contained mechanism/version/configuration scope. The next decision is the exact
-bounded reachability probe and its metadata/publication scope; selecting either
-complete bench topology still depends on that result and lifecycle qualification.
+The source comparison itself created no listener or paid resource. Subsequent
+R15-R17 experiments are recorded separately in SP-007, including R17's admitted
+public listener and failed external TCP attempts. No router/firewall/VPN/DNS
+change followed. R13 remains valid only for its contained mechanism/version/
+configuration scope. Future contributor work in #95 must first establish a
+supported receiver route and satisfy the admission, confinement and lifetime
+gates; selecting a complete topology remains a maintainer decision.

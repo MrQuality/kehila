@@ -3,6 +3,11 @@
 Status: Proposed. Owner: project maintainer. Created: 2026-11-03.
 Acceptance: pending an explicit maintainer decision; merging this proposal does
 not authorize implementation, enrollment, trust changes or replacement of gates.
+Further evaluations are deferred for future contributors in
+[#94](https://github.com/MrQuality/kehila/issues/94) (Modal/E2B) and
+[#95](https://github.com/MrQuality/kehila/issues/95) (runner-initiated SSH).
+See the [current research handoff](../spikes/SP-007-hosted-testbench.md#current-result-and-contributor-handoff)
+for observed results and remaining gates; this proposal does not schedule work.
 Related: [ADR-105](ADR-105-local-owner-authentication.md),
 [ADR-106](ADR-106-local-container-transport.md),
 [testing guide](../TESTING.md),
