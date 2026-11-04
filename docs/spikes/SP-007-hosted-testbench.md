@@ -19,6 +19,15 @@ This extends the earlier documentation-only design milestone into experimental
 research. It does not accept ADR-110, replace gates or authorize paid services,
 unspecified trust installation, merging or PR status changes.
 
+Subsequent maintainer direction selects SSH over tsnet for research and
+authorizes the targeted Windows observer and WSL storage investigation. The
+[SSH companion](../implementation/hosted-testbench-ssh.md) records the revised
+candidate, costs, restriction/lifetime gaps and proposed policy laboratory.
+This supersedes the preferred transport direction, not historical observations
+or the underlying confinement and lifecycle obligations. A specific private
+native Linux temporary-storage boundary was separately approved for the bounded
+WSL socket/browser probes; no trust, mount or system security change follows.
+
 One research record groups the six coupled questions; the labels below preserve
 their original scope. The separate future exact-staged-tree gate migration is
 excluded. Prototype code is research-only and must not become production or a
@@ -27,7 +36,7 @@ required check through this investigation.
 | Premise | Status / consequence if false |
 | --- | --- |
 | Standard hosted capacity can run the current native fixture | Prior source/runtime evidence supports feasibility; fresh resource measurements remain necessary. Failure reopens capacity/preparation, not product limits. |
-| Process-scoped tsnet works on actual Windows and WSL paths | Unqualified; cross-compilation is insufficient. Do not claim these paths from Linux-only results. |
+| Selected transport works on actual Windows and WSL paths | Unqualified. SSH is now preferred; earlier tsnet cross-compilation remains historical evidence, not runtime qualification of either transport. |
 | Account sign-in makes automation access available | Contradicted by empty browser-tool inventory. Account/policy inspection and enrollment remain blocked. |
 | Available GitHub secrets provide confidential per-attempt delivery | Unsupported without sender/recipient, source/run binding and interruption proof. Do not use secrets merely to test that assumption. |
 | Generated certificates authorize installing trust | Unsupported. Exact store/scope/deadline/cleanup approval remains separate. |
@@ -56,7 +65,7 @@ separate.
 | A1 Hosted capacity | Fresh hosted Ubuntu runner, Podman, pinned current native toolchain/database, one Cargo job | Image/dependency/native phase outcomes, elapsed time, sampled system available memory and storage; only this workload's bounded feasibility |
 | A2 Capacity limits | Same run, 1-second samples, existing owned fixture cleanup | Missing measurements or workload/cleanup failure prevents qualification; sampling can miss peaks, and system usage is not workload-attributed RAM |
 | B1 Connector build/API | Reviewed pinned tsnet graph, Linux container build, Windows/Linux targets | Build result and dependency/API constraints only; no runtime Windows/WSL isolation inference |
-| B2 Actual isolation | Actual Windows/WSL connectors, inspected effective policy, exact enrolled peers | Fixed destination, retained port, denied reverse/other-session/database/engine paths; blocked until live admission |
+| B2 Actual isolation | Actual Windows/WSL transport, inspected effective policy, exact session identities | Fixed destination, retained port, denied reverse/other-session/database/engine paths; SSH policy laboratory precedes live admission |
 | C1 Bootstrap | Actual confidential mechanism bound to source/workflow/run/attempt/recipient | Reject wrong/replayed transfer and reconcile interruption without disclosure; secret existence alone is insufficient |
 | D1 Lifecycle | Selected supervisor and independent control path, active streams and owned processes | Observe deadline/kill/outage/restart behavior separately from enrollment expiry; job timeout alone is insufficient |
 | E1 Stock browsers | Actual executable identity and OS, approved trust scope, bypass disabled | Headless product/TLS positive and wrong-issuer/IP/expired negative controls per browser; inventory alone is insufficient |
@@ -475,16 +484,111 @@ protection fixture, sole-maintainer release policy, provider ordering, recipient
 isolation, record binding and enforcement observations remain gates. Do not turn
 proposal detail or read-only API success into C/D qualification.
 
+### SP-007-R10: SSH source investigation, 2026-11-04
+
+The maintainer prefers SSH over tsnet. The
+[SSH investigation](../implementation/hosted-testbench-ssh.md) compares the
+broker topology, source/recipient admission, endpoint ownership, separate
+local/broker/runner lifetimes and dated cost/effort estimates. Primary-source
+inspection supports local/reverse forwarding primitives, not this integrated
+bench. Installed client inventory found Windows OpenSSH 9.5p2 and WSL Ubuntu
+OpenSSH 8.9p1. No connection, broker, policy canary or new secret was created.
+
+The source-first independent challenge exposed three important gaps in a plain
+pair of SSH forwarding commands: broker restrictions do not constrain the reverse
+forward's runner-side destination; broker loopback is not session authentication;
+and stock local forwarding does not prove continuous ownership of a separately
+prebound endpoint. The candidate retains independent runner network restriction,
+broker isolation and local admission ownership rather than weakening those
+contracts. Active-stream cutoff remains distinct from new-login rejection and
+remote backend death. Current upstream manuals do not qualify installed releases.
+
+This closes the source-comparison checkpoint only. Next is a bounded synthetic
+Podman policy laboratory, subject to its reviewed harness and memory budget;
+provider/budget/trust and live integrated qualification remain separate. Existing
+Tailscale account-access blockage does not prevent independent SSH research.
+
+### SP-007-R11: observer and native temporary-storage controls, 2026-11-04
+
+A known-owned IPv4 loopback `TcpListener` was started and retained by the actual
+Windows diagnostic process. The port/state query using terminating-error
+handling reported CIM `CmdletizationQuery_NotFound`; the independent .NET
+port-selected listener enumeration completed with zero matching rows. Owned
+listener stop completed in `finally`; total control duration was 0.889 seconds.
+No browser, driver or HTTP session was involved. This reproduces the observation
+gap independently of browser version and corrects the earlier suppression of
+query errors. It does not identify the Windows root cause or prove endpoint
+confinement. Keep both Windows browser campaigns stopped; accepting wildcard,
+bound or established rows would not repair the listener oracle.
+
+The separately approved native Linux storage control ran as nonroot UID 1000
+on ext4. Root and fresh temporary-directory modes were `0700`, ownership matched,
+and an 87-byte representative Unix socket path bound successfully. The socket
+closed and its temporary directory was removed. The fixture took 0.002 seconds
+inside Linux; this excludes WSL startup and controller overhead. No Chrome or
+driver launched in this control. The approved root remains for bounded probes;
+no mount, trust or global permission setting changed.
+
+Review then found that nesting the first Chrome candidate's temporary layout
+would produce a 108-byte representative socket path despite the shorter control
+passing. The candidate was shortened within the same admitted root and requires
+its own exact-layout bind before launch. The 87-byte pass alone cannot qualify
+every later path. Memory cancellation is likewise a separate harness control,
+not a property inferred from a browser timeout.
+
+### SP-007-R12: actual WSL Chrome after storage repair, 2026-11-04
+
+After the separately approved native-storage boundary and R11 control, the
+reviewed candidate separated retained executable/library artifacts from a fresh
+native runtime root for profile, HOME/XDG and temporary state. It authenticated
+the unchanged artifact manifest and exact script inputs, checked the final
+nested temporary layout with an actual Unix socket bind, then ran one stock
+Chrome data-page case. No global package, mount, certificate or security change
+was made. Old failed fixtures and scripts remain retained.
+
+Prelaunch review shortened the nested socket path and replaced PID-based
+cancellation with a Linux pidfd acquired before identity checks. The helper
+validates UID, process generation, command and source, signals through that
+handle, and has no numeric-PID fallback. The affected tiny cancellation fixture
+passed in 4.219 seconds: the supervisor received interruption, its owned child
+was no longer running, and the Windows launcher joined. This is cancellation
+mechanism evidence, not an actual low-memory browser stop result.
+
+Actual executable/library preflight passed in 0.804 seconds. Chrome
+157.0.8103.38 with its matching ChromeDriver returned Linux/Chrome capabilities
+and `acceptInsecureCerts=false`; two owned loopback listeners were observed
+before and after session creation. The data-page title and button-click title
+change passed in the 5.025-second browser stage. The Linux stage-controller span
+was 5.834 seconds, excluding initial artifact guards; the Windows monitoring
+span was 14.079 seconds including launch/preparation overhead. Normal browser
+quit, owned driver terminate/join and the final owned-root process scan completed
+with no cleanup errors, remaining matches or scan failures. The fresh synthetic
+profile and diagnostics remain protected for assessment.
+
+The host monitor sampled Windows available memory once per second and reported
+a minimum of 2,160,840,704 bytes (about 2.01 GiB). The existing 1.5 GiB stop floor
+was not reached and no interruption was requested. This is sampled system-wide
+availability, not browser RSS, a true peak, a hard memory ceiling or measured
+backend-offload savings. Cancellation latency and intervals between samples
+remain limitations. Podman and a local backend were not started for this case.
+
+This supports the actual WSL stock-Chrome owned-listener/data-page path only.
+It establishes neither application TLS, sandbox qualification, WAN/product flows,
+Windows behavior nor integrated bench relief. A strict-certificate capability on
+a data URL is not a positive or negative TLS test. Both Windows campaigns remain
+stopped at their unresolved observer admission. SSH policy execution is the next
+independent experiment, held for reviewed harness and adequate memory headroom.
+
 ### Current case disposition and next observations
 
 | Scope | Evidence / status | Next decisive observation |
 | --- | --- | --- |
 | A1/A2 Current hosted fixture capacity | Passed R02 with stated measurement limits | Reuse within this source/tool/workload boundary; actual remote session remains separate |
-| B1 API build | Preliminary R03 build support | Review and version a reproducible actual helper; qualify Windows/WSL runtime |
-| B2 Live isolation | Blocked on account/policy/identity admission | Inspect effective account policy and exact peer ownership before enrollment |
+| B1 Transport mechanism | R03 tsnet build support retained; R10 SSH source comparison, no runtime qualification | Review a bounded SSH policy laboratory and actual version/configuration support |
+| B2 Live isolation | SSH preferred; broker/runner/session boundaries unqualified | Demonstrate permitted path and denied targets, roles, shell and cross-session reach with harmless fixtures before live admission |
 | C1 Confidential bootstrap | R09 attempt-bound protected-environment protocol proposed; no actual channel qualified | Admit workflow/protection/release fixture; demonstrate provider ordering, wrong-run/rerun/duplicate-consumer rejection and interruption cleanup with harmless canaries before credentials |
-| D1 Lifetime enforcement | R09 three-owner deadline/revocation candidate proposed; clocks, record binding and runtime behavior unqualified | Disposition shared-provider and preparation residuals; qualify clocks, arming and actual active-stream/owner/outage behavior |
-| E1 Stock browsers | R05/R07 Windows listener admission failed; R06 WSL Firefox headless/owned-listener/DOM passed; R08 WSL Chrome stopped at filesystem admission before executable launch; TLS remains unqualified | Resolve Windows observability, admit an approved compatible Linux temporary directory and exact trust scope, then run affected client/TLS/product cases |
+| D1 Lifetime enforcement | R09 overlay candidate retained; R10 local/broker/runner SSH owners proposed; runtime behavior unqualified | Prove active-stream cutoff separately from key expiry and runner/backend death; disposition outage residuals |
+| E1 Stock browsers | R05/R07 Windows admission failed and R11 reproduced the observation gap without a driver; R06 WSL Firefox and R12 WSL Chrome owned-listener/DOM passed; TLS remains unqualified | Preserve Windows stop; qualify the separately admitted trust/TLS/product cases after transport and lifecycle harness readiness |
 | F1 WAN/product relief | Blocked on B-E | Real Windows/WSL journeys and matched resource observations |
 
 The complete A-F objective is unfinished. Public source has no credential-bearing
@@ -549,6 +653,34 @@ vendor/budget and architecture decisions. Recheck the next documentation-only
 push's cheap admission job to observe that capacity is skipped. This is a targeted
 workflow control, not another general qualification campaign. Full research closure
 and process-effectiveness claims remain premature.
+
+The later maintainer-directed SSH investigation changed the preferred research
+mechanism without accepting a broker or relaxing the transport contract. The
+independent challenge found concrete destination, broker-local isolation and
+endpoint-ownership gaps before implementation. The Windows positive control
+reproduced the observer limitation without another browser campaign. The native
+Linux control and final-layout correction then supported a passing WSL Chrome
+data-page attempt; they do not erase R08's failed admission. The pidfd correction
+was source-discovered and its affected cheap cancellation case passed before
+Chrome. No avoided-cost or general review-effectiveness claim follows.
+
+The first documentation verification attempt in the restricted local environment
+failed with 37 errors and one assertion failure among 389 tests (three skips),
+including unavailable Windows account-directory resolution. This is retained
+as failed restricted-environment verification, not silently replaced by a later
+check. The inspected assertion expected an owned-start failure but instead
+received the same account-directory error; not every other traceback was
+individually classified. The admitted rerun passed all 389 tests with three
+Windows skips, naming and 42 synchronized engineering requirements. Exact
+published CI remains separate evidence. Browser stages, documentation checks and review overlapped; their
+durations are not additive wall time. Research/review time remains unmeasured.
+
+Next improvement observations: keep the final socket layout control before
+browser launch, retain kernel-handle identity for cancellation, and test SSH
+policy with harmless canaries before provider purchase or credential delivery.
+The next owned SSH run needs adequate memory; available RAM near the existing
+warning threshold is not permission to start an additional VM. Full A-F closure
+remains premature.
 
 ## Risks, review and reuse
 
