@@ -358,6 +358,25 @@ need the account, transport, confidentiality, lifetime and exact trust admission
 These local client observations do not yet have a versioned public reproduction
 harness; supported adoption requires a reviewed reproducible client harness.
 
+### SP-007-R07: distinct Windows GeckoDriver admission, 2026-11-04
+
+A separate GeckoDriver-only control tested whether the Windows observer gap also
+affected the unrun Firefox pair. It launched no Firefox browser and made no HTTP
+request. The reviewed driver used explicit loopback binding and the documented
+[`--port 0` atomic allocation](https://firefox-source-docs.mozilla.org/testing/geckodriver/Flags.html).
+A bounded, complete startup line supplied the selected port; six parser fixtures
+passed before execution. The subsequent single socket query observed a stable
+selected-process generation but **zero matching listening sockets**.
+
+The control failed its admission oracle in 1.640 seconds. Cleanup through the
+owned process handle joined the driver without errors, and the outer bounded
+process owner joined. The Firefox pair stopped before session creation. This
+independent driver result extends the observed Windows harness limitation; it
+does not establish its cause or a product/browser defect. The earlier Chrome
+failure remains retained. Neither pair may proceed by removing the listener
+ownership/confinement check. No certificate, security setting or account state
+was changed.
+
 ### Current case disposition and next observations
 
 | Scope | Evidence / status | Next decisive observation |
@@ -367,7 +386,7 @@ harness; supported adoption requires a reviewed reproducible client harness.
 | B2 Live isolation | Blocked on account/policy/identity admission | Inspect effective account policy and exact peer ownership before enrollment |
 | C1 Confidential bootstrap | Source findings constrain the candidate; unexecuted | Select/review actual protected delivery and test wrong-run/replay/interruption |
 | D1 Lifetime enforcement | Startup/Close ordering finding; unexecuted | Inspect an actual supervised mechanism and exercise active-stream/owner/outage cases |
-| E1 Stock browsers | R05 Windows listener-observation admission failed; R06 actual WSL Firefox headless/owned-listener/DOM passed; TLS and remaining browser cases are unqualified | Resolve Windows observability; prepare WSL Chrome and exact trust scope, then run the strict-TLS/product matrix |
+| E1 Stock browsers | R05/R07 Windows Chrome/GeckoDriver listener-observation admission failed; R06 actual WSL Firefox headless/owned-listener/DOM passed; TLS and remaining browser cases are unqualified | Resolve Windows observability; prepare WSL Chrome and exact trust scope, then run the strict-TLS/product matrix |
 | F1 WAN/product relief | Blocked on B-E | Real Windows/WSL journeys and matched resource observations |
 
 The complete A-F objective is unfinished. Public source has no credential-bearing
@@ -402,6 +421,12 @@ separately from the earlier local gate, hosted run and connector builds. Setup
 and fixture defects were corrected before client execution; archive-inspection
 limits and earlier failed attempts remain retained. The Linux result
 establishes its own target path and does not resolve the Windows observer gap.
+
+The distinct 1.640-second Windows GeckoDriver control also stopped at listener
+admission before any browser session. This bounded negative result closes that
+independent diagnostic opportunity without reopening the stopped Chrome branch.
+Further Windows execution depends on resolving the observer contract rather than
+repeating a known-unqualified browser case.
 
 Next owned follow-up: the bench operator prepares actual client/driver admission
 and confidentiality/lifecycle probes; the maintainer retains account, trust,
