@@ -207,6 +207,11 @@ Use finite preparation, attachment and execution budgets, plus bounded cleanup.
 Proposed initial session ceiling: 30 minutes from readiness, within a separate
 45-minute overall job ceiling; these are reviewable harness allowances, not
 measured operating limits or extensions to five-second product deadlines.
+The [three-owner enforcement candidate](../implementation/hosted-verification-testbench.md#expiry-enforcement-candidate-for-spike-d)
+refines this budget for review: freeze the cutoff before arming completes, so
+readiness receives only the remaining allowance, at most 30 minutes. Clock bounds,
+producer binding, shared-provider failures and preparation exposure remain
+unqualified; this is not an accepted change or a hard remote-stop guarantee.
 Allow one fresh attempt after diagnosis only through explicit operator choice.
 Discard interrupted fixtures; never automatically replay uncertain mutations.
 

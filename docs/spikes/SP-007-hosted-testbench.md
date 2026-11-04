@@ -435,6 +435,46 @@ diagnostics and trust need separately defined locations and lifetimes in the
 proposed harness. Actual versions, headless DOM, TLS, sandbox behavior and
 integrated Chrome qualification remain unexecuted.
 
+### SP-007-R09: bootstrap/lifecycle proposal and provider inventory, 2026-11-04
+
+An independent full-scope audit confirmed that live A-F qualification remains
+incomplete but challenged a broader claim that independent research was exhausted:
+C and D still needed concrete mechanism proposals. This is a source/evidence
+finding, not a successful bootstrap or expiry experiment.
+
+Read-only GitHub inspection returned no configured environments; environment,
+workflow and permission metadata could be read. A protected-branch flag was
+observed, but it establishes neither immutable workflow admission nor a protected
+secret-delivery mechanism. No environment, permission, secret, deployment approval
+or workflow was created or changed. Metadata visibility is not proof of write
+capability or successful protection enforcement.
+
+The [bootstrap candidate](../implementation/hosted-verification-testbench.md#confidential-bootstrap-candidate-for-spike-c)
+now names the sender/recipient, immutable workflow/source and run/attempt/job/
+environment bindings, delayed environment reference, protected-job release,
+single-consumer restriction and interrupted-delivery reconciliation. In
+particular, the provider approval endpoint names a run and environment IDs, not
+an attempt. The initial candidate rejects provider reruns, including job-only
+reruns with cached admission outputs. Retry means a fresh dispatch/run,
+environment and node identities; stale approval/cancellation and pre-delivery
+predicate ordering remain necessary actual canary observations.
+
+The [expiry candidate](../implementation/hosted-verification-testbench.md#expiry-enforcement-candidate-for-spike-d)
+maps local supervisor, runner watchdog and separate privileged revoker to their
+owned resources and shared failure domains. It proposes a frozen deadline and
+producer-bound nonsecret arming record, with explicit unqualified clock and
+artifact-attempt assumptions. Arming consumes usable time; it does not promise
+30 usable minutes after readiness. This budget refinement remains Proposed.
+GitHub cancellation, actual termination and node revocation require separate
+observations; the vendor's normal-operation disconnect claim is not an executed
+partition or outage result.
+
+These contracts advance research only. No harmless canary, credential transfer,
+revocation, active-stream expiry or outage campaign ran. The actual workflow/
+protection fixture, sole-maintainer release policy, provider ordering, recipient
+isolation, record binding and enforcement observations remain gates. Do not turn
+proposal detail or read-only API success into C/D qualification.
+
 ### Current case disposition and next observations
 
 | Scope | Evidence / status | Next decisive observation |
@@ -442,8 +482,8 @@ integrated Chrome qualification remain unexecuted.
 | A1/A2 Current hosted fixture capacity | Passed R02 with stated measurement limits | Reuse within this source/tool/workload boundary; actual remote session remains separate |
 | B1 API build | Preliminary R03 build support | Review and version a reproducible actual helper; qualify Windows/WSL runtime |
 | B2 Live isolation | Blocked on account/policy/identity admission | Inspect effective account policy and exact peer ownership before enrollment |
-| C1 Confidential bootstrap | Source findings constrain the candidate; unexecuted | Select/review actual protected delivery and test wrong-run/replay/interruption |
-| D1 Lifetime enforcement | Startup/Close ordering finding; unexecuted | Inspect an actual supervised mechanism and exercise active-stream/owner/outage cases |
+| C1 Confidential bootstrap | R09 attempt-bound protected-environment protocol proposed; no actual channel qualified | Admit workflow/protection/release fixture; demonstrate provider ordering, wrong-run/rerun/duplicate-consumer rejection and interruption cleanup with harmless canaries before credentials |
+| D1 Lifetime enforcement | R09 three-owner deadline/revocation candidate proposed; clocks, record binding and runtime behavior unqualified | Disposition shared-provider and preparation residuals; qualify clocks, arming and actual active-stream/owner/outage behavior |
 | E1 Stock browsers | R05/R07 Windows listener admission failed; R06 WSL Firefox headless/owned-listener/DOM passed; R08 WSL Chrome stopped at filesystem admission before executable launch; TLS remains unqualified | Resolve Windows observability, admit an approved compatible Linux temporary directory and exact trust scope, then run affected client/TLS/product cases |
 | F1 WAN/product relief | Blocked on B-E | Real Windows/WSL journeys and matched resource observations |
 
@@ -495,6 +535,13 @@ passing pure fixtures were insufficient to establish actual environment support.
 No avoided-time total or broad review-effectiveness claim follows. Keep this
 filesystem admission ahead of future client launches and revalidate it on storage,
 mount or browser changes. Preparation/review durations remain unmeasured.
+
+A subsequent suspension audit correctly distinguished blocked live qualification
+from remaining independent proposal work. It exposed the missing concrete C/D
+contracts, which were then drafted using source research and read-only provider
+inspection. This improves the decision record without executing their protocol
+or establishing process effectiveness. Their unknowns remain explicit; do not
+close the full objective from a more detailed proposal.
 
 Next owned follow-up: the bench operator prepares actual client/driver admission
 and confidentiality/lifecycle probes; the maintainer retains account, trust,

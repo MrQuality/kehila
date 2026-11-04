@@ -185,6 +185,100 @@ workflow fixture. No attempt environment, protected-channel credential transfer
 or deployment release has been executed for this candidate. Earlier credential
 preparation is separate from channel qualification.
 
+## Expiry-enforcement candidate for spike D
+
+Recommend three distinct owners: a trusted local supervisor, a runner watchdog
+outside the tested containers, and a separately protected revocation workflow on
+another runner. This is an unqualified candidate, not an independent hard-expiry
+guarantee. The revoker shares GitHub's provider failure domain with the backend;
+neither two jobs nor two timers remove that dependency.
+
+| Owner / protected authority | Resources it can terminate | Failure domain and limitation |
+| --- | --- | --- |
+| Local supervisor, outside the connector/test scripts | Retained local listener, forwarding streams and owned helper/client processes through the admitted OS owner | Survives backend-runner failure; cannot revoke remote nodes or guarantee remote deletion. Local host loss/compromise can defeat it. |
+| Trusted runner watchdog, outside fixture/connector containers | Owned Podman containers, remote listener/connector and their processes | Survives a contained fixture failure; shares runner host, kernel and provider. It respects tsnet startup/Close ordering and uses process ownership for forced termination. |
+| Separate trusted revoker workflow, no tested code | Exact recorded enrolled nodes/unused enrollment keys through Tailscale administration; cancellation of the bound backend run through GitHub | Survives backend-runner or local-supervisor failure while its own runner and APIs work. It cannot independently kill a partitioned backend host; its requests require separate effect observations. |
+
+Keep administrative credentials in a separately protected GitHub secret scope,
+never the backend bundle. Admit the revoker's own workflow/run/attempt separately
+from the backend run/attempt it may stop. Provider-supported least privilege and
+exact device ownership remain account-specific qualification, not inferred from
+possession of an API token. This research has provisioned no administrative
+revocation credential or revoker workflow.
+
+Proposed deadline contract:
+
+1. Before dispatch, the local owner durably records a 45-minute overall deadline
+   and starts a monotonic timer. The runner watchdog independently enforces that
+   admitted overall limit while preparing the fixture. Queue/preparation time
+   consumes the allowance; a late job cannot grant itself a fresh period.
+2. After actual peers are identified, but before attachment, the operator fixes
+   one session deadline: no later than the overall deadline or 30 minutes after
+   this arming decision. Start the separate revoker with those exact private peer
+   identities and the frozen deadline using candidate C's attempt-bound delivery.
+   Starting it before node identities exist would not establish exact revocation.
+3. The trusted revoker emits an authenticated-provider control record containing
+   only admitted public run/source/attempt, target run/attempt, deadline and status
+   fields. Candidate carrier: an [immutable v4 artifact](https://docs.github.com/en/actions/tutorials/store-and-share-data)
+   from the admitted revoker,
+   with no peer identifier or credential. The runner watchdog and local owner
+   verify artifact identity/digest, provider run metadata, accepted producer
+   workflow/source and target before installing that deadline. The
+   [documented artifact metadata](https://docs.github.com/en/rest/actions/artifacts)
+   example identifies a run but supplies no attempt field; do not assume a native
+   attempt attestation. Qualify the trusted publisher's provider-derived attempt
+   binding and rerun behavior. Embedded fields, filenames, ambiguous producers or
+   successful dispatch alone cannot establish an authenticated arming receipt.
+   Verify the digest and reject a mismatch explicitly: the documented download
+   action behavior is a warning, which cannot satisfy this admission contract.
+4. Attachment requires the revoker's observed armed receipt and matching watchdog
+   and local deadline installation. Missing, conflicting or late acknowledgements
+   fail admission. Readiness occurs only after those controls; arming latency
+   therefore reduces the usable session allowance. This is at most 30 minutes,
+   not a promise of 30 usable minutes after readiness, and changes the earlier
+   budget proposal explicitly for maintainer review. Never extend the deadline
+   to recover preparation or arming time.
+5. UTC fields bind the actors' common deadline; monotonic timers enforce each
+   local limit. A conservative clock-skew bound and pre-deadline shutdown budget
+   must be selected and qualified before use. Map UTC to a monotonic cutoff once,
+   subtract those allowances, and begin stopping early enough to finish by the
+   admitted deadline. Wall-clock jumps, restart or duplicate records cannot reset
+   a timer. If clock/boot continuity or the skew bound is unknown, refuse resume
+   and reconcile the old attempt. No numerical skew or shutdown bound is claimed.
+6. At cutoff, deny new attachment, close existing local streams and stop owned
+   remote containers/listeners. The revoker requests backend cancellation and
+   exact node removal, and revokes unused enrollment capability. An enrollment
+   key's expiry, a certificate's expiry and deleting an environment are not
+   substitutes for terminating current access or already delivered credentials.
+
+[GitHub cancellation](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-cancellation)
+uses condition evaluation and staged process termination; its documented
+cancellation period can reach five minutes. The [force-cancel API](https://docs.github.com/en/rest/actions/workflow-runs#force-cancel-a-workflow-run)
+is an escalation after normal cancellation does not respond, not a proof of
+deadline-time process death. [Tailscale removal documentation](https://tailscale.com/docs/features/access-control/device-management/how-to/remove)
+states that removal immediately disconnects a device and warns that it can rejoin
+without administrator reauthorization when device approval is disabled. Treat
+that as vendor-described normal behavior; actual active-stream/partition behavior
+and prevention of reenrollment still need observed controls. Remove the exact
+recorded devices, never whatever currently matches a broad name or tag substring.
+
+| Failure case | Required observation / residual exposure |
+| --- | --- |
+| Bootstrap interrupted before revoker arming | No local forwarding. Runner watchdog and platform timeout bound preparation only under their stated healthy-host assumptions; independent remote cleanup remains unproven. |
+| Local owner killed or host lost | Separate revoker and runner watchdog must act without a local callback; observe remote shutdown and node removal. Local-host loss itself is not their proof. |
+| Backend runner lost or nonresponsive | Local owner closes retained streams. Revoker acts on exact identities; missing remote process observation remains unknown cleanup. |
+| GitHub cancellation accepted or delayed | Record request separately from active-stream closure, process/container termination and final run state. Escalation does not clear the first failure. |
+| Tailscale administration unavailable | Local and runner owners still enforce their cutoffs while healthy; enrolled-node revocation remains unknown. Do not silently extend the session. |
+| GitHub/control-plane outage or compromised owner | Shared-domain controls may fail together. A hard remote stop is not established; admission needs explicit residual-risk disposition or a different enforcement platform. |
+| Restart, stale receipt or lost ledger | Reject old-attempt resumption and all provider reruns; reconcile exact resources without granting a new deadline. A legitimate retry uses a new run and fresh nodes, so late run-scoped cancellation/node deletion cannot target it. |
+
+The actual probe must keep an independently witnessed stream alive immediately
+before expiry, then observe stream closure, owned-process/container termination
+and enrolled access separately. Natural HTTP idle timeout or API-request success
+cannot satisfy those oracles. The five-second product limits remain unchanged.
+Clock mapping, protected revoker delivery/arming, operating-system ownership and
+outage behavior are unexecuted. This candidate cannot yet satisfy D's live gate.
+
 ## Risk management plan
 
 Likelihood is unknown unless an observation is stated. Impact and urgency are
@@ -198,7 +292,7 @@ reviewer agreement cannot accept architectural/security tradeoffs.
 | R1 Untrusted revision receives network or fixture credentials | Public PR scripts execute arbitrary code; [GitHub secure-use guidance](https://docs.github.com/en/actions/reference/security/secure-use). High source confidence; unknown likelihood. | Critical / P1 before enrollment | Admit workflow and source SHAs separately; narrow credentials and immutable dependencies. Negative admission test for fork, substituted SHA and changed workflow; low compute, no local network needed. | Workflow owner; maintainer accepts execution boundary. Reopen on action/workflow/token-scope changes. |
 | R2 Overlay provides new access to local or unrelated services | Userspace is not an access policy. Source-derived threat; unknown likelihood. | Critical / P1 before local connection | Dedicated identities, effective deny-by-default policy, no reverse listener/proxy, fixed destination. Retain the bound local endpoint across dispatch. Check port collision/lost ownership, remote-originated local connection, DB/engine sockets and other-session peers; bounded isolated network cost. | Transport owner; maintainer accepts policy/vendor boundary. Reopen on policy/tag/connector/network change. |
 | R3 TLS/origin protection is bypassed or trust escapes its approved scope | Exact loopback is enforced today; WebDriver can ignore certificate errors; Chromium Linux can use shared certificate storage. High confidence; unknown likelihood of misconfiguration. | Critical / P1 before browser qualification | Keep Rust TLS and same origin; explicit false bypass capability. Prove intended positive and wrong-CA/IP/issuer/expired-cert negative cases in each browser, actual trust-store scope, no unintended ordinary-browser trust, and exact removal after interruption. Bounded temporary trust work only after exact approval. | Security/harness owner; maintainer controls trust approval. Browser/profile/trust changes invalidate affected evidence. |
-| R4 Access or active streams outlive the session owner | Auth-key expiry and ephemeral GC do not impose active-session expiry; co-located timers share runner failure. High confidence; unknown incident likelihood. | High / P1 before live session | Select trusted supervisor and protected remote revocation path with explicit failure domains. Separately observe stream closure, owned-process termination and enrolled access. Test controller death, runner loss, active-stream expiry, control-plane outage and local restart; medium harness work. Withhold live admission until bounded residual exposure is explicitly accepted. | Transport owner; maintainer accepts outage/expiry residual. Reopen on supervisor, credential or provider semantics. |
+| R4 Access or active streams outlive the session owner | Auth-key expiry and ephemeral GC do not impose active-session expiry; co-located timers share runner failure. High confidence; unknown incident likelihood. | High / P1 before live session | Qualify the [three-owner candidate](#expiry-enforcement-candidate-for-spike-d), including clock/stop bounds and protected revoker arming. Separately observe stream closure, owned-process termination and enrolled access. Test controller death, runner loss, active-stream expiry, control-plane outage and local restart; medium harness work. Withhold live admission until bounded residual exposure is explicitly accepted. | Transport owner; maintainer accepts outage/expiry residual. Reopen on supervisor, credential or provider semantics. |
 | R5 Descriptor/result is forged, replayed or secret delivery crosses sessions | GitHub authentication does not privatize public artifacts or establish a confidential per-run channel. High confidence; unknown likelihood. | High / P1 before secret use or attachment/publication | Qualify the [attempt-bound delivery candidate](#confidential-bootstrap-candidate-for-spike-c); authenticate run/attempt/workflow/source and peer, reject reruns/replay/wrong recipients and reconcile partial cleanup. No secret descriptor fields or public bootstrap output. Use harmless canaries before real credentials; provider masking and artifact warnings are insufficient. | Evidence/secret-delivery owners; maintainer owns channel acceptance and publication. Channel, schema, collector or storage changes invalidate controls. |
 | R6 Passing subset or error classification hides a product/harness/cleanup failure | Current reporting has distinct ownership and failure obligations; expected HTTP rejection is case-specific evidence. High source confidence; unknown likelihood. | High / P1 before gate use | Exact case manifest, separate cause/stage and qualification, durable first unexpected failure and independent DB/read-back oracle. Confirm expected rejection can pass its oracle; product failure, missing report, TLS/transport/environment interruption and cleanup failure cannot produce a campaign pass. Low focused cost before browser campaign. | Harness owner; maintainer accepts evidence. Case/oracle/result-contract changes reopen review. |
 | R7 Capacity or WAN delay produces false eligibility claims | Current CI passes do not bound cold disk, relay latency or local RAM. High confidence in gap; workload probability unknown. | Medium / P2 before qualification | Measure both client environments, cold/warm hosted phases and relay path. Preserve deadlines; classify environment failure and retain attempt, not blind retries. Medium compute/time after resource approval. | Verification owner; maintainer selects paid capacity if warranted. Runner/image/region/browser changes invalidate measurements. |
