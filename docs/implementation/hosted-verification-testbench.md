@@ -9,6 +9,14 @@ experimental scope, permissions, observations and remaining gates are recorded
 separately in [SP-007](../spikes/SP-007-hosted-testbench.md). That research does
 not accept this architecture or change required gates.
 
+On 2026-11-04 the maintainer preferred SSH over tsnet and authorized the
+[SSH investigation](hosted-testbench-ssh.md). That companion updates the current
+transport recommendation, costs and mechanism-specific risks. The overlay
+research and C/D candidates below remain historical, unqualified alternatives;
+their source/recipient, confinement and lifetime obligations still apply.
+No Tailscale account access is a prerequisite to independent SSH research, and
+neither transport may activate automatically. No provider has been selected.
+
 ## Research findings and evidence limits
 
 Research date: 2026-11-03. Repository source baseline:
@@ -62,7 +70,7 @@ overhead; no service-wide total bound follows from it.
 | Workflow admission | New separate session workflow; trusted workflow and reviewed immutable source; read-only repository token by default; no secrets in ordinary PR jobs. The existing `ci.yml` is not repurposed into a waiting server. |
 | Hosted fixture | New session lifecycle entry point adjacent to container verification; reuse protected startup/fixture primitives after review, not diagnostic production endpoints or imported experimental application code. Backend/database remain contained and isolated. |
 | Local connector | Test-only helper retains one bound loopback endpoint across dispatch and attachment, then forwards only after admission to one fixed peer destination. No generic proxy/control socket; independent build/dependency review. No production linking to tsnet is proposed. |
-| Runner connector | Raw overlay listener in its own restricted container/network boundary; fixed authority container address/port; no engine socket, host namespace, privileged mode or database forwarding. |
+| Runner connector | Raw byte-forwarding endpoint in its own restricted container/network boundary; fixed authority container address/port; no engine socket, host namespace, privileged mode or database forwarding. The SSH candidate initiates a restricted reverse forward and needs independent destination enforcement. |
 | Browser runner | Python WebDriver suite with pre-admitted browser/driver, loopback driver endpoint, fresh protected profile, separately qualified trust store, one worker and no automatic mutation retries. Windows and WSL emit separate results. |
 | Client storage | Separately specify profile, temporary state, diagnostic and trust locations/lifetimes. Admit actual OS ownership/permissions, locks, socket-path limits and cleanup; Windows ACL protection alone does not establish POSIX semantics. New storage boundaries require approval. |
 | Secret delivery | Select authenticated sender/recipient and confidential transit/storage bound to the session and run attempt; reject replay/cross-session delivery and reconcile interruption/cleanup. No secret dispatch input or public artifact; issuer signing key stays outside the transfer. |
@@ -318,7 +326,8 @@ and necessary controls. Existing required gates are not waived by this rule.
 | E Gate cutover | Separate accepted staged-source contract; proof missing/wrong/stale evidence fails; existing coverage preserved; rollback and publication controls | Current local/CI policy remains until explicit cutover acceptance |
 
 Isolation controls include allowed application port and denied database/engine/
-unrelated local ports, other sessions, reverse initiation and wrong overlay peer.
+unrelated local ports, other sessions, reverse initiation and a wrong authenticated
+session/transport mapping.
 Lifecycle controls include duplicate attachment, timeout before readiness,
 stale run attempt, connection loss before/after commit, controller kill without
 finalization and expiry during an active stream. A cancelled or incomplete

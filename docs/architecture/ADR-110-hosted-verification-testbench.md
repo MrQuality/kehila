@@ -70,11 +70,12 @@ reduce demand substantially, but its size is not yet measured.
 
 ### Preserve the application authority through an opaque connection
 
-Recommend evaluating an isolated Tailscale userspace connector as the first
-transport candidate. The narrow implementation candidate is a small test-only
-Go connector using documented `tsnet.Server.Dial` and `Server.Listen` APIs.
-Windows/WSL binary support, dependency/toolchain compatibility and actual Podman
-network behavior remain feasibility gates, not demonstrated properties.
+The maintainer selected SSH as the preferred research candidate on 2026-11-04.
+Investigate restricted OpenSSH forwarding through a reachable broker first;
+the [SSH investigation](../implementation/hosted-testbench-ssh.md) specifies
+restriction gaps, cost estimates and decisive experiments. Prior tsnet build
+evidence remains historical comparison, not the current preferred direction.
+No broker/provider, live topology or automatic fallback is accepted here.
 
 ```mermaid
 flowchart LR
@@ -82,19 +83,20 @@ flowchart LR
     L[WSL Linux Chrome or Firefox] --> LL[WSL 127.0.0.1 P]
     WL --> C[Local connector for selected environment]
     LL --> C
-    C -->|Opaque application TLS over private overlay| R[Runner connector]
+    C -->|Opaque application TLS through restricted SSH broker| R[Runner connector]
     R -->|One fixed private IPv4 and port| A[Rust TLS authority in Podman]
     A --> D[Disposable PostgreSQL]
 ```
 
 Windows and WSL paths run separately; the diagram does not imply shared loopback
 or simultaneous ownership of one port. The local connector binds only the exact
-loopback endpoint and dials one authenticated session peer/port. It opens no
-tailnet listener, general SOCKS/HTTP proxy, remote shell or network control API.
-The runner connector listens only on its overlay endpoint and forwards only to
-the independently inspected authority container address/port. It cannot forward
-to PostgreSQL, engine sockets or arbitrary destinations. Raw `Listen` is intended;
-`ListenTLS` or a TLS-terminating web proxy would change the application endpoint.
+loopback endpoint and attaches only to the authenticated session mapping. It
+opens no general SOCKS/HTTP proxy, remote shell or network control API. The runner
+initiates a reverse SSH forward toward a session-isolated broker. Its destination
+must be independently restricted to the inspected authority container address/
+port; broker listener restrictions alone cannot enforce that client-side target.
+No PostgreSQL, engine socket or arbitrary-destination reach is admitted. A
+TLS-terminating proxy would change the application endpoint and is excluded.
 
 The helper carries bytes, not HTTP credentials or application authority. Rust
 still terminates browser TLS. Preserve the exact port, IP certificate identity,
@@ -108,7 +110,7 @@ matching follows [RFC 9525 section 6.4](https://www.rfc-editor.org/rfc/rfc9525.h
 The application's `startup.rs` derives the public origin from its listener port,
 and `http_auth.rs` checks exact Host/Origin. Therefore the browser-facing port
 and configured authority listener port must agree for this unchanged product.
-A connector's intermediate overlay port may differ if its mapping is explicit;
+A connector's intermediate transport port may differ if its mapping is explicit;
 certificate IP matching is not the reason for application port agreement.
 
 Before dispatch, the selected local helper must bind and retain ownership of
@@ -120,17 +122,18 @@ fresh admitted session parameters. Qualify Windows and WSL paths under the
 selected networking mode rather than requiring NAT and mirrored mode to behave
 identically.
 
-Use a dedicated bench network policy. Permit only the selected local connector
-identity to the selected session peer and port; deny new reverse connections and
-other destinations. Return traffic on that connection remains necessary. Remove
-broad default grants rather than adding a narrow rule beside allow-all. Do not
-join the whole development machine, install a system VPN, alter routes/DNS,
-advertise subnets or expose a public endpoint as an implicit consequence.
+Use separate session-bound runner and client identities, narrowly restricted
+broker forwarding policy and a runner network boundary. Deny broker shell/
+command/subsystem access, generic forwarding and cross-session reach. Broker
+loopback alone does not isolate local processes or sessions. Preserve continuous
+local endpoint ownership with an admission gate; stock SSH is not yet proven to
+inherit a prebound socket. Do not join the whole machine, install a system VPN,
+alter routes/DNS or expose public application ingress as an implicit consequence.
 
-This introduces vendor/control-plane metadata and availability dependencies plus
-a new Go dependency closure. Their acceptance and cost are separate decisions.
-If the narrow connector or session isolation cannot be supported, reconsider
-an SSH broker or hosted-only automated lane; do not broaden access to obtain a pass.
+SSH trades the proposed Go/overlay identity machinery for broker hosting,
+patching, host-key authentication and session enforcement. Cost, provider and
+trust remain separate decisions. If confinement or lifecycle cannot be supported,
+reconsider the topology; do not broaden access to obtain a pass.
 
 ### Own the session and its evidence
 
@@ -159,7 +162,7 @@ Do not treat authenticated GitHub API access as confidential storage. A public
 result descriptor may contain reviewed source/run identity, stage/status and
 sanitized version information. It is not a credential. Local tooling checks the
 expected repository, workflow revision, source SHA, attempt and freshness against
-GitHub, then authenticates the exact overlay peer separately. Machine/network
+GitHub, then authenticates the exact transport/session mapping separately. Machine/network
 identifiers, owner secrets, enrollment keys, cookies, bearer tokens and TLS private
 keys stay in protected session storage outside public logs/artifacts. Certificate
 fingerprint delivery needs an authenticated channel and explicit trust approval;
@@ -183,12 +186,14 @@ the transfer. The mechanism remains a pre-use admission decision, not a claimed
 existing confidential channel.
 
 The [attempt-bound environment candidate](../implementation/hosted-verification-testbench.md#confidential-bootstrap-candidate-for-spike-c)
-now specifies an ordering and recipient contract for research. Its provider
-timing, protection and replay claims remain unexecuted admission questions.
+specifies an earlier ordering and recipient contract for research. Its provider
+timing, protection and replay claims remain unexecuted admission questions. The
+SSH investigation retains those obligations while proposing SSH role-key and
+host-identity binding; neither mechanism is an operational confidential channel.
 
 Before implementation admission, select the enforcement mechanism for session
 expiry. The required behavior is: stop new local attachments and existing streams
-at the approved deadline; stop the remote listener/backend; expire enrolled
+at the approved deadline; stop the remote listener/backend; revoke session
 access and reconcile both sides. Local connector timers are independent of the
 runner, but not independent of a compromised local connector. A proposed trusted
 local supervisor owns the deadline and teardown independently of test scripts.
@@ -200,18 +205,21 @@ The unresolved enforcement choice blocks live session admission, not this PR.
 The enforcement contract must name failure domains and the resources each
 controller can actually terminate. Two timers inside the same runner do not
 establish independence from runner failure. Process termination, active-stream
-closure and enrolled-node revocation are separate observations. A cleanup trap
-or an enrollment-key revocation request proves none of the other outcomes.
+closure and credential/access revocation are separate observations. A cleanup
+trap or a revocation request proves none of the other outcomes.
 
 Use finite preparation, attachment and execution budgets, plus bounded cleanup.
 Proposed initial session ceiling: 30 minutes from readiness, within a separate
 45-minute overall job ceiling; these are reviewable harness allowances, not
 measured operating limits or extensions to five-second product deadlines.
-The [three-owner enforcement candidate](../implementation/hosted-verification-testbench.md#expiry-enforcement-candidate-for-spike-d)
+The earlier [three-owner enforcement candidate](../implementation/hosted-verification-testbench.md#expiry-enforcement-candidate-for-spike-d)
 refines this budget for review: freeze the cutoff before arming completes, so
 readiness receives only the remaining allowance, at most 30 minutes. Clock bounds,
 producer binding, shared-provider failures and preparation exposure remain
 unqualified; this is not an accepted change or a hard remote-stop guarantee.
+For SSH, research local, broker and runner owners separately: broker stream
+termination cannot establish a partitioned runner's process death. SSH key expiry
+and keepalives do not establish the required active-session deadline.
 Allow one fresh attempt after diagnosis only through explicit operator choice.
 Discard interrupted fixtures; never automatically replay uncertain mutations.
 
@@ -268,9 +276,9 @@ or treating a browser-session pass as the full gate are rejected shortcuts.
 
 | Alternative | Advantages | Disadvantages and disposition |
 | --- | --- | --- |
-| Tailscale isolated connector | NAT traversal/relay support; no owned public broker; process-scoped API candidate | Vendor, quota, dependency and cross-platform proof costs; preferred candidate subject to admission gates. |
+| Tailscale isolated connector | NAT traversal/relay support; no owned public broker; process-scoped API candidate | Vendor, quota, dependency and cross-platform proof costs; historical alternative, no automatic activation. |
 | Raw WireGuard | Small transport protocol; opaque TCP carried through tunnel | Needs a reachable endpoint or traversal infrastructure; keys/routes/relay operations remain. Retain if vendor dependency is rejected. |
-| OpenSSH forwarding through a broker | Mature forwarding; local loopback and application TLS can remain | Owned reachable broker, restricted accounts/keys, hard-expiry enforcement and hosting cost. Credible fallback, not zero infrastructure. |
+| OpenSSH forwarding through a broker | Mature forwarding; local loopback and application TLS can remain | Maintainer-preferred research candidate; broker operation, independent destination/session restriction, expiry enforcement and hosting cost remain. |
 | Public web tunnel or Funnel | Convenient endpoint discovery | Public ingress and hostname/routing mismatch; TLS-terminating modes violate the selected endpoint. Raw TCP modes exist but do not establish compatible private access. Not selected. |
 | Hosted Linux browser beside backend | Simplest unattended integration, no local bridge | Does not qualify local Windows/WSL paths. Useful complementary lane. |
 | CLI/API only | Lower resource cost and good protocol controls | Misses browser runtime, DOM, cookie and interaction behavior. Complement only. |
@@ -278,7 +286,7 @@ or treating a browser-session pass as the full gate are rejected shortcuts.
 
 The [Funnel CLI](https://tailscale.com/docs/reference/tailscale-cli/funnel) and
 [requirements](https://tailscale.com/docs/features/tailscale-funnel) document its
-raw forwarding options and public endpoint restrictions. The SSH fallback uses
+raw forwarding options and public endpoint restrictions. The SSH candidate uses
 [OpenSSH forwarding](https://man.openbsd.org/ssh.1) with explicit
 [server-side restrictions](https://man.openbsd.org/sshd_config.5), not an
 unrestricted shell account.
@@ -306,17 +314,16 @@ The maintainer is asked to decide separately:
 
 1. Accept the proposed bounded hosted-backend/local-browser topology and stock
    Chrome/Firefox headless-first matrix, with headed cases separately qualified.
-2. Accept Tailscale as the first feasibility candidate, subject to plan eligibility,
-   account/data exposure, dependency review and an explicit spending limit. If
-   declined, select broker research or hosted-only automation without claiming
-   local-client replacement.
+2. SSH investigation is authorized and preferred. Separately select a concrete
+   broker/topology and accept its provider, operating responsibility, trust and
+   spending limit after the policy/lifetime research; no purchase is implied.
 3. Accept the lifecycle invariants while requiring a concrete expiry/revocation
    mechanism and trust scope before any live connectivity. Exact issuer/store,
    deadlines, local helper execution and resource approvals remain separate.
 4. Keep required gates intact; authorize any later staged-tree cutover separately.
 
 Recovery impact: all bench data is disposable; interruption invalidates a run
-and requires fresh enrollment. This adds no supported backup/restore behavior
+and requires fresh session admission. This adds no supported backup/restore behavior
 under #60. Language/RTL impact: no product UI/content change; future locale
 coverage under #61 remains separate. Agent execution impact: automation is a
 test operator, not a new product actor or delegated credential under #62.
