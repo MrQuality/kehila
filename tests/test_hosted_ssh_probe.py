@@ -154,11 +154,15 @@ class ProbeContractTests(unittest.TestCase):
                     return (b'passwordauthentication no\nkbdinteractiveauthentication no\n'
                             b'allowtcpforwarding local\nmaxsessions 0\n'
                             b'permitopen 127.0.0.1:31337\npermitlisten none\n')
+                options = _args[0]
+                self.assertIn('--network=bridge', options)
+                self.assertEqual(options[options.index('--publish') + 1], '10.20.30.40:49152:2222')
                 raise subprocess.TimeoutExpired(['synthetic'], 30)
             with patch.object(probe, 'source_binding', return_value=binding), \
                     patch.object(probe, 'candidate_address', return_value='8.8.8.8'), \
                     patch.object(probe, 'create_container', side_effect=create), \
                     patch.object(probe, 'admit_mount_ownership'), \
+                    patch.object(probe, 'selected_guest_ipv4', return_value='10.20.30.40'), \
                     patch.object(probe, 'expiry_control', return_value={'ssh_nonce': True, 'expiry': True}), \
                     patch.object(probe, 'run', side_effect=engine), \
                     patch.object(probe, 'remove_containers') as remove, \
@@ -203,6 +207,7 @@ class ProbeContractTests(unittest.TestCase):
             with patch.object(probe, 'source_binding', return_value=binding), \
                     patch.object(probe, 'candidate_address', return_value='8.8.8.8'), \
                     patch.object(probe, 'admit_mount_ownership'), \
+                    patch.object(probe, 'selected_guest_ipv4', return_value='10.20.30.40'), \
                     patch.object(probe, 'expiry_control'), \
                     patch.object(probe, 'run', side_effect=engine), \
                     patch.object(probe, 'remove_containers'), \
@@ -274,6 +279,7 @@ class ProbeContractTests(unittest.TestCase):
             with patch.object(probe, 'source_binding', return_value=binding), \
                     patch.object(probe, 'candidate_address') as candidate, \
                     patch.object(probe, 'admit_mount_ownership'), \
+                    patch.object(probe, 'selected_guest_ipv4', return_value='10.20.30.40'), \
                     patch.object(probe, 'run', side_effect=engine), \
                     patch.object(probe, 'create_container', return_value=policy) as create, \
                     patch.object(probe, 'expiry_control', return_value={'ssh_nonce': True, 'expiry': True}):
@@ -296,6 +302,82 @@ class ProbeContractTests(unittest.TestCase):
             probe.os.environ['PROBE_PHASE'] = 'live'
             with self.assertRaises(ValueError):
                 probe.source_binding(config)
+
+    def test_guest_bind_uses_private_preferred_source_assigned_on_same_interface(self):
+        route = [{'prefsrc': '10.20.30.40', 'dev': 'eth0'}]
+        interface = [{'ifname': 'eth0', 'addr_info': [
+            {'family': 'inet', 'scope': 'global', 'local': '10.20.30.40'}]}]
+        with tempfile.TemporaryDirectory() as temporary:
+            with patch.object(probe, 'run', side_effect=[json.dumps(route).encode(),
+                    json.dumps(interface).encode()]):
+                self.assertEqual(probe.selected_guest_ipv4(Path(temporary)), '10.20.30.40')
+
+    def test_guest_bind_rejects_ambiguous_route_or_unassigned_source(self):
+        good = {'prefsrc': '10.20.30.40', 'dev': 'eth0'}
+        assigned = {'family': 'inet', 'scope': 'global', 'local': '10.20.30.40'}
+        for routes, interfaces in (
+                ([good, good], []), ([{'dev': 'eth0'}], []),
+                ([dict(good, prefsrc='::1')], []), ([dict(good, prefsrc='0.0.0.0')], []),
+                ([dict(good, prefsrc='127.0.0.1')], []),
+                ([dict(good, prefsrc='169.254.169.254')], []),
+                ([dict(good, dev='--help')], []),
+                ([good], [{'ifname': 'eth1', 'addr_info': [assigned]}]),
+                ([good], [{'ifname': 'eth0', 'addr_info': []}]),
+                ([good], [{'ifname': 'eth0', 'addr_info': [dict(assigned, scope='host')]}]),
+                ([good], [{'ifname': 'eth0', 'addr_info': [assigned, assigned]}])):
+            with self.subTest(routes=routes), tempfile.TemporaryDirectory() as temporary:
+                with patch.object(probe, 'run', side_effect=[json.dumps(routes).encode(),
+                        json.dumps(interfaces).encode()]), self.assertRaises(ValueError):
+                    probe.selected_guest_ipv4(Path(temporary))
+
+    def test_empty_mapping_is_not_normalized_for_the_selected_guest_bind(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            inspected = [{'State': {'Running': True, 'ExitCode': 0},
+                'NetworkSettings': {'Ports': {'2222/tcp': [{'HostIp': '', 'HostPort': '49152'}]}}}]
+            with patch.object(probe, 'run', return_value=json.dumps(inspected).encode()), \
+                    self.assertRaises(ValueError):
+                probe.admit_listener(Path(temporary), 'a' * 64, '10.20.30.40', 'listener')
+            self.assertEqual((Path(temporary) / 'stage').read_text(), 'listener-mapping')
+
+    def test_exact_selected_guest_mapping_is_admitted_without_public_address_output(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            inspected = [{'State': {'Running': True, 'ExitCode': 0},
+                'NetworkSettings': {'Ports': {'2222/tcp': [{'HostIp': '10.20.30.40', 'HostPort': '49152'}]}}}]
+            with patch.object(probe, 'run', side_effect=[json.dumps(inspected).encode(), b'']):
+                result = probe.admit_listener(Path(temporary), 'a' * 64, '10.20.30.40', 'listener')
+            self.assertTrue(result['ready'])
+            self.assertEqual(result['host_kind'], 'selected-guest-ipv4')
+            self.assertNotIn('10.20.30.40', json.dumps(result))
+
+    def test_guest_mapping_rejects_broader_different_or_extra_publications(self):
+        expected = {'HostIp': '10.20.30.40', 'HostPort': '49152'}
+        for mappings in ([dict(expected, HostIp='0.0.0.0')],
+                [dict(expected, HostIp='::')], [dict(expected, HostIp='10.20.30.41')],
+                [dict(expected, HostPort='49153')], [dict(expected, HostPort=49152)],
+                [dict(expected, HostIp=None)], [expected, expected],
+                [dict(expected, extra='unexpected')]):
+            with self.subTest(mapping=mappings), tempfile.TemporaryDirectory() as temporary:
+                inspected = [{'State': {'Running': True, 'ExitCode': 0},
+                    'NetworkSettings': {'Ports': {'2222/tcp': mappings}}}]
+                with patch.object(probe, 'run', return_value=json.dumps(inspected).encode()), \
+                        self.assertRaises(ValueError):
+                    probe.admit_listener(Path(temporary), 'a' * 64, '10.20.30.40', 'listener')
+                self.assertEqual((Path(temporary) / 'stage').read_text(), 'listener-mapping')
+
+    def test_unpublished_metadata_is_distinct_from_an_additional_host_mapping(self):
+        for extra, accepted in ((None, True), ([], False),
+                ([{'HostIp': '10.20.30.40', 'HostPort': '49153'}], False)):
+            with self.subTest(extra=extra), tempfile.TemporaryDirectory() as temporary:
+                inspected = [{'State': {'Running': True, 'ExitCode': 0},
+                    'NetworkSettings': {'Ports': {'2222/tcp': [
+                        {'HostIp': '10.20.30.40', 'HostPort': '49152'}], '9999/tcp': extra}}}]
+                with patch.object(probe, 'run', side_effect=[json.dumps(inspected).encode(), b'']):
+                    if accepted:
+                        self.assertTrue(probe.admit_listener(Path(temporary), 'a' * 64,
+                                                            '10.20.30.40', 'listener')['ready'])
+                    else:
+                        with self.assertRaises(ValueError):
+                            probe.admit_listener(Path(temporary), 'a' * 64, '10.20.30.40', 'listener')
 
 
 

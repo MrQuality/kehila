@@ -166,6 +166,37 @@ def candidate_address(storage):
     return public_ipv4(fields['ip'])
 
 
+def guest_ipv4(value):
+    require(type(value) is str)
+    address = ipaddress.IPv4Address(value)
+    require(str(address) == value and not (address.is_unspecified or address.is_loopback
+            or address.is_link_local or address.is_multicast or address.is_reserved))
+    return value
+
+
+def selected_guest_ipv4(storage):
+    """Observe one kernel-selected source and its assignment; never change routes."""
+    raw = run(['ip', '-j', '-4', 'route', 'get', '1.1.1.1'], storage)
+    (storage / 'guest-route.json').write_bytes(raw)
+    routes = json.loads(raw)
+    require(type(routes) is list and len(routes) == 1 and type(routes[0]) is dict)
+    address = guest_ipv4(routes[0].get('prefsrc'))
+    interface = routes[0].get('dev')
+    require(type(interface) is str and interface != 'lo' and
+            re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.:@-]{0,31}', interface))
+    raw = run(['ip', '-j', '-4', 'address', 'show', 'dev', interface], storage)
+    (storage / 'guest-interface.json').write_bytes(raw)
+    interfaces = json.loads(raw)
+    require(type(interfaces) is list and len(interfaces) == 1 and type(interfaces[0]) is dict
+            and interfaces[0].get('ifname') == interface)
+    addresses = interfaces[0].get('addr_info')
+    require(type(addresses) is list and all(type(a) is dict for a in addresses))
+    # Kernel scope 'global' includes private guest addresses; it is not Internet reachability.
+    require(sum(a.get('family') == 'inet' and a.get('scope') == 'global'
+                and a.get('local') == address for a in addresses) == 1)
+    return address
+
+
 @contextmanager
 def creation_lock(storage):
     """Serialize engine creation with final removal; process death releases lock."""
@@ -271,7 +302,8 @@ def remove_containers_unlocked(storage):
 
 def admit_listener(storage, container, host, scope):
     """Observe before asserting; public diagnostics never contain engine strings."""
-    require(host in {'127.0.0.1', '0.0.0.0'} and scope in {'control', 'listener'})
+    require(scope in {'control', 'listener'})
+    require(host == '127.0.0.1' if scope == 'control' else guest_ipv4(host) == host)
     (storage / 'stage').write_text(scope + '-inspect')
     inspection = run(['sudo', '-n', 'podman', 'inspect', container], storage)
     (storage / (scope + '-inspect.json')).write_bytes(inspection)
@@ -287,14 +319,22 @@ def admit_listener(storage, container, host, scope):
     host_value = entry.get('HostIp')
     host_kind = ({'127.0.0.1': 'loopback', '0.0.0.0': 'wildcard-ipv4', '': 'empty'}.get(host_value, 'other')
                  if type(host_value) is str else 'invalid')
+    if scope == 'listener' and host_value == host:
+        host_kind = 'selected-guest-ipv4'
+    # Podman uses null for exposed-but-unpublished ports; any other extra entry
+    # is not part of this single-publication admission.
+    other_publications = (type(ports) is not dict or
+        any(value is not None for key, value in ports.items() if key != '2222/tcp'))
     safe = dict(scope=scope, running=state.get('Running') is True,
         exit_code=state.get('ExitCode') if type(state.get('ExitCode')) is int
             and 0 <= state['ExitCode'] <= 255 else None,
         ports_type=type(ports).__name__, mapping_type=type(mapping).__name__,
         mapping_count=len(mapping) if type(mapping) is list else None,
+        other_publications=other_publications,
         host_kind=host_kind, selected_port_matches=entry.get('HostPort') == str(PORT),
         port_type=type(entry.get('HostPort')).__name__,
-        mapping_matches=mapping == [{'HostIp': host, 'HostPort': str(PORT)}], ready=False)
+        mapping_matches=(mapping == [{'HostIp': host, 'HostPort': str(PORT)}]
+                         and not other_publications), ready=False)
     (storage / 'admission.json').write_text(json.dumps(safe))
     (storage / 'stage').write_text(scope + '-state')
     require(safe['running'])
@@ -388,6 +428,8 @@ def serve(storage, *, admission_only=False):
     version = run(engine + ['--version'], storage).decode('ascii').strip()
     require(len(version) <= 80 and re.fullmatch(r'podman version [0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?', version))
     (storage / 'engine-version').write_text(version)
+    (storage / 'stage').write_text('guest-bind-address')
+    guest_bind = selected_guest_ipv4(storage)
     admit_mount_ownership(storage)
     (storage / 'stage').write_text('image')
     image_id = storage / 'image-id'
@@ -415,25 +457,25 @@ def serve(storage, *, admission_only=False):
     if admission_only:
         write_result(storage, dict(admission_only=True, owner_succeeded=True,
             controls=controls, descriptor_ready=False, container_removed=True,
-            residual_check=True, podman_version=version))
+            residual_check=True, podman_version=version, guest_bind_selected=True))
         return
     container = None
     started = time.monotonic()
     deadline = int(time.time()) + LEASE
     result = dict(admission_only=False, owner_succeeded=False, container_started=False,
                   descriptor_ready=False, container_removed=False, residual_check=False,
-                  controls=controls, podman_version=version)
+                  controls=controls, podman_version=version, guest_bind_selected=True)
     try:
         (storage / 'stage').write_text('listener')
-        container = create_container(storage, 'live', ['--detach', '--read-only',
+        container = create_container(storage, 'live', ['--detach', '--network=bridge', '--read-only',
             '--memory=256m', '--memory-swap=256m', '--cpus=1', '--pids-limit=128',
             '--tmpfs', '/run:rw,nosuid,nodev,size=8m',
-            '--publish', '0.0.0.0:' + str(PORT) + ':2222'] + mounts +
+            '--publish', guest_bind + ':' + str(PORT) + ':2222'] + mounts +
             ['--env', 'PROBE_NONCE=' + binding['nonce']], image).decode().strip()
         require(re.fullmatch(r'[0-9a-f]{64}', container))
         result['container_started'] = True
         # Inspect only our owned container; no address or inspection output enters logs.
-        admit_listener(storage, container, '0.0.0.0', 'listener')
+        admit_listener(storage, container, guest_bind, 'listener')
         host_key = public_key(' '.join((storage / 'host_key.pub').read_text().split()[:2]))
         (storage / 'stage').write_text('descriptor')
         descriptor = dict(binding, address=address, port=PORT, host_public_key=host_key,

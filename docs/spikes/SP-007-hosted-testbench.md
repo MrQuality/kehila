@@ -749,12 +749,58 @@ attributed client footprint, matched product workload or measured offload saving
 Research/review time and individual overlapping phase durations are unmeasured.
 The failed admission and its sanitized report remain retained for comparison.
 
+### SP-007-R16: nonpublic admission passed; wildcard representation rejected, 2026-11-04
+
+Source `9d54eab87f9392ec8dc3e9e936f09113def16bea` passed the full local hook
+(419 Python tests, two platform skips) and all three
+[required CI jobs](https://github.com/MrQuality/kehila/actions/runs/41802589141).
+The unrelated capacity workload remained skipped. Exact-head composition review
+found no remaining substantive finding before dispatch.
+
+The [admission-only job](https://github.com/MrQuality/kehila/actions/runs/41802976944)
+passed under Podman 4.9.3: strict loopback publication inspection, contained TCP
+readiness, pinned in-container SSH/nonce, twenty-second expiry and owned removal.
+It uploaded no artifact and created no external listener. Its explicit
+`host_loopback_transport_tested=false` remains important: the SSH request ran
+inside the container, not through the host-published loopback port. The local
+controller took 80.375 seconds including hosted waiting and cleanup.
+
+After CI passed, the fresh
+[encryption control](https://github.com/MrQuality/kehila/actions/runs/41804572695)
+passed, but the
+[instrumented public job](https://github.com/MrQuality/kehila/actions/runs/41804768186)
+stopped at `listener-mapping`. This time the witness identifies the rejection:
+the container was running, one mapping had the selected string-valued port, but
+its host field was empty where the harness expected a literal wildcard address.
+Readiness was not reached, no descriptor was returned and no local SSH attempt
+occurred. Contained controls, owned container removal and residual checks passed;
+final cleanup also passed. The controller took 186.735 seconds. Both run artifacts,
+temporary configuration, tags and local keys were subsequently removed.
+
+The [Podman 4.9.3 publication parser](https://github.com/containers/podman/blob/v4.9.3/pkg/specgenutil/util.go)
+intentionally leaves this wildcard host value unset, and the
+[inspection type](https://github.com/containers/podman/blob/v4.9.3/libpod/define/container_inspect.go)
+allows an empty host field for an unspecified bind. This explains the new
+attempt's exact comparison failure; it does not retroactively identify R15's
+coarse failure or establish public ingress.
+
+The next repair keeps ambiguous empty mappings rejected. Select a concrete
+guest IPv4 from one kernel-preferred source/interface and independently confirm
+its assignment; publish only that address and the selected port using explicit
+bridge networking. Kernel scope `global` includes private guest addresses and
+does not establish Internet reachability. Keep this private bind separate from
+the external egress-derived candidate. Guest selection and exact publication
+remain unexecuted at this checkpoint and require fresh nonpublic admission,
+reviewed source, required gates and a bounded external attempt. No interface,
+IPv6, routing, firewall or source-policy fallback is implied. A remains untested
+for incoming connectivity and B remains deferred.
+
 ### Current case disposition and next observations
 
 | Scope | Evidence / status | Next decisive observation |
 | --- | --- | --- |
 | A1/A2 Current hosted fixture capacity | Passed R02 with stated measurement limits | Reuse within this source/tool/workload boundary; actual remote session remains separate |
-| B1 Transport mechanism | R13 contained policy/forwarding; R14 brokerless comparison; R15 stopped during listener admission before local SSH | Diagnose the admission oracle nonpublicly, then establish actual incoming reachability; B remains deferred |
+| B1 Transport mechanism | R16 nonpublic admission passed; public wildcard representation rejected before local SSH | Admit a concrete assigned guest bind, then establish actual incoming reachability; B remains deferred |
 | B2 Live isolation | R13 allowed path/12 denials and two gap counterexamples; R14 direct/reverse enforcement distinction; actual boundaries unqualified | Qualify exact server/runner destination restriction, local/session isolation and teardown/non-reuse for the selected direction |
 | C1 Confidential bootstrap | R15 Linux-to-Windows encrypted control and temporary-artifact deletion observed; production contract unqualified | Keep the artifact method temporary; qualify provider ordering, wrong-run/rerun/duplicate-consumer rejection and interruption cleanup before credentials |
 | D1 Lifetime enforcement | R09 overlay candidate retained; R10 local/broker/runner SSH owners proposed; runtime behavior unqualified | Prove active-stream cutoff separately from key expiry and runner/backend death; disposition outage residuals |
@@ -895,8 +941,8 @@ admission: the retained report cannot distinguish inspection, state, mapping and
 readiness. The owner stopped before local SSH, preserved the failure and verified
 temporary-data deletion rather than weakening the oracle or declaring A
 unreachable. The next owned improvement is precise sanitized evidence plus a
-nonpublic publication control before another external bind. Its effectiveness
-is still unexecuted. Earlier component review and passing unit tests did not
+nonpublic publication control before another external bind. That check was
+unexecuted at that checkpoint. Earlier component review and passing unit tests did not
 establish runtime compatibility; a new successful run must not erase this stop.
 
 Independent composition review also found a delayed-producer cancellation race
@@ -907,6 +953,14 @@ failure mechanism and repair, not a general review-efficiency claim. Three
 required source-commit gates took 505.80, 500.84 and 505.73 seconds sequentially;
 these measured execution spans exclude unmeasured authoring/review and subsequent
 hosted waiting. Required gates were retained; no avoided-time saving is claimed.
+
+R16 then showed why a passing loopback control cannot by itself settle wildcard
+publication semantics. The precise witness isolated a representation rejected
+before any local connection attempt; it did not convert that failure into an
+ingress result. The next bind narrows the interface instead of weakening empty
+mapping admission. Its kernel-assignment and real forwarding observations remain
+pending. Another required source gate took 510.84 seconds, followed by confirmed
+local VM shutdown; individual research/review effort remains unmeasured.
 
 ## Risks, review and reuse
 

@@ -28,7 +28,8 @@ changes PR state.
 
 The live job checks the effective SSH policy, actual contained SSH forwarding and
 a twenty-second expiry control with loopback-only host publication before exposing
-one high IPv4 port. Rootful bind-mount ownership is checked explicitly for StrictModes.
+one high IPv4 port on one verified guest interface address. Rootful bind-mount
+ownership is checked explicitly for StrictModes.
 The SSH role requires the
 admitted key and exact observed client source, denies sessions and reverse
 forwarding, and permits only the synthetic loopback destination. VPN address
@@ -40,10 +41,21 @@ separate limit. An egress-derived endpoint is only a reachability hypothesis.
 Use `--admission-only` to stop after the nonpublic hosted control. That mode never
 creates an external listener or uploads a descriptor artifact. The same strict
 inspection and contained-readiness checks serve the loopback and eventual public
-publication, with only the expected bind address differing. Sanitized diagnostics
+publication with their explicitly selected bind addresses. Sanitized diagnostics
 identify inspect, state, mapping, readiness, SSH and expiry failures and the actual
 engine version. Raw engine data remains private. The SSH control runs inside the
 container; it does not prove that traffic crossed the host-published loopback port.
+
+Podman 4.9.3 deliberately stores an explicit wildcard publication as an empty
+inspect host field. The probe keeps empty mappings rejected and selects a
+concrete guest IPv4 instead. A read-only kernel route query supplies one preferred
+source/interface; a separate interface observation must confirm its assignment.
+Private guest addresses are valid here: kernel scope `global` does not mean
+Internet-global. Both roles use explicit bridge networking. The guest bind and
+the external egress-derived candidate remain separate; the guest address never
+replaces the destination in the encrypted descriptor. Neither selection nor
+exact publication proves a provider ingress mapping. There is no alternate
+interface, IPv6 or routing fallback.
 
 At most three local attempts use pinned host identity and five-second execution
 deadlines, followed by the existing separately bounded descendant/pipe cleanup.
