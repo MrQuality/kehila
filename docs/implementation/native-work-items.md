@@ -85,10 +85,10 @@ are reused within scope; Proposed ADR-108/109 are not silently adopted.
 
 ## Delivery and review map
 
-### Next runtime checkpoint: authorized reads
+### Authorized-read runtime checkpoint
 
 At source `b77aabe`, production composition and startup still support projects
-only. The next focused checkpoint activates the fresh version-three schema,
+only. This focused checkpoint activates the fresh version-three schema,
 updates the exact serving profile and existing project reader, and connects
 `/items/read` and `/items/list` to authenticated production reads. Mutation routes
 and the owner interface remain required subsequent work in this same delivery.
@@ -238,6 +238,62 @@ reclaim or fail the workload if its memory cannot be reduced
 ([kernel memory controller](https://docs.kernel.org/admin-guide/cgroup-v2.html#memory-interface-files)).
 The existing first-failure stop and exact owned recovery remain required. No
 image build, VM/OS configuration or trust change is part of this adjustment.
+
+The lower-ceiling mandatory full gate passed on exact tree
+`a539347e11f0c82ec45c7b8c1255fbf2e4e17ae0`, producing read checkpoint commit
+`c1c962f552e7ada50ff59a97217cd8a09b916a31` through normal hooks. Starting at
+2026-11-05 23:01:29 UTC, it completed in 618.953 seconds through cleanup. It ran
+the full selected matrix: 475 Python tests with two skips, fourteen project-page
+tests, workspace/codec/oracle/Go checks, all twelve provisioned native authority
+modes and their committed-state observers, NATS/OpenSearch readiness and the
+PostgreSQL/FerretDB task path. The authority library passed 158 tests with fourteen
+ignored; twelve provisioned native modes execute separately, while the external
+password corpus and protected-startup asset case remain outside this fixture.
+Task-path controls included forty-eight competing command pairs, stalled-body
+and database deadlines, and Go-to-Rust save/replay/read with search unavailable.
+
+The effective runner ceiling was 1.5 GiB with one CPU and compiler job. Sampled
+aggregate working sets peaked at 4.193 GiB and available memory reached 1.641 GiB.
+Reserve warnings occurred, without a stop alert. The controller joined normally,
+all three service groups reached verified completion, anonymous volumes were
+removed, and the provider stopped. The successful run does not replace the
+earlier memory-stop evidence. Different launch headroom and concurrent host use
+prevent attributing the outcome solely to the lower ceiling; this is not an
+optimal-memory or safe-launch-minimum claim. No repository resource default was
+changed.
+
+The delivered read checkpoint installs fresh v3, exposes authorized item reads
+and bounded lists, preserves project creation replay, and verifies current
+operational state through indexed attributed history. It does not expose item
+mutation functions or provide the owner interface. The remaining save adapter
+must capture exact snapshot dependencies, bound aggregate preparation/retry work
+under the original reservation, and own final replay eligibility before routes
+and client recovery are qualified. Remote CI and final committed-head review
+remain publication prerequisites; full-goal readiness remains incomplete.
+
+#### Read checkpoint delivery review
+
+The native twenty-item case found an ordering defect that source review and the
+small pure fixtures missed: text-projected numeric labels were selected by
+unqualified ordering. Keep table-qualified numeric ordering and actual decimal
+digit-boundary cases in subsequent read/write review. The version-eleven and
+complete-page identity controls detect both affected queries. A separate initial
+fixture failure confused the codec string ceiling with the smaller domain field
+ceiling; accepted-input fixtures now respect both limits.
+
+The first full-gate resource stop demonstrated the owned post-join recovery path
+for the runner and OpenSearch group, while also costing an incomplete full run.
+The next run preserved checks and reduced the runner ceiling within the prior
+budget. Continue measuring reserve and stop conditions; one successful rerun does
+not establish repeatable savings or eliminate the narrow headroom risk. No new
+general verification campaign is introduced by this observation.
+
+Source preparation and independent review overlapped and were interrupted by
+maintainer-requested pauses, so their active durations are unknown and are not
+summed with campaign times. The separate compiler-fixture failure, native ordering
+failure, corrected native pass, memory-stop gate and successful full gate retain
+their own source identities, phases and validity limits above. This is a
+proportional checkpoint review, not closure of the selected WorkItem goal.
 
 One coherent capability may use focused commits for contract/codecs, SQL/profile,
 adapter/coordinator, HTTP/interface and native evidence. Reassess the delivery
