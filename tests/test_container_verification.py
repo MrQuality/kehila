@@ -1,10 +1,11 @@
 """Container gate routing/ownership checks; no engine is contacted by these tests."""
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import importlib.util
 import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
@@ -18,6 +19,44 @@ from verification_settings import load
 
 IMAGE = 'sha256:' + 'a' * 64
 IDENTITY = 'b' * 64
+
+
+class CallerOwnershipTests(unittest.TestCase):
+    def run_main(self, source, record, owner):
+        runtime = ComposeRuntime(['podman', 'compose'], {})
+        arguments = ['container_verify.py', '--docs', '--image', IMAGE,
+                     '--ownership-file', str(record), '--resource-owner', owner]
+        def enter():
+            self.assertEqual(json.loads(record.read_text())['owner'], owner)
+            return nullcontext()
+        with patch.object(sys, 'argv', arguments), patch.object(coordinator, 'ROOT', source), \
+                patch.object(coordinator, 'load', return_value=load({})), \
+                patch.object(coordinator, 'validate_runtime'), patch.object(coordinator, 'validate_daemon_environment'), \
+                patch.object(coordinator, 'managed_runtime', return_value=nullcontext(runtime)), \
+                patch.object(execution.ContainerExecutor, 'owned', side_effect=enter), \
+                patch.object(execution.ContainerExecutor, 'finish_builds'), patch.object(coordinator, 'checks'):
+            coordinator.main()
+
+    def test_caller_known_owner_is_recorded_before_lifecycle_entry(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source = root / 'source'
+            source.mkdir()
+            (source / 'docker-compose.yml').write_text('services: {}', encoding='utf-8')
+            record = root / 'record.json'
+            self.run_main(source, record, 'a' * 32)
+            self.assertEqual(json.loads(record.read_text())['owner'], 'a' * 32)
+            self.assertEqual(json.loads(record.read_text())['groups'], [])
+
+    def test_invalid_caller_owner_cannot_create_ownership_record(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source = root / 'source'
+            source.mkdir()
+            record = root / 'record.json'
+            with self.assertRaises(ValueError):
+                self.run_main(source, record, 'invalid')
+            self.assertFalse(record.exists())
 
 
 class ExecutorTests(unittest.TestCase):

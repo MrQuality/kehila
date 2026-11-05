@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Host lifecycle coordinator for the unchanged matrix in a Linux container."""
 import argparse
-import json
 import os
 from pathlib import Path
 import sys
@@ -15,6 +14,7 @@ from verify import check_commands
 from container_native import check as native_authority
 from native_authority_fixture import NATIVE_TEST_COMMAND
 import time
+from verification_ownership import GROUPS, ServiceOwnership
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,7 +29,12 @@ def prepare_dependencies(executor, seconds):
     executor.execute(['python', 'scripts/container_dependencies.py', 'mark', key])
 
 
-def checks(executor, args):
+def checks(executor, args, ownership=None):
+    def services(selected):
+        if ownership is None:
+            return service_group(executor.runtime, selected)
+        return service_group(executor.runtime, selected, ownership=ownership)
+
     if getattr(args, 'native_authority', False):
         executor.execute([*NATIVE_TEST_COMMAND, '--no-run'])
         executor.finish_builds()
@@ -45,7 +50,7 @@ def checks(executor, args):
     executor.finish_builds()
     native_authority(executor)
     executor.verify_source()
-    with service_group(executor.runtime, ['nats']) as containers:
+    with services(['nats']) as containers:
         with executor.service_network(containers) as addresses:
             host = addresses['nats']
             environment = {'KEHILA_NATS_HOST': host, 'KEHILA_NATS_PORT': '4222',
@@ -54,11 +59,11 @@ def checks(executor, args):
                               '--wait', '180', '--services', 'NATS'])
             executor.execute([sys.executable, 'tests/integration/nats_probe.py'], environment)
             executor.execute(['cargo', 'test', '--locked', '-p', 'event_dispatcher'], environment)
-    with service_group(executor.runtime, ['opensearch']) as containers:
+    with services(['opensearch']) as containers:
         with executor.service_network(containers) as addresses:
             executor.execute([sys.executable, 'scripts/healthcheck.py', '--host', addresses['opensearch'],
                               '--wait', '180', '--services', 'OpenSearch'])
-    with service_group(executor.runtime, ['postgres', 'ferretdb']) as containers:
+    with services(['postgres', 'ferretdb']) as containers:
         with executor.service_network(containers) as addresses:
             for service, name in (('postgres', 'PostgreSQL'), ('ferretdb', 'FerretDB')):
                 executor.execute([sys.executable, 'scripts/healthcheck.py', '--host', addresses[service],
@@ -80,6 +85,8 @@ def main():
     parser.add_argument('--ownership-file', type=Path,
                         default=os.environ.get('KEHILA_VERIFICATION_OWNERSHIP_FILE'),
                         help='Optional new external host-control record')
+    parser.add_argument('--resource-owner', default=os.environ.get('KEHILA_VERIFICATION_RESOURCE_OWNER'),
+                        help='Optional fresh caller-known 128-bit lowercase hex resource owner')
     parser.add_argument('--image', default=os.environ.get('KEHILA_VERIFICATION_IMAGE'))
     parser.add_argument('--engine', choices=['podman'], default='podman')
     parser.add_argument('--podman-machine', default=os.environ.get('KEHILA_TEST_PODMAN_MACHINE') or None)
@@ -108,12 +115,16 @@ def main():
         with managed_runtime(args.engine, args.podman_machine, environment=os.environ,
                              exclusive=args.exclusive_podman_machine) as runtime:
             executor = ContainerExecutor(runtime, settings, args.image, ROOT,
+                                         owner=args.resource_owner,
                                          dependencies=not args.docs,
                                          preparing=args.prepare_dependencies)
+            ownership = None
             if args.ownership_file is not None:
-                # Only the host coordinator writes this; workloads cannot access it.
-                with args.ownership_file.open('x', encoding='utf-8') as record:
-                    json.dump({'owner': executor.owner}, record)
+                # Reserve every applicable service group before any creation.
+                # The external host record is never copied into the runner.
+                full = not (args.docs or args.pure or args.prepare_dependencies or args.native_authority)
+                ownership = ServiceOwnership.create(args.ownership_file, runtime, ROOT,
+                                                    executor.owner, GROUPS if full else ())
             with executor.owned():
                 if args.prepare_dependencies:
                     prepare_dependencies(executor, maximum)
@@ -122,7 +133,7 @@ def main():
                         executor.execute(['python', 'scripts/container_dependencies.py',
                                           'check', executor.cache.key])
                     executor.finish_builds()
-                    checks(executor, args)
+                    checks(executor, args, ownership)
     print('CONTAINER PHASE SECONDS:', time.monotonic() - started, flush=True)
 
 

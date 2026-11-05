@@ -13,9 +13,100 @@ from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import test_services as services
+from verification_ownership import ServiceOwnership, EMPTY
 
 
 class ServiceOwnershipTests(unittest.TestCase):
+    def test_primary_failure_survives_tracked_cleanup_ambiguity(self):
+        primary = RuntimeError('original workload failure')
+        cleanup = ValueError('ambiguous resource')
+        ownership = Mock()
+        group = ownership.group.return_value
+        group.project = 'kehila-test-' + 'a' * 32
+        group.cleanup.side_effect = cleanup
+        with patch.object(services, 'run'), \
+                patch.object(services, '_containers', return_value=['owned-search']), \
+                patch('verification_service_resources.ComposeResources'):
+            with self.assertRaises(RuntimeError) as caught:
+                with services.service_group(services.ComposeRuntime(['podman', 'compose'], {}),
+                                            ['opensearch'], ownership=ownership):
+                    raise primary
+        self.assertIs(caught.exception, primary)
+        self.assertEqual(primary._cleanup_failures, (('Compose project', cleanup),))
+
+    def test_partial_start_keeps_volume_binding_before_destructive_cleanup(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source = root / 'source'
+            source.mkdir()
+            fixture = source / 'docker-compose.yml'
+            fixture.write_text('services: {}', encoding='utf-8')
+            runtime = services.ComposeRuntime(['podman', 'compose'], {})
+            record = root / 'record.json'
+            receipt = ServiceOwnership.create(record, runtime, source, 'a' * 32, [('opensearch',)])
+            resources = Mock()
+            resources.inventory.return_value = EMPTY
+            cid, volume = 'b' * 64, 'e' * 64
+            project = receipt.group(['opensearch'], fixture).project
+            live = {'containers': {cid: {'service': 'opensearch', 'name': project + '_opensearch_1'}}, 'networks': {},
+                    'volumes': {volume: {'container': cid, 'destination': '/data', 'created_at': 'synthetic'}}}
+            primary = RuntimeError('partial startup')
+
+            def command(arguments, **kwargs):
+                if 'up' in arguments:
+                    resources.inventory.return_value = live
+                    raise primary
+
+            def remove(*args):
+                saved = json.loads(record.read_text())['groups'][0]
+                self.assertEqual(saved['state'], 'observed')
+                self.assertIn(volume, saved['resources']['volumes'])
+                # Model interruption after its container is gone: namespace
+                # discovery alone can no longer recover this volume binding.
+                resources.inventory.return_value = EMPTY
+                raise RuntimeError('retained anonymous volume')
+
+            resources.remove.side_effect = remove
+            with patch.object(services, 'run', side_effect=command), \
+                    patch.object(services, '_containers', return_value=[]), \
+                    patch('verification_service_resources.ComposeResources', return_value=resources):
+                with self.assertRaises(RuntimeError) as caught:
+                    with services.service_group(runtime, ['opensearch'], compose_file=fixture, ownership=receipt):
+                        self.fail('failed startup entered body')
+            self.assertIs(caught.exception, primary)
+            saved = json.loads(record.read_text())['groups'][0]
+            self.assertEqual(saved['state'], 'observed')
+            self.assertIn(volume, saved['resources']['volumes'])
+            self.assertEqual(str(primary._cleanup_failures[0][1]), 'retained anonymous volume')
+
+    def test_unarmed_occupied_group_cannot_enter_destructive_finally(self):
+        ownership = Mock()
+        ownership.group.return_value.arm.side_effect = ValueError('occupied namespace')
+        with patch.object(services, 'run') as command:
+            with self.assertRaisesRegex(ValueError, 'occupied namespace'):
+                with services.service_group(services.ComposeRuntime(['podman', 'compose'], {}),
+                                            ['opensearch'], ownership=ownership):
+                    self.fail('occupied group entered')
+        command.assert_not_called()
+        ownership.group.return_value.cleanup.assert_not_called()
+
+    def test_tracked_group_observes_before_body_and_uses_verified_cleanup(self):
+        events = []
+        ownership = Mock()
+        group = ownership.group.return_value
+        group.project = 'kehila-test-' + 'a' * 32
+        group.arm.side_effect = lambda resources: events.append('armed')
+        group.observe.side_effect = lambda resources, **kwargs: events.append('observed')
+        group.cleanup.side_effect = lambda resources: events.append('verified-cleanup')
+        with patch.object(services, 'run', side_effect=lambda *args, **kwargs: events.append(args[0][-1])), \
+                patch.object(services, '_containers', side_effect=[['owned-search'], []]), \
+                patch('verification_service_resources.ComposeResources'):
+            with services.service_group(services.ComposeRuntime(['podman', 'compose'], {}),
+                                        ['opensearch'], ownership=ownership):
+                events.append('body')
+        self.assertEqual(events, ['armed', 'opensearch', 'observed', 'body', 'verified-cleanup'])
+        self.assertEqual(group.observe.call_args.kwargs['expected_containers'], {'opensearch': 'owned-search'})
+
     def test_machine_inspection_uses_stable_account_directory(self):
         stable = Path(tempfile.gettempdir()).resolve()
         with patch.object(services, '_account_directory', return_value=stable), \

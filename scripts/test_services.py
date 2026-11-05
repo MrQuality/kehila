@@ -290,7 +290,7 @@ def _runtime(preferred, machine, environment, exclusive):
 
 
 @contextmanager
-def service_group(runtime, selected, *, compose_file=None):
+def service_group(runtime, selected, *, compose_file=None, ownership=None):
     """Yield verified service/container identities for this owned group's lifetime.
 
     Callers must keep these identities rather than rediscover replacements. An
@@ -300,10 +300,16 @@ def service_group(runtime, selected, *, compose_file=None):
         raise ValueError('Expected a nonempty set of known test services')
     # -p overrides the Compose file's development name. Every group owns a fresh
     # project, including partial startup; cleanup can only address that project.
-    project = 'kehila-test-' + uuid.uuid4().hex
     source = ROOT / 'docker-compose.yml' if compose_file is None else Path(compose_file).resolve()
     if not source.is_file():
         raise ValueError('Owned services require an existing Compose file')
+    tracked = ownership.group(selected, source) if ownership is not None else None
+    project = tracked.project if tracked is not None else 'kehila-test-' + uuid.uuid4().hex
+    if tracked is not None:
+        from verification_service_resources import ComposeResources
+        # Arming is outside the destructive finally: occupied or unpersisted
+        # reservations never authorize Compose down against existing resources.
+        tracked.arm(ComposeResources(runtime))
     command = [*runtime.compose, '-p', project, '-f', str(source)]
     failure = None
     try:
@@ -314,22 +320,27 @@ def service_group(runtime, selected, *, compose_file=None):
             if len(matching) != 1:
                 raise RuntimeError('Expected one running owned container for ' + service)
             containers[service] = matching[0]
+        if tracked is not None:
+            tracked.observe(ComposeResources(runtime), expected_containers=containers)
         yield containers
     except BaseException as error:
         failure = error
         try:
             with cleanup_time():
                 run([*command, 'logs', '--no-color', '--tail', '200'], timeout=30, env=runtime.environment)
-        except (OSError, subprocess.SubprocessError) as diagnostic_error:
+        except (OSError, ValueError, subprocess.SubprocessError) as diagnostic_error:
             print('TEST RESOURCE: diagnostics failed: ' + str(diagnostic_error), file=sys.stderr)
         raise
     finally:
         try:
             with cleanup_time():
-                run([*command, 'down', '--volumes'], timeout=120, env=runtime.environment)
-                if _containers(runtime, project, include_stopped=True):
-                    raise RuntimeError('Owned test containers remain after Compose cleanup')
-        except (OSError, RuntimeError, subprocess.SubprocessError) as cleanup_error:
+                if tracked is not None:
+                    tracked.cleanup(ComposeResources(runtime))
+                else:
+                    run([*command, 'down', '--volumes'], timeout=120, env=runtime.environment)
+                    if _containers(runtime, project, include_stopped=True):
+                        raise RuntimeError('Owned test containers remain after Compose cleanup')
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as cleanup_error:
             if failure is not None:
                 retain_cleanup_failure(failure, cleanup_error, 'Compose project')
                 raise failure

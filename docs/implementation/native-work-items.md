@@ -35,7 +35,7 @@ permission is inferred from the goal.
 | Project creation already has product authentication and native persistence | Established: merged PR #92; `src/io/kehila_authority/`; `project-authority-verification.md` | Extend the product authority; do not reimplement the anonymous worker or repeat completed creation work. |
 | Item creation and sparse editing have accepted domain rules | Established: B-003 seventh slice; `task_contract::item_mutation`, `project`, `operation`; D-021/023/032/033/034 | Reuse those rules; physical codecs/storage are missing. |
 | Current SQL/profile permits item writes | Contradicted: `operations.sql` creation-only slice guards; `access.sql`; authority `postgres/profile.sql` | Review explicit new capabilities and exact startup profile before implementation. |
-| Current project can still equal its creation snapshot after item writes | Contradicted: native `read.rs` compares the whole Project; create advances sequence and recording estimates changes its monotonic flag | Preserve immutable creation snapshots and stable metadata checks. Proposed ADR-111 revision 3 carries an attributed operational-state chain in permanent item revisions, with indexed head verification. |
+| Current project can still equal its creation snapshot after item writes | Contradicted: native `read.rs` compares the whole Project; create advances sequence and recording estimates changes its monotonic flag | Preserve immutable creation snapshots and stable metadata checks. Accepted ADR-111 revision 3 carries an attributed operational-state chain in permanent item revisions, with indexed head verification. |
 | ADR-107 authorizes recoverable item commands | Contradicted: it explicitly excludes generic drafts | Accepted ADR-111 separately supplies pending item creation and the selected direct-edit scope; no server-pending edit recovery is inferred. |
 | Every generated item result can be prepared before any database access | Unsupported for the selected state-dependent approach | Accepted ADR-111 supplies narrowly bounded read preparation under ADR-104; project creation ingress is unchanged. |
 | Existing owner profile defines item mutation grants | Current SQL profile is creation/read-specific; new mapping accepted in ADR-111 | Implement Read/CreateItem/EditItem with current-grant rechecks, retained scope and revocation fences in the reviewed schema/adapter packet. |
@@ -156,9 +156,136 @@ then passed after selection was corrected; it uses command doubles only.
 Initial Rust component diagnostics mistakenly ran on the host, outside the
 required container lane. They are not compliant gate evidence. They retained
 expected unimplemented request/history failures, a cache-resolution stop, a
-compile error, a lint failure and later diagnostic passes separately. The final
-new fixture cases and required containerized gate remain unexecuted. No schema,
-serving route, native WorkItem transaction or browser behavior is qualified.
+compile error, a lint failure and later diagnostic passes separately. At that
+point the final new fixture cases and required containerized gate were unexecuted.
+No schema, serving route, native WorkItem transaction or browser behavior was
+qualified by those diagnostics.
+
+After RAM became available, the first container dependency-preparation attempt
+failed during provider startup because a required resident-memory observation
+was unavailable. It did not reach dependency preparation, compilation or tests.
+The original automatic-cleanup failure is retained separately from the later
+confirmed provider shutdown. No commit was created and the full gate did not run.
+The startup-observation ordering defect was corrected and independently reviewed;
+bounded regression controls failed against the original and passed against the
+correction. Those controls establish no WorkItem or database qualification.
+
+The corrected bounded dependency preparation passed on 2026-11-04, starting at
+18:59:32 UTC and taking 517.359 seconds through cleanup. The mandatory full
+container commit gate then passed from 19:09:25 UTC in 582.906 seconds through
+cleanup, creating `b81b64c8ef6b25e176aaf8574bacccee19700051` with reviewed tree
+`142d97ce0cf312c7b39519746fc684170da9947b`. Each phase confirmed provider shutdown;
+the commit controller joined without termination. Source preparation and review
+spans were not measured; no whole-task elapsed-time claim is made.
+
+The gate passed 426 Python tooling tests with two platform skips, all 18 new
+WorkItem codec tests, the shared workspace/oracle/Go checks, the existing native
+authority fixture, NATS/OpenSearch readiness and PostgreSQL/FerretDB task-path
+checks including 48 competing pairs. The external password-corpus test remains
+explicitly ignored; actual browser execution is unqualified. This establishes
+the codec checkpoint and regressions, not native WorkItem persistence or the
+full selected capability. The SQL records/retention sources remain outside this
+commit and its executed source snapshot.
+
+Sampled preparation aggregate memory peaked at 1.611 GiB with minimum available
+host RAM 4.000 GiB. The full gate peaked at 4.593 GiB aggregate and minimum
+available RAM 1.677 GiB, producing a reserve warning but no stop-floor breach.
+These sampled observations are not a continuous peak guarantee or calibration.
+The narrow reserve during the full gate and dependency-cache preparation cost
+inform later resource/caching work; they do not add another completion campaign.
+
+The codec checkpoint was pushed to draft PR #96. Independent final committed-head
+composition review found no substantive findings and inspected the retained gate
+summary and codec test results. All three jobs passed on `b81b64c` in
+[CI run 41896368550](https://github.com/MrQuality/kehila/actions/runs/41896368550):
+`verify`, `native-authority` and `windows-owner-client`. This executable scope ran
+their workload steps; it was not the earlier documentation-only skip. The PR
+remains draft and assigned to `MrQuality`; full-goal completion and merge are not
+claimed. The updated record and uninstalled SQL sources are local preparation
+for the next coherent checkpoint, outside the published codec tree.
+
+### Storage foundation checkpoint, 2026-11-04
+
+Owner-level atomic saves and a native predecessor-contention control passed on
+2026-11-05 at tree `5a722f2c2e31bd13f18c3bb4ff45e17b3f4482e1`, with twenty-five
+checker controls and a separate final observer. Source challenge and tests
+exposed and corrected a late implicit-FK lock on the predecessor core; a
+canonical malformed-history control also now rejects before that FK path.
+The full focused campaign took 57.844 seconds through owned cleanup/provider
+shutdown; minimum sampled available RAM was 3.669 GiB and aggregate peak
+1.734 GiB. Earlier failures and an invalid initial malformed-history oracle
+remain distinguished in the [save/ordering record](native-work-item-storage.md#atomic-saves-and-predecessor-ordering-checkpoint-2026-11-05).
+This qualifies the uninstalled SQL slice under one command per transaction,
+with full rollback before retry. Typed transaction ownership/reload, serving
+adoption and authenticated end-to-end WorkItem behavior remain incomplete.
+
+The required full gate on the subsequent documented storage tree stopped at
+the 1.5 GiB available-memory floor during OpenSearch readiness. It created no
+commit. Initial interrupted cleanup missed an owned service; separate verified
+recovery removed it and stopped the provider. The [failed-gate record and
+checkpoint retrospective](native-work-item-storage.md#required-gate-hold-and-checkpoint-retrospective-2026-11-05)
+preserve both failures, the completed subphases and the remaining cleanup repair/
+resource prerequisites. The storage packet remains local and PR #96 remains
+draft; the published codec head's earlier gate does not qualify this new tree.
+
+The subsequent write-ahead ownership repair passed its focused controls and one
+real, bounded NATS interruption/recovery check. It preserves partial-start
+identities before deletion and retains primary failures when cleanup refuses
+ambiguous resources. The successful control confirms exact-ID recovery after a
+joined lifecycle child, not general host-failure or anonymous-volume recovery.
+See the [repair evidence and limits](native-work-item-storage.md#verification-ownership-repair-checkpoint-2026-11-05).
+The required full gate on the combined storage/verification packet remains open.
+
+Owner-level historical create/edit reconciliation passed on 2026-11-05 at tree
+`8fb9bf7ba4bbeb17927088db67af6bbe35da0321`, with nineteen checker controls
+and independent committed-state observation. It preserves recorded identity
+before mutable eligibility, distinguishes conflict/expiry/scoped absence, and
+performs no execution. Selected retention-corruption and constructed-time cases
+fail closed. See the [reconciliation record](native-work-item-storage.md#historical-reconciliation-checkpoint-2026-11-05)
+for evidence and limits. Internal replay availability does not qualify decoded
+client success; typed Rust integration, serving adoption and the
+full authenticated journey remain incomplete.
+
+Owner-level read-only pending discovery/open subsequently passed on 2026-11-05
+at tree `8152ad470cee19dcca9523b002bd89e9ac1a6223`, with seventeen checker
+controls, scoped keyset pagination, complete expected authority, bounded content,
+nonmutating effective expiry, corruption classification and a separate committed
+observer. One corruption-harness failure is retained separately from the pass.
+See the [discovery record](native-work-item-storage.md#read-only-pending-discovery-checkpoint-2026-11-05)
+for scope and limits. Product installation/runtime privileges, typed application
+integration and the full capability remain incomplete.
+
+The later owner-level registration/cancellation campaign passed on 2026-11-05
+at tree `94d43d8cd9060b5643fa0b619124bcb5965d8983`. It includes fifteen
+checker controls, private item authority, current-grant negatives, fixed pending
+registration/cancellation, cross-project owner capacity and independent retained
+state observation. A cancellation expiry regression first failed and then passed
+after the transition guard became the single clock owner. Both reached expected
+failures and earlier resource failures remain retained separately. See the
+[storage record](native-work-item-storage.md#fixed-registrationcancellation-checkpoint-2026-11-05)
+for exact evidence and limits. These entries remain outside the installer with
+no new serving grants; execution/reconciliation, read-only discovery, application
+transactions, runtime profile and API/interface are still outstanding.
+
+The subsequent history-agreement campaign passed at tree
+`333b63deb3d0f9bb7040752260c764b022b22398`, including twelve checker controls,
+selected attribution/representation/lifecycle/field-use rejections and separate
+committed-state observation. Owned cleanup and provider shutdown completed;
+independent evidence review found no material blocker to capability source work.
+The earlier missing-history-guard failure remains failed evidence. See the
+[storage record](native-work-item-storage.md#history-agreement-checkpoint-2026-11-04)
+for exact scope, resource observations and limits. Product adoption, runtime
+authorization, typed reload and full capability qualification remain incomplete.
+
+The subsequent local [storage packet](native-work-item-storage.md) has passed
+an owner-only PostgreSQL structural campaign at tree
+`ee49b22a0f8a40143cfd57df1f800cd1f85aae10`: committed create/edit, 12 selected
+named rejection controls, retirement/pruning and a separate retained-state
+observer, with complete owned cleanup. Ten checker controls passed in-container.
+The prior startup-lifetime and SQL-parser failures are retained separately. This
+is not serving-login, concurrency, typed-history, API or complete goal
+qualification. Product version-three adoption, fixed authorized write entry,
+history/field-use agreement and runtime/interface integration remain unfinished.
 
 ### Implementation authority, 2026-11-04
 
@@ -255,7 +382,7 @@ The separate normal-host documentation check passed all 425 tooling tests with
 three platform skips in 35.504 seconds, followed by naming checks and synchronized
 42-requirement engineering metadata. This checks documentation/tooling only;
 WorkItem runtime, schema, codecs and interface are not implemented or qualified.
-Whitespace and working-tree publication checks also passed.
+Whitespace checks also passed.
 
 The independent source/relevance reviewer checked revision two and the associated
 status-document corrections, confirmed both P1 dispositions and found no

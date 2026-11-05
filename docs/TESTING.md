@@ -169,6 +169,31 @@ these contexts. Forced process termination or host
 failure can prevent cleanup; inspect resources carrying the printed unique
 `kehila-test-...` project label before removing any leftover test project.
 
+The Windows container coordinator can additionally write a new external host
+record with `--ownership-file`. A supervising caller can supply its own fresh
+32-character lowercase hexadecimal `--resource-owner` (or
+`KEHILA_VERIFICATION_RESOURCE_OWNER`) to bind that record to the launched run.
+The owner is validated and recorded before executor resource creation; this
+does not imply validation before VM startup. Keep records outside the source
+checkout: they include machine-local routing/source metadata and are never
+copied into the application container.
+
+The version-one record reserves the applicable finite service groups before
+creation. A reservation becomes actionable only after its namespace is verified
+empty and that authorization is persisted before Compose startup. Tracked normal
+cleanup also records partial-start identities before deleting their containers.
+Recovery requires a fresh caller-bound record, the original source/route/owner
+bindings, and confirmed termination/join of the lifecycle process and its
+descendants. Use the same bounded `ComposeResources` instance across recovery
+of all groups to retain one absolute deadline. Recovery validates resources
+before removal, targets full container/network IDs and refuses replacements,
+foreign endpoints, binds or named volumes. Anonymous volumes remain tied to
+their exact container; known retained volumes prevent a successful cleanup
+result. Old owner-only records are not version-one service recovery authority.
+A recovered resource set does not change the original verification failure
+into a pass. These controls cover surviving host supervision, not arbitrary
+host failure or a general resource-pruning command.
+
 Default engine selection tries a ready Podman runtime, then Docker. Use
 `--engine docker` or `--engine podman` to select explicitly. On Windows an
 explicit stopped Podman machine can be started for the run:
