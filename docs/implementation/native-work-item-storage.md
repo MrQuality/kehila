@@ -944,5 +944,43 @@ inside the parent span; finer subdivisions were not measured.
 This is actual evidence for one NATS interruption path, not anonymous-volume
 recovery, arbitrary host failure, the required full gate or WorkItem runtime
 behavior. The required full-gate retry and final committed-head review remain
-open. Source-bound passed SQL evidence is retained; no storage commit or full-goal
-review readiness is claimed.
+open at that checkpoint. Source-bound passed SQL evidence is retained; full-goal
+review readiness is not claimed.
+
+### Passed full storage checkpoint gate, 2026-11-05
+
+The normal-hook full Podman gate passed on exact tree
+`d067298285b6c456d53e8b1c2a9493de75338bad`, creating commit
+`0046be0a9b1966dc6e0c13fe7e0976b7bca8dde2` from parent `b81b64c`. It ran
+474 Python tooling tests with two platform skips, workspace/interface/codec,
+oracle and Go checks, the selected native authority fixture cases and independent
+durable-state observer, NATS/OpenSearch readiness and the PostgreSQL/FerretDB
+task path. The latter passed 48 competing pairs, stalled-body/database guards
+and Go-to-Rust save/replay/read with search unavailable. Externally provisioned
+password-corpus and protected-startup assets remain outside this qualification.
+
+The attempt started at 16:03:55 UTC with 5.773 GiB available host RAM and took
+542.296 seconds through cleanup. The nested command/hook span was 540.687
+seconds and the container phase reported 537.516 seconds; these spans are not
+added. Sampled aggregate working sets peaked at 4.647 GiB and minimum available
+RAM was 1.585 GiB. Reserve warnings occurred, but no stop-floor or aggregate-
+budget event occurred. This was tight observed headroom, not a measured safe
+launch minimum or a continuous peak guarantee.
+
+All three tracked service groups reached verified completion, including normal
+removal of the PostgreSQL/FerretDB anonymous volumes. The provider stopped and
+the controller joined without termination. This qualifies normal tracked
+cleanup in that full run; interrupted anonymous-volume recovery remains outside
+the actual tiny-control evidence. Earlier failed gate, image-admission failure,
+invalid routing oracle and separately verified recoveries are retained as
+distinct results; this successful run does not change their outcomes.
+
+The product installer and runtime profile still target version two: the WorkItem SQL is still
+an uninstalled owner-only overlay. Its executable SQL, checker and fixture files
+are unchanged from the scoped PostgreSQL pass at `5a722f2`; source comparison
+confirmed that relationship. The full gate adds existing application regression
+and verification-lifecycle evidence, not authenticated WorkItem runtime proof.
+Typed bounded preparation, one-command transaction consumption/reload, fresh-v3
+installer/profile adoption, routes/interface and the end-to-end failure cases
+remain required. Publication must retain exact-head review and actual remote CI
+status; no merge or full PR readiness follows from this checkpoint.

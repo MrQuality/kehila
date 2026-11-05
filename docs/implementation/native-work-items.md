@@ -206,6 +206,18 @@ for the next coherent checkpoint, outside the published codec tree.
 
 ### Storage foundation checkpoint, 2026-11-04
 
+The normal-hook full Podman gate subsequently passed on tree
+`d067298285b6c456d53e8b1c2a9493de75338bad`, creating storage checkpoint
+`0046be0a9b1966dc6e0c13fe7e0976b7bca8dde2` from `b81b64c`. It passed
+474 tooling tests with two platform skips and the existing workspace, native
+authority and service-backed task-path regressions. The run took 542.296 seconds
+through cleanup; minimum sampled available RAM was 1.585 GiB and aggregate peak
+4.647 GiB, with reserve warnings but no stop. All tracked service groups completed,
+including normal anonymous-volume cleanup, and provider shutdown/controller join
+were confirmed. See the [full checkpoint record](native-work-item-storage.md#passed-full-storage-checkpoint-gate-2026-11-05)
+for exact scope and retained failures. The SQL remains uninstalled; this does not
+complete Rust integration, the authenticated WorkItem journey or PR #96 readiness.
+
 Owner-level atomic saves and a native predecessor-contention control passed on
 2026-11-05 at tree `5a722f2c2e31bd13f18c3bb4ff45e17b3f4482e1`, with twenty-five
 checker controls and a separate final observer. Source challenge and tests
@@ -234,7 +246,8 @@ identities before deletion and retains primary failures when cleanup refuses
 ambiguous resources. The successful control confirms exact-ID recovery after a
 joined lifecycle child, not general host-failure or anonymous-volume recovery.
 See the [repair evidence and limits](native-work-item-storage.md#verification-ownership-repair-checkpoint-2026-11-05).
-The required full gate on the combined storage/verification packet remains open.
+The full-gate hold was later closed by the passed checkpoint above; the original
+failure and its qualification limits remain in the record.
 
 Owner-level historical create/edit reconciliation passed on 2026-11-05 at tree
 `8fb9bf7ba4bbeb17927088db67af6bbe35da0321`, with nineteen checker controls
