@@ -4,6 +4,8 @@
 mod bundle;
 mod coordinator;
 mod http_auth;
+mod item;
+mod item_ingress;
 mod lifecycle;
 mod listener;
 mod native_ingress;

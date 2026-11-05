@@ -1,4 +1,4 @@
--- Uninstalled source preparation; include only in the coordinated fresh v3
+-- Product operation closure; include only in the coordinated fresh v3
 -- packet. Preserve the original project-intent closure while adding item cores.
 
 ALTER TABLE kehila.operations DROP CONSTRAINT slice1_operation_family;

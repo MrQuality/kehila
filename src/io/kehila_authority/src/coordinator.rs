@@ -21,10 +21,13 @@ use std::{
 use tokio::sync::Mutex as AsyncMutex;
 use zeroize::Zeroizing;
 
+mod item;
 pub(crate) mod jobs;
 mod management;
+mod native_delivery;
 mod project;
-pub(crate) use project::ProjectDelivery;
+pub(crate) use native_delivery::NativeDelivery;
+use native_delivery::{reply, Reply};
 
 const WORK_DEADLINE: Duration = Duration::from_secs(5);
 
@@ -73,6 +76,10 @@ pub(crate) enum Operation {
         credential: Credential,
         command: crate::project::Command,
     },
+    Item {
+        credential: Credential,
+        input: crate::item_ingress::Input,
+    },
 }
 
 pub(crate) enum Output {
@@ -90,7 +97,8 @@ pub(crate) enum Output {
     OthersRevoked {
         count: usize,
     },
-    Project(ProjectDelivery),
+    Project(NativeDelivery),
+    Item(NativeDelivery),
 }
 
 // The adapter retains this through its observed exchange outcome. Channel
@@ -615,6 +623,7 @@ impl Engine {
                 credential,
                 command,
             } => self.project(credential, command, deadline).await,
+            Operation::Item { credential, input } => self.item(credential, input, deadline).await,
         }
     }
 }

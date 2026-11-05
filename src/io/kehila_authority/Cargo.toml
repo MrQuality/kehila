@@ -9,6 +9,7 @@ publish = false
 [dependencies]
 task_contract = { path = "../../pure/task_contract" }
 project_create_codec = { path = "../../pure/project_create_codec" }
+work_item_codec = { path = "../../pure/work_item_codec" }
 argon2 = { version = "=0.6.0", default-features = false, features = ["alloc", "password-hash", "zeroize"] }
 bytes = "=1.12.1"
 data-encoding = { version = "=2.11.1", default-features = false }

@@ -1,6 +1,6 @@
--- Uninstalled source preparation. Requires records.sql and retention.sql.
+-- Fresh v3 operational heads. Requires records.sql and retention.sql.
 -- Fixed write entry inserts a revision before advancing its operational head.
--- No serving grants or installer adoption are supplied by this file.
+-- Serving grants belong to the coordinated installer capability packet.
 
 -- Seed the operational witness for every ProjectCreate in the same transaction,
 -- without changing its request, result or snapshot representation. The trusted

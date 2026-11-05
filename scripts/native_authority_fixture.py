@@ -33,6 +33,7 @@ AUTH_DATABASES = {
     'auth-read': 'native_auth_read',
     'auth-lifetime': 'native_auth_lifetime',
 }
+ITEM_DATABASES = {'item-read': 'native_item_read'}
 
 
 def prepare(seconds):
@@ -91,6 +92,7 @@ def prepare(seconds):
 
 
 SPECS = {
+    'item-read': ('coordinator::jobs::tests::project::item_reads::native_authorized_item_reads', 'item-read-passed'),
     'journey': (TEST, 'passed'),
     'clock': (CLOCK_TEST, 'clock-passed'),
     'restored': (RESTORE_TEST, 'restore-passed'),
@@ -109,7 +111,7 @@ def failure_metadata(mode, returncode, summary, marker_required, marker_present)
     # Only closed labels, numeric observations and known public source locations.
     modes = set(SPECS)
     labels = {'pre_session', 'pre_csrf', 'login', 'state', 'logout',
-              'password_change', 'revoke_others', 'project'}
+              'password_change', 'revoke_others', 'project', 'item'}
     jobs = []
     for label, elapsed in re.findall(r'^owned_job ([a-z_]+) elapsed_us=([0-9]{1,12})$',
                                      summary, re.MULTILINE):
@@ -138,15 +140,16 @@ def failure_metadata(mode, returncode, summary, marker_required, marker_present)
 def journey(seconds, mode='journey'):
     test, marker = SPECS[mode]
     controls = WORK / 'controls'
-    if mode in AUTH_DATABASES:
+    databases = {**AUTH_DATABASES, **ITEM_DATABASES}
+    if mode in databases:
         controls /= mode
         controls.mkdir(mode=0o700)
     environment = dict(os.environ, AUTH001_DB_CONTROLS=str(controls))
-    if mode in AUTH_DATABASES:
-        environment['KEHILA_NATIVE_FIXTURE_DATABASE'] = AUTH_DATABASES[mode]
+    if mode in databases:
+        environment['KEHILA_NATIVE_FIXTURE_DATABASE'] = databases[mode]
     elif 'KEHILA_NATIVE_FIXTURE_DATABASE' in environment:
         raise ValueError('Unexpected authentication fixture database override')
-    if mode in {'journey', 'clock', 'restored'} or mode in AUTH_DATABASES:
+    if mode in {'journey', 'clock', 'restored'} or mode in databases:
         environment['KEHILA_NATIVE_FIXTURE_ADMIN_PASSWORD_FILE'] = str(WORK / 'postgres/admin-password')
     marker_path = controls / marker if marker else None
     if mode == 'auth-unknown' and marker_path.exists():

@@ -71,7 +71,7 @@ class StructureControllerTests(unittest.TestCase):
                 check.check(database)
         database.sql.assert_called_once_with(check.FRESH)
 
-    def test_overlay_failure_cannot_run_fixture_or_success_observer(self):
+    def test_wrong_installed_version_cannot_run_fixture_or_success_observer(self):
         database = self.database()
         database.sql.side_effect = [None, None, None, ValueError('overlay failed')]
         with patch.object(check, 'validate_container'), patch('builtins.print') as output:
@@ -123,16 +123,13 @@ class StructureControllerTests(unittest.TestCase):
                 check.check(database)
         output.assert_not_called()
 
-    def test_success_follows_separate_observation_and_preserves_module_order(self):
+    def test_success_follows_installed_profile_and_separate_observation(self):
         database = self.database()
         with patch.object(check, 'validate_container'), patch('builtins.print') as output:
             check.check(database)
         statements = database.sql.call_args_list
-        overlay = statements[3].args[0]
-        positions = [overlay.index('/work_items/' + name) for name in check.MODULES]
-        self.assertEqual(positions, sorted(positions))
-        self.assertTrue(overlay.startswith('BEGIN;\nSET LOCAL ROLE kehila_owner;\n'))
-        self.assertTrue(overlay.endswith('COMMIT;\n'))
+        self.assertEqual(statements[1].kwargs, {'file': check.DESTINATION + '/install_product.sql'})
+        self.assertEqual(statements[3].args, (check.INSTALLED,))
         for denial in statements[4:7]:
             self.assertEqual(denial.kwargs['expected_state'], '42501')
             self.assertIn('permission denied', denial.kwargs['expected_message'])

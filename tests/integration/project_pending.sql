@@ -41,7 +41,7 @@ $$;
 SELECT pg_advisory_lock(1262831689,1);
 SELECT pg_temp.require((kehila_auth.start_runtime('installation','structural-start')).runtime_generation = 1,
   'fresh runtime generation');
-SELECT pg_temp.require((SELECT array_agg(version ORDER BY version) = ARRAY[1,2]
+SELECT pg_temp.require((SELECT array_agg(version ORDER BY version) = ARRAY[1,2,3]
   FROM kehila.schema_migrations), 'exact product version');
 
 SELECT pg_temp.reject('SET ROLE kehila_owner', '42501');

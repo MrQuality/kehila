@@ -85,6 +85,160 @@ are reused within scope; Proposed ADR-108/109 are not silently adopted.
 
 ## Delivery and review map
 
+### Next runtime checkpoint: authorized reads
+
+At source `b77aabe`, production composition and startup still support projects
+only. The next focused checkpoint activates the fresh version-three schema,
+updates the exact serving profile and existing project reader, and connects
+`/items/read` and `/items/list` to authenticated production reads. Mutation routes
+and the owner interface remain required subsequent work in this same delivery.
+Owner-created synthetic fixture rows are test inputs, not a claim that product
+item creation is implemented. No populated-database upgrade is offered.
+
+Source-first review confirmed this boundary is within accepted ADR-111 revision
+three. Its two implementation prerequisites are explicit nested-helper privileges
+and bounded read materialization. The read authority and its grant-check helper
+are invoker functions; both require enumerated execution privileges. Pending,
+writer, reconciliation and save functions remain unavailable to serving until
+their corresponding production capability is implemented.
+
+The read plan retains the existing 4,096-byte ingress bound, shared sixteen
+admitted lifetimes, single database mutex and original five-second work deadline.
+Each operation uses one authorized read-only repeatable-read snapshot and confirms
+rollback before releasing the database guard. A project is reconstructed and
+checked against its historical configuration and stable creation metadata before
+one indexed operational-head witness is materialized. Head zero requires the
+creation core and initial counters; later heads require a fully decoded attributed
+revision and its indexed predecessor link. Historical creation replay is unchanged.
+
+An item read fetches bounded stable identity, its creation revision and its current
+revision. Each history projection has a one-MiB SQL sentinel and a one-row bound.
+Decode and verify the creation revision, retain its issued identity and fixed
+lifecycle keys, then
+drop its driver row and decoded result before fetching current history. Head
+verification also finishes before item history is fetched. Compare the current
+typed envelope with fixed relational fields and permanent operation attribution;
+do not rerun mutable domain decisions on accepted historical content.
+
+Listing fetches seventeen bounded identity/sequence rows to detect a next page,
+then processes at most sixteen entries in sequence. It reuses the authorized
+project/configuration snapshot and materializes one item's histories at a time;
+it does not fetch seventeen complete histories together. Only bounded summaries
+survive each iteration. The title is the configured text value with readable-ID
+fallback, without changing stored text. Charge each complete encoded summary
+against the outer wire budget before retaining it. Stop before the first row
+that would exceed the budget, using the last delivered sequence as cursor; every
+single admitted summary must fit, otherwise fail explicitly. Never truncate text
+or advance past an undelivered row. Pages do not share a stable snapshot.
+
+| Lifetime | Retained records and release boundary |
+| --- | --- |
+| Project proof | Current relational configuration plus the two bounded historical snapshots; release historical pairs and driver rows before fetching the single bounded head history. |
+| Item proof | Current project/configuration, bounded scalar identity, at most one history driver row and its decoding temporaries; retain issued identity and fixed lifecycle keys between creation and current history. |
+| List | At most seventeen scalar rows, the shared project/configuration, one item proof, accepted summary values and one temporary encoded candidate summary. |
+| Delivery | Bounded encoded response and the existing session/reservation; database transaction and guard have been released. |
+
+These are serialized-record and row bounds, not measured heap guarantees. JSON
+trees, driver buffers, typed clones and encoding temporaries remain additional
+costs under the existing shared capacity. Mutation preparation packet aggregate
+and finite write/reprepare accounting remain prerequisites of the later save
+adapter; no arbitrary values are accepted by this read checkpoint. Required
+native evidence includes the real serving principal, head zero and multiple-item
+heads, original project replay, pagination/byte boundaries, corrupt attribution,
+unsupported startup profiles and denial of unexposed mutation capabilities.
+
+Source preparation on 2026-11-05 connected the read/list production chain and
+fresh-v3 read capabilities. Component review found a missing stable-Project
+agreement check in decoded history; the correction binds operational-head,
+creation and current-item history to the validated project metadata, permitting
+only legitimate historical counter lag in this profile without metadata or
+configuration writers. Such writers must introduce historical-snapshot comparison
+before exposure. This is a source-reviewed restriction, not a mutable domain
+decision on a historical accepted result.
+
+The first container compiler/unit attempt at tree
+`29767296f6d856485b0095da8c2db8de503bbbe0` compiled successfully: 157 library tests
+passed, one failed and thirteen remained ignored. The failure was the page-budget
+test fixture: its 64-KiB title exceeded the existing 16-KiB domain text bound and
+never reached the page encoder. That failed result is retained. The corrected
+fixture uses accepted 16-KiB text with six-byte JSON escape expansion; it does not
+weaken the domain bound. The affected rerun at tree
+`8ef037c5209f197e5fc96ab0432b0e0911309100` passed all seven selected item tests and
+all twenty-five storage-controller tests. The other 157 passed observations remain
+applicable only to unchanged behavior; this is not a new full-suite pass. No new
+native database, HTTP/TLS or startup-profile qualification is claimed yet.
+
+Both attempts used one compiler job in the pinned two-GiB/one-CPU runner and
+confirmed resource removal and provider shutdown. The failed attempt took
+134.610 seconds through cleanup, with sampled aggregate peak 3.437 GiB and minimum
+available 2.398 GiB. The affected pass took 95.797 seconds through cleanup, with
+peak 3.255 GiB and minimum available 2.825 GiB; neither reported a warning or stop
+condition. These are sampled observations, not heap or performance guarantees.
+
+The first native attempt at tree `516b74f35ba4dafe4a0edc13f1d462fe1b54c1b5`
+compiled the release authority, installed fresh v3 and entered the new isolated
+item-read journey. Individual creation and edited-current reads passed their
+assertions; the first populated list returned 503. The attempt stopped there:
+later pagination, corruption/startup controls, the independent observer and other
+native journeys were not qualified. Cleanup removed the database and runner and
+stopped the provider. Elapsed time through cleanup was 178.782 seconds, sampled
+aggregate peak 2.901 GiB, minimum available 3.151 GiB, without warning/stop alerts.
+
+Source diagnosis identified unqualified `ORDER BY` names matching text-projected
+output labels, in both issued-sequence listing and the current-revision maximum.
+PostgreSQL gives an output label precedence over an input name in this situation
+([PostgreSQL 16 sorting rules](https://www.postgresql.org/docs/16/queries-order.html)).
+The correction qualifies the numeric base columns, retaining the full sixteen-row
+page. The native fixture checks every issued identity across twenty items and
+extends the edited item through version eleven, covering both decimal digit
+boundaries. The failed evidence is retained; the correction and remaining native
+cases require a fresh affected attempt before any passing qualification claim.
+
+The affected native campaign at tree `466c90e4483e71a7794fca76b120cb1bd31603ab`
+passed all twelve provisioned modes, including the item-read journey and its
+independent committed-state observer. It exercised complete twenty-item identity
+pagination, current version eleven, zero then cleared estimate with monotonic
+project state, unchanged historical project replay, selected head/non-head
+corruption detection, six selected startup-profile rejections and restored normal
+protections. The existing project/authentication/clock/restored journeys also
+passed with the new project-head write ordinal included. The source correction
+therefore has native repair evidence; the original failed attempt remains retained.
+
+This pass took 212.391 seconds through cleanup; sampled aggregate peaked at
+3.098 GiB and available memory reached a minimum of 2.721 GiB, without warning or
+stop alerts. Owned database/runner removal and provider shutdown completed.
+The mandatory full commit gate remains required. Its final fixture additionally
+checks a native byte-budget page with accepted escaped field text and a lookup
+under another authorized project. Those added cases are prepared, not yet passed.
+Item mutation routes, client recovery and the owner interface remain unfinished.
+
+The first mandatory full gate at tree
+`5f4613ada5575327b966e29d46371955f854daea` failed its resource floor after
+OpenSearch reported ready, during network/cleanup exit. The sampled available
+memory reached 1.492 GiB below the retained 1.5-GiB stop floor; sampled aggregate
+was 4.495 GiB below its six-GiB ceiling, and the Windows low-memory signal was
+false. The controller terminated and joined its owned process tree. Interrupted
+normal cleanup failures remain recorded; separate post-join recovery removed
+the owned runner and OpenSearch resources and stopped the provider. No commit
+was created. Total elapsed time through recovery was 535.969 seconds.
+
+Before that stop, 475 Python tests passed with two skips, the authority library
+passed 158 tests with fourteen ignored, and all twelve provisioned native modes
+and their observers passed. This includes the final escaped-text byte page and
+cross-project denial cases. NATS also completed; PostgreSQL/FerretDB task-path
+verification was not reached. Those are retained partial observations, not a
+successful full gate. The prior native repair and failed attempts are not replaced.
+
+The next required-gate attempt lowers only the runner ceiling from 2 GiB to
+1.5 GiB, with one compiler job and the same tests, CPU, deadlines, host floor and
+aggregate limit. This is a provisional resource-containment experiment within
+the previous ceiling, not an established performance improvement or a claim that
+cache caused the entire measured footprint. A lower cgroup hard limit can force
+reclaim or fail the workload if its memory cannot be reduced
+([kernel memory controller](https://docs.kernel.org/admin-guide/cgroup-v2.html#memory-interface-files)).
+The existing first-failure stop and exact owned recovery remain required. No
+image build, VM/OS configuration or trust change is part of this adjustment.
+
 One coherent capability may use focused commits for contract/codecs, SQL/profile,
 adapter/coordinator, HTTP/interface and native evidence. Reassess the delivery
 boundary if investigation introduces another subsystem. Component approval does

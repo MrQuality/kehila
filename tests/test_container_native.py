@@ -163,6 +163,24 @@ class CleanupTests(unittest.TestCase):
             self.assertEqual(len(observations), 1)
             self.assertLess(invocations[0], observations[0])
 
+    def test_item_read_copy_is_pristine_and_has_its_own_committed_observer(self):
+        executor = Executor()
+        native.check(executor)
+        first_runtime = next(i for i, args in enumerate(executor.events)
+                             if args[0] == 'exec' and 'journey' in args)
+        for mode, database in native.ITEM_DATABASES.items():
+            creations = [i for i, args in enumerate(executor.events)
+                         if args[0] == 'exec' and 'createdb' in args and args[-1] == database]
+            invocations = [i for i, args in enumerate(executor.events)
+                           if args[0] == 'exec' and mode in args]
+            observations = [i for i, args in enumerate(executor.events)
+                            if args[0] == 'exec' and '/tmp/native_item_read_state.sql' in args and database in args]
+            self.assertEqual(len(creations), 1)
+            self.assertEqual(len(invocations), 1)
+            self.assertEqual(len(observations), 1)
+            self.assertLess(creations[0], first_runtime)
+            self.assertLess(invocations[0], observations[0])
+
     def test_child_is_removed_after_failed_work_without_parent_teardown(self):
         executor = Executor(fail_journey=True)
         with self.assertRaises(subprocess.CalledProcessError):

@@ -4,7 +4,7 @@ use super::*;
 use crate::session::Kind;
 use tokio_postgres::{types::ToSql, Transaction};
 mod native;
-pub(crate) use native::{Current, NativeError, Pending, Replay, State as PendingState};
+pub(crate) use native::{Current, Item, NativeError, Pending, Replay, State as PendingState};
 
 const FENCE: &str = "SELECT installation_id::text, owner_actor_id::text, runtime_generation::text, auth_generation::text, verifier_revision::text FROM kehila_auth.fence($1::text::kehila.ident, $2::text::kehila.u64, $3::text::kehila.u64, $4::text::kehila.u64)";
 const READ_AUTHORITY: &str = "SELECT installation_id::text, owner_actor_id::text, runtime_generation::text, auth_generation::text, verifier_revision::text FROM kehila_auth.read_authority($1::text::kehila.ident, $2::text::kehila.u64, $3::text::kehila.u64)";

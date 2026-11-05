@@ -8,6 +8,7 @@ mod clock;
 mod competing;
 mod evidence;
 mod faults;
+mod item_reads;
 mod restored;
 mod write_faults;
 

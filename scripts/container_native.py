@@ -16,7 +16,7 @@ from check_postgresql import IMAGE
 from cleanup_errors import retain_cleanup_failure
 from container_executor import LABEL, one_object
 from verification_budget import cleanup_time, command_timeout
-from native_authority_fixture import AUTH_DATABASES
+from native_authority_fixture import AUTH_DATABASES, ITEM_DATABASES
 
 
 @dataclass(frozen=True)
@@ -145,7 +145,7 @@ def check(executor):
                 identity + ':/tmp/native-authority-state.sql')
         control('cp', str(executor.source / 'tests/integration/native_clock_state.sql'),
                 identity + ':/tmp/native-clock-state.sql')
-        for file in ('native_copy_snapshot.sql', 'native_restored_state.sql', 'native_auth_fixture_state.sql'):
+        for file in ('native_copy_snapshot.sql', 'native_restored_state.sql', 'native_auth_fixture_state.sql', 'native_item_read_state.sql'):
             control('cp', str(executor.source / 'tests/integration' / file), identity + ':/tmp/' + file)
         stage = 'database-start'
         control('start', identity)
@@ -165,15 +165,24 @@ def check(executor):
             'set -- $(cat /sys/fs/cgroup/cpu.max); test "$1" != max; test "$1" = "$2"')
         psql('/tmp/kehila-schema/install_product.sql')
         psql('/tmp/kehila-native/setup.sql')
-        stage = 'pristine-authentication-fixtures'
+        stage = 'pristine-isolated-fixtures'
         baseline = "DO $$ BEGIN IF EXISTS (SELECT FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid()) OR EXISTS (SELECT FROM kehila.projects) OR (SELECT runtime_generation FROM kehila_auth.installation)<>0 OR (SELECT auth_generation<>1 OR verifier_revision<>1 FROM kehila_auth.owner_credentials) THEN RAISE EXCEPTION 'pristine quiescent fixture required'; END IF; END $$;"
         control('exec', identity, 'psql', '-X', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', baseline)
-        for database in AUTH_DATABASES.values():
+        for database in (*AUTH_DATABASES.values(), *ITEM_DATABASES.values()):
             control('exec', identity, 'createdb', '-U', 'postgres', '--owner=kehila_owner',
                     '--template=postgres', database)
             admission = "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_database WHERE datname=current_database() AND datdba='kehila_owner'::regrole AND datallowconn AND NOT datistemplate AND pg_encoding_to_char(encoding)='UTF8') OR NOT has_database_privilege('kehila_auth_runtime_login',current_database(),'CONNECT') OR EXISTS (SELECT FROM pg_db_role_setting WHERE setdatabase=(SELECT oid FROM pg_database WHERE datname=current_database())) THEN RAISE EXCEPTION 'authentication database profile mismatch'; END IF; END $$;"
             control('exec', identity, 'psql', '-X', '-U', 'postgres', '-d', database,
                     '-v', 'ON_ERROR_STOP=1', '-c', admission + baseline)
+        # Exercise the changed production reader before the unchanged journeys;
+        # all isolated databases above were copied before any runtime started.
+        for mode, database in ITEM_DATABASES.items():
+            stage = mode
+            work(['python', 'scripts/native_authority_fixture.py', mode, '--seconds',
+                  str(executor.settings['command_seconds'])])
+            stage = mode + '-independent-observer'
+            (folder / (mode + '-observation.txt')).write_text(
+                psql('/tmp/native_item_read_state.sql', database), encoding='utf-8')
         stage = 'journey'
         work(['python', 'scripts/native_authority_fixture.py', 'journey', '--seconds',
               str(executor.settings['command_seconds'])])

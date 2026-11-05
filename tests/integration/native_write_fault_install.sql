@@ -52,7 +52,7 @@ END $$;
 DO $$ DECLARE target text; BEGIN
   FOREACH target IN ARRAY ARRAY['operations','operation_payloads','projects','configuration_revisions',
     'project_grants','project_grant_events','statuses','workflows','workflow_statuses','workflow_phase_changes',
-    'work_item_types','type_workflows','fields'] LOOP
+    'work_item_types','type_workflows','fields','project_operational_heads'] LOOP
     EXECUTE format('CREATE TRIGGER native_write_fault BEFORE INSERT ON kehila.%I FOR EACH ROW EXECUTE FUNCTION kehila_native_fixture.write_count()',target);
   END LOOP;
 END $$;

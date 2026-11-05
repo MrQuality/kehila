@@ -86,6 +86,39 @@ fn every_project_route_requires_post_browser_cookie_origin_and_csrf_at_the_edge(
 }
 
 #[test]
+fn item_reads_retain_browser_origin_csrf_and_the_existing_body_bound() {
+    for path in ["/items/read", "/items/list"] {
+        let mut request = browser(Method::POST, path);
+        cookie(&mut request, SESSION);
+        assert!(matches!(
+            profile().admit(&request).unwrap().route,
+            Route::Item(_)
+        ));
+        for name in ["origin", CSRF, "sec-fetch-site", "cookie"] {
+            let mut missing = request.clone();
+            missing.headers_mut().remove(name);
+            assert!(profile().admit(&missing).is_err());
+        }
+        let mut oversized = request.clone();
+        oversized.headers_mut().insert(
+            header::CONTENT_LENGTH,
+            (BODY_LIMIT + 1).to_string().parse().unwrap(),
+        );
+        assert_eq!(
+            profile().admit(&oversized).err(),
+            Some(StatusCode::PAYLOAD_TOO_LARGE)
+        );
+        let mut native = cli(Method::POST, path);
+        bearer(&mut native);
+        assert!(profile().admit(&native).is_err());
+        assert!(profile().admit(&browser(Method::GET, path)).is_err());
+    }
+    assert!(profile()
+        .admit(&browser(Method::POST, "/items/edit"))
+        .is_err());
+}
+
+#[test]
 fn explicit_browser_and_cli_routes_admit_only_their_credentials() {
     let mut login = browser(Method::POST, "/auth/browser/login");
     cookie(&mut login, PRE_SESSION);

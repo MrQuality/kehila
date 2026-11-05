@@ -22,6 +22,7 @@ async fn request(handle: &Handle, operation: Operation) -> Response {
         Operation::Password { .. } => "password_change",
         Operation::RevokeOthers { .. } => "revoke_others",
         Operation::Project { .. } => "project",
+        Operation::Item { .. } => "item",
     };
     let started = Instant::now();
     let response =

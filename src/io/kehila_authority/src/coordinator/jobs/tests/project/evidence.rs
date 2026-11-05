@@ -16,6 +16,12 @@ pub(super) const ARTIFACTS: &[&str] = &[
     "kehila.work_item_types",
     "kehila.type_workflows",
     "kehila.fields",
+    "kehila.items",
+    "kehila.item_revisions",
+    "kehila.item_field_uses",
+    "kehila.project_operational_heads",
+    "kehila_auth.pending_items",
+    "kehila_auth.item_pending_policy",
     "kehila_auth.pending_projects",
     "kehila_auth.creation_intents",
 ];

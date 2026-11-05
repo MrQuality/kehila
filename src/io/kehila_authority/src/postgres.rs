@@ -406,14 +406,15 @@ impl Database {
 async fn validate_product_profile(client: &Client) -> Result<(), DbError> {
     let versions = client
         .query(
-            "SELECT version FROM kehila.schema_migrations ORDER BY version LIMIT 3",
+            "SELECT version FROM kehila.schema_migrations ORDER BY version LIMIT 4",
             &[],
         )
         .await
         .map_err(query_error)?;
-    if versions.len() != 2
+    if versions.len() != 3
         || versions[0].try_get::<_, i32>(0).map_err(query_error)? != 1
         || versions[1].try_get::<_, i32>(0).map_err(query_error)? != 2
+        || versions[2].try_get::<_, i32>(0).map_err(query_error)? != 3
     {
         return Err(DbError::Invalid);
     }
@@ -513,6 +514,7 @@ pub(crate) mod tests {
                         | "native_auth_fenced"
                         | "native_auth_read"
                         | "native_auth_lifetime"
+                        | "native_item_read"
                 ) =>
             {
                 value

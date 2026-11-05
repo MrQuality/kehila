@@ -1,5 +1,5 @@
--- Uninstalled source preparation; requires records.sql and the complete
--- transition/capability packet before fresh product adoption. No runtime grants.
+-- Fresh v3 retention guards; requires records.sql and the complete
+-- transition/capability packet. This file supplies no runtime grants.
 
 CREATE FUNCTION kehila.protect_item_history() RETURNS trigger
 LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$

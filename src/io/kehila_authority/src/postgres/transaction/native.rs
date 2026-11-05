@@ -5,9 +5,11 @@ use crate::{
     project::{self, Failure, Prepared},
 };
 use task_contract::project::EstimateUnit;
+mod item_read;
 mod read;
 mod replay;
 mod write;
+pub(crate) use item_read::Item;
 pub(crate) use read::Current;
 pub(crate) use replay::Replay;
 

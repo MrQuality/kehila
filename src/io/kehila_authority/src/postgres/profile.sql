@@ -1,4 +1,4 @@
--- Selected critical capability checks for the fresh version-two profile.
+-- Selected critical capability checks for the fresh version-three read profile.
 -- This is not a general database integrity or PostgreSQL security audit.
 WITH principals AS (
   SELECT * FROM pg_catalog.pg_roles WHERE rolname IN (current_user,session_user,'kehila_creator')
@@ -10,12 +10,21 @@ WITH principals AS (
   ('kehila.configuration_revisions','UPDATE,DELETE,TRUNCATE'),
   ('kehila.project_grants','UPDATE,DELETE,TRUNCATE'),
   ('kehila.project_grant_events','UPDATE,DELETE,TRUNCATE'),
+  ('kehila.items','INSERT,UPDATE,DELETE,TRUNCATE'),
+  ('kehila.item_revisions','INSERT,UPDATE,DELETE,TRUNCATE'),
+  ('kehila.item_field_uses','INSERT,UPDATE,DELETE,TRUNCATE'),
+  ('kehila.project_operational_heads','INSERT,UPDATE,DELETE,TRUNCATE'),
+  ('kehila_auth.pending_items','SELECT,INSERT,UPDATE,DELETE,TRUNCATE'),
+  ('kehila_auth.item_pending_policy','SELECT,INSERT,UPDATE,DELETE,TRUNCATE'),
   ('kehila_auth.installation','SELECT,INSERT,UPDATE,DELETE,TRUNCATE'),
   ('kehila_auth.owner_credentials','SELECT,INSERT,UPDATE,DELETE,TRUNCATE'),
   ('kehila_auth.management_events','INSERT,UPDATE,DELETE,TRUNCATE'),
   ('kehila_auth.pending_policy','INSERT,UPDATE,DELETE,TRUNCATE'),
   ('kehila_auth.pending_projects','INSERT,UPDATE,DELETE,TRUNCATE'),
   ('kehila_auth.creation_intents','INSERT,UPDATE,DELETE,TRUNCATE')
+), native_reads(function_id) AS (VALUES
+  ('kehila_auth.item_read_authority(kehila_auth.authority,kehila.ident)'::regprocedure),
+  ('kehila_auth.require_item_project_grant(kehila.ident,kehila.ident)'::regprocedure)
 ), permitted_functions(function_id) AS (VALUES
   ('kehila.lock_actor(kehila.ident)'::regprocedure),
   ('kehila.lock_operation(bigint)'::regprocedure),
@@ -34,6 +43,7 @@ WITH principals AS (
   ('kehila_auth.open_project(kehila_auth.authority,bigint)'::regprocedure),
   ('kehila_auth.cancel_project(kehila_auth.authority,bigint)'::regprocedure),
   ('kehila_auth.complete_project(kehila_auth.authority,bigint,kehila_auth.intent_key,text,kehila.project_prefix,text,kehila.ident,bigint)'::regprocedure)
+  UNION ALL SELECT function_id FROM native_reads
 ), namespaces AS (
   SELECT oid FROM pg_catalog.pg_namespace WHERE nspname IN ('kehila','kehila_auth')
 )
@@ -48,6 +58,16 @@ SELECT current_setting('server_version_num')::integer / 10000 = 16
  AND NOT pg_has_role(session_user,'kehila_owner','MEMBER')
  AND NOT pg_has_role(session_user,'kehila_auth_admin','MEMBER')
  AND pg_has_role(current_user,'kehila_creator','USAGE')
+ AND has_table_privilege(current_user,'kehila.items','SELECT')
+ AND has_table_privilege(current_user,'kehila.item_revisions','SELECT')
+ AND has_table_privilege(current_user,'kehila.project_operational_heads','SELECT')
+ AND NOT EXISTS (SELECT FROM pg_catalog.pg_proc f JOIN native_reads n ON n.function_id=f.oid
+   WHERE f.proowner<>'kehila_owner'::regrole OR f.prosecdef OR f.provolatile<>'s'
+     OR f.proconfig IS DISTINCT FROM ARRAY['search_path=pg_catalog, kehila_auth, kehila, pg_temp'])
+ AND NOT EXISTS (SELECT FROM pg_catalog.pg_class c
+   WHERE c.oid IN ('kehila.items'::regclass,'kehila.item_revisions'::regclass,
+                  'kehila.project_operational_heads'::regclass)
+     AND (c.relowner<>'kehila_owner'::regrole OR c.relkind<>'r'))
  AND NOT EXISTS (
    SELECT FROM pg_catalog.pg_auth_members m
    JOIN pg_catalog.pg_roles member ON member.oid=m.member

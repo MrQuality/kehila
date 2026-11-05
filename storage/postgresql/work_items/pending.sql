@@ -1,5 +1,5 @@
--- Fixed creation-intent entries. Not installed/granted to serving until the
--- corresponding version-three runtime profile and application path are ready.
+-- Fixed creation-intent entries. Installed with fresh v3; execution stays
+-- owner-only until the corresponding runtime profile/application path is ready.
 CREATE TABLE kehila_auth.item_pending_policy (
   singleton boolean PRIMARY KEY CHECK(singleton),
   prepared_limit integer NOT NULL CHECK(prepared_limit BETWEEN 1 AND 32),

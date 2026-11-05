@@ -45,7 +45,7 @@ impl Response {
         if let Ok(Output::Issued(delivery)) = &mut self.result {
             delivery.confirm_exchange()?;
         }
-        if let Ok(Output::Project(delivery)) = &self.result {
+        if let Ok(Output::Project(delivery) | Output::Item(delivery)) = &self.result {
             delivery.check()?;
         }
         Ok(())

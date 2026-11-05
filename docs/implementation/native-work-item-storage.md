@@ -2,6 +2,9 @@
 
 Status: owner-only structural checkpoint passed under Accepted ADR-111 revision 3;
 product capabilities, installation and runtime adoption remain incomplete.
+The subsequent [authorized-read checkpoint](native-work-items.md#next-runtime-checkpoint-authorized-reads)
+prepares fresh-v3 installation and narrowly scoped read capabilities. Its native
+qualification is pending; serving mutation functions remain unavailable.
 Baseline: `b81b64c`, with the codec checkpoint published and verified separately.
 The initial RAM hold was lifted on 2026-11-04 for bounded codec verification.
 The SQL overlay has separate PostgreSQL evidence; codec verification does not

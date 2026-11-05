@@ -25,6 +25,7 @@ pub(crate) enum Route {
     Password(Kind),
     RevokeOthers(Kind),
     Project(crate::native_ingress::Route),
+    Item(crate::item_ingress::Route),
 }
 
 pub(crate) struct Admitted {
@@ -182,6 +183,13 @@ impl Profile {
                 Kind::Browser,
                 true,
             ),
+            (&Method::POST, path) if path.starts_with("/items/") => (
+                Route::Item(
+                    crate::item_ingress::Route::from_path(path).ok_or(StatusCode::NOT_FOUND)?,
+                ),
+                Kind::Browser,
+                true,
+            ),
             _ => return Err(StatusCode::NOT_FOUND),
         };
         let length = match one(request, "content-length")? {
@@ -243,6 +251,7 @@ impl Profile {
                     | Route::Password(_)
                     | Route::RevokeOthers(_)
                     | Route::Project(_)
+                    | Route::Item(_)
                         if cookies.session.is_some() => {}
                     _ => return Err(StatusCode::UNAUTHORIZED),
                 }

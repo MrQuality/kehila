@@ -1093,6 +1093,7 @@ dependencies = [
  "tokio-postgres-rustls",
  "tokio-rustls 0.26.6",
  "unicode-normalization",
+ "work_item_codec",
  "x509-cert 0.3.0",
  "zeroize",
 ]

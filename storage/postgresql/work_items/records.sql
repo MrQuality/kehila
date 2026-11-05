@@ -1,4 +1,4 @@
--- Source preparation for accepted ADR-111. Not included by an installer yet.
+-- Accepted ADR-111 records, included by the coordinated fresh v3 installer.
 -- Include as kehila_owner only with the reviewed transition/capability packet.
 -- These keys describe references; transition guards are separately required.
 

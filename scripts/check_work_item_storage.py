@@ -3,8 +3,8 @@
 
 The caller owns container/provider lifecycle and resource supervision. This never
 upgrades an existing database, compiles code, starts services or changes trust.
-The overlay is preparation for coordinated version-three capability adoption;
-it is not the product installer or native WorkItem runtime qualification.
+It exercises installed version-three owner contracts; it does not qualify the
+authenticated production WorkItem runtime or interface.
 """
 import argparse
 import json
@@ -25,7 +25,12 @@ FRESH = """DO $$ BEGIN
     RAISE EXCEPTION 'fresh dedicated WorkItem fixture required';
   END IF;
 END; $$;"""
-MODULES = ('records.sql', 'retention.sql', 'heads.sql', 'history.sql', 'closure.sql', 'authority.sql', 'pending.sql', 'discovery.sql', 'reconciliation.sql', 'save.sql')
+INSTALLED = """DO $$ BEGIN
+  IF (SELECT array_agg(version ORDER BY version) FROM kehila.schema_migrations)
+     IS DISTINCT FROM ARRAY[1,2,3] THEN
+    RAISE EXCEPTION 'exact version-three product fixture required';
+  END IF;
+END; $$;"""
 
 
 def check_core_wait(database):
@@ -88,9 +93,7 @@ def check(database, source=ROOT):
         "'installation','owner','storage-enrollment',"
         "'$argon2id$v=19$m=65536,t=3,p=1$AQEBAQEBAQEBAQEBAQEBAQ$"
         "6d50UfWIhEf6nFrBV/eh7X/wOi7ToEKiEY6e0UdWGa8'); RESET ROLE;")
-    overlay = 'BEGIN;\nSET LOCAL ROLE kehila_owner;\n'
-    overlay += ''.join('\\ir ' + DESTINATION + '/work_items/' + name + '\n' for name in MODULES)
-    database.sql(overlay + 'COMMIT;\n')
+    database.sql(INSTALLED)
     for function in ('require_product_operation_success(1)',
                      'initialize_project_operational_head()'):
         database.sql('SET ROLE kehila_auth_runtime; SELECT kehila.' + function + ';',
