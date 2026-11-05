@@ -271,6 +271,35 @@ under the original reservation, and own final replay eligibility before routes
 and client recovery are qualified. Remote CI and final committed-head review
 remain publication prerequisites; full-goal readiness remains incomplete.
 
+The published read head `707db08` then completed remote
+[CI run 42128901676](https://github.com/MrQuality/kehila/actions/runs/42128901676).
+The native-authority and Windows owner-client jobs passed. Shared verification
+failed at strict Rust lint: two inline test modules preceded production items;
+later shared-verification steps were skipped. Moving those unchanged modules
+to file ends passed local formatting and strict all-target workspace Clippy at
+tree `588e561ee03f7f1a490f74fe15e7715821cb3077`. That check took 105.390 seconds,
+peaked at 3.034 GiB sampled aggregate and retained at least 2.650 GiB available,
+with normal cleanup and provider shutdown.
+
+The subsequent mandatory commit gate on that same tree failed after 437.000
+seconds in the native item-read cleanup observer. Immediately after joining the
+runtime owner, its first query observed one serving backend instead of zero;
+the lock assertion and later native/service phases were not reached. No commit
+was created. Available memory stayed at or above 2.222 GiB and sampled aggregate
+peaked at 3.156 GiB, without warnings or stop alerts. Owned cleanup, controller
+join and provider shutdown completed. This failure remains separate from the
+previous passed read gate and remote native run.
+
+The cleanup observer now waits at most five seconds for both the
+serving backends and authority advisory lock to disappear after actual owner
+join. It requires both counts to reach zero and reports the last counts on
+failure; it neither terminates backends nor permits retained locks. Local driver
+closure is not a server-exit acknowledgement under PostgreSQL's
+[termination protocol](https://www.postgresql.org/docs/16/protocol-flow.html#PROTOCOL-FLOW-TERMINATION).
+The observed immediate failure is consistent with that boundary; a transient
+server-exit race remains a diagnosis to validate, not a passing rerun. The
+repaired observer and its mandatory gate are not yet qualified.
+
 #### Read checkpoint delivery review
 
 The native twenty-item case found an ordering defect that source review and the

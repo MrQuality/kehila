@@ -81,45 +81,6 @@ impl Fenced<'_, ReadProof> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn historical_counters_may_lag_but_stable_metadata_must_agree() {
-        let prepared = crate::project::Prepared::new(
-            crate::native_ingress::Form {
-                name: "Project".into(),
-                prefix: "PR".into(),
-                estimate_unit: EstimateUnit::Hours,
-            },
-            "p".into(),
-            "0".repeat(32),
-        )
-        .unwrap();
-        let saved = &prepared.result().project;
-        let mut current = saved.clone();
-        current.next_sequence = 4;
-        current.ever_estimated = true;
-        assert!(historical_project(saved, &current).is_ok());
-        let mut changed = saved.clone();
-        changed.name.push('x');
-        assert!(historical_project(&changed, &current).is_err());
-        let mut changed = saved.clone();
-        changed.prefix = "OTHER".into();
-        assert!(historical_project(&changed, &current).is_err());
-        let mut changed = saved.clone();
-        changed.archived = true;
-        assert!(historical_project(&changed, &current).is_err());
-        let mut changed = saved.clone();
-        changed.next_sequence = 5;
-        assert!(historical_project(&changed, &current).is_err());
-        let mut changed = saved.clone();
-        changed.ever_estimated = true;
-        assert!(historical_project(&changed, saved).is_err());
-    }
-}
-
 struct Stored {
     operation: i64,
     revision: Revision,
@@ -395,5 +356,44 @@ impl<P> Fenced<'_, P> {
             result: SavedResult::Edit(current),
             readable,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn historical_counters_may_lag_but_stable_metadata_must_agree() {
+        let prepared = crate::project::Prepared::new(
+            crate::native_ingress::Form {
+                name: "Project".into(),
+                prefix: "PR".into(),
+                estimate_unit: EstimateUnit::Hours,
+            },
+            "p".into(),
+            "0".repeat(32),
+        )
+        .unwrap();
+        let saved = &prepared.result().project;
+        let mut current = saved.clone();
+        current.next_sequence = 4;
+        current.ever_estimated = true;
+        assert!(historical_project(saved, &current).is_ok());
+        let mut changed = saved.clone();
+        changed.name.push('x');
+        assert!(historical_project(&changed, &current).is_err());
+        let mut changed = saved.clone();
+        changed.prefix = "OTHER".into();
+        assert!(historical_project(&changed, &current).is_err());
+        let mut changed = saved.clone();
+        changed.archived = true;
+        assert!(historical_project(&changed, &current).is_err());
+        let mut changed = saved.clone();
+        changed.next_sequence = 5;
+        assert!(historical_project(&changed, &current).is_err());
+        let mut changed = saved.clone();
+        changed.ever_estimated = true;
+        assert!(historical_project(&changed, saved).is_err());
     }
 }
