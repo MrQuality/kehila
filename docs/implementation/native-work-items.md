@@ -300,7 +300,35 @@ The observed immediate failure is consistent with that boundary; a transient
 server-exit race remains a diagnosis to validate, not a passing rerun. The
 repaired observer and its mandatory gate are not yet qualified.
 
+The repaired candidate passed formatting and strict all-target workspace Clippy
+at tree `40085e6464a47b11d68620e9e380bc676b07e678` in 111.047 seconds through
+cleanup. The normal-hook full gate on that same tree then passed, producing
+`71cd3a4f55b77c285de55e4a302ac5a153c16509` in 546.500 seconds through cleanup.
+It repeated the selected full matrix: 475 Python tests with two skips, fourteen
+project-page tests, workspace/codec/oracle/Go checks, all twelve distinct native
+modes and their observers, NATS/OpenSearch and the PostgreSQL/FerretDB task path,
+including forty-eight competing pairs and stalled-body/database controls. The
+authority library again passed 158 tests with fourteen ignored; the previously
+stated external asset and browser exclusions remain.
+
+The full gate used the same 1.5-GiB runner ceiling, one CPU/compiler job, original
+deadlines and host memory boundaries. Sampled aggregate peaked at 4.165 GiB and
+available memory reached 1.688 GiB; reserve warnings occurred without a stop
+alert. Owned cleanup, normal controller join and provider shutdown completed.
+The bounded observer reached zero backends and authority locks in this run; it
+does not establish what happened after the original failed immediate assertion.
+Remote CI on the repaired published head remains a separate prerequisite.
+
 #### Read checkpoint delivery review
+
+The initial read publication missed a local strict-Clippy check: the full commit
+hook does not run that CI lint step. A successful hook therefore did not establish
+lint success. The repair ran the exact workspace/all-target lint before its next
+commit attempt. The later native failure exposed a separate harness assumption:
+local socket-driver completion was treated as immediate server-process exit.
+Use bounded independent server-side release observation after the actual local
+join; preserve both failure stages rather than treating a later pass as their
+replacement. These corrections do not change production shutdown semantics.
 
 The native twenty-item case found an ordering defect that source review and the
 small pure fixtures missed: text-projected numeric labels were selected by
