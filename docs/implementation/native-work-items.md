@@ -85,7 +85,7 @@ are reused within scope; Proposed ADR-108/109 are not silently adopted.
 
 ## Delivery and review map
 
-### Creation-intent runtime checkpoint: in preparation
+### Creation-intent runtime checkpoint: local qualification complete
 
 The next independent component exposes `/items/pending/register`,
 `/items/pending/list`, `/items/pending/open` and `/items/pending/cancel` under
@@ -152,8 +152,9 @@ unknown-confirmation recovery, finite collision rollback, quotas/pagination,
 pending expiry, completed/pruned inspection and an independent observer proving
 that these routes allocate no items or readable sequence and create no successful
 domain operations. Any owner-seeded completed test item is a separate fixture.
-The candidate now implements this checkpoint; native qualification remains
-outstanding. Independent component/composition review of tree
+The implementation and native results below advance this checkpoint; the full
+original goal and publication/CI gates remain separate. Independent
+component/composition review of tree
 `ddbd66c7f62bc03e874d8eede64925389734e3dc`, against `93983d21`, found no
 substantive source blocker. The separate harness review corrected stored-digest,
 per-project final-count and excess-save-privilege oracles before execution.
@@ -268,6 +269,38 @@ work; no summed end-to-end duration or savings claim is made. The author owns th
 remaining successful full gate and exact-head evidence reconciliation. Resource
 availability and the unresolved saved-result timing decision remain separate
 maintainer constraints; neither is accepted by a reviewer verdict.
+
+#### Successful mandatory gate and checkpoint disposition, 2026-11-06
+
+The normal full Podman commit gate passed on exact tree
+`a937e3146a3804e5034f6ad4b13569eabf1412d7`, creating
+`2f0e0d7d71428303027f0753175d18a43cd57141` from parent `93983d21`.
+It ran 480 tooling tests with two platform skips, fourteen existing project-page
+controls, workspace/codec/oracle/Go checks and the authority suite's 166 passes
+with fifteen fixture- or asset-dependent cases ignored in that ordinary suite. All
+thirteen explicit native modes subsequently passed with their independent
+observers, including pending lifecycle, reads, projects, clock, restore and
+authentication. NATS/OpenSearch checks and PostgreSQL/FerretDB task-path controls
+also passed: 48 competing pairs, direct-worker/stalled-body guards, stalled
+database recovery and Go-to-Rust save/replay/read with search unavailable.
+
+The actual two-service cleanup completed using inspected dependency order,
+removed its network and verified anonymous-volume absence. All three service
+groups reached complete, the controller joined, the final copied source was
+verified and the provider ended stopped. Total time through cleanup was 595.250
+seconds, minimum sampled available memory 2.046585 GiB and peak aggregate working
+sets 4.168072 GiB, with no recorded warning or alert. Observed preflight headroom
+had improved after the prior resource stop; this does not establish a safe launch
+minimum, calibrated capacity or a causal performance improvement.
+
+Independent exact-head composition/evidence review verified the committed
+identity and terminal evidence and found no substantive checkpoint publication
+blocker. The later pass does not reclassify the retained harness, cleanup or
+memory-stop failures. Publication and remote CI still require their own actual
+results. The original create/read/list/edit outcome remains incomplete: item
+execution, saved-result reconciliation, direct edits and the first-party item
+interface are outside this runtime checkpoint. PR review readiness remains
+unavailable, and the saved-result final-clock decision remains unresolved.
 
 ### Authorized-read runtime checkpoint
 
