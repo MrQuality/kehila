@@ -5,6 +5,10 @@ use crate::{
     project::{self, Failure, Prepared},
 };
 use task_contract::project::EstimateUnit;
+macro_rules! proof { () => {
+    "ROW($1::text::kehila.ident,$2::text::kehila.ident,$3::text::kehila.u64,$4::text::kehila.u64,$5::text::kehila.u64)::kehila_auth.authority"
+}; }
+mod item_pending;
 mod item_read;
 mod read;
 mod replay;
@@ -49,9 +53,6 @@ impl From<DbError> for NativeError {
 }
 type Result<T> = std::result::Result<T, NativeError>;
 
-macro_rules! proof { () => {
-    "ROW($1::text::kehila.ident,$2::text::kehila.ident,$3::text::kehila.u64,$4::text::kehila.u64,$5::text::kehila.u64)::kehila_auth.authority"
-}; }
 macro_rules! fields { () => {
     "SELECT request_id,installation_id::text,actor_id::text,intent_handle::text,token::text,form_version,name,prefix::text,estimate_unit,registered_ms::text,expires_ms::text,state,target_project_id::text,operation_row_id FROM "
 }; }
@@ -176,8 +177,8 @@ fn pending(row: Row, authority: &Authority) -> Result<Pending> {
     })
 }
 
-impl Fenced<'_, SessionProof> {
-    fn project_proof(&self) -> [String; 5] {
+impl<P> Fenced<'_, P> {
+    fn native_proof(&self) -> [String; 5] {
         let a = &self.authority;
         [
             a.installation.clone(),
@@ -187,13 +188,16 @@ impl Fenced<'_, SessionProof> {
             a.revision.to_string(),
         ]
     }
+}
+
+impl Fenced<'_, SessionProof> {
     pub(crate) async fn register_project(
         &mut self,
         form: &Form,
         handle: &str,
         token: &str,
     ) -> Result<Pending> {
-        let a = self.project_proof();
+        let a = self.native_proof();
         let unit = project::unit_name(form.estimate_unit);
         let mut rows = self
             .rows(
@@ -218,7 +222,7 @@ impl Fenced<'_, SessionProof> {
         pending(rows.remove(0), &self.authority)
     }
     pub(crate) async fn list_projects(&mut self, before: Option<i64>) -> Result<Page> {
-        let a = self.project_proof();
+        let a = self.native_proof();
         let policy = self
             .run(
                 "SELECT page_limit FROM kehila_auth.pending_policy WHERE singleton",
@@ -253,7 +257,7 @@ impl Fenced<'_, SessionProof> {
         Ok(Page { entries, before })
     }
     pub(crate) async fn open_project(&mut self, id: i64, cancel: bool) -> Result<Option<Pending>> {
-        let a = self.project_proof();
+        let a = self.native_proof();
         let mut rows = self
             .rows(
                 if cancel { CANCEL } else { OPEN },
@@ -273,7 +277,7 @@ impl Fenced<'_, SessionProof> {
         prepared: &Prepared,
         operation: i64,
     ) -> Result<()> {
-        let a = self.project_proof();
+        let a = self.native_proof();
         let command = prepared.command();
         let unit = project::unit_name(command.estimate_unit);
         self.run(

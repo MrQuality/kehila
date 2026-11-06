@@ -86,7 +86,8 @@ class AdmissionTests(unittest.TestCase):
 
 
 class Executor:
-    def __init__(self, fail_journey=False, foreign=False, profile_mismatch=False, copy_mismatch=False):
+    def __init__(self, fail_journey=False, foreign=False, profile_mismatch=False, copy_mismatch=False,
+                 fail_observer=None):
         self.build_network_detached = True
         self.container, self.owner, self.name = RUNNER, OWNER, NAME.removesuffix('-native-db')
         self.settings = {'command_seconds': 300, 'runner_stop_seconds': 120}
@@ -94,6 +95,7 @@ class Executor:
         self.events, self.fail_journey, self.foreign = [], fail_journey, foreign
         self.profile_mismatch = profile_mismatch
         self.copy_mismatch = copy_mismatch
+        self.fail_observer = fail_observer
 
     def inspect_container(self, identity):
         return runner()
@@ -117,6 +119,8 @@ class Executor:
         elif args[0] == 'ps':
             output = DATABASE
         elif args[0] == 'exec' and 'journey' in args and self.fail_journey:
+            raise subprocess.CalledProcessError(1, args)
+        elif args[0] == 'exec' and self.fail_observer and self.fail_observer in args:
             raise subprocess.CalledProcessError(1, args)
         elif args[0] == 'exec' and 'sh' in args:
             output = 'READY'
@@ -163,23 +167,37 @@ class CleanupTests(unittest.TestCase):
             self.assertEqual(len(observations), 1)
             self.assertLess(invocations[0], observations[0])
 
-    def test_item_read_copy_is_pristine_and_has_its_own_committed_observer(self):
+    def test_item_copies_are_pristine_and_have_distinct_committed_observers(self):
         executor = Executor()
         native.check(executor)
         first_runtime = next(i for i, args in enumerate(executor.events)
                              if args[0] == 'exec' and 'journey' in args)
         for mode, database in native.ITEM_DATABASES.items():
+            expected_observer = {'item-read': '/tmp/native_item_read_state.sql',
+                                 'item-pending': '/tmp/native_item_pending_state.sql'}[mode]
             creations = [i for i, args in enumerate(executor.events)
                          if args[0] == 'exec' and 'createdb' in args and args[-1] == database]
             invocations = [i for i, args in enumerate(executor.events)
                            if args[0] == 'exec' and mode in args]
             observations = [i for i, args in enumerate(executor.events)
-                            if args[0] == 'exec' and '/tmp/native_item_read_state.sql' in args and database in args]
+                            if args[0] == 'exec' and expected_observer in args and database in args]
             self.assertEqual(len(creations), 1)
             self.assertEqual(len(invocations), 1)
             self.assertEqual(len(observations), 1)
             self.assertLess(creations[0], first_runtime)
             self.assertLess(invocations[0], observations[0])
+
+    def test_failed_pending_observer_stops_before_later_journeys_and_retains_stage(self):
+        executor = Executor(fail_observer='/tmp/native_item_pending_state.sql')
+        with self.assertRaisesRegex(RuntimeError,
+                'Native fixture command failed at item-pending-independent-observer'):
+            native.check(executor)
+        self.assertFalse(any(args[0] == 'exec' and 'journey' in args for args in executor.events))
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+        folders = list(self.root.glob('kehila-native-diagnostics-*'))
+        self.assertEqual(len(folders), 1)
+        self.assertEqual((folders[0] / 'failure-stage.txt').read_text(encoding='ascii'),
+                         'item-pending-independent-observer')
 
     def test_child_is_removed_after_failed_work_without_parent_teardown(self):
         executor = Executor(fail_journey=True)

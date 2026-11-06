@@ -515,6 +515,7 @@ pub(crate) mod tests {
                         | "native_auth_read"
                         | "native_auth_lifetime"
                         | "native_item_read"
+                        | "native_item_pending"
                 ) =>
             {
                 value

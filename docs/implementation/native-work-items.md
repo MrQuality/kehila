@@ -85,6 +85,190 @@ are reused within scope; Proposed ADR-108/109 are not silently adopted.
 
 ## Delivery and review map
 
+### Creation-intent runtime checkpoint: in preparation
+
+The next independent component exposes `/items/pending/register`,
+`/items/pending/list`, `/items/pending/open` and `/items/pending/cancel` under
+current CreateItem authority. This advances the original full outcome without
+implementing item execution, saved-result reconciliation, direct edits or the
+owner interface yet. It does not settle the pending final saved-result clock
+clarification. Open inspects the immutable Request when retained, including a
+completed command; it never returns a SavedResult. A pruned completed command
+still exposes its permanent terminal identity and item target.
+
+Registration accepts a closed form containing project/type/workflow, expected
+configuration revision, exact optional thousandths and ordered text values. It
+accepts no caller actor, handle, operation token or creation target. Structural
+admission does not establish current configuration/domain executability; a
+registered command can still be rejected by later explicit execution. Generate
+independent 128-bit identities before canonical native admission and any write.
+Equal forms create distinct intents. Unknown registration confirmation remains
+unknown and discoverable; never generate a replacement automatically afterward.
+Only this registration route receives the one-MiB original-body allowance;
+existing routes and small pending locators remain limited to 4,096 bytes.
+
+The candidate keeps the existing sixteen connection and admitted-operation
+bounds, original five-second deadline and single serving database mutex. Three
+registration attempts are a provisional containment bound, not measured
+capacity: generate only small alternative identity tuples eagerly and retain
+one admitted request at a time. Only exact generated-identity uniqueness
+collisions can consume another tuple, after confirmed full rollback and guard
+release; discard old encoded bytes before readmission. Unknown COMMIT and
+other failures do not take that path. Pending TTL snapshot classification is
+separate from saved-result replay eligibility.
+
+Discovery uses bounded summaries and one read-only repeatable-read snapshot;
+Open materializes at most one bounded request. Verify exact scope, canonical
+bytes/fingerprint, supported stored codec, state/lifetime shape and permanent
+core attribution for completed identities. Return at most one nested Request
+with a fixed small summary through the existing bounded wire encoder. Release
+snapshot/guard before delivery. Cancellation returns its typed state only after
+confirmed commit and never undoes a completed item.
+
+The serialized-buffer plan names the copies rather than treating a codec
+ceiling as a heap limit. Preallocate only the validated HTTP content length;
+its body buffer can overlap the incoming frame, and raw bytes are dropped before
+tracked preparation. The sixteen-connection bound is separate from the sixteen
+admitted lifetimes. Registration retains one native request; its PostgreSQL Bind
+buffer and framed write copy can overlap it. The driver row is dropped before
+Open verifies canonical request bytes. Drop raw bytes after verification, then
+drop the historical encoding after constructing its wire value and before final
+outer encoding. Collision readmission drops the old native bytes first. The
+response shares its bounded body through `Arc` and `Bytes::from_owner`.
+
+Driver message metadata, HTTP/TLS buffers, typed values/JSON trees, allocation
+capacity and existing Project candidate packets remain additional costs. The
+Hyper buffer setting and Rustls application-write limits are not whole-transport
+or process heap guarantees. Near-limit controls and the retained resource guard
+remain qualification requirements; no exact global MiB or safe launch minimum
+is asserted by this component.
+
+The serving profile will enumerate the four owner-defined entry functions and
+read the bounded pending policy for the actual configured page limit. No direct
+pending-table access, private write helper, item save or replay capability is
+part of this component. Required evidence includes original-byte/closed-form
+negatives, generated-envelope overflow before writes, cross-session/restart and
+unknown-confirmation recovery, finite collision rollback, quotas/pagination,
+pending expiry, completed/pruned inspection and an independent observer proving
+that these routes allocate no items or readable sequence and create no successful
+domain operations. Any owner-seeded completed test item is a separate fixture.
+The candidate now implements this checkpoint; native qualification remains
+outstanding. Independent component/composition review of tree
+`ddbd66c7f62bc03e874d8eede64925389734e3dc`, against `93983d21`, found no
+substantive source blocker. The separate harness review corrected stored-digest,
+per-project final-count and excess-save-privilege oracles before execution.
+
+Two new ingress tests first failed as expected on tree
+`bc6e4c4bd5b79f48c85cf7c4b9881d079464787d` because the routes were absent.
+The first strict compiler attempt on tree
+`0da901d9b6d2c4453dfc3c8782c6f612994cb8e9` failed on the missing test-only
+operation label; no native fixture ran. That label is now included in both
+the test dispatcher and its closed diagnostic vocabulary. A controller test
+initially expected the underlying process exception instead of the controller's
+documented sanitized stage error; the corrected oracle subsequently passed
+all sixteen controller tests and ten failure-metadata tests. These host tests
+used doubles and contacted no engine or service.
+
+On 2026-11-06, the formatted candidate tree `ddbd66c7` passed strict locked,
+offline workspace Clippy across all targets and the authority library suite:
+166 passed, zero failed, fifteen ignored. Ignored native/external-asset cases
+are not qualification. This compiler/library phase took 183.0 seconds through
+cleanup, sampled at least 2.39 GiB available memory and at most 3.04 GiB aggregate
+working sets, with no resource warning or stop; the provider ended stopped.
+The required full commit gate, actual native lifecycle/observer result, final
+committed-head review and CI remain outstanding. The full agreed outcome and
+draft PR scope remain incomplete.
+
+The first full gate on tree `8c9b1bc9` failed before pending-route execution:
+the Python mode selected its disposable database, but the Rust test fixture's
+closed database-name allowlist omitted that name. The missing entry is repaired;
+this is a harness failure, not a passed lifecycle test. The gate stopped at the
+first unexpected failure, created no commit and ended with the provider stopped.
+Elapsed time through cleanup was 455.031 seconds, with at least 2.19 GiB sampled
+available memory, at most 3.20 GiB aggregate working sets and no resource alert.
+The affected native suite must pass before another full commit-gate attempt.
+
+The subsequent native run on tree `8d4e472c` passed basic pending route and
+ingress checks, then failed the first collision retry-count assertion. The
+oracle had treated database ownership/suboperation entries as transaction
+attempts: two write attempts produced five such entries. The repaired oracle
+uses the existing per-attempt native mutex counter and retains the original
+two/three/one attempt expectations. Zero-database ingress assertions keep their
+original counter. This run ended stopped after 185.688 seconds, with at least
+2.68 GiB available memory and at most 2.71 GiB aggregate working sets. It is
+partial execution evidence, not a passed pending lifecycle or full suite.
+
+Tree `cf08aab9` subsequently reached unknown-confirmation shutdown but failed
+an incorrect harness expectation that every admission stop reports a fatal
+owner shutdown. Existing unknown-commit controls distinguish stopped admission
+from fatal integrity failure: once owned work joins cleanly, the former can
+return a clean shutdown. The repaired cases explicitly assert stopped admission
+and no fatal cause, then require clean shutdown; integrity-failure expectations
+and all durable identity/recovery assertions remain unchanged. This failed run
+ended stopped after 184.750 seconds, with at least 2.47 GiB sampled available
+memory and at most 2.88 GiB aggregate working sets. Full lifecycle qualification
+remains outstanding.
+
+On 2026-11-06 tree `cdd62dd38b606a51f77c716a2b6eceb2b00ed5d4` passed all
+thirteen native modes and their independent observers. This includes the full
+pending lifecycle: exact command recovery, collision rollback/containment,
+unrelated error reachability, real TCP reply loss, controlled lost confirmation,
+restart/cross-session discovery, quotas, pagination, expiry, metadata containment,
+completed-request retention/pruning and startup capability rejection. The final
+observer confirmed the separate owner-seeded item and the absence of pending-route
+domain execution. Existing read/project/clock/restore/authentication controls also
+passed. This remains synthetic native HTTP/TLS evidence, not browser or protected
+startup qualification. The run took 211.922 seconds through cleanup, sampled at
+least 2.26 GiB available memory and at most 3.12 GiB aggregate working sets, and
+ended with the provider stopped. Earlier failed runs remain retained; this pass
+does not reclassify them. The normal full commit gate and publication checks
+remain required before delivering this checkpoint.
+
+The next full gate on tree `a148ef91` passed its workload checks, including all
+thirteen native modes and task-path controls, but failed service cleanup. The
+cleanup helper iterated container IDs; an actual dependent FerretDB container
+prevented PostgreSQL removal. Standard recovery encountered the same order.
+This is a failed gate with no commit, despite passed workloads. It ran 560.000
+seconds through attempted cleanup, sampled at least 1.59 GiB available memory
+and at most 4.17 GiB aggregate working sets, issued reserve warnings and no stop
+alert. Separate bounded recovery revalidated the retained exact identities,
+removed the dependent first, verified service/volume/network removal and stopped
+the provider in 18.031 seconds. Recovery does not qualify the failed gate.
+
+The checkpoint therefore includes a narrow repair to the existing cleanup
+helper. A source-first changed-boundary review confirmed the missing teardown
+prerequisite. Removal now uses inspected dependency relationships between exact
+owned IDs; malformed, foreign and cyclic dependencies fail before removal.
+Receipt compatibility, identity reinspection, caller deadlines, volume checks
+and network cleanup remain unchanged. A two-service regression models actual
+engine refusal and first reproduced the failure; eleven resource controls and
+ten ownership controls subsequently passed without engine contact. This addresses
+an observed delivery blocker, not a new provider or resource-management feature.
+The next mandatory full gate must establish actual repaired service cleanup.
+
+The full gate on tree `71c21417` then stopped at the approved memory floor
+during the OpenSearch phase. Minimum sampled available memory was 1.485 GiB,
+below the 1.5 GiB boundary; aggregate working sets peaked at 4.18 GiB. Windows
+process-initialization failures also appeared during shutdown; their causal
+relationship to the stop is unestablished. Bounded post-join recovery completed
+and the provider ended stopped. The attempt took 527.140 seconds through cleanup
+and created no commit. Earlier native modes passed, but the final two-service
+cleanup and full gate remain unqualified on this tree. No unchanged heavy retry
+is justified while the available-memory premise is worse than at launch.
+
+Checkpoint delivery review: independent source review identified useful boundary
+and oracle corrections, but did not catch all fixture-admission, counter-meaning
+or shutdown-expectation mistakes before execution. Those failures remain explicit.
+The concrete corrections trace the mode through both fixture consumers, measure
+write attempts with the appropriate counter, distinguish admission stop from
+fatal shutdown, and model actual dependency refusal in cleanup. These changes
+improve the controls; their broader delivery effectiveness is unestablished.
+Recorded campaign times exclude uninstrumented preparation/review and overlapping
+work; no summed end-to-end duration or savings claim is made. The author owns the
+remaining successful full gate and exact-head evidence reconciliation. Resource
+availability and the unresolved saved-result timing decision remain separate
+maintainer constraints; neither is accepted by a reviewer verdict.
+
 ### Authorized-read runtime checkpoint
 
 At source `b77aabe`, production composition and startup still support projects

@@ -57,7 +57,7 @@ fn random_salt() -> Result<[u8; 16], HashError> {
     Ok(salt)
 }
 
-fn project_key(control: &Control) -> Result<String, HashError> {
+fn native_key(control: &Control) -> Result<String, HashError> {
     salted_stage(control, random_salt, |bytes| {
         let mut encoded = String::with_capacity(32);
         const HEX: &[u8; 16] = b"0123456789abcdef";
@@ -190,7 +190,7 @@ impl Worker {
         permit: Arc<OwnedSemaphorePermit>,
     ) -> Result<HashPending<(String, String)>, WorkerError> {
         let pending = self.start(deadline, |control| {
-            Ok((project_key(control)?, project_key(control)?))
+            Ok((native_key(control)?, native_key(control)?))
         })?;
         self.retain_preparation_admission(permit)?;
         Ok(pending)
@@ -203,10 +203,28 @@ impl Worker {
     ) -> Result<HashPending<[String; 3]>, WorkerError> {
         let pending = self.start(deadline, |control| {
             Ok([
-                project_key(control)?,
-                project_key(control)?,
-                project_key(control)?,
+                native_key(control)?,
+                native_key(control)?,
+                native_key(control)?,
             ])
+        })?;
+        self.retain_preparation_admission(permit)?;
+        Ok(pending)
+    }
+    pub(crate) fn item_registration_identities(
+        &mut self,
+        deadline: Instant,
+        permit: Arc<OwnedSemaphorePermit>,
+    ) -> Result<HashPending<crate::item_pending::Identities>, WorkerError> {
+        let pending = self.start(deadline, |control| {
+            let attempt = || -> Result<[String; 3], HashError> {
+                Ok([
+                    native_key(control)?,
+                    native_key(control)?,
+                    native_key(control)?,
+                ])
+            };
+            Ok([attempt()?, attempt()?, attempt()?])
         })?;
         self.retain_preparation_admission(permit)?;
         Ok(pending)

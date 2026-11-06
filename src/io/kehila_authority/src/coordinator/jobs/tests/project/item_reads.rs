@@ -18,7 +18,7 @@ const AUTHORITY: &str = "(SELECT ROW(i.installation_id,i.owner_actor_id,i.runtim
  c.auth_generation,c.verifier_revision)::kehila_auth.authority FROM kehila_auth.installation i \
  JOIN kehila_auth.owner_credentials c ON c.owner_actor_id=i.owner_actor_id)";
 
-async fn seed(
+pub(super) async fn seed(
     admin: &Admin,
     current: &Project,
     configuration: &Configuration,

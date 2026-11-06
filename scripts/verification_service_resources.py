@@ -137,8 +137,30 @@ class ComposeResources:
                         'Service resource replacement during cleanup')
             return current
 
+        # Podman refuses to remove a container while a dependent exists. Plan
+        # from inspected full IDs, never receipt serialization or ID sort order.
+        current = remaining()['containers']
+        dependencies = {}
+        for cid in current:
+            info = one(self._invoke(('inspect', '--type', 'container', cid)).stdout)
+            values = info.get('Dependencies')
+            require(info.get('Id') == cid and isinstance(values, list)
+                    and all(isinstance(value, str) for value in values)
+                    and len(values) == len(set(values)) and cid not in values
+                    and set(values) <= set(observed['containers']),
+                    'Invalid or foreign service dependencies')
+            # Already absent owned dependencies confer no new removal authority.
+            dependencies[cid] = set(values) & set(current)
+        order = []
+        while dependencies:
+            depended_on = set().union(*dependencies.values())
+            removable = sorted(set(dependencies) - depended_on)
+            require(removable, 'Service dependency cycle prevents cleanup')
+            for cid in removable:
+                order.append(cid)
+                del dependencies[cid]
         # Every call re-inspects the remaining scope; names cannot adopt a new ID.
-        for cid in observed['containers']:
+        for cid in order:
             if cid in remaining()['containers']:
                 self._invoke(('rm', '--force', '--volumes', cid))
         for nid in observed['networks']:

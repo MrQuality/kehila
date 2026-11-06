@@ -32,12 +32,6 @@ impl Handle {
             .record(crate::lifecycle::probe::Stage::Preparation);
         Ok(receiver)
     }
-    pub(crate) fn submit_project(
-        &self,
-        prepared: preparation::Prepared<Operation>,
-    ) -> Result<oneshot::Receiver<Response>, Error> {
-        self.submit_reserved(prepared.value, prepared.reservation)
-    }
 }
 
 impl Engine {

@@ -6,6 +6,7 @@ use tokio::{
 };
 
 const CAPACITY: usize = 16;
+mod item_pending;
 mod preparation;
 mod project;
 use preparation::{Reservation, Tracker};
@@ -68,6 +69,13 @@ impl Handle {
     ) -> Result<oneshot::Receiver<Response>, Error> {
         let reservation = self.reserve(deadline)?;
         self.submit_reserved(operation, reservation)
+    }
+
+    pub(crate) fn submit_prepared(
+        &self,
+        prepared: preparation::Prepared<Operation>,
+    ) -> Result<oneshot::Receiver<Response>, Error> {
+        self.submit_reserved(prepared.value, prepared.reservation)
     }
 
     fn reserve(&self, deadline: Instant) -> Result<Reservation, Error> {

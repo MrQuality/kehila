@@ -6,6 +6,7 @@ mod coordinator;
 mod http_auth;
 mod item;
 mod item_ingress;
+mod item_pending;
 mod lifecycle;
 mod listener;
 mod native_ingress;

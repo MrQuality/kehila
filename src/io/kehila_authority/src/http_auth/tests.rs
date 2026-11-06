@@ -308,3 +308,79 @@ fn json_requires_exact_object_shape_without_duplicate_keys_or_type_coercion() {
         Ok(json::Input::Change { .. })
     ));
 }
+
+#[test]
+fn pending_item_lifecycle_is_a_closed_authenticated_browser_surface() {
+    for path in [
+        "/items/pending/register",
+        "/items/pending/list",
+        "/items/pending/open",
+        "/items/pending/cancel",
+    ] {
+        let mut request = browser(Method::POST, path);
+        cookie(&mut request, SESSION);
+        assert!(profile().admit(&request).is_ok(), "{path}");
+        for name in ["origin", CSRF, "sec-fetch-site", "cookie"] {
+            let mut missing = request.clone();
+            missing.headers_mut().remove(name);
+            assert!(profile().admit(&missing).is_err(), "{path} missing {name}");
+        }
+        let mut wrong_method = request;
+        *wrong_method.method_mut() = Method::GET;
+        assert!(profile().admit(&wrong_method).is_err());
+    }
+    let mut unimplemented = browser(Method::POST, "/items/pending/execute");
+    cookie(&mut unimplemented, SESSION);
+    assert!(matches!(
+        profile().admit(&unimplemented),
+        Err(StatusCode::NOT_FOUND)
+    ));
+}
+
+#[test]
+fn pending_item_large_body_allowance_is_only_for_registration() {
+    let mut request = browser(Method::POST, "/items/pending/register");
+    cookie(&mut request, SESSION);
+    request.headers_mut().insert(
+        header::CONTENT_LENGTH,
+        project_create_codec::MAX_RECORD_BYTES
+            .to_string()
+            .parse()
+            .unwrap(),
+    );
+    assert!(profile().admit(&request).is_ok());
+    request.headers_mut().insert(
+        header::CONTENT_LENGTH,
+        (project_create_codec::MAX_RECORD_BYTES + 1)
+            .to_string()
+            .parse()
+            .unwrap(),
+    );
+    assert!(matches!(
+        profile().admit(&request),
+        Err(StatusCode::PAYLOAD_TOO_LARGE)
+    ));
+    for path in [
+        "/items/pending/list",
+        "/items/pending/open",
+        "/items/pending/cancel",
+        "/items/read",
+        "/items/list",
+        "/projects/register",
+        "/auth/browser/password",
+    ] {
+        let mut request = browser(Method::POST, path);
+        cookie(&mut request, SESSION);
+        request.headers_mut().insert(
+            header::CONTENT_LENGTH,
+            (BODY_LIMIT + 1).to_string().parse().unwrap(),
+        );
+        assert!(
+            matches!(
+                profile().admit(&request),
+                Err(StatusCode::PAYLOAD_TOO_LARGE)
+            ),
+            "{path}"
+        );
+    }
+}

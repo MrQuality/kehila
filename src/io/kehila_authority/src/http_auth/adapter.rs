@@ -1,5 +1,5 @@
 //! Owned dispatcher for the product listener and bounded transport replies.
-use super::{json, Admitted, Profile, Route, BODY_LIMIT, PRE_SESSION, SESSION};
+use super::{json, Admitted, Profile, Route, PRE_SESSION, SESSION};
 use crate::{
     coordinator::{self, jobs, Credential, LoginKind, Operation, Output},
     session::Kind,
@@ -188,7 +188,8 @@ fn app_status(error: coordinator::Error) -> StatusCode {
         coordinator::Error::Busy => StatusCode::TOO_MANY_REQUESTS,
         coordinator::Error::Unavailable
         | coordinator::Error::AuditUnconfirmed
-        | coordinator::Error::OtherAuditUnconfirmed => StatusCode::SERVICE_UNAVAILABLE,
+        | coordinator::Error::OtherAuditUnconfirmed
+        | coordinator::Error::PendingIdentityExhausted => StatusCode::SERVICE_UNAVAILABLE,
         coordinator::Error::Project(failure) => match failure {
             crate::project::Failure::Forbidden => StatusCode::FORBIDDEN,
             crate::project::Failure::Absent => StatusCode::NOT_FOUND,
@@ -205,6 +206,15 @@ fn application_failure(
     error: coordinator::Error,
     browser: bool,
 ) -> (Response<Full<Bytes>>, Exchange) {
+    if error == coordinator::Error::PendingIdentityExhausted {
+        return (
+            response(
+                StatusCode::SERVICE_UNAVAILABLE,
+                Zeroizing::new(b"{\"error\":\"registration_identity_unavailable\"}".to_vec()),
+            ),
+            Exchange(None),
+        );
+    }
     if let coordinator::Error::Project(failure) = error {
         let code = match failure {
             crate::project::Failure::Forbidden => "forbidden",
@@ -234,7 +244,7 @@ async fn read<B: Body<Data = Bytes> + Unpin>(
     deadline: Instant,
 ) -> Result<Zeroizing<Vec<u8>>, StatusCode> {
     let read_deadline = deadline.min(Instant::now() + Duration::from_secs(2));
-    let mut bytes = Zeroizing::new(Vec::with_capacity(BODY_LIMIT));
+    let mut bytes = Zeroizing::new(Vec::with_capacity(length));
     timeout_at(TokioInstant::from_std(read_deadline), async {
         while let Some(frame) = body.frame().await {
             let frame = frame.map_err(|_| StatusCode::BAD_REQUEST)?;
@@ -305,7 +315,8 @@ fn encode(
         }
         (_, Err(error)) => return Err(error),
         (Route::Project(_), Ok(Output::Project(delivery)))
-        | (Route::Item(_), Ok(Output::Item(delivery))) => {
+        | (Route::Item(_), Ok(Output::Item(delivery)))
+        | (Route::ItemPending(_), Ok(Output::Item(delivery))) => {
             let material = delivery.material()?;
             return Ok(response(
                 StatusCode::from_u16(material.status)
@@ -420,6 +431,34 @@ pub(crate) async fn handle<B: Body<Data = Bytes> + Unpin>(
                 Err(error) => return application_failure(error, true),
             }
         }
+        Route::ItemPending(route) => {
+            let input = match crate::item_pending::ingress::decode(route, &body) {
+                Ok(input) => input,
+                Err(_) => return failure(StatusCode::BAD_REQUEST, false),
+            };
+            drop(body);
+            let Some(bearer) = admitted.bearer else {
+                return failure(StatusCode::UNAUTHORIZED, false);
+            };
+            let credential = Credential {
+                bearer,
+                kind: Kind::Browser,
+                csrf: admitted.csrf,
+            };
+            let preparation = match jobs.prepare_item_pending(credential, input, deadline) {
+                Ok(value) => value,
+                Err(error) => return application_failure(error, true),
+            };
+            let prepared = match timeout_at(TokioInstant::from_std(deadline), preparation).await {
+                Ok(Ok(Ok(value))) => value,
+                Ok(Ok(Err(error))) => return application_failure(error, true),
+                _ => return failure(StatusCode::SERVICE_UNAVAILABLE, false),
+            };
+            match jobs.submit_prepared(prepared) {
+                Ok(receiver) => receiver,
+                Err(error) => return application_failure(error, true),
+            }
+        }
         Route::Project(route) => {
             let input = match crate::native_ingress::decode(route, &body) {
                 Ok(input) => input,
@@ -444,7 +483,7 @@ pub(crate) async fn handle<B: Body<Data = Bytes> + Unpin>(
                 Ok(Ok(Err(error))) => return application_failure(error, true),
                 _ => return failure(StatusCode::SERVICE_UNAVAILABLE, false),
             };
-            match jobs.submit_project(prepared) {
+            match jobs.submit_prepared(prepared) {
                 Ok(receiver) => receiver,
                 Err(error) => return application_failure(error, true),
             }

@@ -1,45 +1,6 @@
 //! Explicit disposable-owner corruption and selected startup-profile controls.
 use super::*;
 
-async fn disconnected(admin: &Admin) {
-    // Joining the local drivers closes their sockets; PostgreSQL observes
-    // Terminate and removes its backends independently. Observe both releases
-    // within a fixed bound before restoring fixtures or starting another owner.
-    let mut observed = None;
-    let released = tokio::time::timeout(Duration::from_secs(5), async {
-        loop {
-            admin
-                .client()
-                .batch_execute("SELECT pg_stat_clear_snapshot()")
-                .await
-                .unwrap();
-            let row = admin
-                .client()
-                .query_one(
-                    "SELECT (SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() \
-                 AND usename='kehila_auth_runtime_login'), (SELECT count(*) FROM pg_locks \
-                 WHERE locktype='advisory' AND database=(SELECT oid FROM pg_database \
-                 WHERE datname=current_database()) AND classid=1262831689::oid \
-                 AND objid=1::oid AND objsubid=2)",
-                    &[],
-                )
-                .await
-                .unwrap();
-            let counts = (row.get::<_, i64>(0), row.get::<_, i64>(1));
-            observed = Some(counts);
-            if counts == (0, 0) {
-                return;
-            }
-            tokio::task::yield_now().await;
-        }
-    })
-    .await;
-    assert!(
-        released.is_ok(),
-        "runtime backend/authority lock release not observed: {observed:?}"
-    );
-}
-
 pub(super) async fn exercise(
     endpoint: &crate::postgres::Endpoint,
     installation: &str,
@@ -96,7 +57,7 @@ pub(super) async fn exercise(
         );
         drop(response);
         assert!(running.await.unwrap().is_err());
-        disconnected(admin).await;
+        evidence::runtime_released(admin).await;
         admin
             .client()
             .batch_execute("BEGIN; SET LOCAL session_replication_role=replica")
@@ -125,7 +86,7 @@ pub(super) async fn exercise(
         admin.client().batch_execute(change).await.unwrap();
         let result=Database::start(endpoint,installation.into(),format!("{attempt}-profile-{index}"),Instant::now()+WORK_DEADLINE).await;
         assert!(matches!(result,Err(DbError::Invalid)),"invalid startup profile was not rejected as invalid");
-        disconnected(admin).await; admin.client().batch_execute(restore).await.unwrap();
+        evidence::runtime_released(admin).await; admin.client().batch_execute(restore).await.unwrap();
     }
     admin
         .client()
@@ -150,7 +111,7 @@ pub(super) async fn exercise(
     );
     handle.stop();
     running.await.unwrap().unwrap();
-    disconnected(admin).await;
+    evidence::runtime_released(admin).await;
     assert!(
         evidence::snapshot(admin).await == before,
         "startup controls changed domain artifacts"

@@ -22,6 +22,7 @@ use tokio::sync::Mutex as AsyncMutex;
 use zeroize::Zeroizing;
 
 mod item;
+mod item_pending;
 pub(crate) mod jobs;
 mod management;
 mod native_delivery;
@@ -40,6 +41,7 @@ pub(crate) enum Error {
     Unavailable,
     AuditUnconfirmed,
     OtherAuditUnconfirmed,
+    PendingIdentityExhausted,
     Project(crate::project::Failure),
 }
 
@@ -75,6 +77,10 @@ pub(crate) enum Operation {
     Project {
         credential: Credential,
         command: crate::project::Command,
+    },
+    ItemPending {
+        credential: Credential,
+        command: crate::item_pending::Command,
     },
     Item {
         credential: Credential,
@@ -623,6 +629,10 @@ impl Engine {
                 credential,
                 command,
             } => self.project(credential, command, deadline).await,
+            Operation::ItemPending {
+                credential,
+                command,
+            } => self.item_pending(credential, command, deadline).await,
             Operation::Item { credential, input } => self.item(credential, input, deadline).await,
         }
     }

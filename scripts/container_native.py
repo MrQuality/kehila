@@ -16,7 +16,7 @@ from check_postgresql import IMAGE
 from cleanup_errors import retain_cleanup_failure
 from container_executor import LABEL, one_object
 from verification_budget import cleanup_time, command_timeout
-from native_authority_fixture import AUTH_DATABASES, ITEM_DATABASES
+from native_authority_fixture import AUTH_DATABASES, ITEM_DATABASES, ITEM_OBSERVERS
 
 
 @dataclass(frozen=True)
@@ -145,7 +145,7 @@ def check(executor):
                 identity + ':/tmp/native-authority-state.sql')
         control('cp', str(executor.source / 'tests/integration/native_clock_state.sql'),
                 identity + ':/tmp/native-clock-state.sql')
-        for file in ('native_copy_snapshot.sql', 'native_restored_state.sql', 'native_auth_fixture_state.sql', 'native_item_read_state.sql'):
+        for file in ('native_copy_snapshot.sql', 'native_restored_state.sql', 'native_auth_fixture_state.sql', *ITEM_OBSERVERS.values()):
             control('cp', str(executor.source / 'tests/integration' / file), identity + ':/tmp/' + file)
         stage = 'database-start'
         control('start', identity)
@@ -174,7 +174,7 @@ def check(executor):
             admission = "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_database WHERE datname=current_database() AND datdba='kehila_owner'::regrole AND datallowconn AND NOT datistemplate AND pg_encoding_to_char(encoding)='UTF8') OR NOT has_database_privilege('kehila_auth_runtime_login',current_database(),'CONNECT') OR EXISTS (SELECT FROM pg_db_role_setting WHERE setdatabase=(SELECT oid FROM pg_database WHERE datname=current_database())) THEN RAISE EXCEPTION 'authentication database profile mismatch'; END IF; END $$;"
             control('exec', identity, 'psql', '-X', '-U', 'postgres', '-d', database,
                     '-v', 'ON_ERROR_STOP=1', '-c', admission + baseline)
-        # Exercise the changed production reader before the unchanged journeys;
+        # Exercise item capabilities before the existing project/auth journeys;
         # all isolated databases above were copied before any runtime started.
         for mode, database in ITEM_DATABASES.items():
             stage = mode
@@ -182,7 +182,7 @@ def check(executor):
                   str(executor.settings['command_seconds'])])
             stage = mode + '-independent-observer'
             (folder / (mode + '-observation.txt')).write_text(
-                psql('/tmp/native_item_read_state.sql', database), encoding='utf-8')
+                psql('/tmp/' + ITEM_OBSERVERS[mode], database), encoding='utf-8')
         stage = 'journey'
         work(['python', 'scripts/native_authority_fixture.py', 'journey', '--seconds',
               str(executor.settings['command_seconds'])])

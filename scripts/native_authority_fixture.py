@@ -33,7 +33,12 @@ AUTH_DATABASES = {
     'auth-read': 'native_auth_read',
     'auth-lifetime': 'native_auth_lifetime',
 }
-ITEM_DATABASES = {'item-read': 'native_item_read'}
+ITEM_FIXTURES = {
+    'item-read': ('native_item_read', 'native_item_read_state.sql'),
+    'item-pending': ('native_item_pending', 'native_item_pending_state.sql'),
+}
+ITEM_DATABASES = {mode: database for mode, (database, _) in ITEM_FIXTURES.items()}
+ITEM_OBSERVERS = {mode: observer for mode, (_, observer) in ITEM_FIXTURES.items()}
 
 
 def prepare(seconds):
@@ -93,6 +98,7 @@ def prepare(seconds):
 
 SPECS = {
     'item-read': ('coordinator::jobs::tests::project::item_reads::native_authorized_item_reads', 'item-read-passed'),
+    'item-pending': ('coordinator::jobs::tests::project::item_pending::native_pending_creation_lifecycle', 'item-pending-passed'),
     'journey': (TEST, 'passed'),
     'clock': (CLOCK_TEST, 'clock-passed'),
     'restored': (RESTORE_TEST, 'restore-passed'),
@@ -111,7 +117,7 @@ def failure_metadata(mode, returncode, summary, marker_required, marker_present)
     # Only closed labels, numeric observations and known public source locations.
     modes = set(SPECS)
     labels = {'pre_session', 'pre_csrf', 'login', 'state', 'logout',
-              'password_change', 'revoke_others', 'project', 'item'}
+              'password_change', 'revoke_others', 'project', 'item', 'item_pending'}
     jobs = []
     for label, elapsed in re.findall(r'^owned_job ([a-z_]+) elapsed_us=([0-9]{1,12})$',
                                      summary, re.MULTILINE):

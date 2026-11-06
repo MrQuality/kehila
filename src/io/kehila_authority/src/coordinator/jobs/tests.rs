@@ -23,6 +23,7 @@ async fn request(handle: &Handle, operation: Operation) -> Response {
         Operation::RevokeOthers { .. } => "revoke_others",
         Operation::Project { .. } => "project",
         Operation::Item { .. } => "item",
+        Operation::ItemPending { .. } => "item_pending",
     };
     let started = Instant::now();
     let response =
