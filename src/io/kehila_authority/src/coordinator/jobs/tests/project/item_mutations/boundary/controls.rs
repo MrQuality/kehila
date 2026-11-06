@@ -90,15 +90,29 @@ pub(super) async fn terminate_held(admin: &Admin, backend: Backend) {
     }).await.expect("terminated replay backend disappearance was not observed");
 }
 
-#[derive(Debug)]
 pub(super) enum MaintenancePrimary {
     Sql(tokio_postgres::Error),
     DecisionLost,
 }
-#[derive(Debug)]
 pub(super) struct MaintenanceFailure {
     pub(super) primary: MaintenancePrimary,
     pub(super) rollback: Option<tokio_postgres::Error>,
+}
+impl std::fmt::Debug for MaintenancePrimary {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Sql(error) => f.debug_tuple("Sql").field(error).finish(),
+            Self::DecisionLost => f.write_str("DecisionLost"),
+        }
+    }
+}
+impl std::fmt::Debug for MaintenanceFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MaintenanceFailure")
+            .field("primary", &self.primary)
+            .field("rollback", &self.rollback)
+            .finish()
+    }
 }
 pub(super) struct Maintenance {
     pub(super) started: tokio::sync::oneshot::Receiver<i32>,

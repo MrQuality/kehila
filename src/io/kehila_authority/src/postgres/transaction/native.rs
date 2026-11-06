@@ -42,6 +42,7 @@ pub(crate) struct Page {
     pub(crate) before: Option<i64>,
 }
 
+#[derive(Debug)]
 pub(crate) enum NativeError {
     Database(DbError),
     Rejected(Failure),

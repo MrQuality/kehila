@@ -160,17 +160,25 @@ async fn checks(
     browser
 }
 
+pub(super) struct RestartTarget<'a> {
+    pub(super) endpoint: &'a crate::postgres::Endpoint,
+    pub(super) installation: &'a str,
+    pub(super) attempt: String,
+}
 pub(super) async fn restart(
     handle: Handle,
     browser: Browser,
     admin: Admin,
-    endpoint: &crate::postgres::Endpoint,
-    installation: &str,
-    attempt: String,
+    target: RestartTarget<'_>,
     creation: Creation,
     history: Option<History>,
     running: &mut tokio::task::JoinHandle<Result<(), Error>>,
 ) -> Serving {
+    let RestartTarget {
+        endpoint,
+        installation,
+        attempt,
+    } = target;
     evidence::settled(&handle).await;
     let before = evidence::snapshot(&admin).await;
     let generation = admin

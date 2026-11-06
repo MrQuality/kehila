@@ -37,6 +37,7 @@ impl Resolved {
     pub(crate) fn operation(&self) -> Option<i64> {
         self.data.operation
     }
+    #[cfg(test)]
     pub(crate) fn target(&self) -> Option<&str> {
         self.data.target.as_deref()
     }
@@ -335,6 +336,7 @@ impl Admitted {
             .ok_or(PreparationError::StateExhausted)?;
         Ok(())
     }
+    #[cfg(test)]
     pub(crate) fn request_bytes(&self) -> &[u8] {
         self.packet.request_bytes()
     }
@@ -685,6 +687,6 @@ pub(crate) use save::{SaveOutcome, WriteConflict, WriteFailure};
 
 mod replay;
 pub(crate) use replay::{
-    HistoricalAccepted, HistoricalDraft, HistoryAuthorization, HistoryPreparation, HistoryRelease,
+    HistoricalAccepted, HistoricalDraft, HistoryAuthorization, HistoryPreparation,
     HistoryReleaseFailure, ReplayRequest,
 };

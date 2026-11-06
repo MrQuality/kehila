@@ -48,6 +48,10 @@ async fn saved(
     assert_eq!(release.authority().authentication, a.authentication);
     assert_eq!(release.authority().revision, a.revision);
 }
+pub(super) struct Results<'a> {
+    pub(super) created: &'a SavedResult,
+    pub(super) cleared: &'a SavedResult,
+}
 pub(super) async fn check(
     admin: &mut Admin,
     a: &Authority,
@@ -55,9 +59,9 @@ pub(super) async fn check(
     project: &str,
     configuration: &Configuration,
     clear_command: Arc<CanonicalItem>,
-    created: &SavedResult,
-    cleared: &SavedResult,
+    results: Results<'_>,
 ) {
+    let Results { created, cleared } = results;
     let before = evidence::snapshot(admin).await;
     saved(
         admin,

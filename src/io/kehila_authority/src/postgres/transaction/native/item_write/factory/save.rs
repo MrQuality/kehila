@@ -1,6 +1,8 @@
 //! Consumes one protected transaction and one admitted mutation packet.
 //! Only fresh provisional acceptance can enter the private payload verifier.
-use super::super::{project_from, NativeRecord, SavedResult};
+#[cfg(test)]
+use super::super::NativeRecord;
+use super::super::{project_from, SavedResult};
 use super::*;
 use crate::postgres::{transaction::ItemWriteProof, DbError};
 
@@ -35,6 +37,18 @@ pub(crate) enum WriteFailure {
     },
     Rollback(DbError),
 }
+impl std::fmt::Debug for WriteFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Operation { primary, rollback } => f
+                .debug_struct("Operation")
+                .field("primary", primary)
+                .field("rollback", rollback)
+                .finish(),
+            Self::Rollback(error) => f.debug_tuple("Rollback").field(error).finish(),
+        }
+    }
+}
 
 pub(crate) enum SaveOutcome<'a> {
     Ready(ValidatedWrite<'a>),
@@ -43,6 +57,7 @@ pub(crate) enum SaveOutcome<'a> {
     Resolved(Resolved),
 }
 
+#[cfg(test)]
 struct NativeSuccess {
     operation: i64,
     result: NativeRecord,
@@ -52,14 +67,18 @@ struct NativeSuccess {
 // Its owner must perform the final session check before consuming commit.
 pub(crate) struct ValidatedWrite<'a> {
     transaction: Fenced<'a, ItemWriteProof>,
+    #[cfg(test)]
     success: NativeSuccess,
 }
 
 // Native-storage admission only: this does not admit an API wire envelope.
 pub(crate) struct Committed {
+    #[cfg(test)]
     authority: Authority,
+    #[cfg(test)]
     success: NativeSuccess,
 }
+#[cfg(test)]
 impl Committed {
     pub(crate) fn authority(&self) -> &Authority {
         &self.authority
@@ -78,10 +97,18 @@ impl ValidatedWrite<'_> {
     pub(crate) async fn commit(self) -> std::result::Result<Committed, DbError> {
         let Self {
             transaction,
+            #[cfg(test)]
             success,
         } = self;
         let authority = transaction.commit().await?;
-        Ok(Committed { authority, success })
+        #[cfg(not(test))]
+        drop(authority);
+        Ok(Committed {
+            #[cfg(test)]
+            authority,
+            #[cfg(test)]
+            success,
+        })
     }
 }
 
@@ -236,11 +263,17 @@ impl<'a> Fenced<'a, ItemWriteProof> {
         .await;
         match stage {
             Ok(Stage::Accepted(accepted)) => {
-                let operation = accepted.operation;
-                let result = admitted.packet.into_result();
+                #[cfg(test)]
+                let success = NativeSuccess {
+                    operation: accepted.operation,
+                    result: admitted.packet.into_result(),
+                };
+                #[cfg(not(test))]
+                drop((accepted, admitted));
                 Ok(SaveOutcome::Ready(ValidatedWrite {
                     transaction: self,
-                    success: NativeSuccess { operation, result },
+                    #[cfg(test)]
+                    success,
                 }))
             }
             Ok(Stage::Reprepare) => {

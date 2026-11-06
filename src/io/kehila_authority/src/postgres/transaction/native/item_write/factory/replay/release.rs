@@ -18,6 +18,18 @@ pub(crate) enum HistoryReleaseFailure {
     },
     Rollback(DbError),
 }
+impl std::fmt::Debug for HistoryReleaseFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Operation { primary, rollback } => f
+                .debug_struct("Operation")
+                .field("primary", primary)
+                .field("rollback", rollback)
+                .finish(),
+            Self::Rollback(error) => f.debug_tuple("Rollback").field(error).finish(),
+        }
+    }
+}
 pub(crate) enum HistoryAuthorization {
     Released(HistoryRelease),
     Expired(Resolved),

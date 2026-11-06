@@ -109,8 +109,9 @@ fn native_item_mutation_execution_and_replay() {
     let recovery_creation=recovery::Creation{entry:registered["entry"].clone(),request:inspected["request"].clone()};
     lose_reply(&handle,&browser,"/items/pending/execute",locator.clone()).await;
     // No creation result has acknowledged the lost write before this restart.
-    let recovery::Serving{handle,browser,admin,running:next}=recovery::restart(handle,browser,admin,&endpoint,
-        &installation,format!("{attempt}-item-lost"),recovery_creation.clone(),None,&mut running).await;
+    let recovery::Serving{handle,browser,admin,running:next}=recovery::restart(handle,browser,admin,
+        recovery::RestartTarget{endpoint:&endpoint,installation:&installation,attempt:format!("{attempt}-item-lost")},
+        recovery_creation.clone(),None,&mut running).await;
     running=next;
     let first=request(&handle,&browser,"/items/pending/execute",locator.clone(),200).await;
     assert_eq!(first["outcome"],"replayed");
@@ -133,8 +134,9 @@ fn native_item_mutation_execution_and_replay() {
         "estimate":{"action":"clear"},"fields":[{"id":task.title_field_id.as_ref().unwrap().0,"action":"clear"}]});
     let cancel_form=json!({"project_id":project_id,"type_id":task.id.0,"workflow_id":null,
         "expected_configuration_revision":"1","estimate":null,"values":[]});
-    let(second,changed,cleared,admin)=contention::exercise(&handle,&browser,admin,milestone_locator,
-        edit.clone(),clear.clone(),cancel_form,&mut running).await;
+    let(second,changed,cleared,admin)=contention::exercise(&handle,&browser,admin,
+        contention::Commands{milestone:milestone_locator,edit:edit.clone(),clear:clear.clone(),cancel_form},
+        &mut running).await;
     let SavedResult::Create(second)=decoded(&second) else{panic!("wrong result family")};
     assert_eq!(second.item.type_id,milestone.id);assert_eq!(second.readable_id.sequence,2);
     assert_eq!(changed["outcome"],"replayed");
@@ -171,10 +173,12 @@ fn native_item_mutation_execution_and_replay() {
     assert_eq!(page["entries"].as_array().unwrap().len(),2);assert!(page["before"].is_null());
     let history=recovery::History{creation_result:first["result"].clone(),edit:edit.clone(),edit_result:changed["result"].clone(),
         project_entry:pending["entry"].clone(),project_result:created["result"].clone(),current:read.clone()};
-    let recovery::Serving{handle,browser,admin,running:next}=recovery::restart(handle,browser,admin,&endpoint,
-        &installation,format!("{attempt}-item-edited"),recovery_creation,Some(history),&mut running).await;
+    let recovery::Serving{handle,browser,admin,running:next}=recovery::restart(handle,browser,admin,
+        recovery::RestartTarget{endpoint:&endpoint,installation:&installation,attempt:format!("{attempt}-item-edited")},
+        recovery_creation,Some(history),&mut running).await;
     running=next;
-    boundary::exercise(&handle,&browser,&admin,&endpoint,&edit,&clear,&locator,&changed["result"],&mut running).await;
+    boundary::exercise(&handle,&browser,&admin,&endpoint,
+        boundary::ReplayInputs{edit,clear,creation:locator,expected:changed["result"].clone()},&mut running).await;
     evidence::runtime_released(&admin).await;
     admin.close().await;mark(&controls,"item-mutation-passed");
  });

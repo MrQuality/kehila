@@ -1,7 +1,7 @@
 # Native WorkItem delivery
 
-Status: Implementation; ADR-111 revision 3 explicitly accepted on 2026-11-04 at
-`80db13c71d60fe9ea53784765c81644952774394`. Full capability and qualification pending.
+Status: Verification; ADR-111 revision 3 explicitly accepted on 2026-11-04 at
+`80db13c71d60fe9ea53784765c81644952774394`. Implementation is complete; final qualification is pending.
 Baseline: `d6f8d3f563dbc8f9a242ec5abf779ab8e7142500`, 2026-11-04.
 Owners: M1-02/#27, operations #8, interface #10, authority #40 and storage #49.
 
@@ -66,11 +66,25 @@ replacement, and requires unchanged domain/history artifacts. This source adds
 no accepted operation or item and makes no supported-restore or edit-client-loss
 claim. Its startup, recovery and cleanup behavior passed within that case.
 
-The interface controller specifications and ordinary development checks remain
-pending. The native result covers finite controlled interleavings and simulated
-HTTP/TLS clients, rather than exhaustive concurrency or actual browser execution.
-Full qualification remains reserved for completion of the entire stated outcome.
-The PR remains draft; this checkpoint does not establish readiness or completion.
+Implementation checkpoint `014c4df` passed its mandatory development gate:
+502 Python tests with two platform skips, all 64 page-controller cases,
+225 authority-library tests with 17 fixture/asset-dependent cases ignored in
+the ordinary suite, the remaining workspace checks, Go checks and frozen
+oracles. These are development results, not full qualification.
+
+The following cleanup preserves typed failure causes through internal diagnostic
+formatting and keeps fixture-only success views out of production storage.
+Named fixture inputs preserve the existing command/result pairings and ownership.
+The repaired source passed workspace formatting and strict all-target Clippy.
+Earlier lint failures for redundant borrows and oversized helper argument lists
+remain distinct from that pass. Its mandatory commit gate and final composed
+qualification are still pending at preparation of this checkpoint.
+
+The native result covers finite controlled interleavings and simulated HTTP/TLS
+clients, rather than exhaustive concurrency or actual browser execution. Full
+qualification is now the remaining verification stage for the implemented
+outcome. The PR remains draft until applicable local/hosted checks and independent
+exact-head composition review pass; this checkpoint does not establish readiness.
 
 ## Outcome and scope
 

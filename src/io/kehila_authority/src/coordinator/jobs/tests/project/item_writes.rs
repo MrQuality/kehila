@@ -376,8 +376,10 @@ fn native_item_write_identity_and_rollback() {
                 &project_id,
                 configuration,
                 clear_command,
-                &SavedResult::Create(first.clone()),
-                &SavedResult::Edit(cleared.clone()),
+                histories::Results {
+                    created: &SavedResult::Create(first.clone()),
+                    cleared: &SavedResult::Edit(cleared.clone()),
+                },
             )
             .await;
             let mut rejected = create(

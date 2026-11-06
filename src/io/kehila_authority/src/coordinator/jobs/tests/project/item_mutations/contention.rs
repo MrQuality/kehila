@@ -3,6 +3,12 @@ use super::*;
 use crate::lifecycle::probe::Point;
 type Reply = (u16, Value, Option<String>);
 type Exchanges = Arc<std::sync::Mutex<tokio::task::JoinSet<()>>>;
+pub(super) struct Commands {
+    pub(super) milestone: Value,
+    pub(super) edit: Value,
+    pub(super) clear: Value,
+    pub(super) cancel_form: Value,
+}
 fn exchange(
     handle: &Handle,
     browser: &Browser,
@@ -87,12 +93,15 @@ async fn cases(
     handle: &Handle,
     browser: &Browser,
     admin: &Admin,
-    milestone: Value,
-    edit: Value,
-    clear: Value,
-    cancel_form: Value,
+    commands: Commands,
     exchanges: &Exchanges,
 ) -> (Value, Value, Value) {
+    let Commands {
+        milestone,
+        edit,
+        clear,
+        cancel_form,
+    } = commands;
     let original = identity(admin, &milestone).await;
     let count = handle.live.probe.item_repreparations();
     let prepared = handle
@@ -287,10 +296,7 @@ pub(super) async fn exercise(
     handle: &Handle,
     browser: &Browser,
     admin: Admin,
-    milestone: Value,
-    edit: Value,
-    clear: Value,
-    cancel_form: Value,
+    commands: Commands,
     running: &mut tokio::task::JoinHandle<Result<(), Error>>,
 ) -> (Value, Value, Value, Admin) {
     // Parent retains both administrative and exchange owners across child panic.
@@ -302,17 +308,7 @@ pub(super) async fn exercise(
     let browser = browser.clone();
     let outcome = tokio::spawn(async move {
         let admin = owned_admin.lock().await;
-        cases(
-            &jobs,
-            &browser,
-            &admin,
-            milestone,
-            edit,
-            clear,
-            cancel_form,
-            &registered,
-        )
-        .await
+        cases(&jobs, &browser, &admin, commands, &registered).await
     })
     .await;
     let mut stopped = false;

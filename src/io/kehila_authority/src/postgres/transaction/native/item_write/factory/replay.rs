@@ -417,4 +417,4 @@ fn decode_payload(
 mod tests;
 
 mod release;
-pub(crate) use release::{HistoryAuthorization, HistoryRelease, HistoryReleaseFailure};
+pub(crate) use release::{HistoryAuthorization, HistoryReleaseFailure};

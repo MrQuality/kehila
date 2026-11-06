@@ -60,12 +60,16 @@ pub(super) async fn cases(
     handle: &Handle,
     browser: &Browser,
     admin: &Admin,
-    edit: &Value,
-    clear: &Value,
-    expected: &Value,
+    inputs: &ReplayInputs,
     owners: &Owners,
     exchanges: &Exchanges,
 ) {
+    let ReplayInputs {
+        edit,
+        clear,
+        expected,
+        ..
+    } = inputs;
     let installation: String = admin
         .client()
         .query_one(

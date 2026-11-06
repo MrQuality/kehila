@@ -97,6 +97,7 @@ enum Next {
     Initial(Intent),
     Retry(ItemRetryIdentity),
 }
+#[derive(Debug)]
 pub(crate) enum AdmissionFailure {
     Item(ItemAdmissionError),
     Representation,
@@ -141,6 +142,33 @@ pub(super) enum AttemptFailure {
     // adapter must not translate this into a claim of rejection or rollback.
     CommittedUndeliverable(Error),
     Exhausted,
+}
+impl std::fmt::Debug for AttemptFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Owner(error) => f.debug_tuple("Owner").field(error).finish(),
+            Self::Eligibility { primary, rollback } => f
+                .debug_struct("Eligibility")
+                .field("primary", primary)
+                .field("rollback", rollback)
+                .finish(),
+            Self::Preparation { primary, rollback } => f
+                .debug_struct("Preparation")
+                .field("primary", primary)
+                .field("rollback", rollback)
+                .finish(),
+            Self::Cleanup(error) => f.debug_tuple("Cleanup").field(error).finish(),
+            Self::Admission(error) => f.debug_tuple("Admission").field(error).finish(),
+            Self::Write(error) => f.debug_tuple("Write").field(error).finish(),
+            Self::Release(error) => f.debug_tuple("Release").field(error).finish(),
+            Self::Commit(error) => f.debug_tuple("Commit").field(error).finish(),
+            Self::CommittedUndeliverable(error) => f
+                .debug_tuple("CommittedUndeliverable")
+                .field(error)
+                .finish(),
+            Self::Exhausted => f.write_str("Exhausted"),
+        }
+    }
 }
 impl AttemptFailure {
     pub(super) fn policy(&self) -> Policy {
@@ -233,7 +261,7 @@ impl Engine {
     ) -> Result<AttemptReport, Error> {
         let deadline = execution.deadline();
         self.check(deadline)?;
-        let entry = self.candidate(&credential)?;
+        let entry = self.candidate(credential)?;
         let origin = NoticeOrigin::capture(&intent, Arc::clone(&entry), deadline)?;
         let notices = self
             .hash(deadline, |worker| {
@@ -243,13 +271,13 @@ impl Engine {
         // Keep the original locator/exact edit Arc through historical resolution.
         // Never reconstruct submitted edit bytes from metadata returned by SQL.
         let result = match self
-            .item_attempt_inner(Arc::clone(&entry), &credential, intent.clone(), execution)
+            .item_attempt_inner(Arc::clone(&entry), credential, intent.clone(), execution)
             .await
         {
             Ok(AttemptOutcome::Resolved(value))
                 if replies::resolution(&value) == Policy::Historical =>
             {
-                self.item_history_inner(entry, &credential, intent, execution)
+                self.item_history_inner(entry, credential, intent, execution)
                     .await
             }
             other => other,
@@ -298,7 +326,7 @@ impl Engine {
                     .await
                     .map_err(|error| AttemptFailure::Owner(fence_error(error)))?;
                 let fresh = snapshot(transaction.authority());
-                if let Err(primary) = self.project_eligibility(&entry, &credential, &fresh) {
+                if let Err(primary) = self.project_eligibility(&entry, credential, &fresh) {
                     let rollback = transaction.rollback().await.err();
                     if rollback.is_some() {
                         self.live.fail(crate::lifecycle::FatalCause::OwnedExecution)
@@ -384,7 +412,7 @@ impl Engine {
                     .await
                     .map_err(|error| AttemptFailure::Owner(fence_error(error)))?;
                 let fresh = snapshot(transaction.authority());
-                if let Err(primary) = self.project_eligibility(&entry, &credential, &fresh) {
+                if let Err(primary) = self.project_eligibility(&entry, credential, &fresh) {
                     let rollback = transaction.rollback().await.err();
                     if rollback.is_some() {
                         self.live.fail(crate::lifecycle::FatalCause::OwnedExecution)
@@ -409,7 +437,7 @@ impl Engine {
                         // This is the last owner eligibility check before consuming COMMIT.
                         let eligible = self
                             .check(deadline)
-                            .and_then(|_| self.project_eligibility(&entry, &credential, &fresh));
+                            .and_then(|_| self.project_eligibility(&entry, credential, &fresh));
                         if let Err(primary) = eligible {
                             let rollback = write.rollback().await.err();
                             if rollback.is_some() {
@@ -417,8 +445,7 @@ impl Engine {
                             }
                             return Err(AttemptFailure::Eligibility { primary, rollback });
                         }
-                        let committed = write.commit().await.map_err(AttemptFailure::Commit)?;
-                        drop(committed);
+                        write.commit().await.map_err(AttemptFailure::Commit)?;
                         Written::Committed { reply, fresh }
                     }
                     ItemSaveOutcome::Reprepare(identity) => {

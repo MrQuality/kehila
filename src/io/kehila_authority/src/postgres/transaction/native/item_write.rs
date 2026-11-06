@@ -13,7 +13,6 @@ struct Scope {
     installation: String,
     actor: String,
 }
-#[derive(Debug)]
 pub(crate) enum PreparationError {
     InvalidProof,
     StateExhausted,
@@ -21,6 +20,18 @@ pub(crate) enum PreparationError {
     Unavailable,
     Domain(ItemMutationError),
     Representation(project_create_codec::Error),
+}
+impl std::fmt::Debug for PreparationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidProof => f.write_str("InvalidProof"),
+            Self::StateExhausted => f.write_str("StateExhausted"),
+            Self::Expired => f.write_str("Expired"),
+            Self::Unavailable => f.write_str("Unavailable"),
+            Self::Domain(error) => f.debug_tuple("Domain").field(error).finish(),
+            Self::Representation(error) => f.debug_tuple("Representation").field(error).finish(),
+        }
+    }
 }
 impl From<project_create_codec::Error> for PreparationError {
     fn from(error: project_create_codec::Error) -> Self {
@@ -278,6 +289,7 @@ impl Accepted {
         }
         Ok(accepted)
     }
+    #[cfg(test)]
     fn revision(&self) -> &Revision {
         &self.revision
     }
@@ -287,6 +299,7 @@ impl Accepted {
     fn result_bytes(&self) -> &[u8] {
         self.result_bytes.as_bytes()
     }
+    #[cfg(test)]
     fn into_result(self) -> NativeRecord {
         let Self { result_bytes, .. } = self;
         result_bytes
@@ -313,8 +326,8 @@ impl Accepted {
 mod factory;
 pub(crate) use factory::{
     Admitted, Disposition, Draft, HistoricalAccepted, HistoricalDraft, HistoryAuthorization,
-    HistoryPreparation, HistoryRelease, HistoryReleaseFailure, Preparation, ReplayRequest,
-    Resolved, RetryIdentity, SaveOutcome, WriteConflict, WriteFailure,
+    HistoryPreparation, HistoryReleaseFailure, Preparation, ReplayRequest, Resolved, RetryIdentity,
+    SaveOutcome, WriteConflict, WriteFailure,
 };
 #[cfg(test)]
 mod tests;

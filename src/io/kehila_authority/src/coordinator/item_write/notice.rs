@@ -61,6 +61,24 @@ pub(in crate::coordinator) enum NoticeFailure {
     },
     Cleanup(DbError),
 }
+impl std::fmt::Debug for NoticeFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Owner(error) => f.debug_tuple("Owner").field(error).finish(),
+            Self::Eligibility { primary, rollback } => f
+                .debug_struct("Eligibility")
+                .field("primary", primary)
+                .field("rollback", rollback)
+                .finish(),
+            Self::Scope { primary, rollback } => f
+                .debug_struct("Scope")
+                .field("primary", primary)
+                .field("rollback", rollback)
+                .finish(),
+            Self::Cleanup(error) => f.debug_tuple("Cleanup").field(error).finish(),
+        }
+    }
+}
 impl NoticeFailure {
     pub(in crate::coordinator) fn generic_error(&self) -> Error {
         match self {

@@ -43,7 +43,7 @@ impl Engine {
     ) -> Result<AttemptReport, Error> {
         let deadline = execution.deadline();
         self.check(deadline)?;
-        let entry = self.candidate(&credential)?;
+        let entry = self.candidate(credential)?;
         let origin = NoticeOrigin::capture(&intent, Arc::clone(&entry), deadline)?;
         let notices = self
             .hash(deadline, |worker| {
@@ -51,7 +51,7 @@ impl Engine {
             })
             .await??;
         let result = self
-            .item_history_inner(entry, &credential, intent, execution)
+            .item_history_inner(entry, credential, intent, execution)
             .await;
         Ok(AttemptReport {
             result,

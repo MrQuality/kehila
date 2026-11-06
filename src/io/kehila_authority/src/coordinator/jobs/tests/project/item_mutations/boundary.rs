@@ -260,15 +260,18 @@ async fn stop_runtime(
     );
     (valid, observed)
 }
+pub(super) struct ReplayInputs {
+    pub(super) edit: Value,
+    pub(super) clear: Value,
+    pub(super) creation: Value,
+    pub(super) expected: Value,
+}
 pub(super) async fn exercise(
     handle: &Handle,
     browser: &Browser,
     admin: &Admin,
     endpoint: &Endpoint,
-    edit: &Value,
-    clear: &Value,
-    creation: &Value,
-    expected: &Value,
+    inputs: ReplayInputs,
     running: &mut tokio::task::JoinHandle<Result<(), Error>>,
 ) {
     let second = login(handle).await;
@@ -292,13 +295,9 @@ pub(super) async fn exercise(
     }
     let jobs = handle.clone();
     let browser = browser.clone();
-    let edit = edit.clone();
-    let expected = expected.clone();
     let exchanges: Exchanges = Arc::new(std::sync::Mutex::new(tokio::task::JoinSet::new()));
     let registered = Arc::clone(&exchanges);
     let owners = Arc::clone(&maintenance);
-    let clear = clear.clone();
-    let creation = creation.clone();
     // Observe the assertion-prone child, retaining all spawned exchanges in the
     // parent. Sender drops release its gates even when that child panics.
     let outcome = tokio::spawn(async move {
@@ -307,23 +306,13 @@ pub(super) async fn exercise(
             &browser,
             &second,
             &case_admin,
-            &edit,
-            &expected,
+            &inputs.edit,
+            &inputs.expected,
             &registered,
         )
         .await;
-        retirement::cases(
-            &jobs,
-            &browser,
-            &case_admin,
-            &edit,
-            &clear,
-            &expected,
-            &owners,
-            &registered,
-        )
-        .await;
-        rollback::case(&jobs, &browser, &case_admin, &creation).await;
+        retirement::cases(&jobs, &browser, &case_admin, &inputs, &owners, &registered).await;
+        rollback::case(&jobs, &browser, &case_admin, &inputs.creation).await;
         case_admin.close().await;
         true
     })
