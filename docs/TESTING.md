@@ -42,6 +42,57 @@ replace risk-selected boundary tests. Do not bypass them or describe a focused
 development run as a full gate pass. Resource, container, privacy and trust
 restrictions continue to apply.
 
+## Risk-based selection and fault testing
+
+Risk-based testing is in use as a manual selection practice with automated
+execution and coarse scheduling backstops. The hook/CI modes distinguish
+development from final qualification; focused native selectors execute explicitly
+chosen cases. They do not automatically infer changed contracts, consequences or
+all affected tests. The broader [test strategy](TEST_STRATEGY.md) remains Proposed.
+
+For material changes, record the changed contract, consequential failure mechanism,
+selected checks and decisive oracles, reusable evidence/validity conditions and
+deferred final checks in the existing
+[delivery record](procedures/engineering-delivery-record.md#risk-and-review-map).
+Trace producers, consumers, permission boundaries and old assertions as well as
+edited files. Prioritize consequence and uncertainty; avoid an automatic test
+matrix or a numerical score that substitutes for judgment. Run cheap relevant
+format/lint checks early where practical, then the smallest meaningful affected
+behavior and integration checks. Required backstops still apply.
+
+Test allowed and denied behavior against the current contract. Keep unrelated
+inputs valid when varying one rejection condition, and use a positive control
+where it establishes reachability. Require evidence of the intended rejection
+boundary and unchanged durable state when applicable. A parse failure, timeout
+or unrelated error cannot qualify a different security or integrity rejection.
+Use actual relevant roles, storage and transport when those interactions are the
+question; passing component tests alone does not establish their composition.
+
+Controlled fault injection is a technique within this risk-based selection.
+Existing native fixtures exercise selected reply loss, restart, backend loss,
+disposable database-clock changes and interleavings; shared integration checks
+exercise selected dependency stalls/unavailability. See the bounded
+[WorkItem qualification](implementation/native-work-items.md#final-qualification-2026-11-06).
+This is not a general chaos platform or exhaustive failure qualification.
+
+When a risk warrants an automated fault experiment, identify the invariant and
+permitted outcomes, applicable no-fault control, exact owned target and observed
+fault activation. Check application results and independent durable state where
+relevant, then joining, cleanup and recovery within bounded resources/time.
+Record source/environment, fault point and observed order; retain a seed when
+used, without claiming it reproduces uncontrolled OS/network scheduling. Keep
+fault-injection, application and cleanup failures distinct; preserve first failures.
+Use existing fixtures where practical. Broader randomized, multi-fault or long
+campaigns need a separately justified scope and applicable execution authority.
+No new chaos automation or default campaign is introduced by this guidance.
+
+Schedule relevant bounded fault checks during development and include applicable
+regressions in final qualification. Do not reopen a completed goal merely to add
+unrelated fault cases. The author and relevant reviewer own selection and evidence
+adequacy; the maintainer retains architectural and other nondelegated acceptance.
+
+### User-assisted final verification
+
 The maintainer directed this scheduling rule on 2026-10-31: checks that require
 someone to operate a separate device, handle an operating-system confirmation
 or make a temporary trust change belong to final qualification before the PR
@@ -87,13 +138,16 @@ pristine database, native runtime path and independent SQL observer. The runner
 retains its compilation, source checks, execution budgets and owned cleanup.
 Its output and retained failure diagnostics identify the focused scope.
 
-This selects WorkItem journeys only. It supplies neither the other native
-journeys nor shared full verification. `--native-authority` and the default full
-runner retain their complete native sequence. The selector's orchestration has
-mocked regression evidence; its focused real PostgreSQL composition still needs
-execution with the next affected native change. Use the existing exported-source
-and explicit dependency-preparation procedure; do not run the container verifier
-directly from a checkout.
+This selects WorkItem journeys only; `item-write` and `item-mutation` are also
+available. It supplies neither the other native journeys nor shared full
+verification. `--native-authority` and the default full runner retain their
+complete native sequence. Mocked controls cover selector orchestration; later
+[WorkItem evidence](implementation/native-work-items.md#current-implementation-checkpoint-2026-11-06)
+records actual focused mutation/read execution and independent observers,
+superseding the earlier pending-execution status. That evidence has its stated
+source/fixture limits; availability of a selector does not qualify future changes.
+Use the existing exported-source and explicit dependency-preparation procedure;
+do not run the container verifier directly from a checkout.
 
 Full and pure verification validate the [engineering register](engineering/ENGINEERING-STANDARD.md)
 and run Go formatting/vet checks in addition to the existing matrix. CI retains

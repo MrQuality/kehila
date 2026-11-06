@@ -7,6 +7,11 @@ configuration and credentials stay outside public source and output.
 
 ## Scope and checkpoint plan
 
+Maintain a concise current summary at the top of the existing record: source
+revision, authorized activity or waiting condition, evidence scope, remaining
+work, blockers/decisions and live workloads/resource use. Label earlier entries
+as historical; append corrections without rewriting failed evidence.
+
 - Authoritative request and accepted decisions; original/revised outcome and scope.
 - Current revision, operating profile and actual execution permissions.
 - Coherent checkpoint contracts; included/excluded work and completion criteria.
@@ -21,6 +26,19 @@ configuration and credentials stay outside public source and output.
 | Review layer / owner | Base and head/tree | Covered contracts and shared boundaries | Source inspected / checks actually executed | Findings and dispositions | Exclusions / validity conditions |
 | --- | --- | --- | --- | --- | --- |
 | Applicable layer and independent context | Exact identities | Include producer/consumer ownership | Reading is not execution | Severity, priority, source and closure evidence | Source, environment, fixture, oracle or contract changes |
+
+### Affected verification selection
+
+For material changes, name the changed contract and consequential failure risk;
+trace producers, consumers, permissions and existing assertions. Record selected
+checks and their decisive oracles, retained evidence/validity and deferred final
+checks. Explain omitted material boundaries; irrelevant fields need no new ceremony.
+
+For rejection controls, identify the valid baseline, single varied property and
+intended rejection/side-effect oracle. For fault experiments, identify the exact
+owned target, observed activation, permitted outcomes, independent state check
+where relevant, bounded cleanup/recovery and reproduction evidence. These fields
+apply to selected risks, not every conceivable failure or every routine edit.
 
 ## Event/evidence ledger
 

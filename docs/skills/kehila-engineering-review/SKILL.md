@@ -26,6 +26,18 @@ intervening delta, shared-contract/caller/environment changes and invalidation
 conditions. Final exact-head composition review is mandatory for the delivery;
 matching hashes or component approvals alone are insufficient.
 
+Apply the accepted contract-based verification practices in
+`docs/procedures/engineering-delivery.md` from the repository root.
+Trace changed contracts through producers, consumers, permissions and older tests.
+Challenge acceptance/rejection oracles: keep unrelated inputs valid, establish
+reachability where needed and reject passes caused by the wrong failure. Review
+meaningful composition under actual relevant roles/storage/transport, not just
+component success. For selected fault tests require observed activation, permitted
+outcomes, independent state where relevant and bounded owned cleanup/recovery.
+Use the existing delivery record for current source/evidence, remaining work,
+blockers and live resource use. These are proportional manual assessments, not
+automatic semantic test selection or a universal chaos campaign.
+
 Keep commits focused and PRs coherent. Generic line/file thresholds are inspection
 signals, not rejection/splitting rules. Large exceptions need coupling justification,
 component map and separate treatment of adopted source, generated locks/notices,

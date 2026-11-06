@@ -42,6 +42,16 @@ at closeout. Preserve valid evidence using explicit source/environment/fixture/o
 conditions. Required hook/CI gates remain. At milestone/large-goal closeout use the
 repository retrospective; do not claim savings or efficacy without observations.
 
+For verification selection apply the accepted
+contract-based practices in `docs/procedures/engineering-delivery.md`:
+trace changed contracts through producers, consumers, permissions and old tests;
+choose discriminating acceptance/rejection and meaningful boundary checks from
+consequence and uncertainty. Select interruption/fault controls only for material
+risks, with observed activation, permitted outcomes and bounded owned recovery.
+Record selected checks, decisive oracles, reusable evidence and deferred final
+cases in the existing delivery record. Automated backstops do not infer semantic
+risk coverage; no general chaos platform or universal campaign is implied.
+
 This is an independently authored engineering application of the accepted
 recommendations. Design reference: Anthropic's operational
 [risk-assessment](https://github.com/anthropics/knowledge-work-plugins/blob/4fa3cb92e2942d6594200fa8d2c800708e086072/operations/skills/risk-assessment/SKILL.md).

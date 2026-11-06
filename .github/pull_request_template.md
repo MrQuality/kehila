@@ -17,6 +17,10 @@ references match the scope actually completed by this PR.
 
 List the checks run and their results. Include service versions for relevant
 integration tests and note any coverage gaps.
+For material changes, explain the changed contract/failure risk, affected callers
+and boundaries, selected checks and decisive acceptance/rejection or fault oracles.
+Link retained evidence with its validity limits and identify deferred final checks;
+use the existing delivery record rather than duplicate it here.
 After checks finish, link their immutable source SHA and CI run in this description
 or a PR conversation record. A run for an earlier SHA does not qualify changed code.
 

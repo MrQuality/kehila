@@ -21,14 +21,16 @@ manual pilot execution, not new CI enforcement or an independent GitHub approval
 Follow the [development setup](README.md#development-setup), then run:
 
 ```text
-python scripts/verify.py
+python scripts/verify.py --development
 ```
 
-Use `python scripts/verify.py --pure` when working on pure logic without the
-development services. Full verification builds first, then owns and cleans up
-only the services needed by each phase. Integration changes still require the
-complete service-backed suite. See [the testing guide](docs/TESTING.md) for
-coverage and limitations.
+Use `python scripts/verify.py --pure` for the applicable pure-logic matrix.
+During development, select additional checks from changed contracts and failure
+risks, including real service-backed checks for affected integration boundaries.
+The development backstop does not provision the service stack. At goal completion,
+run full applicable qualification; full verification builds first, then owns and
+cleans up the services needed by each phase. Windows execution follows the
+exported-source container procedure in [the testing guide](docs/TESTING.md).
 
 Use the [test strategy](docs/TEST_STRATEGY.md) to identify the evidence relevant
 to a change. It is proposed; [the testing guide](docs/TESTING.md) describes the
@@ -83,6 +85,12 @@ cancellation/material suspension), complete a proportional
 [retrospective](docs/procedures/delivery-retrospective-template.md) with independent
 challenge and owned follow-up. Coincident boundaries may share one report; routine
 commits do not require another ceremony.
+
+The maintainer accepted the [general verification practices](docs/procedures/engineering-delivery.md#contract-based-verification)
+on 2026-11-07: discriminating acceptance/rejection tests, changed-contract impact
+review, meaningful integration boundaries, interruption/recovery behavior and
+explicit current evidence. Apply them proportionally within the existing delivery
+record. Acceptance does not imply automatic risk analysis or a new chaos platform.
 
 Apply the [Definition of Done](docs/engineering/DEFINITION-OF-DONE.md), recording
 applicable evidence and justified not-applicable criteria. Link existing
