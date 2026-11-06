@@ -1,7 +1,8 @@
 # Native WorkItem delivery
 
-Status: Verification; ADR-111 revision 3 explicitly accepted on 2026-11-04 at
-`80db13c71d60fe9ea53784765c81644952774394`. Implementation is complete; final qualification is pending.
+Status: Qualified for the agreed fresh-development slice. ADR-111 revision 3 was
+explicitly accepted on 2026-11-04 at `80db13c71d60fe9ea53784765c81644952774394`.
+This remains partial M1; supported installation and real-data use are excluded.
 Baseline: `d6f8d3f563dbc8f9a242ec5abf779ab8e7142500`, 2026-11-04.
 Owners: M1-02/#27, operations #8, interface #10, authority #40 and storage #49.
 
@@ -77,14 +78,64 @@ formatting and keeps fixture-only success views out of production storage.
 Named fixture inputs preserve the existing command/result pairings and ownership.
 The repaired source passed workspace formatting and strict all-target Clippy.
 Earlier lint failures for redundant borrows and oversized helper argument lists
-remain distinct from that pass. Its mandatory commit gate and final composed
-qualification are still pending at preparation of this checkpoint.
+remain distinct from that pass. Its mandatory commit gate passed at `3c1c76b`.
+A later test-only repair at `c1755ca` updates an older denial oracle to call the
+private fence helper, preserving the exact permission-denied assertion and
+role/reset steps. Its affected native-read fixture, independent observer and
+mandatory commit gate passed before final qualification.
 
 The native result covers finite controlled interleavings and simulated HTTP/TLS
-clients, rather than exhaustive concurrency or actual browser execution. Full
-qualification is now the remaining verification stage for the implemented
-outcome. The PR remains draft until applicable local/hosted checks and independent
-exact-head composition review pass; this checkpoint does not establish readiness.
+clients, rather than exhaustive concurrency or actual browser execution. The
+completed qualification is recorded below. Review readiness remains governed by
+the PR's current checks, source comparison and independent review; no merge is
+authorized by this record.
+
+## Final qualification (2026-11-06)
+
+The complete agreed capability passed the mandatory full local qualification on
+`c1755ca85f7f9ba994b23a6b5c5bd613dbaf17ba`, tree
+`9e032476a708adb4727667847a4449d81d8dd354`. The run executed all 15 explicitly
+provisioned native cases, their independent SQL/state observers, the ordinary
+workspace/interface/tooling/Go checks and the frozen oracles. It also completed
+the NATS, OpenSearch and PostgreSQL/FerretDB integrations, including 48 competing
+create/update/retry/reuse pairs, stalled-body and stalled-database recovery, and
+Go-to-Rust save/replay/read with search unavailable. All three service groups
+completed owned cleanup, the final copied source matched, the process tree
+joined and the provider stopped.
+
+The run took 658.390 seconds through cleanup. Sampled aggregate working sets
+peaked at 4.155174 GiB, with a minimum sampled available memory of 1.719170 GiB.
+One two-GiB reserve warning occurred; no resource-limit alert occurred. These
+are observations of this run, not capacity guarantees or hard peak measurements.
+
+All three jobs passed on the same exact head in
+[full CI run 42265316690](https://github.com/MrQuality/kehila/actions/runs/42265316690):
+native authority, shared verification and the experimental Windows owner client.
+The native job recorded full scope, all 15 native-case successes and copied-source
+verification. Shared verification recorded full scope and passed formatting,
+strict all-target Clippy, the standalone transport checks and service-backed
+verification. Independent exact-head composition review found no confirmed
+substantive source finding.
+
+The preceding
+[full CI attempt](https://github.com/MrQuality/kehila/actions/runs/42261584243)
+remains failed: its native-read fixture still expected the deliberately granted
+save entry to be denied. The repair checks a genuinely private helper without
+changing runtime grants. The corresponding local full attempt was deliberately
+stopped during optimized compilation once that failure was established; its
+owned resources were removed and provider stopped, but it is not a passing
+qualification. The earlier deferred-validator failure and lint failures also
+remain distinct from the later passes. A Windows source-export path-length
+failure occurred before tests; a shorter external working path resolved it
+without an OS setting change or hook bypass.
+
+The qualification covers the agreed synthetic fresh-database capability and
+finite controlled interleavings. Simulated DOM and HTTP/TLS clients do not
+establish actual browser behavior. External password-corpus/protected-startup
+assets, real-data use, broader installation/restore support, client-record-loss
+edit recovery, exhaustive concurrency and throughput/capacity claims remain
+outside this result. The delivery closeout keeps timing overlaps and unknown
+preparation/review intervals separate from measured phase durations.
 
 ## Outcome and scope
 
