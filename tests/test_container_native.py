@@ -158,6 +158,36 @@ class CleanupTests(unittest.TestCase):
         self.assertLess(invocation, observer)
         self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
 
+    def test_focused_item_write_keeps_only_write_database_and_observer(self):
+        executor = Executor()
+        native.check(executor, item_cases=('item-write',))
+        modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
+                 for args in executor.events if 'scripts/native_authority_fixture.py' in args]
+        self.assertEqual(modes, ['prepare', 'item-write'])
+        self.assertEqual([args[-1] for args in executor.events if 'createdb' in args],
+                         ['native_item_write'])
+        invocation = next(i for i, args in enumerate(executor.events) if 'item-write' in args)
+        observations = [i for i, args in enumerate(executor.events)
+                        if '/tmp/native_item_write_state.sql' in args and 'native_item_write' in args]
+        self.assertEqual(len(observations), 1)
+        self.assertLess(invocation, observations[0])
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+
+    def test_failed_write_observer_retains_failure_and_stops_before_later_cases(self):
+        executor = Executor(fail_observer='/tmp/native_item_write_state.sql')
+        with self.assertRaisesRegex(RuntimeError, 'item-write-independent-observer'):
+            native.check(executor, item_cases=('item-read', 'item-write'))
+        modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
+                 for args in executor.events if 'scripts/native_authority_fixture.py' in args]
+        self.assertEqual(modes, ['prepare', 'item-write'])
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+        folders = list(self.root.glob('kehila-native-diagnostics-*'))
+        self.assertEqual(len(folders), 1)
+        selection = json.loads((folders[0] / 'selection.json').read_text(encoding='utf-8'))
+        self.assertEqual(selection, {'scope': 'focused-items',
+                                     'selected_items': ['item-write', 'item-read'],
+                                     'observed_items': []})
+
     def test_focused_cases_run_once_in_canonical_order(self):
         executor = Executor()
         native.check(executor, item_cases=('item-pending', 'item-read'))
@@ -203,7 +233,7 @@ class CleanupTests(unittest.TestCase):
         self.assertEqual(removals, [('rm', '--force', '--volumes', DATABASE)])
         modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
                  for args in executor.events if 'scripts/native_authority_fixture.py' in args]
-        self.assertEqual(modes, ['prepare', 'item-read', 'item-pending', 'journey', 'clock', 'restored',
+        self.assertEqual(modes, ['prepare', 'item-write', 'item-read', 'item-pending', 'item-mutation', 'journey', 'clock', 'restored',
             'auth-expiry', 'auth-delivery', 'auth-unknown', 'auth-owned', 'auth-revoke', 'auth-fenced',
             'auth-read', 'auth-lifetime'])
 
@@ -232,8 +262,10 @@ class CleanupTests(unittest.TestCase):
         first_runtime = next(i for i, args in enumerate(executor.events)
                              if args[0] == 'exec' and 'journey' in args)
         for mode, database in native.ITEM_DATABASES.items():
-            expected_observer = {'item-read': '/tmp/native_item_read_state.sql',
-                                 'item-pending': '/tmp/native_item_pending_state.sql'}[mode]
+            expected_observer = {'item-write': '/tmp/native_item_write_state.sql',
+                                 'item-read': '/tmp/native_item_read_state.sql',
+                                 'item-pending': '/tmp/native_item_pending_state.sql',
+                                 'item-mutation': '/tmp/native_item_mutation_state.sql'}[mode]
             creations = [i for i, args in enumerate(executor.events)
                          if args[0] == 'exec' and 'createdb' in args and args[-1] == database]
             invocations = [i for i, args in enumerate(executor.events)

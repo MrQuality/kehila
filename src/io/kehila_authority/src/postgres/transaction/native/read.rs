@@ -21,6 +21,10 @@ pub(crate) struct Current {
     pub(crate) project: Project,
     pub(crate) configuration: Configuration,
     pub(crate) creation_operation: i64,
+    pub(crate) configuration_project: Project,
+    pub(crate) configuration_operation: i64,
+    pub(crate) state_version: u64,
+    pub(crate) state_operation: i64,
 }
 
 fn phase(value: String) -> Result<Phase> {
@@ -340,22 +344,28 @@ impl<P> Fenced<'_, P> {
         if stable != recorded_project || configuration != recorded_configuration {
             return Err(NativeError::Integrity);
         }
-        // Free the historical pair and relational driver buffers before loading
-        // the one indexed operational history. Its mutable counters are proved
-        // independently; creation snapshots and historical replay stay frozen.
+        // Release the historical configuration and driver buffers before the
+        // indexed operational history. Retain only its bounded Project metadata
+        // for project preparation dependencies; no second configuration clone.
         drop(recorded_configuration);
-        drop(recorded_project);
         drop(stable);
         drop(types);
         drop(workflows);
         drop(projects);
         drop(grants);
-        self.verify_operational_head(&project, creation_operation)
+        let (state_version, state_operation) = self
+            .verify_operational_head(&project, creation_operation)
             .await?;
         Ok(Current {
             project,
             configuration,
             creation_operation,
+            configuration_project: recorded_project,
+            // The current fresh profile has no configuration writer. Its
+            // revision pair was verified against the creation operation above.
+            configuration_operation: creation_operation,
+            state_version,
+            state_operation,
         })
     }
 }
@@ -367,6 +377,13 @@ impl Fenced<'_, SessionProof> {
 }
 impl Fenced<'_, ReadProof> {
     pub(crate) async fn read_project(&mut self, id: &str) -> Result<Current> {
+        self.current_project(id).await
+    }
+}
+
+// Fixed validation reload only; the dedicated proof gains no project mutation.
+impl Fenced<'_, ItemWriteProof> {
+    pub(super) async fn reload_item_project(&mut self, id: &str) -> Result<Current> {
         self.current_project(id).await
     }
 }

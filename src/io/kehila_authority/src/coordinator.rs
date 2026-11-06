@@ -23,6 +23,7 @@ use zeroize::Zeroizing;
 
 mod item;
 mod item_pending;
+pub(crate) mod item_write;
 pub(crate) mod jobs;
 mod management;
 mod native_delivery;
@@ -81,6 +82,10 @@ pub(crate) enum Operation {
     ItemPending {
         credential: Credential,
         command: crate::item_pending::Command,
+    },
+    ItemMutation {
+        credential: Credential,
+        command: item_write::Command,
     },
     Item {
         credential: Credential,
@@ -596,7 +601,12 @@ impl Engine {
         Ok(Output::PasswordChanged)
     }
 
-    async fn execute(&self, operation: Operation, deadline: Instant) -> Result<Output, Error> {
+    async fn execute(
+        &self,
+        operation: Operation,
+        execution: jobs::Execution,
+    ) -> Result<Output, Error> {
+        let deadline = execution.deadline();
         self.check(deadline)?;
         match operation {
             Operation::PreSession(bearer) => self.pre_session(bearer, deadline).await,
@@ -633,6 +643,13 @@ impl Engine {
                 credential,
                 command,
             } => self.item_pending(credential, command, deadline).await,
+            Operation::ItemMutation {
+                credential,
+                command,
+            } => {
+                self.execute_item_mutation(credential, command, &execution)
+                    .await
+            }
             Operation::Item { credential, input } => self.item(credential, input, deadline).await,
         }
     }

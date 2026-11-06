@@ -24,6 +24,7 @@ async fn request(handle: &Handle, operation: Operation) -> Response {
         Operation::Project { .. } => "project",
         Operation::Item { .. } => "item",
         Operation::ItemPending { .. } => "item_pending",
+        Operation::ItemMutation { .. } => "item_mutation",
     };
     let started = Instant::now();
     let response =
@@ -380,4 +381,30 @@ fn native_owned_login() {
             }
             mark(&controls, "passed");
         });
+}
+
+#[test]
+fn item_uncertainty_remains_nonidentifying_after_runtime_stop_and_deadline() {
+    use crate::coordinator::item_write::AttemptFailure;
+    for cause in [
+        AttemptFailure::Commit(DbError::UnknownCommit),
+        AttemptFailure::CommittedUndeliverable(Error::Unauthorized),
+    ] {
+        let error = cause.policy().generic_error().unwrap();
+        let live = RuntimeLiveness::new();
+        live.stop();
+        let capacity = Arc::new(Semaphore::new(1));
+        let response = Response {
+            result: Err(error),
+            deadline: Instant::now(),
+            live,
+            _permit: Arc::new(capacity.clone().try_acquire_owned().unwrap()),
+        };
+        assert!(matches!(
+            response.result(),
+            Err(Error::Project(crate::project::Failure::OutcomeUnknown))
+        ));
+        drop(response);
+        assert_eq!(capacity.available_permits(), 1);
+    }
 }

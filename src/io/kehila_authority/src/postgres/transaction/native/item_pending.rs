@@ -4,18 +4,27 @@ use crate::item_pending::Registration;
 use serde_json::{json, Value};
 
 pub(crate) struct ItemPending {
-    project: String,
-    id: i64,
-    handle: String,
-    token: String,
-    target: String,
-    codec: u32,
-    digest: [u8; 32],
-    registered: u64,
-    expires: u64,
-    state: State,
-    operation: Option<i64>,
+    pub(super) project: String,
+    pub(super) id: i64,
+    pub(super) handle: String,
+    pub(super) token: String,
+    pub(super) target: String,
+    pub(super) codec: u32,
+    pub(super) digest: [u8; 32],
+    pub(super) registered: u64,
+    pub(super) expires: u64,
+    pub(super) state: State,
+    pub(super) operation: Option<i64>,
 }
+pub(super) struct StoredRequest {
+    pub(super) request: work_item_codec::Request,
+    pub(super) bytes: Vec<u8>,
+}
+pub(super) struct DecodedPending {
+    pub(super) entry: ItemPending,
+    pub(super) request: Option<StoredRequest>,
+}
+
 impl ItemPending {
     #[cfg(test)]
     pub(crate) fn id(&self) -> i64 {
@@ -275,7 +284,11 @@ impl Fenced<'_, ReadProof> {
         )
     }
 
-    pub(crate) async fn open_pending_item(&mut self, project: &str, handle: &str) -> Result<Value> {
+    pub(super) async fn read_pending_item(
+        &mut self,
+        project: &str,
+        handle: &str,
+    ) -> Result<DecodedPending> {
         let a = self.native_proof();
         let mut rows = self
             .rows(
@@ -308,7 +321,6 @@ impl Fenced<'_, ReadProof> {
         let request = if let Some(bytes) = bytes {
             let request = work_item_codec::verify_request(entry.codec, &bytes, &entry.digest)
                 .map_err(|_| NativeError::Integrity)?;
-            drop(bytes);
             let work_item_codec::Request::Create {
                 project_id,
                 command,
@@ -322,8 +334,18 @@ impl Fenced<'_, ReadProof> {
             {
                 return Err(NativeError::Integrity);
             }
-            // Stored-version encoding is historical inspection, not fresh
-            // native or mutable domain validation.
+            Some(StoredRequest { request, bytes })
+        } else {
+            None
+        };
+        Ok(DecodedPending { entry, request })
+    }
+    pub(crate) async fn open_pending_item(&mut self, project: &str, handle: &str) -> Result<Value> {
+        let DecodedPending { entry, request } = self.read_pending_item(project, handle).await?;
+        let request = if let Some(StoredRequest { request, bytes }) = request {
+            // Historical inspection neither regenerates native envelopes nor
+            // applies current domain rules. Keep its original copy lifetime.
+            drop(bytes);
             let encoded = work_item_codec::encode_request(&request, entry.codec)
                 .map_err(|_| NativeError::Integrity)?;
             drop(request);

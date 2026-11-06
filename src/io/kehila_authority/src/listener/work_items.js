@@ -1,6 +1,7 @@
 "use strict";
-// Current reads, saved creation intent and cancellation. Execution and replay remain separate.
-globalThis.KehilaWorkItems = ({document, request, run, checkBinding}) => {
+// Current reads and explicit item saves; historical replay retains original identity.
+globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding,
+  randomBytes = count => globalThis.crypto.getRandomValues(new Uint8Array(count)), encode = JSON.stringify}) => {
   const el = id => document.getElementById(id);
   const invalid = () => { throw new Error("Invalid or mismatched WorkItem response."); };
   const require = value => { if (!value) invalid(); };
@@ -20,6 +21,12 @@ globalThis.KehilaWorkItems = ({document, request, run, checkBinding}) => {
   let busy = false, active = true, itemButtons = [], pendingButtons = [];
   let draft = null, formFields = [], confirmation = null;
   let registrationUnknown = false, cancellationUnknown = null, abandonedCancellation = false;
+  let currentRead = null, editor = null, editFields = [], retainedSave = null, retryClosed = false;
+  let abandonedSave = false, receiptTarget = null, lookupNotice = false;
+  let openedFacts = null, openedInspected = false;
+  // Retained UTF-8 records: <=1MiB exact wire plus <=2KiB identity/lifecycle
+  // metadata. Typed view/form/response temporaries and JS heap are separate.
+  const EDIT_WIRE_BYTES = 1048576, EDIT_METADATA_BYTES = 2048;
   const message = value => { el("items-status").textContent = value; };
   function controls(nextBusy = busy, nextActive = active) {
     busy = nextBusy; active = nextActive;
@@ -28,10 +35,19 @@ globalThis.KehilaWorkItems = ({document, request, run, checkBinding}) => {
     el("pending-older").disabled = busy || !active || !project || pendingBefore === null;
     el("pending-read-item").disabled = busy || !active || !project || !opened || opened.state !== "completed";
     for (const button of [...itemButtons,...pendingButtons]) button.disabled = busy || !active || !project;
-    creationControls();
+    creationControls(); mutationControls();
   }
   function clear(forget = false) {
-    if (forget) { registrationUnknown = false; cancellationUnknown = null; abandonedCancellation = false; }
+    if (forget) {
+      registrationUnknown = false; cancellationUnknown = null; abandonedCancellation = false;
+      if (retainedSave) el("item-recovery-status").textContent = "The save recovery record was discarded. This does not cancel a save or undo work that may already have completed.";
+      abandonedSave = abandonedSave || retainedSave !== null; retainedSave = null; retryClosed = false;
+      receiptTarget = null; el("item-mutation-receipt").replaceChildren();
+    }
+    openedFacts = null; openedInspected = false; lookupNotice = false;
+    currentRead = null; editor = null; editFields = [];
+    el("item-edit-form").hidden = true; el("item-edit-fields").replaceChildren();
+    el("item-edit-estimate").value = ""; el("item-edit-estimate-action").value = "keep";
     draft = null; formFields = []; confirmation = null;
     el("item-create-fields").replaceChildren(); el("item-create-form").hidden = true;
     el("item-kind").replaceChildren(); el("item-kind").value = "";
@@ -56,7 +72,10 @@ globalThis.KehilaWorkItems = ({document, request, run, checkBinding}) => {
   }
   const action = work => run(async () => {
     try { await work(); }
-    catch (error) { message(typeof error.message === "string" ? error.message.slice(0,240) : "WorkItem inspection unavailable."); }
+    catch (error) {
+      const text = typeof error.message === "string" ? error.message.slice(0,240) : "WorkItem operation unavailable.";
+      message(text); if (retainedSave || abandonedSave) el("item-recovery-status").textContent = text;
+    }
   });
   async function checkedContext(context) {
     if (!context || context !== project) return false;
@@ -97,8 +116,8 @@ globalThis.KehilaWorkItems = ({document, request, run, checkBinding}) => {
   }
   async function list(kind,cursor = null) {
     const context = project, pending = kind === "pending";
-    if (pending) { pendingBefore = null; pendingButtons = []; opened = null; hideConfirmation(); el("pending-detail").replaceChildren(); }
-    else { itemsBefore = null; itemButtons = []; el("item-detail").replaceChildren(); }
+    if (pending) { pendingBefore = null; pendingButtons = []; opened = null; openedFacts = null; openedInspected = false; hideConfirmation(); el("pending-detail").replaceChildren(); }
+    else { itemsBefore = null; itemButtons = []; currentRead = null; editor = null; editFields = []; el("item-edit-form").hidden = true; el("item-detail").replaceChildren(); }
     el(pending ? "pending-rows" : "item-rows").replaceChildren(); controls();
     const data = await send(context,pending ? "/items/pending/list" : "/items/list",{project_id:context?.id,before:cursor});
     if (!data) return;
@@ -143,6 +162,7 @@ globalThis.KehilaWorkItems = ({document, request, run, checkBinding}) => {
     });
   }
   async function read(context,item) {
+    currentRead = null; editor = null; editFields = []; el("item-edit-form").hidden = true; controls();
     el("item-detail").replaceChildren();
     const data = await send(context,"/items/read",{project_id:context.id,item_id:item});
     if (!data) return;
@@ -152,22 +172,24 @@ globalThis.KehilaWorkItems = ({document, request, run, checkBinding}) => {
     const name = readable(data.readable_id,context,item);
     const values = fields(result.data.values,context.configuration);
     details("item-detail",[["Item",name],["Version",current.version],["Type",current.type_id],["Workflow",current.workflow_id],["Status",current.status_id],["Phase",result.phase],["Estimate",estimate(result.data.estimate,result.project.estimate_unit)],...values]);
+    currentRead = {context,result}; controls();
     message("Current item read under fresh authority.");
   }
   async function inspect(context,selected) {
-    opened = selected; hideConfirmation(); el("pending-detail").replaceChildren(); controls();
+    opened = selected; openedFacts = null; openedInspected = false; hideConfirmation(); el("pending-detail").replaceChildren(); controls();
     const data = await send(context,"/items/pending/open",{project_id:context.id,intent_handle:selected.intent_handle});
     if (!data) return;
     require(keys(data,["entry","request"])); const entry = pendingSummary(data.entry,context);
     for (const key of ["project_id","request_id","intent_handle","token","target_item_id","registered_ms","expires_ms"]) require(entry[key] === selected[key]);
-    let pairs = [["Saved request",entry.request_id],["State",entry.state],["Item target",entry.target_item_id]];
+    let facts = null, pairs = [["Saved request",entry.request_id],["State",entry.state],["Item target",entry.target_item_id]];
     if (data.request !== null) {
       require(["prepared","completed"].includes(entry.state));
       const command = envelope(data.request,"item_create_request");
       require(keys(command,["project_id","operation_id","item_id","type_id","workflow_id","expected_configuration_revision","estimate","values"]) && command.project_id === context.id && command.operation_id === entry.token && command.item_id === entry.target_item_id && uint(command.expected_configuration_revision) && id(command.type_id) && (command.workflow_id === null || id(command.workflow_id)));
+      facts = Object.freeze({type:command.type_id,workflow:command.workflow_id,configuration:command.expected_configuration_revision,estimate:command.estimate});
       pairs = [...pairs,["Type",command.type_id],["Workflow",command.workflow_id === null ? "Configured default at execution" : command.workflow_id],["Configuration revision",command.expected_configuration_revision],["Estimate",estimate(command.estimate,context.unit)],...fields(command.values)];
     } else require(entry.state !== "prepared");
-    details("pending-detail",pairs); opened = entry; observeTerminal(entry); controls();
+    details("pending-detail",pairs); opened = entry; openedFacts = facts; openedInspected = true; observeTerminal(entry); controls();
     message(entry.state === "completed" ? "Creation is recorded. Read its current item separately; a retained command is not a saved-result replay." : "Saved request inspected. No WorkItem was created by this action.");
   }
   const sameEntry = (left,right) => left && right && ["project_id","request_id","intent_handle","token","target_item_id","registered_ms","expires_ms"].every(key => left[key] === right[key]);
@@ -192,7 +214,11 @@ globalThis.KehilaWorkItems = ({document, request, run, checkBinding}) => {
       field.input.disabled = unavailable || !draft || !field.present.checked;
     }
     el("pending-open-selected").disabled = unavailable || !opened;
-    const canCancel = !unavailable && opened && opened.state === "prepared" && (!cancellationUnknown || sameEntry(cancellationUnknown,opened));
+    const executionUnknown = retainedSave?.family === "item_create" && retainedSave.attempted;
+    const sameCreation = retainedSave?.family === "item_create" && sameEntry(retainedSave.entry,opened);
+    el("pending-execute").disabled = unavailable || !openedInspected || !opened || opened.state !== "prepared" || cancellationUnknown !== null || (retainedSave !== null && (!sameCreation || retryClosed));
+    el("pending-reconcile").disabled = unavailable || !opened || (retainedSave !== null && !sameCreation);
+    const canCancel = !unavailable && !executionUnknown && opened && opened.state === "prepared" && (!cancellationUnknown || sameEntry(cancellationUnknown,opened));
     el("pending-cancel").disabled = !canCancel;
     el("pending-confirm-cancel").disabled = !canCancel || !confirmation || confirmation.context !== project || !sameEntry(confirmation.entry,opened);
     el("pending-keep-request").disabled = unavailable || !confirmation;
@@ -250,6 +276,223 @@ globalThis.KehilaWorkItems = ({document, request, run, checkBinding}) => {
     const [whole,fraction = ""] = text.split(".");
     return (whole + fraction.padEnd(3,"0")).replace(/^0+(?=[0-9])/,"");
   }
+  function mutationControls() {
+    const unavailable = busy || !active;
+    el("item-edit-start").disabled = unavailable || !project || !currentRead || retainedSave !== null || project.archived || currentRead.result.item.archived;
+    el("item-edit-save").disabled = unavailable || !editor || retainedSave !== null;
+    el("item-edit-estimate-action").disabled = unavailable || !editor;
+    el("item-edit-estimate").disabled = unavailable || !editor || el("item-edit-estimate-action").value !== "set";
+    for (const field of editFields) { field.action.disabled = unavailable || !editor; field.input.disabled = unavailable || !editor || field.action.value !== "set"; }
+    el("item-edit-check").disabled = unavailable || !retainedSave;
+    el("item-edit-retry").disabled = unavailable || !retainedSave || retryClosed;
+    el("item-edit-forget").disabled = unavailable || !retainedSave;
+    const target = retainedSave || receiptTarget;
+    el("item-edit-read-current").disabled = unavailable || !target || !project || project.id !== target.project;
+    const scope = retainedSave || receiptTarget;
+    el("item-save-scope").textContent = scope ? (scope.family === "item_create" ? "Creation" : "Edit") + " in project " + scope.project + "; item " + scope.item + "." : "";
+    el("item-recovery").hidden = !retainedSave && !abandonedSave && !receiptTarget && !lookupNotice;
+  }
+  function textValue(value, required = false) {
+    if (typeof value !== "string" || value.includes("\0")) throw new Error("Text must be valid UTF-8 without NUL.");
+    for (const symbol of value) { const code = symbol.charCodeAt(0); if (symbol.length === 1 && code >= 0xd800 && code <= 0xdfff) throw new Error("Text must be valid UTF-8."); }
+    if (required && /^\p{White_Space}*$/u.test(value)) throw new Error("Required text must contain a non-whitespace value.");
+    if (new TextEncoder().encode(value).length > 16384) throw new Error("Text exceeds the field byte limit.");
+    return value;
+  }
+  const sameOwner = (a,b) => a.installation_id === b.installation_id && a.actor_id === b.actor_id;
+  async function saveBinding(retained = null) {
+    const binding = await checkBinding();
+    if (retained && retainedSave !== retained) return null;
+    require(keys(binding,["installation_id","actor_id"]) && id(binding.installation_id) && id(binding.actor_id));
+    if (retained && !sameOwner(binding,retained.binding)) {
+      clear(true); el("item-recovery-status").textContent = "The installation or owner changed. The old save record was discarded; this does not undo a save that may have completed.";
+      throw new Error("The installation or owner changed. No old save was resent.");
+    }
+    return Object.freeze({...binding});
+  }
+  function nextVersion(value) {
+    require(uint(value)); const next = (BigInt(value) + 1n).toString();
+    if (!uint(next)) throw new Error("Item version is exhausted. No edit can be prepared.");
+    return next;
+  }
+  async function beginEdit() {
+    const selected = currentRead, context = project;
+    if (!selected || selected.context !== context || retainedSave || context.archived || selected.result.item.archived) throw new Error("Read the current item before preparing a separate edit.");
+    await saveBinding(); if (selected !== currentRead || context !== project) return;
+    const result = selected.result, item = result.item;
+    require(result.project.configuration_revision === context.configuration.revision && uint(context.configuration.revision)); nextVersion(item.version);
+    const kind = context.configuration.types.find(value => value.id === item.type_id); require(kind);
+    const values = new Map(result.data.values.map(entry => [entry.id,entry.value]));
+    editFields = context.configuration.fields.filter(field => field.owner_type === item.type_id && !field.archived && field.usage !== "hidden" && field.kind === "text").map(definition => {
+      require(id(definition.id) && typeof definition.name === "string" && ["required","optional"].includes(definition.usage));
+      const existing = values.get(definition.id); require(!existing || existing.kind === "text");
+      const group = document.createElement("div"), label = document.createElement("label"), action = document.createElement("select"), input = document.createElement("textarea"), name = document.createElement("span");
+      action.name = definition.id + "_action"; action.replaceChildren(option("keep","Keep"),option("set","Set"),option("clear","Clear",definition.usage === "required")); action.value = "keep";
+      input.name = definition.id; input.value = existing ? existing.value : ""; name.textContent = definition.name;
+      label.append(name,action,input); group.append(label); action.addEventListener("change",() => controls());
+      return {definition,action,input,group,original:existing ? existing.value : null,rendered:input.value};
+    });
+    editor = {context,item:{...item},configuration:context.configuration.revision,phase:result.phase,estimate:result.data.estimate};
+    el("item-edit-estimate-action").value = "keep"; el("item-edit-estimate").value = "";
+    el("item-edit-fields").replaceChildren(...editFields.map(field => field.group)); el("item-edit-form").hidden = false;
+    message("Prepare explicit text and estimate changes. Keep preserves the existing exact value."); controls();
+  }
+  function retainedEdit(selected,binding) {
+    if (!selected || selected !== editor || selected.context !== project || el("item-edit-form").hidden || retainedSave) throw new Error("An unresolved save cannot be overwritten. Check it or explicitly stop tracking it.");
+    const fields = []; let bytes = 0;
+    for (const field of editFields) {
+      const action = field.action.value;
+      if (action === "keep") continue;
+      if (action === "clear") { if (field.definition.usage === "required") throw new Error("Required text cannot be cleared."); fields.push({id:field.definition.id,action}); }
+      else if (action === "set") {
+        // Browsers normalize textarea line endings. An unchanged rendered value
+        // retains the original stored text rather than silently rewriting CRLF.
+        const value = textValue(field.original !== null && field.input.value === field.rendered ? field.original : field.input.value,field.definition.usage === "required");
+        bytes += new TextEncoder().encode(value).length; fields.push({id:field.definition.id,action,value});
+      } else invalid();
+    }
+    if (fields.length > 128 || bytes > 1048576) throw new Error("Edit exceeds the field or payload limit.");
+    const action = el("item-edit-estimate-action").value;
+    let estimate;
+    if (action === "keep" || action === "clear") estimate = {action};
+    else if (action === "set") { const value = parseEstimate(el("item-edit-estimate").value); if (value === null) throw new Error("Set requires an exact estimate, including zero."); estimate = {action,value}; }
+    else invalid();
+    const raw = Array.from(randomBytes(16)); require(raw.length === 16 && raw.every(value => Number.isInteger(value) && value >= 0 && value <= 255));
+    const operation_id = raw.map(value => value.toString(16).padStart(2,"0")).join("");
+    const body = {project_id:selected.context.id,item_id:selected.item.id,operation_id,expected_item_version:selected.item.version,expected_configuration_revision:selected.configuration,estimate,fields};
+    const wire = encode(body); require(typeof wire === "string");
+    if (new TextEncoder().encode(wire).length > EDIT_WIRE_BYTES) throw new Error("Encoded edit exceeds the request limit. No save was sent.");
+    require(JSON.stringify(JSON.parse(wire)) === JSON.stringify(body));
+    const metadata = {binding,project:body.project_id,item:body.item_id,family:"item_edit",version:body.expected_item_version,configuration:body.expected_configuration_revision,
+      lifecycle:{type:selected.item.type_id,workflow:selected.item.workflow_id,status:selected.item.status_id,archived:selected.item.archived,phase:selected.phase},estimate:selected.estimate};
+    if (new TextEncoder().encode(JSON.stringify(metadata)).length > EDIT_METADATA_BYTES) throw new Error("Edit identity exceeds the retention limit. No save was sent.");
+    Object.freeze(metadata.lifecycle); return Object.freeze({...metadata,wire});
+  }
+  function savedResult(data,retained,family) {
+    require(retained.family === family && ["item_create","item_edit"].includes(family));
+    const create = family === "item_create";
+    require(keys(data,["outcome","result"]) && [create ? "created" : "edited","replayed"].includes(data.outcome));
+    const value = envelope(data.result,family + "_result");
+    require(keys(value,create ? ["project","item","data","phase","readable_id"] : ["project","item","data","phase"]));
+    const item = value.item;
+    require(keys(item,["id","project_id","type_id","workflow_id","status_id","version","archived"]) && item.id === retained.item && item.project_id === retained.project && id(item.type_id) && id(item.workflow_id) && id(item.status_id) && uint(item.version) && typeof item.archived === "boolean" && ["new","active","done"].includes(value.phase));
+    require(keys(value.project,["id","name","prefix","estimate_unit","configuration_revision","archived","next_sequence","ever_estimated"]) && value.project.id === retained.project && uint(value.project.configuration_revision) && ["hours","points"].includes(value.project.estimate_unit));
+    require(typeof value.project.name === "string" && id(value.project.prefix) && typeof value.project.archived === "boolean" && uint(value.project.next_sequence) && typeof value.project.ever_estimated === "boolean");
+    require(keys(value.data,["estimate","values"])); estimate(value.data.estimate,value.project.estimate_unit); fields(value.data.values);
+    return value;
+  }
+  function editResult(data,retained) {
+    const value = savedResult(data,retained,"item_edit"), item = value.item, state = retained.lifecycle, original = JSON.parse(retained.wire);
+    require(item.version === nextVersion(retained.version) && value.project.configuration_revision === retained.configuration);
+    require(item.type_id === state.type && item.workflow_id === state.workflow && item.status_id === state.status && item.archived === state.archived && value.phase === state.phase);
+    const expected = original.estimate.action === "set" ? original.estimate.value : original.estimate.action === "clear" ? null : retained.estimate;
+    require(value.data.estimate === expected);
+    for (const change of original.fields) {
+      const value = valueFor(change.id);
+      if (change.action === "set") require(value && value.kind === "text" && value.value === change.value);
+      else if (change.action === "clear") require(value === undefined);
+      else require(change.action === "keep");
+    }
+    function valueFor(id) { return value.data.values.find(entry => entry.id === id)?.value; }
+    return value;
+  }
+  async function operateEdit(kind,retained = retainedSave) {
+    if (!retained || retained.family !== "item_edit" || retained !== retainedSave || kind === "retry" && retryClosed) return;
+    if (!await saveBinding(retained)) return;
+    const reply = await requestWire(kind === "check" ? "/items/reconcile" : "/items/edit",retained.wire);
+    if (retained !== retainedSave || !await saveBinding(retained)) return;
+    if (reply.status !== 200) {
+      if (reply.status === 410 && reply.data?.error === "replay_expired") retryClosed = true;
+      el("item-recovery-status").textContent = retryClosed ? "The saved result expired. Read the current item separately; this identity will never become a new save." : "Save remains unconfirmed. A lookup or rejected attempt does not prove an earlier in-flight save cannot commit. Check or retry this exact request.";
+      controls(); return;
+    }
+    const result = editResult(reply.data,retained);
+    details("item-mutation-receipt",[["Result",reply.data.outcome === "replayed" ? "Historical recorded edit" : "Recorded edit"],["Project",retained.project],["Item",retained.item],["Version",result.item.version],["Estimate",estimate(result.data.estimate,result.project.estimate_unit)],...fields(result.data.values)]);
+    receiptTarget = {project:retained.project,item:retained.item,family:retained.family}; retainedSave = null; retryClosed = false; lookupNotice = false;
+    if (currentRead?.context.id === retained.project && currentRead.result.item.id === retained.item) {
+      currentRead = null; editor = null; editFields = []; el("item-edit-form").hidden = true;
+    }
+    el("item-recovery-status").textContent = "Recorded save confirmed. This result is separate from current item data; read current state before another edit."; controls();
+  }
+  async function saveEdit() {
+    const selected = editor; const binding = await saveBinding(); if (selected !== editor) return;
+    const retained = retainedEdit(selected,binding);
+    retainedSave = retained; retryClosed = false; editor = null; editFields = []; el("item-edit-form").hidden = true;
+    el("item-mutation-receipt").replaceChildren(); receiptTarget = null;
+    el("item-recovery-status").textContent = "Save acknowledgement pending. The exact request is retained; no automatic repeat will be sent."; controls();
+    await operateEdit("retry",retained);
+  }
+  function creationRecord(entry,binding) {
+    pendingSummary(entry,{id:entry.project_id});
+    const wire = JSON.stringify({project_id:entry.project_id,intent_handle:entry.intent_handle});
+    const metadata = {family:"item_create",binding,project:entry.project_id,item:entry.target_item_id,entry:Object.freeze({...entry}),facts:openedFacts,attempted:false};
+    if (new TextEncoder().encode(wire).length > 2048 || new TextEncoder().encode(JSON.stringify(metadata)).length > 2048) throw new Error("Creation identity exceeds its retention limit. No execution was sent.");
+    return Object.freeze({...metadata,wire});
+  }
+  function creationResult(data,retained) {
+    const value = savedResult(data,retained,"item_create");
+    require(value.item.version === "1" && value.item.archived === false);
+    readable(value.readable_id,{id:retained.project},retained.item);
+    require(value.readable_id.prefix === value.project.prefix && value.project.next_sequence === nextVersion(value.readable_id.sequence));
+    const facts = retained.facts;
+    if (facts) require(value.item.type_id === facts.type && value.project.configuration_revision === facts.configuration && (facts.workflow === null || value.item.workflow_id === facts.workflow) && value.data.estimate === facts.estimate);
+    // The client retains bounded identity/facts, not the full server-owned
+    // command. Exact field agreement is checked by the correlated backend path.
+    return value;
+  }
+  async function operateCreation(kind,retained = retainedSave) {
+    if (!retained || retained.family !== "item_create" || retained !== retainedSave || kind === "retry" && retryClosed) return;
+    if (kind === "retry" && cancellationUnknown) throw new Error("Check the unconfirmed cancellation before executing a saved creation.");
+    if (!await saveBinding(retained)) return;
+    if (kind === "retry" && cancellationUnknown) throw new Error("Check the unconfirmed cancellation before executing a saved creation.");
+    if (kind === "retry" && !retained.attempted) {
+      retained = Object.freeze({...retained,attempted:true}); retainedSave = retained;
+    }
+    hideConfirmation(); controls();
+    const reply = await requestWire(kind === "check" ? "/items/pending/reconcile" : "/items/pending/execute",retained.wire);
+    if (retained !== retainedSave || !await saveBinding(retained)) return;
+    if (![200,201].includes(reply.status)) {
+      const error = reply.data?.error;
+      if (reply.status === 410 || reply.status === 404 && error === "pending_not_found") retryClosed = true;
+      if (reply.status === 410 && error === "replay_expired") {
+        receiptTarget = {project:retained.project,item:retained.item,family:retained.family};
+        if (sameEntry(opened,retained.entry)) showEntry({...retained.entry,state:"completed"});
+        el("item-recovery-status").textContent = "Creation is recorded, but its saved result expired. Read the current item separately; this identity will never become a new creation.";
+      } else {
+        if (sameEntry(opened,retained.entry) && reply.status === 410 && ["pending_expired","pending_cancelled"].includes(error)) showEntry({...retained.entry,state:error === "pending_expired" ? "expired" : "cancelled"});
+        if (sameEntry(opened,retained.entry) && error === "pending_not_found") { opened = null; openedFacts = null; openedInspected = false; el("pending-detail").replaceChildren(); }
+        el("item-recovery-status").textContent = retryClosed
+          ? "Retry is unavailable for this expired identity or missing locator. An earlier in-flight execution may still complete; check the recorded outcome. No replacement request was registered."
+          : "Creation was not confirmed at this lookup. Another session or an earlier in-flight attempt may still complete. No new identity was registered; check or explicitly retry the same saved request.";
+      }
+      // Only a lookup record for which this page never began execution can be
+      // released by absence. An earlier attempted execution remains unknown.
+      if (!retained.attempted && reply.status === 404 && ["operation_not_found","pending_not_found"].includes(error)) { retainedSave = null; retryClosed = false; lookupNotice = true; }
+      controls(); return;
+    }
+    require(reply.status === (reply.data?.outcome === "created" ? 201 : 200));
+    const value = creationResult(reply.data,retained);
+    details("item-mutation-receipt",[["Result",reply.data.outcome === "replayed" ? "Historical recorded creation" : "Recorded creation"],["Project",retained.project],["Item",readable(value.readable_id,{id:retained.project},retained.item)],["Version",value.item.version],["Estimate",estimate(value.data.estimate,value.project.estimate_unit)],...fields(value.data.values)]);
+    receiptTarget = {project:retained.project,item:retained.item,family:retained.family}; retainedSave = null; retryClosed = false; lookupNotice = false;
+    if (sameEntry(opened,retained.entry)) showEntry({...retained.entry,state:"completed"});
+    el("item-recovery-status").textContent = "Recorded creation confirmed. Its historical result is separate from current item data; cancellation cannot undo it."; controls();
+  }
+  async function selectedCreation(kind) {
+    const selected = opened, context = project;
+    if (!selected || !context) return;
+    if (kind === "retry" && (!openedInspected || selected.state !== "prepared" || cancellationUnknown)) return;
+    const binding = await saveBinding(); if (selected !== opened || context !== project) return;
+    if (retainedSave && (retainedSave.family !== "item_create" || !sameEntry(retainedSave.entry,selected))) throw new Error("Check or explicitly stop tracking the retained save before tracking another request.");
+    if (!retainedSave) { retainedSave = creationRecord(selected,binding); retryClosed = false; lookupNotice = false; receiptTarget = null; el("item-mutation-receipt").replaceChildren(); }
+    el("item-recovery-status").textContent = kind === "check" ? "Checking recorded creation only. This check never executes the request." : "Creation acknowledgement pending. An interrupted response does not cancel the owned work.";
+    controls(); await operateCreation(kind,retainedSave);
+  }
+  async function operateRetained(kind) {
+    const retained = retainedSave; if (!retained) return;
+    if (retained.family === "item_edit") return operateEdit(kind,retained);
+    if (retained.family === "item_create") return operateCreation(kind,retained);
+    invalid();
+  }
   function creationForm(context) {
     if (!draft || draft.context !== context || el("item-create-form").hidden || context.archived) throw new Error("Creation form unavailable. Start a separate request; an earlier unconfirmed save is not retried here.");
     if (draft.unsupported) throw new Error("A required nontext field is unsupported by this form.");
@@ -274,7 +517,7 @@ globalThis.KehilaWorkItems = ({document, request, run, checkBinding}) => {
     return body;
   }
   function showEntry(entry) {
-    opened = entry; hideConfirmation();
+    opened = entry; openedFacts = null; openedInspected = false; hideConfirmation(); observeTerminal(entry);
     details("pending-detail",[["Saved request",entry.request_id],["State",entry.state],["Item target",entry.target_item_id]]); controls();
   }
   async function registerCreation() {
@@ -300,23 +543,38 @@ globalThis.KehilaWorkItems = ({document, request, run, checkBinding}) => {
   async function confirmCancellation() {
     const selected = confirmation;
     if (!selected || selected.context !== project || !sameEntry(selected.entry,opened) || opened.state !== "prepared") return;
+    if (retainedSave?.family === "item_create" && retainedSave.attempted) throw new Error("Check the unconfirmed creation before cancelling its request.");
     if (cancellationUnknown && !sameEntry(cancellationUnknown,selected.entry)) throw new Error("Check the earlier unconfirmed cancellation before cancelling another request.");
     if (!await checkedContext(selected.context)) return;
+    if (confirmation !== selected || !sameEntry(selected.entry,opened) || retainedSave?.family === "item_create" && retainedSave.attempted) return;
     cancellationUnknown = Object.freeze({...selected.entry}); hideConfirmation(); controls();
     const reply = await transmit(selected.context,"/items/pending/cancel",{project_id:selected.context.id,intent_handle:selected.entry.intent_handle});
     if (!reply) return;
     require(reply.status === 200 && keys(reply.data,["entry"]));
     const entry = pendingSummary(reply.data.entry,selected.context);
-    require(sameEntry(entry,selected.entry) && entry.state !== "prepared"); observeTerminal(entry); showEntry(entry);
+    require(sameEntry(entry,selected.entry) && entry.state !== "prepared"); showEntry(entry);
     message(entry.state === "completed" ? "Creation is already recorded. Cancellation did not undo it; read its current item separately." : "Saved request is " + entry.state + ". No replacement was registered.");
   }
+  el("item-edit-start").addEventListener("click",() => action(beginEdit));
+  el("item-edit-form").addEventListener("submit",event => { event.preventDefault(); action(saveEdit); });
+  el("item-edit-estimate-action").addEventListener("change",() => controls());
+  el("item-edit-check").addEventListener("click",() => action(() => operateRetained("check")));
+  el("item-edit-retry").addEventListener("click",() => action(() => operateRetained("retry")));
+  el("item-edit-read-current").addEventListener("click",() => action(() => { const target = retainedSave || receiptTarget; return target && project?.id === target.project && read(project,target.item); }));
+  el("item-edit-forget").addEventListener("click",() => action(async () => {
+    const retained = retainedSave; if (!retained || !await saveBinding(retained)) return;
+    retainedSave = null; retryClosed = false; abandonedSave = true;
+    el("item-recovery-status").textContent = "Stopped tracking this save. It may already have completed or may still commit; this does not cancel it or prove rollback."; controls();
+  }));
   el("item-new-request").addEventListener("click",() => action(beginCreation));
   el("item-kind").addEventListener("change",() => action(async () => renderType()));
   el("item-create-form").addEventListener("submit",event => { event.preventDefault(); action(registerCreation); });
   el("item-dismiss-save").addEventListener("click",() => action(async () => { if (!await checkedContext(project)) return; registrationUnknown = false; controls(); message("Earlier save warning dismissed at your request. No request was proved rejected and no identities were merged."); }));
+  el("pending-execute").addEventListener("click",() => action(() => selectedCreation("retry")));
+  el("pending-reconcile").addEventListener("click",() => action(() => selectedCreation("check")));
   el("pending-open-selected").addEventListener("click",() => action(() => opened && inspect(project,opened)));
   el("pending-cancel").addEventListener("click",() => {
-    if (!project || !opened || opened.state !== "prepared" || cancellationUnknown && !sameEntry(cancellationUnknown,opened)) return;
+    if (!project || !opened || opened.state !== "prepared" || retainedSave?.family === "item_create" && retainedSave.attempted || cancellationUnknown && !sameEntry(cancellationUnknown,opened)) return;
     confirmation = {context:project,entry:Object.freeze({...opened})}; el("pending-cancel-confirmation").hidden = false; controls();
   });
   el("pending-keep-request").addEventListener("click",() => { hideConfirmation(); controls(); });

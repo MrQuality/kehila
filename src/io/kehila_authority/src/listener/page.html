@@ -41,10 +41,21 @@
     </div>
     <pre id="project-result"></pre>
   </section>
+  <section id="item-recovery" hidden>
+    <h2>Item save outcomes</h2>
+    <p id="item-save-scope"></p>
+    <p id="item-recovery-status" role="status" aria-live="polite"></p>
+    <p>Edit recovery is kept in this page's memory. Reloading or closing the page loses that record; it never retries a save automatically. Saved creation requests remain discoverable on the server.</p>
+    <button id="item-edit-check" type="button" disabled>Check this save's recorded outcome</button>
+    <button id="item-edit-retry" type="button" disabled>Retry this exact save</button>
+    <button id="item-edit-read-current" type="button" disabled>Read current item separately</button>
+    <button id="item-edit-forget" type="button" disabled>Stop tracking this save</button>
+    <dl id="item-mutation-receipt"></dl>
+  </section>
   <section id="work-items" hidden>
     <h2>WorkItems in <span id="items-project"></span></h2>
     <p id="items-status" role="status" aria-live="polite"></p>
-    <p>Browse current items or save a creation request. Saving does not create an item. Execution and editing controls are still being prepared.</p>
+    <p>Browse current items, save a creation request, or explicitly edit a current item. Saving a creation request does not create an item.</p>
     <p id="item-uncertainty" role="status" aria-live="polite"></p>
     <button id="item-dismiss-save" type="button" hidden>Dismiss the earlier unconfirmed-save warning</button>
     <p><button id="item-new-request" type="button">Start a separate item request</button></p>
@@ -61,12 +72,22 @@
       <button id="items-older" type="button" disabled>Older items</button></p>
     <ul id="item-rows"></ul>
     <dl id="item-detail"></dl>
+    <button id="item-edit-start" type="button" disabled>Edit the current item</button>
+    <form id="item-edit-form" hidden>
+      <p>Keep leaves a value unchanged. Set saves the exact text shown; clear removes an optional value. A save keeps the item and configuration versions read here.</p>
+      <label>Estimate action <select id="item-edit-estimate-action"><option value="keep">Keep</option><option value="set">Set</option><option value="clear">Clear</option></select></label>
+      <label>Estimate <input id="item-edit-estimate" type="text" inputmode="decimal" autocomplete="off"></label>
+      <div id="item-edit-fields"></div>
+      <button id="item-edit-save">Save item edit</button>
+    </form>
     <h3>Saved item creation requests</h3>
     <p><button id="pending-refresh" type="button">Refresh saved item requests</button>
       <button id="pending-older" type="button" disabled>Older saved item requests</button></p>
     <ul id="pending-rows"></ul>
     <dl id="pending-detail"></dl>
     <p><button id="pending-open-selected" type="button" disabled>Inspect selected saved request</button>
+      <button id="pending-execute" type="button" disabled>Create this saved item</button>
+      <button id="pending-reconcile" type="button" disabled>Check its recorded creation</button>
       <button id="pending-cancel" type="button" disabled>Cancel this saved request</button>
       <button id="pending-check-cancel" type="button" disabled>Check the unconfirmed cancellation</button>
       <button id="pending-stop-tracking" type="button" disabled>Stop tracking this unconfirmed cancellation</button></p>

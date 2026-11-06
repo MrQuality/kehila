@@ -329,7 +329,7 @@ fn pending_item_lifecycle_is_a_closed_authenticated_browser_surface() {
         *wrong_method.method_mut() = Method::GET;
         assert!(profile().admit(&wrong_method).is_err());
     }
-    let mut unimplemented = browser(Method::POST, "/items/pending/execute");
+    let mut unimplemented = browser(Method::POST, "/items/pending/unknown");
     cookie(&mut unimplemented, SESSION);
     assert!(matches!(
         profile().admit(&unimplemented),
@@ -382,5 +382,47 @@ fn pending_item_large_body_allowance_is_only_for_registration() {
             ),
             "{path}"
         );
+    }
+}
+
+#[test]
+fn item_mutation_and_reconciliation_routes_share_browser_security_and_exact_body_caps() {
+    for path in [
+        "/items/pending/execute",
+        "/items/pending/reconcile",
+        "/items/edit",
+        "/items/reconcile",
+    ] {
+        let mut request = browser(Method::POST, path);
+        cookie(&mut request, SESSION);
+        let admitted = profile().admit(&request).unwrap();
+        let Route::ItemMutation(route) = admitted.route else {
+            panic!("mutation route not selected")
+        };
+        for name in ["origin", CSRF, "sec-fetch-site", "cookie"] {
+            let mut missing = request.clone();
+            missing.headers_mut().remove(name);
+            assert!(profile().admit(&missing).is_err(), "{path} missing {name}");
+        }
+        let mut oversized = request.clone();
+        oversized.headers_mut().insert(
+            header::CONTENT_LENGTH,
+            (route.body_limit() + 1).to_string().parse().unwrap(),
+        );
+        assert_eq!(
+            profile().admit(&oversized).err(),
+            Some(StatusCode::PAYLOAD_TOO_LARGE)
+        );
+        let mut bounded = request.clone();
+        bounded.headers_mut().insert(
+            header::CONTENT_LENGTH,
+            route.body_limit().to_string().parse().unwrap(),
+        );
+        assert!(profile().admit(&bounded).is_ok());
+        let mut native = cli(Method::POST, path);
+        bearer(&mut native);
+        assert!(profile().admit(&native).is_err());
+        *request.method_mut() = Method::GET;
+        assert!(profile().admit(&request).is_err());
     }
 }

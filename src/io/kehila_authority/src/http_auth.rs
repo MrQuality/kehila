@@ -26,6 +26,7 @@ pub(crate) enum Route {
     RevokeOthers(Kind),
     Project(crate::native_ingress::Route),
     Item(crate::item_ingress::Route),
+    ItemMutation(crate::item_mutation_ingress::Route),
     ItemPending(crate::item_pending::ingress::Route),
 }
 
@@ -184,6 +185,18 @@ impl Profile {
                 Kind::Browser,
                 true,
             ),
+            (&Method::POST, path)
+                if crate::item_mutation_ingress::Route::from_path(path).is_some() =>
+            {
+                (
+                    Route::ItemMutation(
+                        crate::item_mutation_ingress::Route::from_path(path)
+                            .ok_or(StatusCode::NOT_FOUND)?,
+                    ),
+                    Kind::Browser,
+                    true,
+                )
+            }
             (&Method::POST, path) if path.starts_with("/items/pending/") => (
                 Route::ItemPending(
                     crate::item_pending::ingress::Route::from_path(path)
@@ -213,6 +226,7 @@ impl Profile {
         };
         let body_limit = match route {
             Route::ItemPending(route) => route.body_limit(),
+            Route::ItemMutation(route) => route.body_limit(),
             _ => BODY_LIMIT,
         };
         if length > body_limit {
@@ -265,6 +279,7 @@ impl Profile {
                     | Route::RevokeOthers(_)
                     | Route::Project(_)
                     | Route::Item(_)
+                    | Route::ItemMutation(_)
                     | Route::ItemPending(_)
                         if cookies.session.is_some() => {}
                     _ => return Err(StatusCode::UNAUTHORIZED),

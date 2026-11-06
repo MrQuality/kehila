@@ -296,6 +296,17 @@ never execute. Retired changed requests still conflict. Production compactor
 implementation and supported backup/restore remain separate; native owner-only
 retirement and restored-identity fixtures qualify the bounded route semantics.
 
+The maintainer accepted this replay-expiry authorization boundary on 2026-11-06:
+after historical decoding and complete response admission, perform a final
+trusted database-clock expiry check immediately before handing the prepared
+response to transport. Replay must be unexpired at that authorization point.
+An authorized response may finish transmission after the replay deadline;
+subsequent expiry or a database-clock change does not retract that authorization.
+Continue checking live-session eligibility, revocation and the original monotonic
+request deadline through delivery. The original 90-day deadline, original-grant
+requirements, retirement rules and permanent operation identity remain in force.
+This clarification does not permit an expired or retired identity to execute again.
+
 Individual reads and lists use a fresh coherent authorized snapshot and final
 live session/monotonic-expiry check before response release. Project lists here
 are WorkItems of one authorized project: keyset pagination by issued sequence,

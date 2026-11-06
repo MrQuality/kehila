@@ -41,6 +41,30 @@ pub(super) fn reply(status: u16, value: Value) -> Reply {
         business: status < 400,
     }
 }
+// Sealed admitted envelope. Item attempt packets construct it before mutation.
+#[derive(Clone)]
+pub(super) struct EncodedReply {
+    status: u16,
+    body: Arc<Zeroizing<Vec<u8>>>,
+    business: bool,
+}
+impl EncodedReply {
+    pub(super) fn encoded_len(&self) -> usize {
+        self.body.len()
+    }
+    #[cfg(test)]
+    pub(super) fn test_parts(&self) -> (u16, &[u8]) {
+        (self.status, self.body.as_slice())
+    }
+    pub(super) fn admit(reply: Reply) -> Result<Self, Error> {
+        let body = Arc::new(crate::project::wire::encode(&reply.value)?);
+        Ok(Self {
+            status: reply.status,
+            body,
+            business: reply.business,
+        })
+    }
+}
 impl Engine {
     pub(super) fn project_eligibility(
         &self,
@@ -67,7 +91,16 @@ impl Engine {
         deadline: Instant,
     ) -> Result<NativeDelivery, Error> {
         self.check(deadline)?;
-        let body = crate::project::wire::encode(&reply.value)?;
+        self.native_delivery_encoded(entry, fresh, EncodedReply::admit(reply)?, deadline)
+    }
+    pub(super) fn native_delivery_encoded(
+        &self,
+        entry: Arc<Session>,
+        fresh: Snapshot,
+        reply: EncodedReply,
+        deadline: Instant,
+    ) -> Result<NativeDelivery, Error> {
+        self.check(deadline)?;
         if !entry.eligible(&fresh, Instant::now())
             || (reply.business && !entry.successful_business(&fresh, Instant::now()))
         {
@@ -76,7 +109,7 @@ impl Engine {
         self.check(deadline)?;
         Ok(NativeDelivery {
             status: reply.status,
-            body: Arc::new(body),
+            body: reply.body,
             entry,
             snapshot: fresh,
             deadline,

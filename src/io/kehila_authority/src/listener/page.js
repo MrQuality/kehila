@@ -13,23 +13,28 @@
     signedIn = name === "session";
     for (const id of ["login", "session", "retiring"]) element(id).hidden = id !== name;
   };
-  async function request(path, data) {
+  async function exchange(path, body) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5000);
     try {
       const headers = {"x-kehila-client": "browser"};
-      if (data !== undefined) {
+      if (body !== undefined) {
         headers["content-type"] = "application/json";
         headers["x-kehila-csrf"] = csrf;
       }
       const response = await fetch(path, {
-        method: data === undefined ? "GET" : "POST", headers,
-        body: data === undefined ? undefined : JSON.stringify(data),
+        method: body === undefined ? "GET" : "POST", headers,
+        body,
         credentials: "same-origin", cache: "no-store", redirect: "error", signal: controller.signal
       });
       return {status: response.status, data: await jsonBody(response)};
     } finally { clearTimeout(timer); }
   }
+  const request = (path, data) => exchange(path, data === undefined ? undefined : JSON.stringify(data));
+  const requestWire = (path, wire) => {
+    if (typeof wire !== "string") throw new Error("Retained request encoding unavailable.");
+    return exchange(path, wire);
+  };
   async function refresh() {
     csrf = null; clearProjects(false);
     const proof = await request("/auth/browser/csrf");
@@ -155,6 +160,7 @@
       throw new Error("The installation or owner changed. Old selections were discarded. Reload and sign in again.");
     }
     binding = reply.data;
+    return Object.freeze({installation_id:binding.installation_id,actor_id:binding.actor_id});
   }
   function choose(entry, observed = false) {
     workItems.clear();
@@ -270,6 +276,6 @@
     workItems.useProject(reply.data, projectId);
     projectStatus("Current project and configuration read under fresh server authority.");
   }));
-  const workItems = KehilaWorkItems({document, request, run: projectAction, checkBinding});
+  const workItems = KehilaWorkItems({document, request, requestWire, run: projectAction, checkBinding});
   action(refresh);
 })();

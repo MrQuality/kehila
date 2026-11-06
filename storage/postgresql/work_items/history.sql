@@ -147,8 +147,10 @@ $$;
 CREATE TRIGGER item_field_use_reference BEFORE INSERT ON kehila.item_field_uses
   FOR EACH ROW EXECUTE FUNCTION kehila.check_item_field_use();
 
+-- Deferred checks can run after the save entry has returned to the serving
+-- role. Validate private first-use evidence with the schema owner's authority.
 CREATE FUNCTION kehila.check_item_revision_uses() RETURNS trigger
-LANGUAGE plpgsql SET search_path = pg_catalog, kehila, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, kehila, pg_temp AS $$
 DECLARE data_values jsonb; entry jsonb;
 BEGIN
   data_values := NEW.history #> '{value,result,value,data,values}';

@@ -39,7 +39,8 @@ DO $$ BEGIN
   END IF;
   IF has_table_privilege('kehila_auth_runtime','kehila_auth.pending_items','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
     OR NOT has_table_privilege('kehila_auth_runtime','kehila_auth.item_pending_policy','SELECT')
-    OR has_function_privilege('kehila_auth_runtime','kehila_auth.save_item_create(kehila_auth.authority,kehila.ident,kehila_auth.intent_key,bytea,kehila_auth.item_preparation,jsonb)','EXECUTE')
+    OR NOT has_function_privilege('kehila_auth_runtime','kehila_auth.save_item_create(kehila_auth.authority,kehila.ident,kehila_auth.intent_key,bytea,kehila_auth.item_preparation,jsonb)','EXECUTE')
+    OR has_function_privilege('kehila_auth_runtime','kehila_auth.item_write_fence(kehila_auth.authority,kehila.ident)','EXECUTE')
     OR EXISTS(SELECT FROM pg_stat_activity WHERE datname=current_database() AND usename='kehila_auth_runtime_login')
     OR EXISTS(SELECT FROM pg_locks WHERE locktype='advisory'
       AND database=(SELECT oid FROM pg_database WHERE datname=current_database())

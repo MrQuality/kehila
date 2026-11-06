@@ -10,6 +10,7 @@ macro_rules! proof { () => {
 }; }
 mod item_pending;
 mod item_read;
+pub(super) mod item_write;
 mod read;
 mod replay;
 mod write;

@@ -13,11 +13,9 @@ pub(crate) struct Item {
 }
 
 impl Fenced<'_, ReadProof> {
-    pub(crate) async fn read_items(
-        &mut self,
-        input: crate::item_ingress::Input,
-    ) -> Result<serde_json::Value> {
-        let project = input.project();
+    // The coherent initial_owner profile grants Read/CreateItem/EditItem
+    // together. New profiles must revisit this shared scope authorization.
+    pub(crate) async fn authorize_item_scope(&mut self, project: &str) -> Result<()> {
         let a = &self.authority;
         let proof = [
             a.installation.clone(),
@@ -41,6 +39,14 @@ impl Fenced<'_, ReadProof> {
             return Err(NativeError::Integrity);
         }
         drop(authority);
+        Ok(())
+    }
+    pub(crate) async fn read_items(
+        &mut self,
+        input: crate::item_ingress::Input,
+    ) -> Result<serde_json::Value> {
+        let project = input.project();
+        self.authorize_item_scope(project).await?;
         let current = self.read_project(project).await?;
         match input {
             crate::item_ingress::Input::Read { item, .. } => {
@@ -81,9 +87,9 @@ impl Fenced<'_, ReadProof> {
     }
 }
 
-struct Stored {
-    operation: i64,
-    revision: Revision,
+pub(super) struct Stored {
+    pub(super) operation: i64,
+    pub(super) revision: Revision,
 }
 impl Stored {
     fn bind_project(&self, current: &Project) -> Result<()> {
@@ -103,7 +109,7 @@ impl Stored {
     }
 }
 
-fn historical_project(saved: &Project, current: &Project) -> Result<()> {
+pub(super) fn historical_project(saved: &Project, current: &Project) -> Result<()> {
     // This exact fresh profile has no metadata/configuration writer. Before
     // exposing one, compare each revision with its retained historical snapshot
     // instead. Only allocation and the monotonic estimate flag can differ here.
@@ -200,8 +206,29 @@ fn stored(row: Row, project: &str, item: &str, version: u64) -> Result<Stored> {
     })
 }
 
+// Owned bounded driver data only: no client, transaction or database guard.
+// Decode on the owned CPU lane after the snapshot has been rolled back.
+// The Row retains its bounded driver buffer until decode finishes; this is
+// separate from the temporary String and typed revision allocated by stored().
+pub(super) struct HistoricalRecord {
+    row: Row,
+    project: String,
+    item: String,
+    version: u64,
+}
+impl HistoricalRecord {
+    pub(super) fn decode(self) -> Result<Stored> {
+        stored(self.row, &self.project, &self.item, self.version)
+    }
+}
+
 impl<P> Fenced<'_, P> {
-    async fn item_revision(&mut self, project: &str, item: &str, version: u64) -> Result<Stored> {
+    pub(super) async fn historical_item_revision(
+        &mut self,
+        project: &str,
+        item: &str,
+        version: u64,
+    ) -> Result<HistoricalRecord> {
         let rows = self
             .rows(
                 include_str!("item_revision.sql"),
@@ -213,14 +240,25 @@ impl<P> Fenced<'_, P> {
         if rows.next().is_some() {
             return Err(NativeError::Integrity);
         }
-        stored(row, project, item, version)
+        Ok(HistoricalRecord {
+            row,
+            project: project.into(),
+            item: item.into(),
+            version,
+        })
+    }
+
+    async fn item_revision(&mut self, project: &str, item: &str, version: u64) -> Result<Stored> {
+        self.historical_item_revision(project, item, version)
+            .await?
+            .decode()
     }
 
     pub(super) async fn verify_operational_head(
         &mut self,
         project: &Project,
         creation: i64,
-    ) -> Result<()> {
+    ) -> Result<(u64, i64)> {
         let id = &project.id.0;
         let rows = self.rows("SELECT h.state_version::numeric(20,0)::text,h.operation_row_id, \
           r.item_id::text,r.item_version::numeric(20,0)::text, \
@@ -258,7 +296,7 @@ impl<P> Fenced<'_, P> {
             {
                 return Err(NativeError::Integrity);
             }
-            return Ok(());
+            return Ok((state, operation));
         }
         let item = item.ok_or(NativeError::Integrity)?;
         let version = scalar(version.ok_or(NativeError::Integrity)?)?;
@@ -277,7 +315,7 @@ impl<P> Fenced<'_, P> {
         {
             return Err(NativeError::Integrity);
         }
-        Ok(())
+        Ok((state, operation))
     }
 
     pub(super) async fn current_item(
@@ -285,6 +323,18 @@ impl<P> Fenced<'_, P> {
         current_project: &Project,
         item: &str,
     ) -> Result<Item> {
+        let (stored, readable) = self.current_item_record(current_project, item).await?;
+        Ok(Item {
+            result: stored.revision.result,
+            readable,
+        })
+    }
+
+    pub(super) async fn current_item_record(
+        &mut self,
+        current_project: &Project,
+        item: &str,
+    ) -> Result<(Stored, task_contract::project::ReadableId)> {
         let project = current_project.id.0.as_str();
         let rows = self.rows("SELECT current_version::numeric(20,0)::text,issued_prefix::text, \
           issued_sequence::numeric(20,0)::text,creation_operation_row_id, \
@@ -312,10 +362,10 @@ impl<P> Fenced<'_, P> {
         if first.operation != creation {
             return Err(NativeError::Integrity);
         }
-        let SavedResult::Create(first) = first.revision.result else {
+        let SavedResult::Create(first_result) = &first.revision.result else {
             return Err(NativeError::Integrity);
         };
-        let readable = first.readable_id.clone();
+        let readable = first_result.readable_id.clone();
         if readable.project_id.0 != project
             || readable.item_id.0 != item
             || readable.prefix != prefix
@@ -324,38 +374,32 @@ impl<P> Fenced<'_, P> {
         {
             return Err(NativeError::Integrity);
         }
-        if first.project.prefix != readable.prefix
-            || Some(first.project.next_sequence) != readable.sequence.checked_add(1)
+        if first_result.project.prefix != readable.prefix
+            || Some(first_result.project.next_sequence) != readable.sequence.checked_add(1)
         {
             return Err(NativeError::Integrity);
         }
         if version == 1 {
-            return Ok(Item {
-                result: SavedResult::Create(first),
-                readable,
-            });
+            return Ok((first, readable));
         }
-        let original_item = first.item.clone();
+        let original_item = first_result.item.clone();
         drop(first);
         let current = self.item_revision(project, item, version).await?;
         current.bind_project(current_project)?;
         if current.item().version != version {
             return Err(NativeError::Integrity);
         }
-        let SavedResult::Edit(current) = current.revision.result else {
+        let SavedResult::Edit(current_result) = &current.revision.result else {
             return Err(NativeError::Integrity);
         };
-        if current.item.type_id != original_item.type_id
-            || current.item.workflow_id != original_item.workflow_id
-            || current.item.status_id != original_item.status_id
-            || current.item.archived != original_item.archived
+        if current_result.item.type_id != original_item.type_id
+            || current_result.item.workflow_id != original_item.workflow_id
+            || current_result.item.status_id != original_item.status_id
+            || current_result.item.archived != original_item.archived
         {
             return Err(NativeError::Integrity);
         }
-        Ok(Item {
-            result: SavedResult::Edit(current),
-            readable,
-        })
+        Ok((current, readable))
     }
 }
 

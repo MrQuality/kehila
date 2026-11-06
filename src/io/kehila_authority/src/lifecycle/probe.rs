@@ -29,6 +29,8 @@ pub(crate) struct Probe {
     transaction_gate: Mutex<Option<TransactionHold>>,
     sql_state: Mutex<Option<String>>,
     registration_identities: Mutex<Option<crate::item_pending::Identities>>,
+    item_replay: Mutex<Option<ItemReplayObservation>>,
+    item_repreparations: AtomicUsize,
 }
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub(crate) enum Point {
@@ -39,6 +41,19 @@ pub(crate) enum Point {
     ReadSnapshot,
     RegistrationRollback,
     PendingCommit,
+    ItemBeforeCommit,
+    ItemMutationPrepared,
+    ItemHistoryLoaded,
+    ItemReplayFenced,
+    ItemReplayCleanup,
+}
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ItemReplayObservation {
+    Prepared,
+    Authorized,
+    Expired,
+    BeforeOrigin,
+    RollbackFailed,
 }
 struct TransactionHold {
     request_id: i64,
@@ -51,6 +66,18 @@ pub(crate) struct TransactionGate {
     pub(crate) release: tokio::sync::oneshot::Sender<()>,
 }
 impl Probe {
+    pub(crate) fn item_reprepared(&self) {
+        self.item_repreparations.fetch_add(1, Ordering::SeqCst);
+    }
+    pub(crate) fn item_repreparations(&self) -> usize {
+        self.item_repreparations.load(Ordering::SeqCst)
+    }
+    pub(crate) fn record_item_replay(&self, value: ItemReplayObservation) {
+        *self.item_replay.lock().unwrap() = Some(value);
+    }
+    pub(crate) fn take_item_replay(&self) -> Option<ItemReplayObservation> {
+        self.item_replay.lock().unwrap().take()
+    }
     pub(crate) fn registration_identities(
         &self,
         identities: crate::item_pending::Identities,

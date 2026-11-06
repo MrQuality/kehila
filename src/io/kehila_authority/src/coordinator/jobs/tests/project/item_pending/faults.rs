@@ -320,6 +320,12 @@ pub(super) async fn profiles(ctx: &Context<'_>) {
         "kehila_auth.list_pending_items(kehila_auth.authority,kehila.ident,bigint)",
         "kehila_auth.open_pending_item(kehila_auth.authority,kehila.ident,kehila_auth.intent_key)",
         "kehila_auth.cancel_item(kehila_auth.authority,kehila.ident,kehila_auth.intent_key)",
+        "kehila_auth.reconcile_item_create(kehila_auth.authority,kehila.ident,kehila_auth.intent_key)",
+        "kehila_auth.reconcile_item_edit(kehila_auth.authority,kehila.ident,kehila.ident,kehila.operation_token,bigint,bytea)",
+        "kehila_auth.save_item_create(kehila_auth.authority,kehila.ident,kehila_auth.intent_key,bytea,kehila_auth.item_preparation,jsonb)",
+        "kehila_auth.save_item_edit(kehila_auth.authority,kehila.ident,kehila.ident,kehila.operation_token,bytea,kehila_auth.item_preparation,jsonb)",
+        "kehila_auth.authorize_item_replay(kehila_auth.authority,kehila.ident,text,kehila.ident,kehila.operation_token,bigint,bigint,bytea,kehila.u64,kehila.u64,bigint,kehila.u64,kehila_auth.intent_key)",
+
     ];
     for (i, function) in functions.iter().enumerate() {
         ctx.admin
@@ -351,7 +357,7 @@ pub(super) async fn profiles(ctx: &Context<'_>) {
         ("GRANT SELECT ON kehila_auth.pending_items TO kehila_auth_runtime","REVOKE SELECT ON kehila_auth.pending_items FROM kehila_auth_runtime"),
         ("ALTER FUNCTION kehila_auth.open_pending_item(kehila_auth.authority,kehila.ident,kehila_auth.intent_key) OWNER TO kehila_auth_admin","ALTER FUNCTION kehila_auth.open_pending_item(kehila_auth.authority,kehila.ident,kehila_auth.intent_key) OWNER TO kehila_owner"),
         ("ALTER FUNCTION kehila_auth.open_pending_item(kehila_auth.authority,kehila.ident,kehila_auth.intent_key) SECURITY INVOKER","ALTER FUNCTION kehila_auth.open_pending_item(kehila_auth.authority,kehila.ident,kehila_auth.intent_key) SECURITY DEFINER"),
-        ("GRANT EXECUTE ON FUNCTION kehila_auth.save_item_create(kehila_auth.authority,kehila.ident,kehila_auth.intent_key,bytea,kehila_auth.item_preparation,jsonb) TO kehila_auth_runtime","REVOKE EXECUTE ON FUNCTION kehila_auth.save_item_create(kehila_auth.authority,kehila.ident,kehila_auth.intent_key,bytea,kehila_auth.item_preparation,jsonb) FROM kehila_auth_runtime"),
+        ("GRANT EXECUTE ON FUNCTION kehila_auth.item_write_fence(kehila_auth.authority,kehila.ident) TO kehila_auth_runtime","REVOKE EXECUTE ON FUNCTION kehila_auth.item_write_fence(kehila_auth.authority,kehila.ident) FROM kehila_auth_runtime"),
     ].into_iter().enumerate() {
         ctx.admin.client().batch_execute(change).await.unwrap();
         if i>=2 {assert!(ctx.admin.client().query_one("SELECT has_function_privilege('kehila_auth_runtime','kehila_auth.open_pending_item(kehila_auth.authority,kehila.ident,kehila_auth.intent_key)','EXECUTE')",&[]).await.unwrap().get::<_,bool>(0));}

@@ -37,6 +37,7 @@ class FailureMetadataTests(unittest.TestCase):
                 'owned_job private_label elapsed_us=42\n'
                 'owned_job login elapsed_us=123\n'
                 'owned_job item_pending elapsed_us=321\n'
+                'owned_job item_mutation elapsed_us=456\n'
                 'panicked at /private/DO_NOT_EMIT.rs:9:2\n'
                 'panicked at src/coordinator/jobs/tests/unknown_commit.rs:95:13\n')
         result = fixture.failure_metadata('auth-unknown', 101, text, True, False)
@@ -44,7 +45,8 @@ class FailureMetadataTests(unittest.TestCase):
         self.assertNotIn('DO_NOT_EMIT', encoded)
         self.assertNotIn('private_label', encoded)
         self.assertEqual(result['jobs'], [{'operation': 'login', 'elapsed_us': 123},
-                                         {'operation': 'item_pending', 'elapsed_us': 321}])
+                                         {'operation': 'item_pending', 'elapsed_us': 321},
+                                         {'operation': 'item_mutation', 'elapsed_us': 456}])
         self.assertEqual(result['public_panic_location'], {
             'source': 'src/io/kehila_authority/src/coordinator/jobs/tests/unknown_commit.rs',
             'line': 95, 'column': 13})

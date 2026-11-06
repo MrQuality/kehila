@@ -6,6 +6,9 @@ DO $$ BEGIN
     OR (SELECT count(*) FROM kehila.operations)<>32
     OR (SELECT count(*) FROM kehila.operation_payloads)<>32
     OR (SELECT count(*) FROM kehila_auth.pending_items WHERE state='completed')<>20
+    OR (SELECT count(*) FROM kehila_auth.pending_items)<>21
+    OR (SELECT count(*) FROM kehila_auth.pending_items WHERE state='cancelled' AND target_item_id='factory-target' AND request_bytes IS NULL)<>1
+    OR EXISTS(SELECT FROM kehila_auth.pending_items WHERE state='prepared')
     OR (SELECT count(*) FROM kehila.project_operational_heads WHERE state_version=30)<>1
     OR (SELECT count(*) FROM kehila.projects WHERE next_sequence=21 AND ever_estimated)<>1
     OR NOT EXISTS(SELECT FROM kehila.projects p JOIN kehila.project_operational_heads h USING(project_id)

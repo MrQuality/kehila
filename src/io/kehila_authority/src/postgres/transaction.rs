@@ -3,7 +3,19 @@
 use super::*;
 use crate::session::Kind;
 use tokio_postgres::{types::ToSql, Transaction};
+#[cfg(test)]
+pub(super) mod fixture;
 mod native;
+pub(crate) use native::item_write::{
+    Admitted as AdmittedItem, Canonical as CanonicalItem, Disposition as ItemDisposition,
+    Draft as ItemDraft, HistoricalAccepted as ItemHistoricalAccepted,
+    HistoricalDraft as ItemHistoricalDraft, HistoryAuthorization as ItemHistoryAuthorization,
+    HistoryPreparation as ItemHistoryPreparation,
+    HistoryReleaseFailure as ItemHistoryReleaseFailure, Preparation as ItemPreparation,
+    PreparationError as ItemAdmissionError, ReplayRequest as ItemReplayRequest,
+    Resolved as ItemResolution, RetryIdentity as ItemRetryIdentity, SaveOutcome as ItemSaveOutcome,
+    WriteConflict as ItemWriteConflict, WriteFailure as ItemWriteFailure,
+};
 pub(crate) use native::{Current, Item, NativeError, Pending, Replay, State as PendingState};
 
 const FENCE: &str = "SELECT installation_id::text, owner_actor_id::text, runtime_generation::text, auth_generation::text, verifier_revision::text FROM kehila_auth.fence($1::text::kehila.ident, $2::text::kehila.u64, $3::text::kehila.u64, $4::text::kehila.u64)";
@@ -24,6 +36,11 @@ enum Expected<'a> {
 
 pub(crate) enum PasswordProof {}
 pub(crate) enum SessionProof {}
+// Constructed only on a fresh RC/session fence. No conversion from a general
+// transaction, so earlier project mutations cannot accompany an item commit.
+pub(crate) enum ItemWriteProof {}
+// Fresh nonmutating replay authorization; no conversion from a prior writer.
+pub(crate) enum ItemReplayProof {}
 pub(crate) enum ReadProof {}
 
 pub(crate) struct Fenced<'a, P> {
@@ -132,6 +149,42 @@ impl Database {
         )
         .await
     }
+    pub(crate) async fn fenced_item_write(
+        &mut self,
+        installation: &str,
+        runtime: u64,
+        authentication: u64,
+        deadline: Instant,
+    ) -> Result<Fenced<'_, ItemWriteProof>, DbError> {
+        self.fenced(
+            Expected::Session {
+                installation,
+                runtime,
+                authentication,
+            },
+            deadline,
+        )
+        .await
+    }
+
+    pub(crate) async fn fenced_item_replay(
+        &mut self,
+        installation: &str,
+        runtime: u64,
+        authentication: u64,
+        deadline: Instant,
+    ) -> Result<Fenced<'_, ItemReplayProof>, DbError> {
+        self.fenced(
+            Expected::Session {
+                installation,
+                runtime,
+                authentication,
+            },
+            deadline,
+        )
+        .await
+    }
+
     async fn fenced<P>(
         &mut self,
         expected: Expected<'_>,

@@ -211,6 +211,18 @@ impl Worker {
         self.retain_preparation_admission(permit)?;
         Ok(pending)
     }
+    // Bounded owned preparation shares this worker and the original serving
+    // allowance. Producers supply owned work only after releasing DB ownership.
+    pub(crate) fn owned_preparation<T: Send + 'static>(
+        &mut self,
+        deadline: Instant,
+        permit: Arc<OwnedSemaphorePermit>,
+        work: impl FnOnce() -> T + Send + 'static,
+    ) -> Result<HashPending<T>, WorkerError> {
+        let pending = self.start(deadline, move |_| Ok(work()))?;
+        self.retain_preparation_admission(permit)?;
+        Ok(pending)
+    }
     pub(crate) fn item_registration_identities(
         &mut self,
         deadline: Instant,

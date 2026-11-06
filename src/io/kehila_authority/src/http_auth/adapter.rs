@@ -316,6 +316,7 @@ fn encode(
         (_, Err(error)) => return Err(error),
         (Route::Project(_), Ok(Output::Project(delivery)))
         | (Route::Item(_), Ok(Output::Item(delivery)))
+        | (Route::ItemMutation(_), Ok(Output::Item(delivery)))
         | (Route::ItemPending(_), Ok(Output::Item(delivery))) => {
             let material = delivery.material()?;
             return Ok(response(
@@ -427,6 +428,34 @@ pub(crate) async fn handle<B: Body<Data = Bytes> + Unpin>(
                 csrf: admitted.csrf,
             };
             match jobs.submit(Operation::Item { credential, input }, deadline) {
+                Ok(receiver) => receiver,
+                Err(error) => return application_failure(error, true),
+            }
+        }
+        Route::ItemMutation(route) => {
+            let input = match crate::item_mutation_ingress::decode(route, &body) {
+                Ok(input) => input,
+                Err(_) => return failure(StatusCode::BAD_REQUEST, false),
+            };
+            drop(body);
+            let Some(bearer) = admitted.bearer else {
+                return failure(StatusCode::UNAUTHORIZED, false);
+            };
+            let credential = Credential {
+                bearer,
+                kind: Kind::Browser,
+                csrf: admitted.csrf,
+            };
+            let preparation = match jobs.prepare_item_mutation(credential, input, deadline) {
+                Ok(value) => value,
+                Err(error) => return application_failure(error, true),
+            };
+            let prepared = match timeout_at(TokioInstant::from_std(deadline), preparation).await {
+                Ok(Ok(Ok(value))) => value,
+                Ok(Ok(Err(error))) => return application_failure(error, true),
+                _ => return failure(StatusCode::SERVICE_UNAVAILABLE, false),
+            };
+            match jobs.submit_prepared(prepared) {
                 Ok(receiver) => receiver,
                 Err(error) => return application_failure(error, true),
             }

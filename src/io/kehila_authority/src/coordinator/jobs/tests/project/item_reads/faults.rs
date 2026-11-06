@@ -80,7 +80,7 @@ pub(super) async fn exercise(
         ("INSERT INTO kehila.schema_migrations(version,description) VALUES(4,'unsupported fixture')", "DELETE FROM kehila.schema_migrations WHERE version=4"),
         ("GRANT UPDATE ON kehila.items TO kehila_auth_runtime", "REVOKE UPDATE ON kehila.items FROM kehila_auth_runtime"),
         ("REVOKE SELECT ON kehila.items FROM kehila_auth_runtime", "GRANT SELECT ON kehila.items TO kehila_auth_runtime"),
-        ("GRANT EXECUTE ON FUNCTION kehila_auth.save_item_create(kehila_auth.authority,kehila.ident,kehila_auth.intent_key,bytea,kehila_auth.item_preparation,jsonb) TO kehila_auth_runtime", "REVOKE EXECUTE ON FUNCTION kehila_auth.save_item_create(kehila_auth.authority,kehila.ident,kehila_auth.intent_key,bytea,kehila_auth.item_preparation,jsonb) FROM kehila_auth_runtime"),
+        ("GRANT EXECUTE ON FUNCTION kehila_auth.item_write_fence(kehila_auth.authority,kehila.ident) TO kehila_auth_runtime", "REVOKE EXECUTE ON FUNCTION kehila_auth.item_write_fence(kehila_auth.authority,kehila.ident) FROM kehila_auth_runtime"),
         ("ALTER FUNCTION kehila_auth.item_read_authority(kehila_auth.authority,kehila.ident) OWNER TO kehila_auth_admin", "ALTER FUNCTION kehila_auth.item_read_authority(kehila_auth.authority,kehila.ident) OWNER TO kehila_owner"),
     ].into_iter().enumerate() {
         admin.client().batch_execute(change).await.unwrap();

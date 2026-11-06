@@ -5,6 +5,73 @@ Status: Implementation; ADR-111 revision 3 explicitly accepted on 2026-11-04 at
 Baseline: `d6f8d3f563dbc8f9a242ec5abf779ab8e7142500`, 2026-11-04.
 Owners: M1-02/#27, operations #8, interface #10, authority #40 and storage #49.
 
+## Current implementation checkpoint (2026-11-06)
+
+The later source preparation adds serving routes for explicit creation execution,
+creation reconciliation, direct edits and edit reconciliation. The replay path
+loads bounded immutable history, releases its snapshot before tracked decoding
+and complete response admission, then obtains fresh replay-only authorization.
+The accepted delivery boundary is the final trusted database-clock check after
+that preparation and immediately before transport handoff. Subsequent expiry
+or clock movement does not retract an authorized reply; session eligibility and
+the original monotonic request deadline continue through delivery. Earlier
+checkpoint statements describing this decision as unresolved are historical.
+
+The interface source now includes explicit creation execution, saved-result
+checks and direct sparse editing. One bounded in-memory recovery record retains
+either the creation locator or the exact edit request and token. An unresolved
+save prevents replacement by another save. Checking a result never executes it;
+retry is explicit and preserves the original identity and bytes. Losing the
+client record remains outside direct-edit recovery, as accepted. Historical
+receipts remain separate from a fresh current item read.
+
+The serving mutation and recovery fixture passed in a fresh PostgreSQL database
+using the restricted runtime login. Its matching independent SQL observer also
+passed. An initial run exposed a deferred field-use validator executing without
+its required table authority; the corrected owner-defined validator retains its
+fixed search path and private execution boundary, with no additional runtime
+grants. Startup checks verify its owner and exact constraint-trigger binding.
+The passing native fixture covers
+both item types, actual socket-loss barriers, exact retries, stale conflicts and
+prepared-reply clock/session/deadline controls. The fixture source now also covers
+both retirement orderings, clock reversal after committed retirement, and actual
+rollback failure after terminating the exact held replay backend. Its state
+oracle permits only the two intended retirement flags and payload removals while
+requiring permanent identity/history and other domain artifacts to remain equal.
+The negative cleanup case requires an observed rollback failure and suppressed
+output; a timeout, panic or unrelated runtime failure cannot satisfy it. These
+controls passed within the focused native case. The two test-only replay gates
+distinguish fresh-fence acquisition from a known authorized transaction awaiting
+rollback; production builds contain neither wait.
+
+The same fixture now encodes controlled serving-path contention: a prepared
+Milestone is reprepared after a competing edit advances the project head;
+identical creation and edit requests replay one accepted result; changed content
+under an edit identity conflicts; a distinct edit expecting the old version
+cannot silently rebase; and cancellation competes with creation in both orders.
+Followers enter sequentially and their mutex attempts are observed while the
+winner is held. This tests one authority with serialized database entry. It
+claims neither parallel SQL writers nor repeated retry-exhaustion coverage.
+The cases reuse the two successful items and edits, adding one cancelled intent.
+They retain parent ownership of exchanges, original deadlines and canonical
+identity/state oracles. These cases passed within the focused native case.
+
+The fixture also composes recovery across successor runtimes. Its first restart
+precedes the first acknowledgement of a creation whose TCP reply was lost;
+discovery/Open retain the original locator, token, target and request. A later
+restart checks original creation/edit historical results after current state has
+advanced, along with the unchanged original Project saved result. Each transition
+joins/releases the previous owner before startup, checks generation and session
+replacement, and requires unchanged domain/history artifacts. This source adds
+no accepted operation or item and makes no supported-restore or edit-client-loss
+claim. Its startup, recovery and cleanup behavior passed within that case.
+
+The interface controller specifications and ordinary development checks remain
+pending. The native result covers finite controlled interleavings and simulated
+HTTP/TLS clients, rather than exhaustive concurrency or actual browser execution.
+Full qualification remains reserved for completion of the entire stated outcome.
+The PR remains draft; this checkpoint does not establish readiness or completion.
+
 ## Outcome and scope
 
 The maintainer selected this outcome on 2026-11-04: in a fresh development
