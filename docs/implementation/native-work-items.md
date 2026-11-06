@@ -85,7 +85,7 @@ are reused within scope; Proposed ADR-108/109 are not silently adopted.
 
 ## Delivery and review map
 
-### Owner interface: integrated source, qualification pending
+### Owner interface: local qualification complete
 
 The current interface component connects fresh authorized project reads to
 bounded item browsing, individual reads and saved creation-request discovery.
@@ -130,6 +130,27 @@ seconds through cleanup. Its embedded interface route compiled as part of that
 check. Minimum sampled available memory was 3.405865 GiB and peak aggregate
 working sets 3.017921 GiB, with no recorded warning or alert; the provider stopped.
 This does not establish actual browser behavior or replace the normal full gate.
+
+The normal full gate then passed on tree
+`07991c892803c2dd9e9a27fe598395c7c635bdac`, producing `c6d45ff`. It ran both
+interface test files, the ordinary authority/workspace controls, all thirteen
+native modes and service-backed task-path checks. All three owned service groups
+completed, the source matched and Git exited normally with its process tree
+joined. The provider stopped. Total time through cleanup was 564.671 seconds,
+minimum sampled available memory 2.564625 GiB and peak aggregate working sets
+3.961929 GiB, with no recorded warning or alert. This is component qualification,
+not completion of WorkItem execution, saved-result recovery or editing. Actual
+browser execution remains unqualified; final exact-head review and remote CI
+are separate publication prerequisites.
+
+At this milestone, review corrected an oracle-fidelity error: the stop-tracking
+controller's binding callback performs an authorization lookup, so an unchanged
+WorkItem request count could not prove absence of HTTP. The corrected test
+observes the binding port separately and passed. Expected-red evidence and
+subsequent successes remain distinct; no service failure is reclassified. Source
+preparation/review spans were not fully instrumented and overlapped verification,
+so no total engineering-time or causal performance-improvement claim is made.
+The broader delivery and its saved-result clock decision remain open.
 
 ### Creation-intent runtime checkpoint: local qualification complete
 
