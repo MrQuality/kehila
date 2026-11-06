@@ -33,6 +33,14 @@ AUTH_DATABASES = {
     'auth-read': 'native_auth_read',
     'auth-lifetime': 'native_auth_lifetime',
 }
+ITEM_FIXTURES = {
+    'item-write': ('native_item_write', 'native_item_write_state.sql'),
+    'item-read': ('native_item_read', 'native_item_read_state.sql'),
+    'item-pending': ('native_item_pending', 'native_item_pending_state.sql'),
+    'item-mutation': ('native_item_mutation', 'native_item_mutation_state.sql'),
+}
+ITEM_DATABASES = {mode: database for mode, (database, _) in ITEM_FIXTURES.items()}
+ITEM_OBSERVERS = {mode: observer for mode, (_, observer) in ITEM_FIXTURES.items()}
 
 
 def prepare(seconds):
@@ -91,6 +99,10 @@ def prepare(seconds):
 
 
 SPECS = {
+    'item-write': ('coordinator::jobs::tests::project::item_writes::native_item_write_identity_and_rollback', 'item-write-passed'),
+    'item-read': ('coordinator::jobs::tests::project::item_reads::native_authorized_item_reads', 'item-read-passed'),
+    'item-pending': ('coordinator::jobs::tests::project::item_pending::native_pending_creation_lifecycle', 'item-pending-passed'),
+    'item-mutation': ('coordinator::jobs::tests::project::item_mutations::native_item_mutation_execution_and_replay', 'item-mutation-passed'),
     'journey': (TEST, 'passed'),
     'clock': (CLOCK_TEST, 'clock-passed'),
     'restored': (RESTORE_TEST, 'restore-passed'),
@@ -109,7 +121,7 @@ def failure_metadata(mode, returncode, summary, marker_required, marker_present)
     # Only closed labels, numeric observations and known public source locations.
     modes = set(SPECS)
     labels = {'pre_session', 'pre_csrf', 'login', 'state', 'logout',
-              'password_change', 'revoke_others', 'project'}
+              'password_change', 'revoke_others', 'project', 'item', 'item_pending', 'item_mutation'}
     jobs = []
     for label, elapsed in re.findall(r'^owned_job ([a-z_]+) elapsed_us=([0-9]{1,12})$',
                                      summary, re.MULTILINE):
@@ -138,15 +150,16 @@ def failure_metadata(mode, returncode, summary, marker_required, marker_present)
 def journey(seconds, mode='journey'):
     test, marker = SPECS[mode]
     controls = WORK / 'controls'
-    if mode in AUTH_DATABASES:
+    databases = {**AUTH_DATABASES, **ITEM_DATABASES}
+    if mode in databases:
         controls /= mode
         controls.mkdir(mode=0o700)
     environment = dict(os.environ, AUTH001_DB_CONTROLS=str(controls))
-    if mode in AUTH_DATABASES:
-        environment['KEHILA_NATIVE_FIXTURE_DATABASE'] = AUTH_DATABASES[mode]
+    if mode in databases:
+        environment['KEHILA_NATIVE_FIXTURE_DATABASE'] = databases[mode]
     elif 'KEHILA_NATIVE_FIXTURE_DATABASE' in environment:
         raise ValueError('Unexpected authentication fixture database override')
-    if mode in {'journey', 'clock', 'restored'} or mode in AUTH_DATABASES:
+    if mode in {'journey', 'clock', 'restored'} or mode in databases:
         environment['KEHILA_NATIVE_FIXTURE_ADMIN_PASSWORD_FILE'] = str(WORK / 'postgres/admin-password')
     marker_path = controls / marker if marker else None
     if mode == 'auth-unknown' and marker_path.exists():

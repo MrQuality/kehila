@@ -2,7 +2,7 @@ SET ROLE kehila_owner;
 DO $$ DECLARE target text; BEGIN
   FOREACH target IN ARRAY ARRAY['operations','operation_payloads','projects','configuration_revisions',
     'project_grants','project_grant_events','statuses','workflows','workflow_statuses','workflow_phase_changes',
-    'work_item_types','type_workflows','fields'] LOOP
+    'work_item_types','type_workflows','fields','project_operational_heads'] LOOP
     EXECUTE format('DROP TRIGGER native_write_fault ON kehila.%I',target);
   END LOOP;
 END $$;

@@ -1,0 +1,26 @@
+{
+  "codec_version": 1,
+  "kind": "item_revision",
+  "value": {
+    "actor_id": "a", "configuration_revision": "1",
+    "project_state_version": "1", "previous_project_operation": "4",
+    "result": {
+      "codec_version": 1,
+      "kind": "item_create_result",
+      "value": {
+        "project": {
+          "id": "p", "name": "project", "prefix": "PR",
+          "configuration_revision": "1", "next_sequence": "2",
+          "archived": false, "estimate_unit": "hours", "ever_estimated": false
+        },
+        "item": {
+          "id": "i", "project_id": "p", "type_id": "task", "workflow_id": "wf",
+          "status_id": "new", "version": "1", "archived": false
+        },
+        "data": { "estimate": null, "values": [] },
+        "phase": "new",
+        "readable_id": { "project_id": "p", "item_id": "i", "prefix": "PR", "sequence": "1" }
+      }
+    }
+  }
+}

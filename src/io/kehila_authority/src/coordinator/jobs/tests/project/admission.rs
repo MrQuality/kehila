@@ -179,7 +179,7 @@ pub(super) async fn receiver_drop_and_capacity(handle: &Handle, browser: &Browse
         Err(Error::Busy)
     ));
     // Submission transfers the existing reservation even when none are free.
-    let response = handle.submit_project(prepared).unwrap().await.unwrap();
+    let response = handle.submit_prepared(prepared).unwrap().await.unwrap();
     assert!(matches!(response.result(), Ok(Output::Project(_))));
     assert_eq!(handle.capacity.available_permits(), 0);
     drop(replies);

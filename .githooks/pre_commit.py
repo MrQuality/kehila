@@ -101,6 +101,8 @@ def verify_index_and_head(tree, head):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", help="CI: compare this ancestor with checked-out HEAD")
+    parser.add_argument('--qualification', action='store_true',
+                        help='Run full verification of the staged tree, including an empty/prose-only diff')
     args = parser.parse_args()
     head_before = head_commit()
     tree_before = git("write-tree").strip()
@@ -117,10 +119,10 @@ def main():
     # rather than consulting a possibly changing real index a second time.
     if not supported_tree(tree_before):
         return fail(3, "Symlinks and submodules are unsupported in the verified snapshot")
-    if not changed:
+    if not changed and not args.qualification:
         print("No changes to verify")
         return verify_index_and_head(tree_before, head_before)
-    scope = verification_scope(changed)
+    scope = 'full' if args.qualification else verification_scope(changed)
     if scope == "docs":
         print("Documentation-only change; no test run required")
         return verify_index_and_head(tree_before, head_before)
@@ -130,12 +132,15 @@ def main():
         snapshot = Path(temporary) / "source"
         export_source(tree_before, snapshot, Path(temporary) / "index")
         print("Verification source tree:", tree_before.decode("ascii"), flush=True)
-        live = scope == "full"
         verifier = "container_verify.py" if os.name == "nt" else "verify.py"
         allowance = settings['gate_seconds'] if os.name == 'nt' else 600
         command = [sys.executable, str(snapshot / "scripts" / verifier), "--timeout", str(allowance)]
-        if not live:
+        if not args.qualification and scope == 'full':
+            command.append('--development')
+        elif not args.qualification:
             command.append("--pure")
+        print('Verification mode:', 'qualification' if args.qualification else
+              'development' if scope == 'full' else 'pure', flush=True)
         environment = os.environ.copy()
         environment.setdefault("CARGO_TARGET_DIR", str(ROOT / "target"))
         # Keep verification failure active while owned cleanup runs.

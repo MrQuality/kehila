@@ -58,6 +58,8 @@ def main():
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--pure", action="store_true", help="Run unit tests without external services")
     modes.add_argument("--docs", action="store_true", help="Run Python, naming and engineering metadata checks")
+    modes.add_argument('--development', action='store_true',
+                       help='Run shared unit/tooling/page checks without provisioning external services')
     parser.add_argument('--external-services', action='store_true',
                         help='Use already-running disposable services without owning their lifecycle')
     parser.add_argument('--engine', choices=('auto', 'podman', 'docker'),
@@ -72,7 +74,7 @@ def main():
     parser.add_argument('--timeout', type=float, default=600,
                         help='Total work budget in seconds (at most 600); bounded cleanup runs afterward')
     args = parser.parse_args()
-    if args.external_services and (args.pure or args.docs):
+    if args.external_services and (args.pure or args.docs or args.development):
         parser.error('--external-services applies only to full verification')
     if args.external_services and (args.podman_machine is not None or args.exclusive_podman_machine):
         parser.error('--external-services cannot own a Podman machine')
@@ -81,13 +83,13 @@ def main():
         validate_seconds(args.timeout)
     except ValueError as error:
         parser.error(str(error))
-    if not (args.pure or args.docs):
+    if not (args.pure or args.docs or args.development):
         for name, address in (('KEHILA_TEST_MONGO_URL', 'mongodb://127.0.0.1:27017'),
                               ('KEHILA_NATS_ADDRESS', '127.0.0.1:4222'),
                               ('KEHILA_NATS_HOST', '127.0.0.1'), ('KEHILA_NATS_PORT', '4222')):
             if os.environ.get(name, address) != address:
                 parser.error(name + ' must use default local endpoints; use standalone probes for custom endpoints')
-    if not (args.pure or args.docs or args.external_services):
+    if not (args.pure or args.docs or args.development or args.external_services):
         try:
             validate_daemon_environment(os.environ, args.podman_machine)
         except ValueError as error:
@@ -104,9 +106,10 @@ def check_commands(args):
         commands.append([sys.executable, "scripts/go_static.py"])
         if args.pure:
             commands.append(['cargo', 'test', '--locked', '-p', 'kehila_query', '-p', 'task_contract',
-                             '-p', 'project_create_codec'])
+                             '-p', 'project_create_codec', '-p', 'work_item_codec'])
         else:
-            commands += [['node', '--test', '--test-reporter=tap', 'tests/integration/project_page.test.cjs'],
+            commands += [['node', '--test', '--test-reporter=tap', 'tests/integration/project_page.test.cjs',
+                          'tests/integration/work_item_page.test.cjs'],
                          ['cargo', 'test', '--locked', '--workspace', '--no-run'],
                          ['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher']]
         commands += [[sys.executable, "experiments/SP-002/check_seed_oracle.py"],
@@ -121,7 +124,7 @@ def run_checks(args):
     commands = check_commands(args)
     for command in commands:
         execute(command, environment)
-    if not args.pure and not args.docs:
+    if not (args.pure or args.docs or args.development):
         with owned_directory('kehila-verify-') as folder:
             execute([sys.executable, 'tests/integration/task_path.py', '--build-only', str(folder)],
                     environment)

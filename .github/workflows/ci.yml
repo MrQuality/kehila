@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, labeled]
 permissions:
   contents: read
 concurrency:
@@ -27,14 +28,19 @@ jobs:
       - name: Select verification scope using the commit policy
         id: scope
         run: python scripts/ci_scope.py
+      - name: Record exact source and qualification scope
+        run: |
+          git rev-parse HEAD
+          echo "Verification scope: ${{ steps.scope.outputs.scope }}"
+          echo "Native qualification is executed only in full scope."
       - name: Export exact public source outside the checkout
-        if: steps.scope.outputs.scope != 'docs'
+        if: steps.scope.outputs.scope == 'full'
         run: |
           mkdir "$RUNNER_TEMP/native-authority-source"
           git archive --format=tar HEAD --output "$RUNNER_TEMP/native-authority-source.tar"
           tar -xf "$RUNNER_TEMP/native-authority-source.tar" -C "$RUNNER_TEMP/native-authority-source"
       - name: Prepare the explicit Podman toolchain and database images
-        if: steps.scope.outputs.scope != 'docs'
+        if: steps.scope.outputs.scope == 'full'
         run: |
           podman --version
           podman build --memory=2g --cpu-period=100000 --cpu-quota=100000 --layers \
@@ -45,10 +51,10 @@ jobs:
           echo "KEHILA_VERIFICATION_IMAGE=$image" >> "$GITHUB_ENV"
           podman pull docker.io/library/postgres@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4
       - name: Prepare locked dependencies explicitly
-        if: steps.scope.outputs.scope != 'docs'
+        if: steps.scope.outputs.scope == 'full'
         run: python "$RUNNER_TEMP/native-authority-source/scripts/container_verify.py" --prepare-dependencies
       - name: Verify real native PostgreSQL and listener HTTP/TLS
-        if: steps.scope.outputs.scope != 'docs'
+        if: steps.scope.outputs.scope == 'full'
         run: python "$RUNNER_TEMP/native-authority-source/scripts/container_verify.py" --native-authority
   windows-owner-client:
     runs-on: windows-2025
@@ -132,10 +138,18 @@ jobs:
           cargo clippy --manifest-path experiments/AUTH-001/Cargo.toml --locked --all-targets -- -D warnings
           cargo test --manifest-path experiments/AUTH-001/Cargo.toml --locked --all-targets -- --test-threads=1
       - name: Prepare disposable host
-        if: steps.scope.outputs.scope != 'docs'
+        if: steps.scope.outputs.scope == 'full'
         run: python scripts/ci_prepare.py
       - name: Run shared verification, engineering validation and Go static checks
         if: steps.scope.outputs.scope != 'docs'
-        run: python scripts/verify.py
+        env:
+          VERIFY_SCOPE: ${{ steps.scope.outputs.scope }}
+        run: |
+          git rev-parse HEAD
+          case "$VERIFY_SCOPE" in
+            development) python scripts/verify.py --development ;;
+            full) python scripts/verify.py ;;
+            *) echo "Unknown verification scope" >&2; exit 2 ;;
+          esac
       - name: Verify changed code against event base
         run: python scripts/ci_enforce.py

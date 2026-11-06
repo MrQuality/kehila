@@ -324,7 +324,7 @@ fn decode_configuration(v: &Value) -> Outcome<Configuration> {
     })
 }
 
-fn encode_project(p: &Project) -> Value {
+pub(crate) fn encode_project(p: &Project) -> Value {
     json!({
         "id": p.id.0,
         "name": p.name,
@@ -370,7 +370,7 @@ pub(crate) fn decode_result(v: &Value) -> Outcome<ProjectCreateResult> {
     })
 }
 
-fn decode_project(p: &Value) -> Outcome<Project> {
+pub(crate) fn decode_project(p: &Value) -> Outcome<Project> {
     object(
         p,
         &[

@@ -86,7 +86,8 @@ class AdmissionTests(unittest.TestCase):
 
 
 class Executor:
-    def __init__(self, fail_journey=False, foreign=False, profile_mismatch=False, copy_mismatch=False):
+    def __init__(self, fail_journey=False, foreign=False, profile_mismatch=False, copy_mismatch=False,
+                 fail_observer=None):
         self.build_network_detached = True
         self.container, self.owner, self.name = RUNNER, OWNER, NAME.removesuffix('-native-db')
         self.settings = {'command_seconds': 300, 'runner_stop_seconds': 120}
@@ -94,6 +95,7 @@ class Executor:
         self.events, self.fail_journey, self.foreign = [], fail_journey, foreign
         self.profile_mismatch = profile_mismatch
         self.copy_mismatch = copy_mismatch
+        self.fail_observer = fail_observer
 
     def inspect_container(self, identity):
         return runner()
@@ -118,6 +120,8 @@ class Executor:
             output = DATABASE
         elif args[0] == 'exec' and 'journey' in args and self.fail_journey:
             raise subprocess.CalledProcessError(1, args)
+        elif args[0] == 'exec' and self.fail_observer and self.fail_observer in args:
+            raise subprocess.CalledProcessError(1, args)
         elif args[0] == 'exec' and 'sh' in args:
             output = 'READY'
         elif args[0] == 'exec' and '/tmp/native_copy_snapshot.sql' in args:
@@ -138,11 +142,100 @@ class CleanupTests(unittest.TestCase):
         temporary.start()
         self.addCleanup(temporary.stop)
 
+    def test_focused_item_case_keeps_its_pristine_database_and_observer_only(self):
+        executor = Executor()
+        native.check(executor, item_cases=('item-read',))
+        modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
+                 for args in executor.events if 'scripts/native_authority_fixture.py' in args]
+        self.assertEqual(modes, ['prepare', 'item-read'])
+        copies = [args[-1] for args in executor.events if 'createdb' in args]
+        self.assertEqual(copies, ['native_item_read'])
+        copy = next(i for i, args in enumerate(executor.events) if 'createdb' in args)
+        observer = next(i for i, args in enumerate(executor.events)
+                        if '/tmp/native_item_read_state.sql' in args)
+        invocation = next(i for i, args in enumerate(executor.events) if 'item-read' in args)
+        self.assertLess(copy, invocation)
+        self.assertLess(invocation, observer)
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+
+    def test_focused_item_write_keeps_only_write_database_and_observer(self):
+        executor = Executor()
+        native.check(executor, item_cases=('item-write',))
+        modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
+                 for args in executor.events if 'scripts/native_authority_fixture.py' in args]
+        self.assertEqual(modes, ['prepare', 'item-write'])
+        self.assertEqual([args[-1] for args in executor.events if 'createdb' in args],
+                         ['native_item_write'])
+        invocation = next(i for i, args in enumerate(executor.events) if 'item-write' in args)
+        observations = [i for i, args in enumerate(executor.events)
+                        if '/tmp/native_item_write_state.sql' in args and 'native_item_write' in args]
+        self.assertEqual(len(observations), 1)
+        self.assertLess(invocation, observations[0])
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+
+    def test_failed_write_observer_retains_failure_and_stops_before_later_cases(self):
+        executor = Executor(fail_observer='/tmp/native_item_write_state.sql')
+        with self.assertRaisesRegex(RuntimeError, 'item-write-independent-observer'):
+            native.check(executor, item_cases=('item-read', 'item-write'))
+        modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
+                 for args in executor.events if 'scripts/native_authority_fixture.py' in args]
+        self.assertEqual(modes, ['prepare', 'item-write'])
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+        folders = list(self.root.glob('kehila-native-diagnostics-*'))
+        self.assertEqual(len(folders), 1)
+        selection = json.loads((folders[0] / 'selection.json').read_text(encoding='utf-8'))
+        self.assertEqual(selection, {'scope': 'focused-items',
+                                     'selected_items': ['item-write', 'item-read'],
+                                     'observed_items': []})
+
+    def test_focused_cases_run_once_in_canonical_order(self):
+        executor = Executor()
+        native.check(executor, item_cases=('item-pending', 'item-read'))
+        modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
+                 for args in executor.events if 'scripts/native_authority_fixture.py' in args]
+        self.assertEqual(modes, ['prepare', 'item-read', 'item-pending'])
+
+    def test_invalid_focused_selection_fails_before_any_executor_observation(self):
+        for selection in ((), ('item-read', 'item-read'), ('journey',), ('typo',), ('item-read', [])):
+            executor = Executor()
+            with patch.object(executor, 'inspect_container') as inspect:
+                with self.subTest(selection=selection), self.assertRaises(ValueError):
+                    native.check(executor, item_cases=selection)
+                inspect.assert_not_called()
+                self.assertEqual(executor.events, [])
+
+    def test_focused_observer_failure_retains_scope_and_cleans_up(self):
+        executor = Executor(fail_observer='/tmp/native_item_read_state.sql')
+        with self.assertRaisesRegex(RuntimeError, 'item-read-independent-observer'):
+            native.check(executor, item_cases=('item-read',))
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+        folders = list(self.root.glob('kehila-native-diagnostics-*'))
+        self.assertEqual(len(folders), 1)
+        selection = json.loads((folders[0] / 'selection.json').read_text(encoding='utf-8'))
+        self.assertEqual(selection, {'scope': 'focused-items', 'selected_items': ['item-read'],
+                                     'observed_items': []})
+
+    def test_focused_cleanup_failure_does_not_report_success(self):
+        class CleanupFailure(Executor):
+            def engine(self, *args, **kwargs):
+                if args[0] == 'rm':
+                    raise subprocess.CalledProcessError(1, args)
+                return super().engine(*args, **kwargs)
+
+        with patch('builtins.print') as output, self.assertRaises(subprocess.CalledProcessError):
+            native.check(CleanupFailure(), item_cases=('item-read',))
+        self.assertFalse(any(str(call.args[0]).startswith('PASS:') for call in output.call_args_list))
+
     def test_dependent_database_is_removed_by_full_identity(self):
         executor = Executor()
         native.check(executor)
         removals = [args for args in executor.events if args[0] == 'rm']
         self.assertEqual(removals, [('rm', '--force', '--volumes', DATABASE)])
+        modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
+                 for args in executor.events if 'scripts/native_authority_fixture.py' in args]
+        self.assertEqual(modes, ['prepare', 'item-write', 'item-read', 'item-pending', 'item-mutation', 'journey', 'clock', 'restored',
+            'auth-expiry', 'auth-delivery', 'auth-unknown', 'auth-owned', 'auth-revoke', 'auth-fenced',
+            'auth-read', 'auth-lifetime'])
 
     def test_authentication_copies_precede_all_runtime_journeys_and_are_observed(self):
         executor = Executor()
@@ -162,6 +255,40 @@ class CleanupTests(unittest.TestCase):
             self.assertEqual(len(invocations), 1)
             self.assertEqual(len(observations), 1)
             self.assertLess(invocations[0], observations[0])
+
+    def test_item_copies_are_pristine_and_have_distinct_committed_observers(self):
+        executor = Executor()
+        native.check(executor)
+        first_runtime = next(i for i, args in enumerate(executor.events)
+                             if args[0] == 'exec' and 'journey' in args)
+        for mode, database in native.ITEM_DATABASES.items():
+            expected_observer = {'item-write': '/tmp/native_item_write_state.sql',
+                                 'item-read': '/tmp/native_item_read_state.sql',
+                                 'item-pending': '/tmp/native_item_pending_state.sql',
+                                 'item-mutation': '/tmp/native_item_mutation_state.sql'}[mode]
+            creations = [i for i, args in enumerate(executor.events)
+                         if args[0] == 'exec' and 'createdb' in args and args[-1] == database]
+            invocations = [i for i, args in enumerate(executor.events)
+                           if args[0] == 'exec' and mode in args]
+            observations = [i for i, args in enumerate(executor.events)
+                            if args[0] == 'exec' and expected_observer in args and database in args]
+            self.assertEqual(len(creations), 1)
+            self.assertEqual(len(invocations), 1)
+            self.assertEqual(len(observations), 1)
+            self.assertLess(creations[0], first_runtime)
+            self.assertLess(invocations[0], observations[0])
+
+    def test_failed_pending_observer_stops_before_later_journeys_and_retains_stage(self):
+        executor = Executor(fail_observer='/tmp/native_item_pending_state.sql')
+        with self.assertRaisesRegex(RuntimeError,
+                'Native fixture command failed at item-pending-independent-observer'):
+            native.check(executor)
+        self.assertFalse(any(args[0] == 'exec' and 'journey' in args for args in executor.events))
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+        folders = list(self.root.glob('kehila-native-diagnostics-*'))
+        self.assertEqual(len(folders), 1)
+        self.assertEqual((folders[0] / 'failure-stage.txt').read_text(encoding='ascii'),
+                         'item-pending-independent-observer')
 
     def test_child_is_removed_after_failed_work_without_parent_teardown(self):
         executor = Executor(fail_journey=True)

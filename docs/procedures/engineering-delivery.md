@@ -2,9 +2,10 @@
 
 | Field | Value |
 | --- | --- |
-| ID / version | SOP-003 / 1 |
+| ID / version | SOP-003 / 2 |
 | Status | Proposed codification; accepted controls in manual use |
 | Authority | Maintainer accepted the PR #92 post-mortem recommendations and milestone/large-goal recurrence on 2026-11-03. This records that authorization, not acceptance of this exact SOP version. |
+| Revision | General verification practices accepted 2026-11-07; this revision incorporates them without accepting the exact codification or adding semantic CI enforcement. |
 | Owner | Project maintainer; delivery author maintains the task record |
 | First application | PR #92 process amendment; [retrospective](../postmortems/2026-11-03-authenticated-project-delivery.md) |
 | Enforcement | Human/agent assessment and existing required checks; no semantic CI enforcement or branch-protection change |
@@ -103,6 +104,40 @@ before removing older code; ask only where that consequential uncertainty remain
 Do not promote optional cleanup into an unrelated delivery blocker. Missing optional
 review skills must be disclosed; use a bounded direct assessment without claiming
 that the missing skill ran. Preserve mandatory specialist checks when applicable.
+
+## Contract-based verification
+
+The maintainer accepted these general practices on 2026-11-07. The delivery
+author applies them with the relevant component/integration reviewer, using the
+existing risk and review record. They refine risk-based testing rather than add
+a universal matrix or a separate approval ceremony.
+
+1. Test permitted and prohibited outcomes against the current contract. Isolate
+   the property under test, preserve valid unrelated inputs and use positive
+   controls where needed. A rejection must be attributable to the intended
+   boundary; an unrelated parse error, timeout or crash cannot satisfy it.
+2. Trace changed contracts through producers, consumers, permissions, invariants
+   and existing tests, including callers and negative assertions outside edited
+   files. Select affected checks and reassess retained evidence from that trace.
+3. Verify meaningful composition boundaries with the smallest representative
+   integration check. Component success does not establish behavior under a
+   different role, real storage/transport, implicit locking or cancellation path.
+4. Treat failure and interruption as lifecycle behavior. Select consequential
+   fault points by risk; observe fault activation, permitted outcomes, durable
+   state where relevant, ownership, cancellation, cleanup and recovery. Normal
+   cleanup alone is not evidence of interrupted cleanup.
+5. Keep one authoritative current summary of source, execution/evidence scope,
+   remaining work, blockers/decisions, live workloads and resource availability.
+   Distinguish prepared, executed, passed, failed, stopped, deferred, superseded
+   and excluded work. Label historical checkpoints and preserve their evidence.
+
+Use the [testing guide](../TESTING.md#risk-based-selection-and-fault-testing) for
+selection and fault-experiment guidance. Cheap relevant mechanical checks should
+precede expensive integrated work where practical. Run selected boundary/fault
+checks during development; reserve full applicable qualification for the completed
+goal. Required backstops remain mandatory and do not infer semantic risk coverage.
+No automatic risk engine, chaos platform or expanded execution authority follows
+from these practices. Evaluate their use and limits at the next existing closeout.
 
 ## Environment and harness admission
 

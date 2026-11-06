@@ -16,7 +16,7 @@ from check_postgresql import IMAGE
 from cleanup_errors import retain_cleanup_failure
 from container_executor import LABEL, one_object
 from verification_budget import cleanup_time, command_timeout
-from native_authority_fixture import AUTH_DATABASES
+from native_authority_fixture import AUTH_DATABASES, ITEM_DATABASES, ITEM_OBSERVERS
 
 
 @dataclass(frozen=True)
@@ -86,7 +86,21 @@ def admit_database(info, identity, runner, owner, name):
             'Native database must use bounded ephemeral storage')
 
 
-def check(executor):
+def selected_item_cases(cases):
+    """None selects full qualification; explicit selections never mean full."""
+    if cases is None:
+        return None
+    require(isinstance(cases, (tuple, list)) and bool(cases)
+            and all(isinstance(case, str) and case in ITEM_DATABASES for case in cases),
+            'Select one or more known native item cases')
+    require(len(set(cases)) == len(cases), 'Native item cases must not repeat')
+    return tuple(case for case in ITEM_DATABASES if case in cases)
+
+
+def check(executor, *, item_cases=None):
+    item_cases = selected_item_cases(item_cases)
+    items = ITEM_DATABASES if item_cases is None else {
+        case: ITEM_DATABASES[case] for case in item_cases}
     require(executor.build_network_detached, 'Disconnect build networking before native verification')
     admit_runner(executor.inspect_container(executor.container), executor.container, executor.owner)
     root = Path(tempfile.gettempdir()).resolve()
@@ -95,6 +109,10 @@ def check(executor):
     require(not any((parent / '.git').exists() for parent in (root, *root.parents)),
             'Native diagnostic storage must be outside Git checkouts')
     folder = Path(tempfile.mkdtemp(prefix='kehila-native-diagnostics-', dir=root)).resolve()
+    selection = {'scope': 'full-native' if item_cases is None else 'focused-items',
+                 'selected_items': list(items), 'observed_items': []}
+    (folder / 'selection.json').write_text(json.dumps(selection), encoding='utf-8')
+    print('NATIVE SCOPE:', selection['scope'], ', '.join(items), flush=True)
     name = executor.name + '-native-db'
     stage, attempted, failure = 'prepare', False, None
 
@@ -145,7 +163,7 @@ def check(executor):
                 identity + ':/tmp/native-authority-state.sql')
         control('cp', str(executor.source / 'tests/integration/native_clock_state.sql'),
                 identity + ':/tmp/native-clock-state.sql')
-        for file in ('native_copy_snapshot.sql', 'native_restored_state.sql', 'native_auth_fixture_state.sql'):
+        for file in ('native_copy_snapshot.sql', 'native_restored_state.sql', 'native_auth_fixture_state.sql', *ITEM_OBSERVERS.values()):
             control('cp', str(executor.source / 'tests/integration' / file), identity + ':/tmp/' + file)
         stage = 'database-start'
         control('start', identity)
@@ -165,86 +183,99 @@ def check(executor):
             'set -- $(cat /sys/fs/cgroup/cpu.max); test "$1" != max; test "$1" = "$2"')
         psql('/tmp/kehila-schema/install_product.sql')
         psql('/tmp/kehila-native/setup.sql')
-        stage = 'pristine-authentication-fixtures'
+        stage = 'pristine-isolated-fixtures'
         baseline = "DO $$ BEGIN IF EXISTS (SELECT FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid()) OR EXISTS (SELECT FROM kehila.projects) OR (SELECT runtime_generation FROM kehila_auth.installation)<>0 OR (SELECT auth_generation<>1 OR verifier_revision<>1 FROM kehila_auth.owner_credentials) THEN RAISE EXCEPTION 'pristine quiescent fixture required'; END IF; END $$;"
         control('exec', identity, 'psql', '-X', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', baseline)
-        for database in AUTH_DATABASES.values():
+        databases = (*AUTH_DATABASES.values(), *items.values()) if item_cases is None else items.values()
+        for database in databases:
             control('exec', identity, 'createdb', '-U', 'postgres', '--owner=kehila_owner',
                     '--template=postgres', database)
             admission = "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_database WHERE datname=current_database() AND datdba='kehila_owner'::regrole AND datallowconn AND NOT datistemplate AND pg_encoding_to_char(encoding)='UTF8') OR NOT has_database_privilege('kehila_auth_runtime_login',current_database(),'CONNECT') OR EXISTS (SELECT FROM pg_db_role_setting WHERE setdatabase=(SELECT oid FROM pg_database WHERE datname=current_database())) THEN RAISE EXCEPTION 'authentication database profile mismatch'; END IF; END $$;"
             control('exec', identity, 'psql', '-X', '-U', 'postgres', '-d', database,
                     '-v', 'ON_ERROR_STOP=1', '-c', admission + baseline)
-        stage = 'journey'
-        work(['python', 'scripts/native_authority_fixture.py', 'journey', '--seconds',
-              str(executor.settings['command_seconds'])])
-        stage = 'write-trace-observer'
-        control('cp', executor.container + ':/work/native-authority/controls/write-trace.json',
-                str(folder / 'write-trace.json'))
-        write_log = control('logs', '--timestamps', identity, both_streams=True)
-        (folder / 'write-trace.log').write_text(write_log, encoding='utf-8')
-        verify_write_trace(json.loads((folder / 'write-trace.json').read_text(encoding='utf-8')),
-                           write_log)
-        stage = 'independent-observer'
-        observation = psql('/tmp/native-authority-state.sql')
-        (folder / 'observation.txt').write_text(observation, encoding='utf-8')
-        stage = 'clock-authority-journey'
-        work(['python', 'scripts/native_authority_fixture.py', 'clock', '--seconds',
-              str(executor.settings['command_seconds'])])
-        stage = 'clock-independent-observer'
-        (folder / 'clock-observation.txt').write_text(psql('/tmp/native-clock-state.sql'), encoding='utf-8')
-        stage = 'quiescent-copy'
-        source_state = psql('/tmp/native_copy_snapshot.sql', tuples=True)
-        require(len(source_state.encode('utf-8')) <= 1024**2, 'Synthetic copy observation exceeds bound')
-        decoded = snapshot_document(source_state)
-        require(isinstance(decoded, dict) and decoded.get('tables') and decoded.get('sequences')
-                and all(key in decoded for key in ('schemas','relations','types','indexes','columns','functions','constraints','triggers','raw_checks')),
-                'Synthetic copy observation is incomplete')
-        (folder / 'copy-source-state.txt').write_text(source_state, encoding='utf-8')
-        repeated_state = psql('/tmp/native_copy_snapshot.sql', tuples=True)
-        (folder / 'copy-source-repeat-state.txt').write_text(repeated_state, encoding='utf-8')
-        require(source_state == repeated_state, 'CHECK normalization changed production snapshot or was unstable')
-        control('exec', identity, 'sh', '-c',
-                'set -eu; umask 077; mkdir -m 700 /tmp/native-copy; '
-                'pg_dump -U postgres -d postgres --format=custom --schema=kehila '
-                '--schema=kehila_auth --schema=kehila_native_fixture --file=/tmp/native-copy/state.dump; '
-                'test "$(stat -c %a /tmp/native-copy/state.dump)" = 600')
-        control('exec', identity, 'createdb', '-U', 'postgres', '--owner=kehila_owner', 'kehila_native_restored')
-        control('exec', identity, 'pg_restore', '-U', 'postgres', '-d', 'kehila_native_restored',
-                '--single-transaction', '--exit-on-error', '/tmp/native-copy/state.dump')
-        restored_state = psql('/tmp/native_copy_snapshot.sql', 'kehila_native_restored', tuples=True)
-        require(len(restored_state.encode('utf-8')) <= 1024**2, 'Restored copy observation exceeds bound')
-        (folder / 'copy-restored-state.txt').write_text(restored_state, encoding='utf-8')
-        restored_decoded = snapshot_document(restored_state)
-        require(isinstance(restored_decoded, dict) and 'raw_checks' in restored_decoded,
-                'Restored copy observation is incomplete')
-        # Both raw deparse forms stay in the private snapshots. Only CHECK
-        # definitions use PostgreSQL's scratch-object reparse normalization;
-        # every other captured field remains an exact comparison.
-        decoded.pop('raw_checks')
-        restored_decoded.pop('raw_checks')
-        require(decoded == restored_decoded, 'Synthetic copy state/schema/authority differs before startup')
-        stage = 'restored-native-journey'
-        work(['python', 'scripts/native_authority_fixture.py', 'restored', '--seconds',
-              str(executor.settings['command_seconds'])])
-        stage = 'restored-independent-observer'
-        (folder / 'restored-observation.txt').write_text(
-            psql('/tmp/native_restored_state.sql', 'kehila_native_restored'), encoding='utf-8')
-        # The final test changes the source database's password. Keep it after
-        # every journey that depends on its original fixture credential.
-        for mode in ('auth-expiry', 'auth-delivery', 'auth-unknown'):
-            stage = mode
-            work(['python', 'scripts/native_authority_fixture.py', mode, '--seconds',
-                  str(executor.settings['command_seconds'])])
-        stage = 'authentication-independent-observer'
-        (folder / 'authentication-observation.txt').write_text(
-            psql('/tmp/native-clock-state.sql'), encoding='utf-8')
-        for mode, database in AUTH_DATABASES.items():
+        # Exercise item capabilities before the existing project/auth journeys;
+        # all isolated databases above were copied before any runtime started.
+        for mode, database in items.items():
             stage = mode
             work(['python', 'scripts/native_authority_fixture.py', mode, '--seconds',
                   str(executor.settings['command_seconds'])])
             stage = mode + '-independent-observer'
             (folder / (mode + '-observation.txt')).write_text(
-                psql('/tmp/native_auth_fixture_state.sql', database), encoding='utf-8')
+                psql('/tmp/' + ITEM_OBSERVERS[mode], database), encoding='utf-8')
+            selection['observed_items'].append(mode)
+            (folder / 'selection.json').write_text(json.dumps(selection), encoding='utf-8')
+        if item_cases is None:
+            stage = 'journey'
+            work(['python', 'scripts/native_authority_fixture.py', 'journey', '--seconds',
+                  str(executor.settings['command_seconds'])])
+            stage = 'write-trace-observer'
+            control('cp', executor.container + ':/work/native-authority/controls/write-trace.json',
+                    str(folder / 'write-trace.json'))
+            write_log = control('logs', '--timestamps', identity, both_streams=True)
+            (folder / 'write-trace.log').write_text(write_log, encoding='utf-8')
+            verify_write_trace(json.loads((folder / 'write-trace.json').read_text(encoding='utf-8')),
+                               write_log)
+            stage = 'independent-observer'
+            observation = psql('/tmp/native-authority-state.sql')
+            (folder / 'observation.txt').write_text(observation, encoding='utf-8')
+            stage = 'clock-authority-journey'
+            work(['python', 'scripts/native_authority_fixture.py', 'clock', '--seconds',
+                  str(executor.settings['command_seconds'])])
+            stage = 'clock-independent-observer'
+            (folder / 'clock-observation.txt').write_text(psql('/tmp/native-clock-state.sql'), encoding='utf-8')
+            stage = 'quiescent-copy'
+            source_state = psql('/tmp/native_copy_snapshot.sql', tuples=True)
+            require(len(source_state.encode('utf-8')) <= 1024**2, 'Synthetic copy observation exceeds bound')
+            decoded = snapshot_document(source_state)
+            require(isinstance(decoded, dict) and decoded.get('tables') and decoded.get('sequences')
+                    and all(key in decoded for key in ('schemas','relations','types','indexes','columns','functions','constraints','triggers','raw_checks')),
+                    'Synthetic copy observation is incomplete')
+            (folder / 'copy-source-state.txt').write_text(source_state, encoding='utf-8')
+            repeated_state = psql('/tmp/native_copy_snapshot.sql', tuples=True)
+            (folder / 'copy-source-repeat-state.txt').write_text(repeated_state, encoding='utf-8')
+            require(source_state == repeated_state, 'CHECK normalization changed production snapshot or was unstable')
+            control('exec', identity, 'sh', '-c',
+                    'set -eu; umask 077; mkdir -m 700 /tmp/native-copy; '
+                    'pg_dump -U postgres -d postgres --format=custom --schema=kehila '
+                    '--schema=kehila_auth --schema=kehila_native_fixture --file=/tmp/native-copy/state.dump; '
+                    'test "$(stat -c %a /tmp/native-copy/state.dump)" = 600')
+            control('exec', identity, 'createdb', '-U', 'postgres', '--owner=kehila_owner', 'kehila_native_restored')
+            control('exec', identity, 'pg_restore', '-U', 'postgres', '-d', 'kehila_native_restored',
+                    '--single-transaction', '--exit-on-error', '/tmp/native-copy/state.dump')
+            restored_state = psql('/tmp/native_copy_snapshot.sql', 'kehila_native_restored', tuples=True)
+            require(len(restored_state.encode('utf-8')) <= 1024**2, 'Restored copy observation exceeds bound')
+            (folder / 'copy-restored-state.txt').write_text(restored_state, encoding='utf-8')
+            restored_decoded = snapshot_document(restored_state)
+            require(isinstance(restored_decoded, dict) and 'raw_checks' in restored_decoded,
+                    'Restored copy observation is incomplete')
+            # Both raw deparse forms stay in the private snapshots. Only CHECK
+            # definitions use PostgreSQL's scratch-object reparse normalization;
+            # every other captured field remains an exact comparison.
+            decoded.pop('raw_checks')
+            restored_decoded.pop('raw_checks')
+            require(decoded == restored_decoded, 'Synthetic copy state/schema/authority differs before startup')
+            stage = 'restored-native-journey'
+            work(['python', 'scripts/native_authority_fixture.py', 'restored', '--seconds',
+                  str(executor.settings['command_seconds'])])
+            stage = 'restored-independent-observer'
+            (folder / 'restored-observation.txt').write_text(
+                psql('/tmp/native_restored_state.sql', 'kehila_native_restored'), encoding='utf-8')
+            # The final test changes the source database's password. Keep it after
+            # every journey that depends on its original fixture credential.
+            for mode in ('auth-expiry', 'auth-delivery', 'auth-unknown'):
+                stage = mode
+                work(['python', 'scripts/native_authority_fixture.py', mode, '--seconds',
+                      str(executor.settings['command_seconds'])])
+            stage = 'authentication-independent-observer'
+            (folder / 'authentication-observation.txt').write_text(
+                psql('/tmp/native-clock-state.sql'), encoding='utf-8')
+            for mode, database in AUTH_DATABASES.items():
+                stage = mode
+                work(['python', 'scripts/native_authority_fixture.py', mode, '--seconds',
+                      str(executor.settings['command_seconds'])])
+                stage = mode + '-independent-observer'
+                (folder / (mode + '-observation.txt')).write_text(
+                    psql('/tmp/native_auth_fixture_state.sql', database), encoding='utf-8')
     except BaseException as error:
         failure = error
         (folder / 'failure-stage.txt').write_text(stage, encoding='ascii')
@@ -284,4 +315,7 @@ def check(executor):
                 require(folder.parent == root and folder.name.startswith('kehila-native-diagnostics-'),
                         'Refusing cleanup outside allocated diagnostics directory')
                 shutil.rmtree(folder)
-    print('PASS: native durable cardinalities, identity coherence and owned cleanup')
+    if item_cases is None:
+        print('PASS: native durable cardinalities, identity coherence and owned cleanup')
+    else:
+        print('PASS: focused native items, independent observers and owned cleanup:', ', '.join(items))

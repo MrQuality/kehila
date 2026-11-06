@@ -3,13 +3,20 @@ use http_body_util::{BodyExt, Full, Limited};
 use rustls::pki_types::{PrivatePkcs8KeyDer, ServerName};
 use tokio_rustls::TlsConnector;
 
+type HttpReply = (hyper::StatusCode, hyper::HeaderMap, bytes::Bytes);
+enum ClientBehavior {
+    Complete,
+    MissingCloseNotify,
+    DropBeforeReply(crate::lifecycle::probe::TransactionGate),
+}
+
 /// Actual owner connection/adapter path; intentionally bypasses protected
 /// startup and provider publication, which have separate integration fixtures.
 async fn exchange(
     jobs: jobs::Handle,
     request: hyper::Request<Full<bytes::Bytes>>,
-    clean_close: bool,
-) -> (Outcome, hyper::StatusCode, hyper::HeaderMap, bytes::Bytes) {
+    behavior: ClientBehavior,
+) -> (Outcome, Option<HttpReply>) {
     let rcgen::CertifiedKey { cert, signing_key } =
         rcgen::generate_simple_self_signed(vec!["127.0.0.1".into()]).unwrap();
     let acceptor = TlsAcceptor::from(
@@ -57,14 +64,37 @@ async fn exchange(
             .insert("origin", format!("https://{address}").parse().unwrap());
     }
     let client = async {
-        if clean_close {
-            return crate::test_exchange::request_with_headers(
-                address,
-                client,
-                ServerName::IpAddress(address.ip().into()),
-                request,
-            )
-            .await;
+        match behavior {
+            ClientBehavior::Complete => {
+                return crate::test_exchange::request_with_headers(
+                    address,
+                    client,
+                    ServerName::IpAddress(address.ip().into()),
+                    request,
+                )
+                .await
+                .map(Some);
+            }
+            ClientBehavior::DropBeforeReply(mut gate) => {
+                let mut work = Box::pin(crate::test_exchange::request_with_headers(
+                    address,
+                    client,
+                    ServerName::IpAddress(address.ip().into()),
+                    request,
+                ));
+                tokio::select! {
+                    arrived = &mut gate.arrived => arrived.expect("targeted pre-COMMIT point disappeared"),
+                    _ = &mut work => panic!("client completed before the held pre-COMMIT point"),
+                }
+                // request_with_headers owns both the socket and HTTP driver.
+                // Drop really closes TCP before allowing the owned SQL commit.
+                drop(work);
+                gate.release
+                    .send(())
+                    .expect("held COMMIT owner disappeared");
+                return Ok(None);
+            }
+            ClientBehavior::MissingCloseNotify => {}
         }
         let socket = TcpStream::connect(address).await?;
         let tls = TlsConnector::from(client)
@@ -93,13 +123,12 @@ async fn exchange(
         // reciprocal TLS alert. This models a late cleanup failure; it does
         // not assert the exact close behavior of either platform client.
         drop(parts.map_err(|_| crate::io_error("test HTTP driver"))?);
-        reply
+        reply.map(Some)
     };
     let (outcome, reply) = timeout(CONNECTION_DEADLINE, async { tokio::join!(server, client) })
         .await
         .unwrap();
-    let (status, headers, body) = reply.unwrap();
-    (outcome, status, headers, body)
+    (outcome, reply.unwrap())
 }
 
 /// Actual listener connection/HTTP/TLS, with an explicitly supplied trust root.
@@ -109,9 +138,22 @@ pub(crate) async fn browser_exchange(
     jobs: jobs::Handle,
     request: hyper::Request<Full<bytes::Bytes>>,
 ) -> (hyper::StatusCode, hyper::HeaderMap, bytes::Bytes) {
-    let (outcome, status, headers, body) = exchange(jobs, request, true).await;
+    let (outcome, reply) = exchange(jobs, request, ClientBehavior::Complete).await;
     assert!(matches!(outcome, Outcome::Complete));
-    (status, headers, body)
+    reply.unwrap()
+}
+
+/// Controlled TCP response loss after the owned command reaches its COMMIT
+/// barrier. Distinct from an adapter receiver drop or late TLS cleanup failure.
+pub(crate) async fn browser_disconnect_before_reply(
+    jobs: jobs::Handle,
+    request: hyper::Request<Full<bytes::Bytes>>,
+    gate: crate::lifecycle::probe::TransactionGate,
+) -> Outcome {
+    let (outcome, reply) = exchange(jobs, request, ClientBehavior::DropBeforeReply(gate)).await;
+    assert!(reply.is_none());
+    assert!(!matches!(outcome, Outcome::Complete));
+    outcome
 }
 
 pub(crate) async fn cli_state(
@@ -125,8 +167,9 @@ pub(crate) async fn cli_state(
         )
         .body(Full::new(bytes::Bytes::new()))
         .unwrap();
-    let (outcome, status, _, body) = exchange(jobs, request, true).await;
+    let (outcome, reply) = exchange(jobs, request, ClientBehavior::Complete).await;
     assert!(matches!(outcome, Outcome::Complete));
+    let (status, _, body) = reply.unwrap();
     (status, body)
 }
 
@@ -139,8 +182,9 @@ pub(crate) async fn cli_login_without_peer_close(
             b"{\"password\":\"a fixed test password\"}",
         )))
         .unwrap();
-    let (outcome, status, _, body) = exchange(jobs, request, false).await;
+    let (outcome, reply) = exchange(jobs, request, ClientBehavior::MissingCloseNotify).await;
     assert!(matches!(outcome, Outcome::Rejected(Rejection::PeerClose)));
+    let (status, _, body) = reply.unwrap();
     (status, body)
 }
 

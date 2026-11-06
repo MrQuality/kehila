@@ -12,4 +12,7 @@ SET LOCAL ROLE kehila_owner;
 \ir pending.sql
 INSERT INTO kehila.schema_migrations(version, description)
   VALUES (2, 'Authenticated project creation and server-owned pending requests');
+\ir work_items/install.sql
+INSERT INTO kehila.schema_migrations(version, description)
+  VALUES (3, 'Native WorkItem history and authorized current reads');
 COMMIT;

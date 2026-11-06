@@ -13,12 +13,18 @@ public requirements where available.
 - Candidate revision; authorization source, scope and unresolved decisions:
 - Decision this work informs; included work and non-goals:
 - Existing accepted constraints, contrary evidence and evidence limits:
+- Current source/evidence summary, remaining work, blockers/decisions and live
+  workloads/resource use; label older checkpoints as historical:
 
 | Consequential premise | Status | Source / actual acceptance or observation | Consequence if false / dependent work | If unresolved: resolver / next action |
 | --- | --- | --- | --- | --- |
 | To identify | Established / inferred / proposed / unresolved / contradicted | A claim cannot establish itself | To identify | To identify, when applicable |
 
 - Author's candidate approach (send to the validator only after Phase A):
+- Affected verification: changed contract/risk and producers/consumers/permissions;
+  selected acceptance/rejection, composition or fault checks and decisive oracles;
+  retained evidence/validity and deferred final checks (use the existing delivery
+  record fields, not a second registry):
 - Early validator input/version; decisive sources/revisions checked directly,
   evidence gaps/contradictions; Phase A evidence, Phase B findings and verdict:
 - Findings disposition: source, user decision or dependent work still paused:
