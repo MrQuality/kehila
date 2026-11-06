@@ -56,8 +56,8 @@ class GitGateTests(unittest.TestCase):
         self.write("docs/spec.md", "# Fixture contract\n\nUpdated arithmetic acceptance criterion.\n")
         self.git("add", "docs/spec.md")
 
-    def hook(self):
-        return subprocess.run([sys.executable, ".githooks/pre_commit.py"], cwd=self.root,
+    def hook(self, *options):
+        return subprocess.run([sys.executable, ".githooks/pre_commit.py", *options], cwd=self.root,
                               env=self.environment, capture_output=True, text=True, timeout=60)
 
     def test_checkout_local_override_is_rejected_before_snapshot_verification(self):
@@ -135,16 +135,30 @@ sys.exit(gate.main())
                         self.assertNotEqual(result.returncode, 0)
                     self.assertEqual(self.git('write-tree').stdout.strip(), captured)
 
-    def test_adapter_change_runs_full_suite_and_propagates_failure(self):
+    def test_adapter_change_runs_development_matrix_and_propagates_failure(self):
         # Check runner arguments and exit propagation without simulating a service.
-        self.write("scripts/verify.py", "import sys\nassert '--pure' not in sys.argv\nprint('full-suite-selected')\nsys.exit(7)\n")
+        self.write("scripts/verify.py", "import sys\nassert '--development' in sys.argv\nprint('development-selected')\nsys.exit(7)\n")
         self.git("add", "scripts/verify.py")
         self.write("src/io/adapter.rs", "// adapter contract\n")
         self.git("add", "src/io/adapter.rs")
         result = self.hook()
         self.assertEqual(result.returncode, 3, result.stderr)
-        self.assertIn("full-suite-selected", result.stdout)
+        self.assertIn("development-selected", result.stdout)
         self.assertIn("VERIFICATION_FAILED", result.stderr)
+
+    def test_explicit_qualification_runs_full_even_for_empty_or_prose_diff(self):
+        self.write('scripts/verify.py', "import sys\nassert '--development' not in sys.argv\n"
+                   "assert '--pure' not in sys.argv\nprint('full-qualification-selected')\n")
+        self.git('add', 'scripts/verify.py')
+        tree = self.git('write-tree').stdout.strip()
+        commit = self.git('commit-tree', tree, '-p', 'HEAD', '-m', 'Qualification fixture').stdout.strip()
+        self.git('update-ref', 'refs/heads/main', commit)
+        for prose in (False, True):
+            if prose:
+                self.stage_docs()
+            result = self.hook('--qualification')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('full-qualification-selected', result.stdout)
 
     def test_build_cache_respects_external_directory_and_preserves_default(self):
         with tempfile.TemporaryDirectory(prefix="kehila-external-cache-") as external:

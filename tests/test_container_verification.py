@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import container_executor as execution
@@ -22,9 +23,9 @@ IDENTITY = 'b' * 64
 
 
 class CallerOwnershipTests(unittest.TestCase):
-    def run_main(self, source, record, owner):
+    def run_main(self, source, record, owner, mode=('--docs',)):
         runtime = ComposeRuntime(['podman', 'compose'], {})
-        arguments = ['container_verify.py', '--docs', '--image', IMAGE,
+        arguments = ['container_verify.py', *mode, '--image', IMAGE,
                      '--ownership-file', str(record), '--resource-owner', owner]
         def enter():
             self.assertEqual(json.loads(record.read_text())['owner'], owner)
@@ -34,8 +35,10 @@ class CallerOwnershipTests(unittest.TestCase):
                 patch.object(coordinator, 'validate_runtime'), patch.object(coordinator, 'validate_daemon_environment'), \
                 patch.object(coordinator, 'managed_runtime', return_value=nullcontext(runtime)), \
                 patch.object(execution.ContainerExecutor, 'owned', side_effect=enter), \
-                patch.object(execution.ContainerExecutor, 'finish_builds'), patch.object(coordinator, 'checks'):
+                patch.object(execution.ContainerExecutor, 'finish_builds'), \
+                patch.object(coordinator, 'checks') as checks:
             coordinator.main()
+        return checks.call_args.args[1]
 
     def test_caller_known_owner_is_recorded_before_lifecycle_entry(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -57,6 +60,29 @@ class CallerOwnershipTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.run_main(source, record, 'invalid')
             self.assertFalse(record.exists())
+
+    def test_focused_mode_records_no_unrelated_services_and_normalizes_cli_order(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source = root / 'source'
+            source.mkdir()
+            (source / 'docker-compose.yml').write_text('services: {}', encoding='utf-8')
+            record = root / 'record.json'
+            args = self.run_main(source, record, 'a' * 32,
+                ('--native-item', 'item-pending', '--native-item', 'item-read'))
+            self.assertEqual(args.native_item, ('item-read', 'item-pending'))
+            self.assertEqual(json.loads(record.read_text())['groups'], [])
+
+    def test_development_ownership_reserves_no_service_groups(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source = root / 'source'
+            source.mkdir()
+            (source / 'docker-compose.yml').write_text('services: {}', encoding='utf-8')
+            record = root / 'record.json'
+            args = self.run_main(source, record, 'a' * 32, ('--development',))
+            self.assertTrue(args.development)
+            self.assertEqual(json.loads(record.read_text())['groups'], [])
 
 
 class ExecutorTests(unittest.TestCase):
@@ -178,6 +204,19 @@ class ExecutorTests(unittest.TestCase):
 
 
 class MatrixTests(unittest.TestCase):
+    def test_development_executes_unit_matrix_without_native_or_service_start(self):
+        executor = Mock()
+        args = SimpleNamespace(docs=False, pure=False, development=True,
+                               native_authority=False, native_item=None)
+        with patch.object(coordinator, 'native_authority') as native, \
+                patch.object(coordinator, 'service_group') as group:
+            coordinator.checks(executor, args)
+        native.assert_not_called()
+        group.assert_not_called()
+        commands = [call.args[0] for call in executor.execute.call_args_list]
+        self.assertIn(['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher'], commands)
+        self.assertFalse(any('--build-only' in command or '--release' in command for command in commands))
+
     def test_all_commands_use_container_executor_and_serial_internal_endpoints(self):
         events = []
         executor = Mock()
@@ -196,7 +235,7 @@ class MatrixTests(unittest.TestCase):
             yield {name: '10.1.0.' + str(i + 2) for i, name in enumerate(containers)}
 
         executor.service_network.side_effect = network
-        args = Mock(docs=False, pure=False, native_authority=False)
+        args = SimpleNamespace(docs=False, pure=False, native_authority=False, native_item=None)
         with patch.object(coordinator, 'service_group', group), \
                 patch.object(coordinator, 'native_authority', lambda _: events.append(('native',))):
             coordinator.checks(executor, args)
@@ -232,6 +271,32 @@ class MatrixTests(unittest.TestCase):
         executor.finish_builds.side_effect = lambda: events.append(('disconnect',))
         executor.verify_source.side_effect = lambda: events.append(('source',))
         with patch.object(coordinator, 'native_authority', lambda _: events.append(('native',))):
-            coordinator.checks(executor, Mock(native_authority=True, docs=False, pure=False))
+            coordinator.checks(executor, SimpleNamespace(native_authority=True, native_item=None,
+                                                        docs=False, pure=False))
         self.assertEqual(events, [('command', ['cargo', 'test', '--release', '--offline', '--locked', '-p',
             'kehila_authority', '--lib', '--no-run']), ('disconnect',), ('native',), ('source',)])
+
+    def test_focused_native_mode_compiles_then_delegates_exact_cases_and_verifies_source(self):
+        events = []
+        executor = Mock()
+        executor.execute.side_effect = lambda command: events.append(('compile', command))
+        executor.finish_builds.side_effect = lambda: events.append(('disconnect',))
+        executor.verify_source.side_effect = lambda: events.append(('source',))
+        args = SimpleNamespace(native_authority=False, native_item=('item-read',), docs=False, pure=False)
+        with patch.object(coordinator, 'native_authority',
+                          lambda _, **kw: events.append(('native', kw))), \
+                patch.object(coordinator, 'service_group', side_effect=AssertionError('Unrelated service start')):
+            coordinator.checks(executor, args)
+        self.assertEqual(events, [('compile', [*coordinator.NATIVE_TEST_COMMAND, '--no-run']),
+            ('disconnect',), ('native', {'item_cases': ('item-read',)}), ('source',)])
+
+    def test_bad_cli_selection_fails_before_runtime_validation(self):
+        for options in (['--native-item', 'typo'],
+                        ['--native-item', 'item-read', '--native-item', 'item-read'],
+                        ['--native-item', 'item-read', '--pure']):
+            with self.subTest(options=options), patch.object(sys, 'argv', ['container_verify.py', *options]), \
+                    patch.object(coordinator, 'validate_runtime') as validate:
+                with self.assertRaises(SystemExit) as result:
+                    coordinator.main()
+                self.assertEqual(result.exception.code, 2)
+                validate.assert_not_called()

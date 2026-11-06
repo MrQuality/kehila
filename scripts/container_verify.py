@@ -11,8 +11,8 @@ from test_services import managed_runtime, service_group, validate_daemon_enviro
 from verification_budget import validate_seconds, work_budget
 from verification_settings import load
 from verify import check_commands
-from container_native import check as native_authority
-from native_authority_fixture import NATIVE_TEST_COMMAND
+from container_native import check as native_authority, selected_item_cases
+from native_authority_fixture import NATIVE_TEST_COMMAND, ITEM_DATABASES
 import time
 from verification_ownership import GROUPS, ServiceOwnership
 
@@ -35,15 +35,19 @@ def checks(executor, args, ownership=None):
             return service_group(executor.runtime, selected)
         return service_group(executor.runtime, selected, ownership=ownership)
 
-    if getattr(args, 'native_authority', False):
+    item_cases = getattr(args, 'native_item', None)
+    if getattr(args, 'native_authority', False) or item_cases is not None:
         executor.execute([*NATIVE_TEST_COMMAND, '--no-run'])
         executor.finish_builds()
-        native_authority(executor)
+        if item_cases is None:
+            native_authority(executor)
+        else:
+            native_authority(executor, item_cases=item_cases)
         executor.verify_source()
         return
     for command in check_commands(args):
         executor.execute(command)
-    if args.docs or args.pure:
+    if args.docs or args.pure or getattr(args, 'development', False):
         return
     executor.execute([sys.executable, 'tests/integration/task_path.py', '--build-only', '/work/task-path'])
     executor.execute([*NATIVE_TEST_COMMAND, '--no-run'])
@@ -78,9 +82,13 @@ def main():
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument('--docs', action='store_true')
     modes.add_argument('--pure', action='store_true')
+    modes.add_argument('--development', action='store_true',
+                       help='Run shared unit/tooling/page checks without provisioning external services')
     modes.add_argument('--prepare-dependencies', action='store_true')
     modes.add_argument('--native-authority', action='store_true',
                        help='Only compile and run the real native PostgreSQL/HTTP/TLS product fixture')
+    modes.add_argument('--native-item', action='append', choices=tuple(ITEM_DATABASES),
+                       help='Run a focused WorkItem case with its independent observer; repeat for multiple cases')
     parser.add_argument('--timeout', type=float)
     parser.add_argument('--ownership-file', type=Path,
                         default=os.environ.get('KEHILA_VERIFICATION_OWNERSHIP_FILE'),
@@ -95,6 +103,10 @@ def main():
         parser.error('KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE must be 0 or 1')
     parser.add_argument('--exclusive-podman-machine', action='store_true', default=exclusive == '1')
     args = parser.parse_args()
+    try:
+        args.native_item = selected_item_cases(args.native_item)
+    except ValueError as error:
+        parser.error(str(error))
     validate_runtime(args.engine, args.podman_machine, args.exclusive_podman_machine)
     validate_daemon_environment(os.environ, args.podman_machine)
     settings = load()
@@ -122,7 +134,8 @@ def main():
             if args.ownership_file is not None:
                 # Reserve every applicable service group before any creation.
                 # The external host record is never copied into the runner.
-                full = not (args.docs or args.pure or args.prepare_dependencies or args.native_authority)
+                full = not (args.docs or args.pure or args.development or args.prepare_dependencies
+                            or args.native_authority or args.native_item is not None)
                 ownership = ServiceOwnership.create(args.ownership_file, runtime, ROOT,
                                                     executor.owner, GROUPS if full else ())
             with executor.owned():

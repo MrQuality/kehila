@@ -142,11 +142,70 @@ class CleanupTests(unittest.TestCase):
         temporary.start()
         self.addCleanup(temporary.stop)
 
+    def test_focused_item_case_keeps_its_pristine_database_and_observer_only(self):
+        executor = Executor()
+        native.check(executor, item_cases=('item-read',))
+        modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
+                 for args in executor.events if 'scripts/native_authority_fixture.py' in args]
+        self.assertEqual(modes, ['prepare', 'item-read'])
+        copies = [args[-1] for args in executor.events if 'createdb' in args]
+        self.assertEqual(copies, ['native_item_read'])
+        copy = next(i for i, args in enumerate(executor.events) if 'createdb' in args)
+        observer = next(i for i, args in enumerate(executor.events)
+                        if '/tmp/native_item_read_state.sql' in args)
+        invocation = next(i for i, args in enumerate(executor.events) if 'item-read' in args)
+        self.assertLess(copy, invocation)
+        self.assertLess(invocation, observer)
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+
+    def test_focused_cases_run_once_in_canonical_order(self):
+        executor = Executor()
+        native.check(executor, item_cases=('item-pending', 'item-read'))
+        modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
+                 for args in executor.events if 'scripts/native_authority_fixture.py' in args]
+        self.assertEqual(modes, ['prepare', 'item-read', 'item-pending'])
+
+    def test_invalid_focused_selection_fails_before_any_executor_observation(self):
+        for selection in ((), ('item-read', 'item-read'), ('journey',), ('typo',), ('item-read', [])):
+            executor = Executor()
+            with patch.object(executor, 'inspect_container') as inspect:
+                with self.subTest(selection=selection), self.assertRaises(ValueError):
+                    native.check(executor, item_cases=selection)
+                inspect.assert_not_called()
+                self.assertEqual(executor.events, [])
+
+    def test_focused_observer_failure_retains_scope_and_cleans_up(self):
+        executor = Executor(fail_observer='/tmp/native_item_read_state.sql')
+        with self.assertRaisesRegex(RuntimeError, 'item-read-independent-observer'):
+            native.check(executor, item_cases=('item-read',))
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+        folders = list(self.root.glob('kehila-native-diagnostics-*'))
+        self.assertEqual(len(folders), 1)
+        selection = json.loads((folders[0] / 'selection.json').read_text(encoding='utf-8'))
+        self.assertEqual(selection, {'scope': 'focused-items', 'selected_items': ['item-read'],
+                                     'observed_items': []})
+
+    def test_focused_cleanup_failure_does_not_report_success(self):
+        class CleanupFailure(Executor):
+            def engine(self, *args, **kwargs):
+                if args[0] == 'rm':
+                    raise subprocess.CalledProcessError(1, args)
+                return super().engine(*args, **kwargs)
+
+        with patch('builtins.print') as output, self.assertRaises(subprocess.CalledProcessError):
+            native.check(CleanupFailure(), item_cases=('item-read',))
+        self.assertFalse(any(str(call.args[0]).startswith('PASS:') for call in output.call_args_list))
+
     def test_dependent_database_is_removed_by_full_identity(self):
         executor = Executor()
         native.check(executor)
         removals = [args for args in executor.events if args[0] == 'rm']
         self.assertEqual(removals, [('rm', '--force', '--volumes', DATABASE)])
+        modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
+                 for args in executor.events if 'scripts/native_authority_fixture.py' in args]
+        self.assertEqual(modes, ['prepare', 'item-read', 'item-pending', 'journey', 'clock', 'restored',
+            'auth-expiry', 'auth-delivery', 'auth-unknown', 'auth-owned', 'auth-revoke', 'auth-fenced',
+            'auth-read', 'auth-lifetime'])
 
     def test_authentication_copies_precede_all_runtime_journeys_and_are_observed(self):
         executor = Executor()

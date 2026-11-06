@@ -104,11 +104,22 @@ Include relevant service versions and results for integration changes. Keep
 credentials, local environment files, and unrelated changes out of the PR.
 
 The local commit hook tests staged source files in an isolated directory. Stage
-test fixes before retrying a failed commit. CI runs the full suite for executable,
-dependency, workflow, engineering qualification-input and unclassified changes
-in pull requests and pushes to `main`. Known ordinary prose-only changes run the
-shared documentation checks described in [the testing guide](docs/TESTING.md).
-Documentation-check results do not establish full-suite or release qualification.
+test fixes before retrying a failed commit. During development, select additional
+checks from the affected contracts and failure risks. Ordinary commits run the
+pure or development backstop; draft PR CI runs development checks for non-prose
+changes without provisioning the external service stack. These checks do not
+establish full qualification. Known ordinary prose changes retain the shared
+documentation checks described in [the testing guide](docs/TESTING.md).
+
+When the complete delivery goal is implemented, run full final qualification.
+The local staged gate accepts `--qualification`. While the PR remains draft,
+applying the `qualification` label requests full hosted verification of its exact
+head. If another final attempt needs a new event, remove and reapply the label;
+a retained label does not make later draft updates run the full suite. Ready PRs
+and pushes to `main` retain full non-prose verification. Invalid CI event/base
+metadata fails selection. Full evidence and independent exact-head review must
+pass before marking ready; a label, draft flag or green development run does not
+establish completion. Merging remains the maintainer's decision.
 
 Changes to `main` require passing CI. During the sole-contributor phase, an
 independent approving PR review is optional. Before merging, the maintainer

@@ -85,6 +85,77 @@ are reused within scope; Proposed ADR-108/109 are not silently adopted.
 
 ## Delivery and review map
 
+### Risk-based development testing
+
+The maintainer directed on 2026-11-06 that development testing follow risk and
+full testing wait until this entire outcome is implemented. The outcome above
+is unchanged. Keep checks proportional to the changed invariant and its actual
+producer/consumer boundaries, rather than scheduling another full campaign for
+each helper or checkpoint.
+
+| Changed contract | Development evidence to select | Evidence not established by that selection |
+| --- | --- | --- |
+| Pure request/result admission and sealed mutation packet | Relevant unit, representation-bound and rejection cases | Native atomicity, authorization or durable replay |
+| Current-state, pending-request decoding or mutation preparation | Affected unit checks and real item-read/item-pending fixture with its independent SQL observer | Unchanged project/authentication journeys and an executed item save |
+| Item save/reload, rollback or retry ownership | Real native write path with accepted state/history comparison, rollback, conflict and uncertain-outcome cases relevant to the change | End-to-end recovery until the runtime and client path also execute |
+| Shared authority, schema, transaction or deadline behavior | Affected native consumers and failure oracles traced from the shared contract; expand selection when that dependency is uncertain | Qualification of unexecuted consumers |
+| Interface request identity and outcome handling | Affected page controls and response-loss/retry assertions | Actual browser execution or durable storage correctness |
+| Verification orchestration | Focused selection, invocation, prerequisite/observer pairing, deadline and owned-cleanup controls | A real service journey merely because mocks passed |
+
+Retain earlier results only while their relevant source, environment, fixture
+and oracle premises hold. Record why a change invalidates a case before rerunning
+it. Full shared/native verification, the complete capability failure/concurrency
+matrix, applicable client checks and independent exact-head composition review
+remain final qualification work. User-assisted cases remain batched at that
+stage under their existing permissions. No deferred check is counted as passed.
+
+The bounded native selector adds explicit `--native-item` cases with their
+pristine database and matching independent observer. Existing full sequencing
+and cleanup are retained. The two affected mocked orchestration test files pass
+39 tests in total. The initial pre-implementation attempt failed for the missing
+selection API and absent focused routing; those are harness-development results,
+not native product failures. No real focused fixture or full campaign has run
+for this selector. Its first real composition check belongs with the next
+affected native change, avoiding a separate qualification campaign.
+
+The shared verifier now has a development mode; ordinary I/O/tooling commits use
+it while pure commits keep the pure matrix. Explicit local `--qualification`
+forces full staged-tree testing. Draft CI uses the development backstop, with
+full hosted qualification requested by the exact `qualification` label event
+after the entire goal is implemented. Ready/main verification remains full as
+applicable. Invalid event/base/draft metadata fails selection, and the same event
+policy drives snapshot enforcement. Branch protection and readiness criteria are
+unchanged. This is a scheduling change, not a waiver of final evidence.
+
+The earlier cadence candidate proposed full/error handling for unknown paths.
+Disposition: validated draft events instead use the explicit development
+inventory, honoring the maintainer's instruction to reserve full testing for
+the finished goal. Unknown paths still require author tracing of affected
+contracts and relevant targeted checks before dependent work/publication; the
+backstop makes no claim to cover arbitrary new subsystems. Hold affected work if
+that trace cannot be established. Invalid metadata and unavailable diffs remain
+selection errors. Final full qualification is unchanged.
+
+Focused routing checks passed: 17 shared-matrix tests, 20 container orchestration
+tests, 18 Git snapshot tests (two platform skips), eight classification tests,
+12 CI-scope tests and three CI-enforcement tests. Initial attempts failed for the
+missing development/event APIs and qualification-flag propagation; those failures
+remain retained. This is mocked/Git-fixture evidence only. Development-mode
+container execution and hosted event composition remain unexecuted at this
+checkpoint; full capability qualification remains deferred to the finished goal.
+The workflow YAML parsed successfully, including the six PR event types, three
+jobs and full-only native/service preparation guards. This is source validation,
+not a hosted execution result.
+
+This component includes native-case selection, shared development mode,
+hook/event propagation, regression controls and contributor documentation.
+It excludes a generic test scheduler, branch-protection changes and product
+architecture changes. The component review found no substantive blocker; the
+native full-sequence indentation accounts for substantial textual churn, with
+tests/documentation separately reviewable. Its next publication checkpoint is a
+bounded development-mode execution and review of the resulting source/evidence;
+it does not redefine the whole WorkItem goal as complete.
+
 ### Owner interface: local qualification complete
 
 The current interface component connects fresh authorized project reads to

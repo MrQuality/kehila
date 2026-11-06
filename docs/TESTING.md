@@ -21,6 +21,27 @@ results and link experiments to decisions and reusable regression coverage.
 
 ## Automated checks and user-assisted final verification
 
+On 2026-11-06 the maintainer directed risk-based testing during development and
+full testing only when the delivery goal is finished. Select development checks
+from the changed invariant, its consumers and the consequence of failure. Use
+real service-backed tests when the question concerns storage, authorization,
+atomicity or concurrent behavior; pure tests and mocks cannot establish those
+contracts. Broaden affected coverage when shared contracts change or contrary
+evidence invalidates an earlier result. Do not repeat unrelated journeys simply
+because another implementation checkpoint has been reached.
+
+In the existing delivery record, name the selected checks and their decisive
+oracles, retained evidence and its validity conditions, and deferred final cases.
+Reserve full applicable qualification and final exact-head composition review for
+the completed goal. A component checkpoint does not redefine that goal. Deferred
+checks remain incomplete, and failures remain retained evidence.
+
+The hook/CI selectors below distinguish development from final qualification.
+They provide an automated backstop; they cannot infer every affected contract or
+replace risk-selected boundary tests. Do not bypass them or describe a focused
+development run as a full gate pass. Resource, container, privacy and trust
+restrictions continue to apply.
+
 The maintainer directed this scheduling rule on 2026-10-31: checks that require
 someone to operate a separate device, handle an operating-system confirmation
 or make a temporary trust change belong to final qualification before the PR
@@ -47,6 +68,32 @@ Deferred or unexecuted cases remain incomplete. It neither grants security or
 trust permissions nor authorizes changing a PR's status.
 
 ## Commands
+
+The shared development backstop is `python scripts/verify.py --development` on
+the CI host, or `python scripts/container_verify.py --development` through the
+exported-source Podman procedure on Windows. It runs tooling/static checks,
+page controls, Go/frozen checks and Rust workspace tests excluding the live-NATS
+test crate. It does not provision the external service stack or run the native
+PostgreSQL journeys. Some unit tests own local listeners; this is not a claim of
+pure execution or absence of runtime activity. Reassess the service-independent
+workspace inventory when adding tests/crates. Select affected real service cases
+separately during development.
+
+For a focused native WorkItem development check, the exported-source Podman
+runner accepts `--native-item item-read` or `--native-item item-pending`.
+Repeat `--native-item` to select both; duplicates and unknown cases fail before
+runtime entry. Cases run in the fixture's canonical order, each with its isolated
+pristine database, native runtime path and independent SQL observer. The runner
+retains its compilation, source checks, execution budgets and owned cleanup.
+Its output and retained failure diagnostics identify the focused scope.
+
+This selects WorkItem journeys only. It supplies neither the other native
+journeys nor shared full verification. `--native-authority` and the default full
+runner retain their complete native sequence. The selector's orchestration has
+mocked regression evidence; its focused real PostgreSQL composition still needs
+execution with the next affected native change. Use the existing exported-source
+and explicit dependency-preparation procedure; do not run the container verifier
+directly from a checkout.
 
 Full and pure verification validate the [engineering register](engineering/ENGINEERING-STANDARD.md)
 and run Go formatting/vet checks in addition to the existing matrix. CI retains
@@ -511,16 +558,35 @@ python scripts/verify.py --docs
 
 This mode runs Python tooling regressions, naming and engineering metadata/
 generated-document checks without compilers or external services. CI keeps the
-always-triggered `verify` job and selects this path only when every changed file
-is a known ordinary prose document. The shared hook policy excludes engineering
-register/preamble/generated-standard inputs from that shortcut. All other CI
-changes retain full verification; an empty diff, unavailable event base, unknown
-input or code deletion/rename into documentation selects full verification.
-The hook retains its pure/full source distinction; CI is deliberately more
-conservative for every non-prose change. Workflow changes themselves select full
-verification. No workflow-level path ignore or commit-message bypass is added.
-Lightweight results establish only their documented scope; release qualification
-still requires full verification of its subject source and maintainer assessment.
+always-triggered `verify` job and selects this shortcut only after a valid diff
+shows known ordinary prose documents. Engineering register/preamble/generated
+standard inputs cannot take it. Non-prose, unknown and empty diffs select the
+development backstop for validated draft PRs and full verification for ready PRs
+or main pushes. Code deletions/renames cannot become prose-only by similarity.
+For unknown draft paths, the backstop covers its explicit inventories only.
+The author must trace affected contracts and select relevant checks; it does not
+prove coverage of an arbitrary new subsystem. Hold affected dependent work when
+that scope cannot be established. This deliberately avoids an automatic full
+campaign during unfinished development; it does not reduce final qualification.
+Malformed events, invalid draft state and unavailable comparison bases fail
+selection explicitly. No workflow-level path ignore or commit-message bypass is
+added. Lightweight results establish only their documented scope.
+
+At the finished goal, an authenticated author requests full draft-PR qualification
+by applying the exact `qualification` label. This `pull_request: labeled` event
+forces full checks even for prose/empty diffs. It uses the event's added label,
+not the PR's retained label list: later draft updates remain development runs.
+Remove/reapply the label for a fresh final request, or rerun prior evidence only
+when its exact source remains applicable. Do not add an automated token-driven
+label step or mark the PR ready to obtain its first full qualification. Resolve
+merge conflicts before using PR workflows.
+
+Record the checked-out head SHA, event/action, mode and workflow URL with final
+evidence. The workflow checks out the PR head, not GitHub's default merge ref.
+The native job explicitly defers its journeys outside full scope; its successful
+development job status is not executed native evidence. A readiness event runs
+full qualification conservatively and can repeat the already completed final
+run; it does not replace the full pass required before readiness.
 
 The full suite runs Python tests for the development tools, service readiness
 checks, the NATS account API check, Rust workspace tests, and Go tests. Missing
@@ -721,17 +787,25 @@ test doubles may complement these checks.
 the hook, run `python scripts/setup_env.py --hooks-only`.
 
 The hook exports staged files into a temporary directory and tests that snapshot.
-Unstaged edits cannot fix failing staged code. Changes to adapters, dependencies,
-test tools, or CI run the full suite; changes limited to pure code use unit tests.
-Documentation-only changes do not run tests locally. Documentation updates are
-expected when behavior changes, but are not required for every code edit.
+Unstaged edits cannot fix failing staged code. Changes limited to pure code use
+the pure matrix. Other non-prose changes use the development backstop, including
+adapter, dependency, tool and CI changes. Documentation-only changes do not run
+tests locally. Run `python .githooks/pre_commit.py --qualification` for the full
+staged-tree gate at goal completion; this explicit request also tests an empty
+or prose-only diff. Documentation updates are expected when behavior changes,
+but are not required for every code edit.
 
 The snapshot verifier rejects symlinks and submodules and checks that the index
 has not changed during execution. It cannot judge test completeness or relevance;
 these remain part of review.
 
-CI runs the full suite, then verifies changes relative to the event's base commit.
-Initial pushes are checked in a disposable clone with the staged tree preserved.
+CI selects development or full scope as described above, then exercises the same
+snapshot gate against the event base. Full scope propagates `--qualification`;
+an initial main push uses a disposable clone with its staged tree preserved and
+full qualification retained. Invalid event metadata never silently selects a
+lighter gate. Draft development keeps formatting/lint, standalone transport and
+Windows client checks separately visible; service preparation/native journeys
+are deferred. Whole-goal readiness still requires full applicable qualification.
 Required CI settings on the hosting service provide the shared automated merge
 gate; local hooks alone cannot enforce it. Independent review is optional during
 the sole-contributor phase described in the contribution guide. Consult the

@@ -47,6 +47,43 @@ class PureMatrixTests(IsolatedEnvironmentTests):
                 VERIFY.main()
 
 
+class DevelopmentMatrixTests(IsolatedEnvironmentTests):
+    def test_development_runs_workspace_and_page_checks_without_service_phases(self):
+        with patch.object(sys, 'argv', ['verify.py', '--development']), \
+                patch.object(VERIFY.subprocess, 'run') as run, \
+                patch.object(VERIFY, 'managed_runtime') as runtime, \
+                patch.object(VERIFY, 'owned_directory') as directory:
+            VERIFY.main()
+        runtime.assert_not_called()
+        directory.assert_not_called()
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertIn(['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher'], commands)
+        self.assertTrue(any('tests/integration/work_item_page.test.cjs' in command for command in commands))
+        self.assertTrue(any('scripts/go_test.py' in command for command in commands))
+        self.assertFalse(any('--build-only' in command or '--run-only' in command
+                             or 'scripts/healthcheck.py' in command for command in commands))
+
+    def test_development_workspace_failure_propagates_without_service_start(self):
+        def run(command, **kwargs):
+            if '--exclude' in command:
+                raise subprocess.CalledProcessError(1, command)
+        with patch.object(sys, 'argv', ['verify.py', '--development']), \
+                patch.object(VERIFY.subprocess, 'run', side_effect=run), \
+                patch.object(VERIFY, 'managed_runtime') as runtime:
+            with self.assertRaises(subprocess.CalledProcessError):
+                VERIFY.main()
+        runtime.assert_not_called()
+
+    def test_development_rejects_external_services_before_execution(self):
+        with patch.object(sys, 'argv', ['verify.py', '--development', '--external-services']), \
+                patch.object(VERIFY.subprocess, 'run') as run, \
+                patch('sys.stderr', new_callable=io.StringIO):
+            with self.assertRaises(SystemExit) as result:
+                VERIFY.main()
+        self.assertEqual(result.exception.code, 2)
+        run.assert_not_called()
+
+
 class FullLifecycleTests(IsolatedEnvironmentTests):
     def test_matrix_fixtures_are_independent_of_caller_routing_settings(self):
         from test_engineering import RegisterTests
