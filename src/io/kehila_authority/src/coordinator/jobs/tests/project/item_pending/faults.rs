@@ -43,13 +43,7 @@ async fn collisions(ctx: &Context<'_>, serving: &Serving) {
     assert!(fault.consumed());
     drop(fault);
     assert_eq!(
-        serving
-            .handle
-            .live
-            .probe
-            .snapshot()
-            .native_mutex_attempts
-            - before.native_mutex_attempts,
+        serving.handle.live.probe.snapshot().native_mutex_attempts - before.native_mutex_attempts,
         2
     );
     assert_eq!(
@@ -73,13 +67,7 @@ async fn collisions(ctx: &Context<'_>, serving: &Serving) {
     assert!(fault.consumed());
     drop(fault);
     assert_eq!(
-        serving
-            .handle
-            .live
-            .probe
-            .snapshot()
-            .native_mutex_attempts
-            - before.native_mutex_attempts,
+        serving.handle.live.probe.snapshot().native_mutex_attempts - before.native_mutex_attempts,
         2
     );
     assert_eq!(
@@ -113,13 +101,7 @@ async fn collisions(ctx: &Context<'_>, serving: &Serving) {
     assert!(fault.consumed());
     drop(fault);
     assert_eq!(
-        serving
-            .handle
-            .live
-            .probe
-            .snapshot()
-            .native_mutex_attempts
-            - before.native_mutex_attempts,
+        serving.handle.live.probe.snapshot().native_mutex_attempts - before.native_mutex_attempts,
         3
     );
     assert_eq!(
@@ -162,12 +144,7 @@ async fn unrelated(ctx: &Context<'_>, serving: Serving) -> Serving {
             Some(code)
         );
         assert_eq!(
-            serving
-                .handle
-                .live
-                .probe
-                .snapshot()
-                .native_mutex_attempts
+            serving.handle.live.probe.snapshot().native_mutex_attempts
                 - before.native_mutex_attempts,
             1
         );
@@ -255,13 +232,7 @@ async fn unknown_registration(ctx: &Context<'_>, serving: Serving) -> (Serving, 
         (503, json!({"error":"outcome_unknown"}))
     );
     assert_eq!(
-        serving
-            .handle
-            .live
-            .probe
-            .snapshot()
-            .native_mutex_attempts
-            - before.native_mutex_attempts,
+        serving.handle.live.probe.snapshot().native_mutex_attempts - before.native_mutex_attempts,
         1
     );
     assert!(!serving.handle.live.is_live());
@@ -311,13 +282,7 @@ async fn unknown_cancellation(ctx: &Context<'_>, serving: Serving, entry: &Value
         (503, json!({"error":"outcome_unknown"}))
     );
     assert_eq!(
-        serving
-            .handle
-            .live
-            .probe
-            .snapshot()
-            .native_mutex_attempts
-            - before.native_mutex_attempts,
+        serving.handle.live.probe.snapshot().native_mutex_attempts - before.native_mutex_attempts,
         1
     );
     assert!(!serving.handle.live.is_live());

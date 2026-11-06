@@ -302,6 +302,29 @@ execution, saved-result reconciliation, direct edits and the first-party item
 interface are outside this runtime checkpoint. PR review readiness remains
 unavailable, and the saved-result final-clock decision remains unresolved.
 
+CI run `42157391757` on published head `a0131eb` passed native-authority and
+windows-owner-client, but verify failed at Rust formatting; its later steps
+were skipped. Six retry-counter assertions needed rewrapping after the earlier
+oracle repair. The formatter was not rerun after those later test edits before
+publication. The corrected file preserves the same expressions and expected
+counts `2/2/3/1/1/1`; independent delta review confirmed no semantic change.
+Container formatting verification and strict all-target workspace Clippy passed
+on tree `5a46d44a1b84bf6bdec85874bc6e67e8369c53dd` in 106.500 seconds through
+cleanup, with minimum sampled available memory 3.33 GiB, peak aggregate working
+sets 3.04 GiB, no recorded warning or alert and the provider stopped. This does
+not turn the failed CI run or its skipped checks into passes. The repair still
+requires its normal full commit gate and successful subsequent CI.
+
+The next normal gate attempt on tree `655e85e311757797f29643354cf2ea36e620f142`
+failed after the child reported completed workload checks and staged-source
+verification. During final observation, machine inspection exited with code 125;
+the controller terminated and joined Git before a commit was created. The cause
+of that inspection failure is unestablished. Total time through cleanup was
+583.406 seconds, minimum sampled available memory 2.075443 GiB and peak aggregate
+working sets 4.301178 GiB, with no recorded warning or alert. Owned cleanup ended
+with the provider stopped. Completed child checks do not qualify this failed
+outer gate; a successful normal gate remains required.
+
 ### Authorized-read runtime checkpoint
 
 At source `b77aabe`, production composition and startup still support projects
