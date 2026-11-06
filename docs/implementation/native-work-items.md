@@ -325,6 +325,16 @@ working sets 4.301178 GiB, with no recorded warning or alert. Owned cleanup ende
 with the provider stopped. Completed child checks do not qualify this failed
 outer gate; a successful normal gate remains required.
 
+The following normal full gate passed on tree
+`a6b03a250e4d323ee49d108b6c44816dd12ca1c4`, creating `d33de09`. It completed the
+required workload checks, source verification and owned cleanup, and Git exited
+normally with its process tree joined. The provider ended stopped. Total time
+through cleanup was 566.781 seconds, peak sampled aggregate working sets
+4.259209 GiB and minimum sampled available memory 1.748802 GiB. The two-GiB
+reserve warning was recorded; there was no resource-limit alert or floor breach.
+The previous failed gate and failed remote CI remain distinct. Subsequent remote
+CI and final committed-head review still require their own results.
+
 ### Authorized-read runtime checkpoint
 
 At source `b77aabe`, production composition and startup still support projects
