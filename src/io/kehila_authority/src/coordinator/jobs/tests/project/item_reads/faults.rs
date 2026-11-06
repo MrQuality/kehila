@@ -17,7 +17,9 @@ pub(super) async fn exercise(
     let denied = admin
         .client()
         .query(
-            "SELECT kehila_auth.save_item_create(NULL,NULL,NULL,NULL,NULL,NULL)",
+            // The closed save entry is a serving capability; its private fence
+            // remains unavailable to the runtime as an independent operation.
+            "SELECT kehila_auth.item_write_fence(NULL::kehila_auth.authority,NULL::kehila.ident)",
             &[],
         )
         .await
