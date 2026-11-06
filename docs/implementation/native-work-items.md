@@ -85,6 +85,52 @@ are reused within scope; Proposed ADR-108/109 are not silently adopted.
 
 ## Delivery and review map
 
+### Owner interface: integrated source, qualification pending
+
+The current interface component connects fresh authorized project reads to
+bounded item browsing, individual reads and saved creation-request discovery.
+It adds configured type/workflow selection, optional text presence and exact
+thousandths estimates to explicit intent registration, plus immutable request
+inspection and confirmed same-locator cancellation. Saving does not execute a
+WorkItem. Execution, saved-result recovery and direct editing remain required
+future interface work within the original goal.
+
+Forms preserve exact text and distinguish absent, empty and zero values. They
+reject unsupported required nontext fields, unavailable configured choices,
+per-field UTF-8 overflow and encoded request-body overflow before transmission.
+Response identities, revisions and pagination positions remain exact strings;
+rendered field contents use text nodes and whitespace-preserving elements.
+Project replacement and owner-binding loss invalidate stale actions and late
+responses. Registration uncertainty cannot be resolved by comparing equal forms
+or by a later separately confirmed save.
+
+An unconfirmed cancellation retains one exact locator and permits only explicit
+same-locator retries. Inspection of a prepared snapshot does not resolve it.
+Because a cancelled request can later disappear, an explicit stop-tracking action
+can release that client slot while retaining a bounded generic uncertainty
+warning across ordinary project/context changes. It performs an owner-binding
+lookup but sends no WorkItem request and establishes no rollback or confirmed
+outcome. Explicit owner-forget clears the local warning. A completed result
+preserves its item target for a separate current read; cancellation never undoes
+an accepted item.
+
+The isolated final interface tree `4751719d223f613952f44ccc843bb9f4953def3f`
+passed all 42 simulated-controller checks, including existing project controls,
+in 33.593 seconds through owned cleanup. The provider stopped; minimum sampled
+available memory was 4.928623 GiB and peak aggregate working sets 1.497421 GiB,
+with no recorded warning or alert. Expected pre-implementation failures were
+retained separately. Independent component review found no remaining source
+finding. This evidence covers simulated controllers, not actual browser use,
+Rust route compilation or the integrated checkout's mandatory gate; those
+applicable integration checks remain pending.
+
+The integrated tree `cd80f233be143b0a863d2370990f1a91070790eb` subsequently passed
+formatting and strict locked, offline all-target workspace Clippy in 107.359
+seconds through cleanup. Its embedded interface route compiled as part of that
+check. Minimum sampled available memory was 3.405865 GiB and peak aggregate
+working sets 3.017921 GiB, with no recorded warning or alert; the provider stopped.
+This does not establish actual browser behavior or replace the normal full gate.
+
 ### Creation-intent runtime checkpoint: local qualification complete
 
 The next independent component exposes `/items/pending/register`,

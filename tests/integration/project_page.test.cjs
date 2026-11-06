@@ -43,12 +43,15 @@ async function fixture(handler = () => undefined) {
       async cancel() { readers.cancelled++; }, releaseLock() { readers.released++; }
     })}};
   };
-  vm.runInNewContext(fs.readFileSync(page + 'page.js', 'utf8'), {
+  const context = {
     document: {getElementById: id => { assert.ok(elements.has(id), id); return elements.get(id); },
       createElement: tag => { const el = new Element(tag); if (tag === 'button') buttons.push(el); return el; },
       querySelectorAll: selector => selector === 'button' ? buttons : []},
-    fetch, AbortController, TextDecoder, Uint8Array, setTimeout, clearTimeout
-  });
+    fetch, AbortController, TextDecoder, TextEncoder, Uint8Array, setTimeout, clearTimeout
+  };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(page + 'work_items.js', 'utf8'), context);
+  vm.runInContext(fs.readFileSync(page + 'page.js', 'utf8'), context);
   const idle = async () => {
     for (let i = 0; i < 100; i++) { await new Promise(setImmediate); if (!elements.get('logout').disabled) return; }
     throw new Error('Page did not settle');
@@ -198,4 +201,17 @@ test('over-limit, invalid UTF-8 and malformed acknowledgement preserve save reco
     assert.equal(f.elements.get('project-form').hidden, true);
     assert.equal(f.readers.cancelled, 1);
   }
+});
+
+test('fresh current project read enables scoped item browsing and a separate project request clears it', async () => {
+  const f = await fixture((url, body) => {
+    if (url === '/projects/list') return [200, {entries:[entry('completed')], before:null}];
+    if (url === '/projects/open') return [200, {entry:entry('completed')}];
+    if (url === '/projects/read') return [200, {outcome:'read',
+      project:{codec_version:1,kind:'project_snapshot',value:{id:'native-project',name:'Fresh project',estimate_unit:'points',configuration_revision:'1'}},
+      configuration:{codec_version:1,kind:'configuration_snapshot',value:{project_id:'native-project',revision:'1',fields:[]}}}];
+    if (url === '/items/list') { assert.deepEqual(body,{project_id:'native-project',before:null});return [200,{outcome:'listed',entries:[],before:null}]; }
+  });
+  assert.equal(f.elements.get('work-items').hidden,true);await f.select();await f.fire('read-project');assert.equal(f.elements.get('work-items').hidden,false);
+  await f.fire('items-refresh');assert.equal(f.calls.filter(call=>call.url==='/items/list').length,1);await f.fire('new-request');assert.equal(f.elements.get('work-items').hidden,true);
 });
