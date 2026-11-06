@@ -142,7 +142,8 @@ tests, 18 Git snapshot tests (two platform skips), eight classification tests,
 missing development/event APIs and qualification-flag propagation; those failures
 remain retained. This is mocked/Git-fixture evidence only. Development-mode
 container execution and hosted event composition remain unexecuted at this
-checkpoint; full capability qualification remains deferred to the finished goal.
+source-review checkpoint; full capability qualification remains deferred to the
+finished goal. The later development execution is recorded below.
 The workflow YAML parsed successfully, including the six PR event types, three
 jobs and full-only native/service preparation guards. This is source validation,
 not a hosted execution result.
@@ -152,9 +153,23 @@ hook/event propagation, regression controls and contributor documentation.
 It excludes a generic test scheduler, branch-protection changes and product
 architecture changes. The component review found no substantive blocker; the
 native full-sequence indentation accounts for substantial textual churn, with
-tests/documentation separately reviewable. Its next publication checkpoint is a
-bounded development-mode execution and review of the resulting source/evidence;
-it does not redefine the whole WorkItem goal as complete.
+tests/documentation separately reviewable. The bounded development-mode execution
+completed below supplies the local publication checkpoint; hosted composition
+and the whole WorkItem outcome remain unfinished.
+
+On 2026-11-06 exact tree `64c3ae5c2e6cdb54fff1395e7e15c7dc937586c2`
+passed the normal Podman development commit gate, producing `2c54355`.
+It ran 500 Python tooling tests with two platform skips, all 42 page controls,
+workspace tests excluding live NATS, Go static/tests and frozen oracles.
+No native PostgreSQL journey or external service group ran in this scope.
+The source checks, Git completion and owned cleanup passed; the provider stopped.
+Time through cleanup was 309.954 seconds with the existing 1.5 GiB/one-CPU runner.
+Minimum sampled available memory was 2.891373 GiB and peak aggregate working sets
+were 3.221176 GiB, with no warning or alert. These are observations, not capacity
+or minimum-launch guarantees. A preceding preparation assertion failed and was
+independently reconciled; that failed evidence remains distinct from this pass.
+The running source matched the independently reviewed candidate. Hosted event
+composition and full capability qualification remain outstanding.
 
 ### Owner interface: local qualification complete
 
