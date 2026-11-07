@@ -12,15 +12,35 @@ the scoped native HTTP/TLS, concurrency, restart and synthetic-copy evidence;
 the merged PR records its final-head checks and review. Actual browser behavior,
 supported installation/real-data use and full M1 remain unqualified.
 
-The [native WorkItem delivery brief](implementation/native-work-items.md)
-records the next user-selected outcome and its proposed architectural gates.
-WorkItem create/read/list/edit integration is not implemented yet. The legacy
-Go/FerretDB task path remains separate and unauthenticated.
+The [native WorkItem delivery record](implementation/native-work-items.md)
+records the subsequently delivered capability in
+[PR #96](https://github.com/MrQuality/kehila/pull/96): authenticated Task/Milestone
+create/read/bounded-list, ordinary text/estimate edits, server-owned pending
+creation and identity-preserving retry/reconciliation. Pure model rules, native
+SQL, the Rust authority and the development interface are connected for this
+fresh synthetic slice. Broader M1 behavior, populated upgrades/import, supported
+installation and real-data/browser qualification remain outside that evidence.
 
-Older progress sections below retain earlier component boundaries and dated
-observations. Statements that the native application adapter is absent are
-superseded for PR #92's bounded project-creation scope only; they remain relevant
-to unfinished WorkItem and broader M1 integration.
+[PR #97](https://github.com/MrQuality/kehila/pull/97) retires the separate anonymous
+Go/FerretDB prototype from builds, setup and required verification. The
+[retirement record](implementation/ferretdb-retirement.md) maps its tests to
+retained native evidence or explicitly retired protocols and records remaining
+qualification gates. Existing experimental records and retained volumes are
+preserved; no compatibility bridge or data import is provided.
+
+| Current component | Implemented boundary |
+| --- | --- |
+| Rust/native PostgreSQL authority | Authenticated project creation, pending creation, cancellation/reconciliation, authorized project and WorkItem reads, bounded item lists, Task/Milestone creation and text/estimate edits |
+| Pure project/WorkItem contracts and codecs | Typed model rules and frozen request/result/snapshot representations; the authority adopts the selected persistence slice, not every broader pure rule |
+| Go synchronization contracts | Retained independent pure module and its format/vet/test inventory |
+| NATS and OpenSearch | Independent broker/readiness checks; native authoritative operations do not require search/event delivery |
+| Compose and native fixtures | PostgreSQL/NATS/OpenSearch development infrastructure; isolated PostgreSQL TLS fixtures and independent state observers for native capability qualification |
+
+Older component notes below retain earlier boundaries and dated observations.
+Statements that the native application adapter is absent, or WorkItems are not
+connected, describe that earlier stage and are superseded by the current summary
+and linked delivery evidence. They do not retract the still-unfinished broader
+M1 and supported-release obligations.
 
 The [engineering standard](engineering/ENGINEERING-STANDARD.md) assesses Kehila as
 E0 Experimental, independently of product delivery milestones. The register and
@@ -28,7 +48,10 @@ its generated document are checked in shared verification; Go formatting/vet
 join the current CI baseline. These controls do not add supported product,
 authentication, recovery or release capabilities, or broaden existing evidence.
 
-Kehila is in early development. The current components are:
+## Earlier component notes
+
+The following inventory and limitations are historical. Use the current native
+checkpoint above for implemented application behavior.
 
 [ADR-102](architecture/ADR-102-postgresql-transactions.md) records the accepted
 native PostgreSQL/JSONB and bounded-transaction direction for new M1 storage.

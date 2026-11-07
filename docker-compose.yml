@@ -14,16 +14,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 30
-  ferretdb:
-    # 1.x supports stock Postgres; 2.x requires a different backend.
-    image: ghcr.io/ferretdb/ferretdb:1.24.2
-    environment:
-      FERRETDB_POSTGRESQL_URL: postgres://postgres:postgres@postgres:5432/yaja
-      FERRETDB_TELEMETRY: disabled
-    ports: ["27017:27017"]
-    depends_on:
-      postgres:
-        condition: service_healthy
   nats:
     image: docker.io/library/nats:2.10.26-alpine
     command: ["-js", "-m", "8222", "-sd", "/data/jetstream"]

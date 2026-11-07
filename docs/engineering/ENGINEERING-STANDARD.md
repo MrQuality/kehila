@@ -232,8 +232,8 @@ Every exposed read, mutation, configuration and replay path MUST authenticate an
 - **Sources:** ASVS, SSDF.
 - **Required evidence:** Allow/deny, IDOR, cross-project, revoked-grant replay, session and CLI/browser negative tests.
 - **Enforcement:** Authoritative service boundaries and security integration suite.
-- **Current status:** partial. Origin checks and pure grant rules exist; no integrated authentication or authorization baseline.
-- **Current evidence:** [go/io/task_api/server.go](../../go/io/task_api/server.go), [src/pure/task_contract/tests/operation.rs](../../src/pure/task_contract/tests/operation.rs)
+- **Current status:** partial. Native owner/session and grant enforcement have bounded synthetic coverage; complete browser/session recovery and every future exposed path remain unqualified.
+- **Current evidence:** [src/pure/task_contract/tests/operation.rs](../../src/pure/task_contract/tests/operation.rs), [src/io/kehila_authority/src/http_auth.rs](../../src/io/kehila_authority/src/http_auth.rs), [src/io/kehila_authority/src/session.rs](../../src/io/kehila_authority/src/session.rs), [docs/implementation/ferretdb-retirement.md](../../docs/implementation/ferretdb-retirement.md)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-007](../../docs/product/backlog.md#b-007), [docs/product/backlog.md#b-020](../../docs/product/backlog.md#b-020), [docs/product/decisions.md#d-017](../../docs/product/decisions.md#d-017), [docs/product/decisions.md#d-033](../../docs/product/decisions.md#d-033)
 
 <a id="sec-003"></a>
@@ -307,8 +307,8 @@ Public HTTP APIs MUST be OpenAPI contract-first with tested schemas, stable erro
 - **Sources:** OpenAPI, ASVS, ISO25010.
 - **Required evidence:** Validated specification, cross-language positive/negative conformance and compatibility diff; documented endpoint applicability.
 - **Enforcement:** Future contract validation and API integration tests; design review now.
-- **Current status:** partial. Experimental errors include operation_id_reused/version_conflict; no supported OpenAPI contract exists.
-- **Current evidence:** [go/io/task_api/server.go](../../go/io/task_api/server.go), [src/io/task_worker/src/main.rs](../../src/io/task_worker/src/main.rs), [packages/contracts/index.d.ts](../../packages/contracts/index.d.ts)
+- **Current status:** partial. The anonymous prototype contract is retired. The native HTTP boundary exists; a supported OpenAPI specification, compatibility policy and complete endpoint conformance remain pending.
+- **Current evidence:** [packages/contracts/index.d.ts](../../packages/contracts/index.d.ts), [src/io/kehila_authority/src/listener.rs](../../src/io/kehila_authority/src/listener.rs), [docs/implementation/ferretdb-retirement.md](../../docs/implementation/ferretdb-retirement.md)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-004](../../docs/product/backlog.md#b-004), [docs/product/backlog.md#b-022](../../docs/product/backlog.md#b-022), [docs/product/decisions.md#d-016](../../docs/product/decisions.md#d-016), [docs/product/decisions.md#d-032](../../docs/product/decisions.md#d-032)
 
 <a id="api-002"></a>
@@ -322,8 +322,8 @@ Same operation ID and intent MUST return the original accepted result within its
 - **Sources:** ISO25010, ASVS.
 - **Required evidence:** Pure and actual-storage replay/race tests, scope/fingerprint/expiry/restore tests and API mappings.
 - **Enforcement:** Domain replay logic, immutable storage uniqueness, service access checks and integration tests.
-- **Current status:** partial. Bounded single-task ledger exists; scoped configurable replay/access/compaction/restore integration is pending.
-- **Current evidence:** [src/io/task_worker/src/lib.rs](../../src/io/task_worker/src/lib.rs), [tests/integration/live_task_worker.py](../../tests/integration/live_task_worker.py), [src/pure/task_contract/tests/operation.rs](../../src/pure/task_contract/tests/operation.rs)
+- **Current status:** partial. Native Project and WorkItem replay have bounded real-storage coverage; configurable replay/compaction/restore qualification remains pending. Native protocol/error mapping is not literal prototype envelope conformance.
+- **Current evidence:** [src/pure/task_contract/tests/operation.rs](../../src/pure/task_contract/tests/operation.rs), [src/io/kehila_authority/src/postgres/transaction/native/replay.rs](../../src/io/kehila_authority/src/postgres/transaction/native/replay.rs), [scripts/native_authority_fixture.py](../../scripts/native_authority_fixture.py), [docs/implementation/ferretdb-retirement.md](../../docs/implementation/ferretdb-retirement.md)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-005](../../docs/product/backlog.md#b-005), [docs/product/backlog.md#b-007](../../docs/product/backlog.md#b-007), [docs/product/backlog.md#b-022](../../docs/product/backlog.md#b-022), [docs/product/decisions.md#d-016](../../docs/product/decisions.md#d-016), [docs/product/decisions.md#d-017](../../docs/product/decisions.md#d-017), [docs/product/decisions.md#d-032](../../docs/product/decisions.md#d-032), [docs/product/decisions.md#d-033](../../docs/product/decisions.md#d-033), [docs/product/decisions.md#d-034](../../docs/product/decisions.md#d-034)
 
 <a id="data-001"></a>
@@ -337,8 +337,8 @@ Accepted task versions MUST increase monotonically; mutation/version/replay acce
 - **Sources:** ISO25010.
 - **Required evidence:** Storage uniqueness tests, contention/crash evidence and domain-to-enforcing-layer invariant table.
 - **Enforcement:** Domain rules, database keys and service tests; unresolved Q-019 blocks affected routes.
-- **Current status:** partial. Finite single-task race evidence is not linearizability proof or cross-document consistency.
-- **Current evidence:** [src/io/task_worker/src/lib.rs](../../src/io/task_worker/src/lib.rs), [docs/product/B-003-contract.md](../../docs/product/B-003-contract.md), [tests/integration/live_task_worker.py](../../tests/integration/live_task_worker.py)
+- **Current status:** partial. Native Project and WorkItem transaction/replay races have bounded fresh-database evidence; this does not establish all future cross-record contracts or general linearizability.
+- **Current evidence:** [docs/product/B-003-contract.md](../../docs/product/B-003-contract.md), [src/io/kehila_authority/src/postgres/transaction/native/item_write.rs](../../src/io/kehila_authority/src/postgres/transaction/native/item_write.rs), [scripts/native_authority_fixture.py](../../scripts/native_authority_fixture.py), [docs/implementation/ferretdb-retirement.md](../../docs/implementation/ferretdb-retirement.md)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-005](../../docs/product/backlog.md#b-005), [docs/product/backlog.md#b-009](../../docs/product/backlog.md#b-009), [docs/product/backlog.md#b-011](../../docs/product/backlog.md#b-011), [docs/product/backlog.md#b-012](../../docs/product/backlog.md#b-012), [docs/product/backlog.md#b-023](../../docs/product/backlog.md#b-023), [docs/product/decisions.md#d-016](../../docs/product/decisions.md#d-016), [docs/product/decisions.md#d-018](../../docs/product/decisions.md#d-018)
 
 <a id="event-001"></a>
@@ -352,8 +352,8 @@ Events MUST carry ID/type/schema version, aggregate ID/version, timestamp and co
 - **Sources:** ISO25010, OTel.
 - **Required evidence:** Versioned event schemas, producer/consumer tests, gap/rebuild and poison replay evidence.
 - **Enforcement:** Schema/contract tests, consumer version gates, client merge rules and recovery tooling.
-- **Current status:** partial. Minimum-version search check and bounded Python spike evidence exist; production CDC/indexer/event envelope is absent.
-- **Current evidence:** [go/io/task_api/server.go](../../go/io/task_api/server.go), [packages/contracts/index.d.ts](../../packages/contracts/index.d.ts), [docs/spikes/SP-001-task-path.md](../../docs/spikes/SP-001-task-path.md)
+- **Current status:** partial. The prototype minimum-version search adapter is retired. Retained type contracts and historical spike evidence do not establish a production CDC/indexer/event envelope.
+- **Current evidence:** [packages/contracts/index.d.ts](../../packages/contracts/index.d.ts), [docs/spikes/SP-001-task-path.md](../../docs/spikes/SP-001-task-path.md), [docs/implementation/ferretdb-retirement.md](../../docs/implementation/ferretdb-retirement.md)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-005](../../docs/product/backlog.md#b-005), [docs/product/backlog.md#b-022](../../docs/product/backlog.md#b-022), [docs/product/backlog.md#b-023](../../docs/product/backlog.md#b-023), [docs/product/decisions.md#d-016](../../docs/product/decisions.md#d-016), [docs/product/decisions.md#d-017](../../docs/product/decisions.md#d-017)
 
 <a id="persist-001"></a>
@@ -367,8 +367,8 @@ Supported installation MUST retain acknowledged writes, configuration and replay
 - **Sources:** ISO25010.
 - **Required evidence:** Actual supported-runtime termination/restart and durable-volume tests with independent reads.
 - **Enforcement:** Provisioning/readiness plus supported-runtime qualification.
-- **Current status:** partial. Bounded worker/spike evidence exists; main Compose has ephemeral data and no supported durability qualification.
-- **Current evidence:** [docs/spikes/SP-001-task-path.md](../../docs/spikes/SP-001-task-path.md), [src/io/task_worker/src/lib.rs](../../src/io/task_worker/src/lib.rs)
+- **Current status:** partial. Native synthetic PostgreSQL fixtures cover bounded commit/replay/recovery behavior. Supported populated installations, retained-volume machine restarts and production durability remain unqualified.
+- **Current evidence:** [docs/spikes/SP-001-task-path.md](../../docs/spikes/SP-001-task-path.md), [scripts/native_authority_fixture.py](../../scripts/native_authority_fixture.py), [docs/implementation/ferretdb-retirement.md](../../docs/implementation/ferretdb-retirement.md)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-005](../../docs/product/backlog.md#b-005), [docs/product/backlog.md#b-024](../../docs/product/backlog.md#b-024), [docs/product/decisions.md#d-016](../../docs/product/decisions.md#d-016), [docs/product/decisions.md#d-017](../../docs/product/decisions.md#d-017)
 
 <a id="rec-001"></a>
@@ -442,8 +442,8 @@ Critical invariants MUST be exercised by deterministic concurrency, sustained co
 - **Sources:** ISO25010.
 - **Required evidence:** Campaign parameters, interruption barriers, invariant oracles and failures across the QUALIFICATION matrix.
 - **Enforcement:** Real-service release campaigns and bounded CI regressions.
-- **Current status:** partial. Finite races/stalls and prototype failure cases exist; full production path and sustained/model qualification are pending.
-- **Current evidence:** [tests/integration/live_task_worker.py](../../tests/integration/live_task_worker.py), [docs/TEST_STRATEGY.md](../../docs/TEST_STRATEGY.md), [docs/spikes/SP-001-task-path.md](../../docs/spikes/SP-001-task-path.md)
+- **Current status:** partial. Native synthetic races, body deadlines and serving-network recovery have bounded evidence; sustained/model and full supported-environment qualification remain pending.
+- **Current evidence:** [docs/TEST_STRATEGY.md](../../docs/TEST_STRATEGY.md), [docs/spikes/SP-001-task-path.md](../../docs/spikes/SP-001-task-path.md), [scripts/native_authority_fixture.py](../../scripts/native_authority_fixture.py), [docs/implementation/ferretdb-retirement.md](../../docs/implementation/ferretdb-retirement.md)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-023](../../docs/product/backlog.md#b-023), [docs/product/backlog.md#b-024](../../docs/product/backlog.md#b-024)
 
 <a id="test-004"></a>
@@ -502,8 +502,8 @@ User/workload-controlled request/query complexity, filters, fields, task/event s
 - **Sources:** ASVS, ISO25010.
 - **Required evidence:** Limit inventory, maximum/over-limit tests and reviewed justification for any unbounded dimension.
 - **Enforcement:** Domain limits, adapter admission and queue retention policies.
-- **Current status:** partial. Worker and logical model have bounds; full API/query/queue/event limits and retained-history policy remain incomplete.
-- **Current evidence:** [src/io/task_worker/src/main.rs](../../src/io/task_worker/src/main.rs), [src/pure/task_contract/tests/payload_limits.rs](../../src/pure/task_contract/tests/payload_limits.rs), [go/io/task_api/server.go](../../go/io/task_api/server.go)
+- **Current status:** partial. Native listener and pure model bounds exist. Complete API/query/queue/event limits and retained-history qualification remain incomplete.
+- **Current evidence:** [src/pure/task_contract/tests/payload_limits.rs](../../src/pure/task_contract/tests/payload_limits.rs), [src/io/kehila_authority/src/listener.rs](../../src/io/kehila_authority/src/listener.rs), [docs/implementation/ferretdb-retirement.md](../../docs/implementation/ferretdb-retirement.md)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-004](../../docs/product/backlog.md#b-004), [docs/product/backlog.md#b-005](../../docs/product/backlog.md#b-005), [docs/product/backlog.md#b-022](../../docs/product/backlog.md#b-022), [docs/product/backlog.md#b-025](../../docs/product/backlog.md#b-025), [docs/product/decisions.md#d-017](../../docs/product/decisions.md#d-017), [docs/product/decisions.md#d-021](../../docs/product/decisions.md#d-021), [docs/product/decisions.md#d-023](../../docs/product/decisions.md#d-023), [docs/product/decisions.md#d-030](../../docs/product/decisions.md#d-030)
 
 <a id="obs-001"></a>
@@ -562,8 +562,8 @@ Supported configuration MUST have a schema, safe defaults, precedence, secret se
 - **Sources:** ISO25010, ASVS.
 - **Required evidence:** Invalid/startup configuration and dependency-failure tests with documented capability responses.
 - **Enforcement:** Startup/service validation and dependency matrix in QUALIFICATION; future config validation CLI requires design.
-- **Current status:** partial. Development bounds and index health exist; supported config schema and complete health model do not.
-- **Current evidence:** [src/io/task_worker/src/main.rs](../../src/io/task_worker/src/main.rs), [scripts/healthcheck.py](../../scripts/healthcheck.py)
+- **Current status:** partial. Native startup validation and development service/index probes exist; a complete supported configuration schema and operational health model remain incomplete.
+- **Current evidence:** [scripts/healthcheck.py](../../scripts/healthcheck.py), [src/io/kehila_authority/src/startup.rs](../../src/io/kehila_authority/src/startup.rs), [docs/implementation/ferretdb-retirement.md](../../docs/implementation/ferretdb-retirement.md)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-005](../../docs/product/backlog.md#b-005), [docs/product/backlog.md#b-027](../../docs/product/backlog.md#b-027)
 
 <a id="ops-002"></a>

@@ -13,7 +13,7 @@ from pathlib import Path
 import re
 import uuid
 
-GROUPS = (('nats',), ('opensearch',), ('postgres', 'ferretdb'))
+GROUPS = (('nats',), ('opensearch',), ('postgres',))
 EMPTY = {'containers': {}, 'networks': {}, 'volumes': {}}
 
 

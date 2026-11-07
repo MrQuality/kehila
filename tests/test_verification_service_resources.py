@@ -72,14 +72,15 @@ class ResourceTests(unittest.TestCase):
         postgres = resources.containers[CID]
         postgres['Name'] = PROJECT + '_postgres_1'
         postgres['Config']['Labels']['com.docker.compose.service'] = 'postgres'
-        ferret = copy.deepcopy(postgres)
-        ferret['Id'] = FOREIGN
-        ferret['Name'] = PROJECT + '_ferretdb_1'
-        ferret['Config']['Labels']['com.docker.compose.service'] = 'ferretdb'
-        ferret['Dependencies'] = [CID]
-        resources.containers[FOREIGN] = ferret
-        resources.networks[NID]['containers'][FOREIGN] = {'name': ferret['Name']}
-        return resources, {'project': PROJECT, 'services': ['postgres', 'ferretdb']}
+        # Synthetic dependency order, independent of the default phase catalog.
+        dependent = copy.deepcopy(postgres)
+        dependent['Id'] = FOREIGN
+        dependent['Name'] = PROJECT + '_nats_1'
+        dependent['Config']['Labels']['com.docker.compose.service'] = 'nats'
+        dependent['Dependencies'] = [CID]
+        resources.containers[FOREIGN] = dependent
+        resources.networks[NID]['containers'][FOREIGN] = {'name': dependent['Name']}
+        return resources, {'project': PROJECT, 'services': ['postgres', 'nats']}
 
     def test_dependents_are_removed_before_their_database_regardless_of_id_order(self):
         resources, group = self.dependent_services()

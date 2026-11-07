@@ -192,8 +192,7 @@ class ContainerExecutor:
         seconds = command_timeout(self.settings['command_seconds'] if limit is None else limit)
         command = ['python' if value == sys.executable else str(value) for value in command]
         arguments = ['exec']
-        allowed = {'KEHILA_TEST_MONGO_URL', 'KEHILA_NATS_HOST', 'KEHILA_NATS_PORT',
-                   'KEHILA_NATS_ADDRESS'}
+        allowed = {'KEHILA_NATS_HOST', 'KEHILA_NATS_PORT', 'KEHILA_NATS_ADDRESS'}
         for key, value in (environment or {}).items():
             if key in allowed:
                 arguments += ['--env', key + '=' + value]

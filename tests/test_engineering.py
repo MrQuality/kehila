@@ -228,8 +228,8 @@ class GoStaticTests(unittest.TestCase):
             sys.path.pop(0)
 
     def test_gofmt_violation_blocks_vet(self):
-        result = subprocess.CompletedProcess([], 0, 'go/io/task_api/server.go\n')
-        with patch.object(self.module, 'go_files', return_value=['go/io/task_api/server.go']), \
+        result = subprocess.CompletedProcess([], 0, 'go/pure/sync_contract/epoch.go\n')
+        with patch.object(self.module, 'go_files', return_value=['go/pure/sync_contract/epoch.go']), \
                 patch.object(self.module.subprocess, 'run', return_value=result) as run:
             with self.assertRaisesRegex(RuntimeError, 'Run gofmt'):
                 self.module.main()
@@ -238,7 +238,7 @@ class GoStaticTests(unittest.TestCase):
     def test_vet_failure_is_not_swallowed(self):
         results = [subprocess.CompletedProcess([], 0, ''),
                    subprocess.CalledProcessError(1, ['go', 'vet'])]
-        with patch.object(self.module, 'go_files', return_value=['go/io/task_api/server.go']), \
+        with patch.object(self.module, 'go_files', return_value=['go/pure/sync_contract/epoch.go']), \
                 patch.object(self.module.subprocess, 'run', side_effect=results) as run:
             with self.assertRaises(subprocess.CalledProcessError):
                 self.module.main()

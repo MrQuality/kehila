@@ -9,11 +9,12 @@
 
 Kehila is an open-source project management system in early development, designed
 around custom fields and real-time updates. This repository currently contains
-a Rust query parser, NATS connection checks, a bounded Go-to-Rust task path,
-shared synchronization types, pure rules for the configurable project and
-WorkItem model, and a product-owned authenticated native project-creation path
-with a first-party development interface. WorkItem persistence and editing are
-not yet connected to that authority. There is no supported installation or
+a Rust query parser, NATS connection checks, shared synchronization types, pure
+rules for the configurable project and WorkItem model, and an authenticated Rust
+authority with native PostgreSQL persistence and a first-party development
+interface. Its bounded slice includes project creation and Task/Milestone
+create/read/list, text/estimate edits, pending creation and identity-preserving
+retry/reconciliation. There is no supported installation or
 real-data readiness claim; actual browser qualification remains deferred.
 
 The project and repository were renamed to Kehila on 2026-10-04. Package/import
@@ -28,11 +29,10 @@ storage and machine identifiers are retained to preserve data; see the
 | Rust query parser | Parses a single equality filter, such as `status = 'Open'` |
 | Rust NATS connection | Connects to a broker and checks protocol round trips |
 | Go synchronization rules | Checks whether a query can run at the current schema version |
-| Go API and Rust task worker | Experimental local task save/read boundary with versioned replay against development storage; no supported application API yet |
-| Rust project and WorkItem contract | Pure typed rules for seeded project creation, delegated status administration, configuration, fields, conversion, current selection, estimates, knowledge, relationships, provenance, and scoped replay/expiry with tombstones; not connected to the worker |
-| Rust native product authority | Authenticated project creation, server-owned pending recovery, cancellation, reconciliation and independently authorized PostgreSQL read-back; bounded synthetic development profile, with actual browser qualification deferred |
+| Rust project and WorkItem contract | Pure typed rules for project creation, configuration, fields, conversion, selection, estimates, knowledge, relationships, provenance and scoped replay/expiry with tombstones; the native authority connects a selected persistence slice |
+| Rust native product authority | Authenticated Project/Task/Milestone creation and reads, bounded item lists, text/estimate edits, pending-creation cancellation and identity-preserving recovery; fresh synthetic development profile, with actual browser qualification deferred |
 | TypeScript contracts | Shared type declarations; no JavaScript runtime |
-| Development services | PostgreSQL, FerretDB, OpenSearch, and NATS in Compose |
+| Development services | PostgreSQL, OpenSearch and NATS in Compose; native qualification owns a separate isolated PostgreSQL TLS fixture |
 
 See [implementation status](docs/IMPLEMENTATION.md) for limitations and planned work.
 
@@ -61,8 +61,9 @@ On Linux installations without a `python` command, use `python3` in the commands
 below. The Git verification launcher accepts either name for Python 3.10+.
 
 Install Python 3.10+, Git, Rust stable, Go 1.22+, and Podman or Docker with a
-Compose provider. Allow about 4 GiB of memory and ports 5432, 27017, 4222, 8222,
-and 9200 for the development services. Initial image pulls need Internet access.
+Compose provider. The development services use ports 5432, 4222, 8222 and 9200.
+Choose explicit host/runner resource bounds for container verification; the
+runner limit excludes the VM and services. Initial image pulls need Internet access.
 No third-party Python packages are required. npm/pnpm is optional for the
 declarations-only JavaScript workspace.
 
@@ -73,15 +74,20 @@ python scripts/setup_env.py --hooks-only
 python scripts/verify.py
 ```
 
-Full verification builds with one compiler job before starting short-lived,
+The shared host matrix builds with one compiler job before starting short-lived,
 owned service groups. It removes each group after its checks. Keep the listed
 ports free; existing development containers are not borrowed or stopped.
 On Windows, `python scripts/verify.py --engine podman --podman-machine NAME`
 starts an explicit stopped VM after builds and retains it as shared. Add
 `--exclusive-podman-machine` only for an initially stopped VM reserved exclusively
 for the run, allowing automatic cleanup and shutdown.
-Full checks require default local endpoints, including with `--external-services`.
+Host service checks require default local endpoints, including with `--external-services`.
 See [test lifecycle and hook settings](docs/TESTING.md#owned-test-services).
+Native capability qualification additionally requires the exported-source
+container fixture and independent SQL observers. The full container gate and
+required native CI job retain that coverage; host service readiness alone does
+not establish it. See the [native implementation evidence](docs/implementation/native-work-items.md)
+and [prototype retirement record](docs/implementation/ferretdb-retirement.md).
 OpenSearch requires `vm.max_map_count` of at least 262144 on the Linux host or
 VM. CI configures this in its disposable runner.
 
@@ -97,11 +103,12 @@ all checks and leaves the stack under your ownership. Inspect or stop it with:
 
 ```text
 podman compose -f docker-compose.yml logs
-podman compose -f docker-compose.yml down
+podman compose -f docker-compose.yml stop
 ```
 
-Use `docker compose` if you started the stack with Docker. Development data is
-ephemeral and is lost when containers are removed. Read [SECURITY.md](SECURITY.md)
+Use `docker compose` if you started the stack with Docker. Existing experimental
+records and retained volumes are preserved; retirement does not import them into
+the native development profile. Read [SECURITY.md](SECURITY.md)
 before changing network exposure or using real data.
 
 ## Parser example
@@ -124,17 +131,18 @@ This is Kehila's own filter grammar. Jira Query Language (JQL) compatibility is
 not a current feature or requirement. See the [naming and third-party reference
 policy](docs/BRANDING.md) for terminology and compatibility claims.
 
-## Planned architecture
+## Architecture direction
 
-The planned application uses a Go API, Rust workers, PostgreSQL through FerretDB,
-NATS for events, and OpenSearch for search. A shared Rust compiler will support
-server queries and browser-side evaluation. The full application API, UI,
-change-data-capture pipeline, and query compiler remain to be implemented.
+The implemented M1 slice uses an authenticated Rust authority and native
+PostgreSQL. NATS event delivery, OpenSearch projections and the broader query
+compiler remain separate integration work; native saves and authoritative reads
+do not depend on those services. The first-party interface currently exposes
+the bounded project and WorkItem development capability.
 
-The [v0.2 design](docs/reference/Kehila-v0.2.md) describes the target architecture
-and proposed contracts. It is a design reference, not a list of shipped features.
-The current development stack uses FerretDB 1.24.2 with PostgreSQL 16; a deployment
-requires a separate review of dependencies, authentication, and storage choices.
+The [v0.2 design](docs/reference/Kehila-v0.2.md) remains a historical design input.
+Accepted [architecture records](docs/architecture/README.md), including native
+storage and owner authority, supersede its earlier storage/API direction.
+Deployment, supported upgrades and real-data use still require their own evidence.
 
 ## Contributing
 

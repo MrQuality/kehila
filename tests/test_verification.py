@@ -48,7 +48,7 @@ class VerificationTests(unittest.TestCase):
         self.assertEqual(POLICY.verification_scope(['.github/pull_request_template.md']), 'docs')
         for paths in ([], ['new-config.toml'], ['docs/fixture.json'],
                       ['README.md', 'scripts/verify.py'], ['.github/workflows/ci.yml'],
-                      ['Cargo.lock'], ['src/io/task_worker/src/lib.rs']):
+                      ['Cargo.lock'], ['src/io/kehila_authority/src/listener.rs']):
             with self.subTest(paths=paths):
                 self.assertEqual(POLICY.verification_scope(paths), 'full')
 

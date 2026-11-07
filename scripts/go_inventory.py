@@ -4,7 +4,7 @@ from pathlib import Path
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-GO_MODULES = ('go/pure/sync_contract', 'go/io/task_api')
+GO_MODULES = ('go/pure/sync_contract',)
 GO_PACKAGES = ['./' + module + '/...' for module in GO_MODULES]
 
 

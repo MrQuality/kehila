@@ -8,7 +8,6 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cleanup_errors import run_main
-from temp_work import owned_directory
 from test_services import managed_runtime, service_group, validate_runtime, validate_daemon_environment
 from verification_budget import command_timeout, owner_environment, validate_seconds, work_budget
 
@@ -19,14 +18,14 @@ def execute(command, environment):
     print('VERIFY:', ' '.join(command), flush=True)
     timeout = command_timeout(450 if os.name == 'nt' and command[0] == 'cargo' else 300)
     owners = {'scripts/go_test.py', 'experiments/SP-002/check_seed_oracle.py',
-              'experiments/SP-003/check.py', 'tests/integration/task_path.py'}
+              'experiments/SP-003/check.py'}
     if len(command) > 1 and command[0] == sys.executable and command[1] in owners:
         environment = owner_environment(environment, timeout)
         timeout = None  # Cooperative child bounds work and unwinds its own resources.
     subprocess.run(command, cwd=ROOT, env=environment, check=True, timeout=timeout)
 
 
-def live_checks(folder, environment, args):
+def live_checks(environment, args):
     def run(command):
         execute(command, environment)
 
@@ -34,12 +33,10 @@ def live_checks(folder, environment, args):
         run([sys.executable, 'scripts/healthcheck.py', '--wait', '180', '--services', *names])
 
     broker_tests = ['cargo', 'test', '--locked', '-p', 'event_dispatcher']
-    task_path = [sys.executable, 'tests/integration/task_path.py', '--run-only', str(folder)]
     if args.external_services:
-        health('PostgreSQL', 'FerretDB', 'NATS', 'OpenSearch')
+        health('PostgreSQL', 'NATS', 'OpenSearch')
         run([sys.executable, 'tests/integration/nats_probe.py'])
         run(broker_tests)
-        run(task_path)
         return
     with managed_runtime(args.engine, args.podman_machine, environment=environment, exclusive=args.exclusive_podman_machine) as compose:
         with service_group(compose, ['nats']):
@@ -48,9 +45,8 @@ def live_checks(folder, environment, args):
             run(broker_tests)
         with service_group(compose, ['opensearch']):
             health('OpenSearch')
-        with service_group(compose, ['postgres', 'ferretdb']):
-            health('PostgreSQL', 'FerretDB')
-            run(task_path)
+        with service_group(compose, ['postgres']):
+            health('PostgreSQL')
 
 
 def main():
@@ -84,8 +80,7 @@ def main():
     except ValueError as error:
         parser.error(str(error))
     if not (args.pure or args.docs or args.development):
-        for name, address in (('KEHILA_TEST_MONGO_URL', 'mongodb://127.0.0.1:27017'),
-                              ('KEHILA_NATS_ADDRESS', '127.0.0.1:4222'),
+        for name, address in (('KEHILA_NATS_ADDRESS', '127.0.0.1:4222'),
                               ('KEHILA_NATS_HOST', '127.0.0.1'), ('KEHILA_NATS_PORT', '4222')):
             if os.environ.get(name, address) != address:
                 parser.error(name + ' must use default local endpoints; use standalone probes for custom endpoints')
@@ -101,6 +96,7 @@ def main():
 def check_commands(args):
     commands = [[sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
                 [sys.executable, "scripts/check_branding.py"],
+                [sys.executable, "scripts/check_retired_paths.py"],
                 [sys.executable, "scripts/check_engineering.py"]]
     if not args.docs:
         commands.append([sys.executable, "scripts/go_static.py"])
@@ -125,10 +121,7 @@ def run_checks(args):
     for command in commands:
         execute(command, environment)
     if not (args.pure or args.docs or args.development):
-        with owned_directory('kehila-verify-') as folder:
-            execute([sys.executable, 'tests/integration/task_path.py', '--build-only', str(folder)],
-                    environment)
-            live_checks(folder, environment, args)
+        live_checks(environment, args)
 
 
 if __name__ == '__main__':

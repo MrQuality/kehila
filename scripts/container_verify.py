@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host lifecycle coordinator for the unchanged matrix in a Linux container."""
+"""Host lifecycle coordinator for the shared matrix in a Linux container."""
 import argparse
 import os
 from pathlib import Path
@@ -49,7 +49,6 @@ def checks(executor, args, ownership=None):
         executor.execute(command)
     if args.docs or args.pure or getattr(args, 'development', False):
         return
-    executor.execute([sys.executable, 'tests/integration/task_path.py', '--build-only', '/work/task-path'])
     executor.execute([*NATIVE_TEST_COMMAND, '--no-run'])
     executor.finish_builds()
     native_authority(executor)
@@ -67,13 +66,10 @@ def checks(executor, args, ownership=None):
         with executor.service_network(containers) as addresses:
             executor.execute([sys.executable, 'scripts/healthcheck.py', '--host', addresses['opensearch'],
                               '--wait', '180', '--services', 'OpenSearch'])
-    with services(['postgres', 'ferretdb']) as containers:
+    with services(['postgres']) as containers:
         with executor.service_network(containers) as addresses:
-            for service, name in (('postgres', 'PostgreSQL'), ('ferretdb', 'FerretDB')):
-                executor.execute([sys.executable, 'scripts/healthcheck.py', '--host', addresses[service],
-                                  '--wait', '180', '--services', name])
-            executor.execute([sys.executable, 'tests/integration/task_path.py', '--run-only', '/work/task-path'],
-                             {'KEHILA_TEST_MONGO_URL': 'mongodb://' + addresses['ferretdb'] + ':27017'})
+            executor.execute([sys.executable, 'scripts/healthcheck.py', '--host', addresses['postgres'],
+                              '--wait', '180', '--services', 'PostgreSQL'])
     executor.verify_source()
 
 

@@ -175,12 +175,18 @@ module to both the inventory and workspace before relying on shared checks.
 See [qualification](engineering/QUALIFICATION.md) for future property, fault,
 performance, recovery and release campaigns and their current evidence boundaries.
 
-Run the full suite with a ready container engine:
+Run the shared host matrix with a ready container engine:
 
 ```text
 python scripts/setup_env.py --hooks-only
 python scripts/verify.py
 ```
+
+Native product qualification also requires the exported-source container fixture
+and its independent SQL observers. The default full container gate includes that
+sequence; CI retains a separate required native job. Host infrastructure readiness
+alone does not qualify the native authority. See the
+[retirement dispositions](implementation/ferretdb-retirement.md).
 
 ### Standalone A0 verification boundary
 
@@ -222,7 +228,7 @@ It does not qualify password/session/HTTP behavior or the rest of A1–A3.
 Full verification first runs tooling/static checks, precompiles the complete
 Rust workspace test executables, executes the offline workspace tests with
 `--workspace --exclude event_dispatcher`, runs frozen oracles and Go tests, and
-prepares both live task-path binaries. Child commands use `CARGO_BUILD_JOBS=1` and append
+completes workspace compilation before live services. Child commands use `CARGO_BUILD_JOBS=1` and append
 `-p=1` to existing `GOFLAGS`; compiler parallelism is bounded without reducing
 test counts or changing application concurrency.
 
@@ -232,7 +238,7 @@ Only then does it start unique, disposable Compose projects, one phase at a time
 | --- | --- | --- |
 | Broker execution | NATS | TCP readiness, account API probe and all `event_dispatcher` tests, including the live broker round trip |
 | Search readiness | OpenSearch | TCP readiness and yellow/green HTTP cluster health |
-| Task path | PostgreSQL, FerretDB | Both TCP probes and complete two-worker contention, request/dependency deadline, recovery and Go-to-Rust/search-unavailable checks |
+| Database infrastructure | PostgreSQL | TCP readiness; native product behavior uses the separate isolated PostgreSQL TLS fixture and state observers |
 
 The runner verifies one running owned container for each requested service,
 then confirms no owned containers remain after teardown. Each project is removed
@@ -245,7 +251,7 @@ primary failure and every labelled Compose/VM/directory cleanup failure are
 retained and printed without rewriting the original exception cause. The shared
 reporter is used at both verifier and child-check CLI boundaries, including
 normal interruption (exit 130); argument-parser exit codes remain unchanged.
-Task-path resources use an explicit cleanup owner: the body exception remains
+Resource-owning checks use an explicit cleanup owner: the body exception remains
 primary and each callback failure is attached with its resource label, even if
 the callback suppresses its Python context or supplies its own cause. All
 registered callbacks run. On a successful body, the first cleanup failure is
@@ -256,11 +262,10 @@ The native verifier owns a 600-second work budget (`--timeout`, positive and at 
 with separate explicit dependency preparation; see the container design below.
 Every work command receives the smaller of its own timeout and the
 remaining budget. Resource-owning Python checks (Go tests, SP-002/SP-003 check
-drivers and task-path preparation/execution) receive a same-host monotonic
+drivers) receive a same-host monotonic
 deadline through `KEHILA_VERIFICATION_DEADLINE`. Their parent waits while they
-time out leaf work and unwind their own directories, processes and collection
-cleanup. Task-path readiness/network operations also check the deadline, including
-requests running in helper threads. The parent does not kill these Python owners
+time out leaf work and unwind their own directories and processes.
+The parent does not kill these Python owners
 at the work deadline. Standalone commands keep their existing local timeouts.
 Diagnostics and teardown use their separate bounded command
 limits after work expires. The staged hook passes this budget and waits for the
@@ -372,13 +377,12 @@ python scripts/verify.py --external-services
 That explicit mode performs all full checks against existing services and leaves
 their lifecycle to the caller. It does not provide the overlap reduction of the
 owned mode. Both full modes require the default local test endpoints:
-`KEHILA_TEST_MONGO_URL=mongodb://127.0.0.1:27017`,
 `KEHILA_NATS_ADDRESS=127.0.0.1:4222`, `KEHILA_NATS_HOST=127.0.0.1` and
 `KEHILA_NATS_PORT=4222` (unset variables use these defaults). Overrides are rejected
-before builds so readiness, the Python account probe, Rust broker tests and live
-task-path checks agree about their targets. `--external-services` changes lifecycle
-ownership; it does not add custom endpoint support. Use standalone `task_path.py`
-or `nats_probe.py` for custom endpoints. Native PostgreSQL investigations retain
+before builds so readiness, the Python account probe and Rust broker tests agree
+about their targets. `--external-services` changes lifecycle ownership; it does
+not add custom endpoint support. Use standalone `nats_probe.py` for custom broker
+endpoints. Native PostgreSQL investigations retain
 their separate documented container/resource preflight and qualification scope.
 
 Generated SP-002 check executables now use the shared owned temporary-directory
@@ -388,6 +392,11 @@ scripts participate in deadline handling; their behavior is separate
 from those recorded native runs.
 
 ### Lifecycle verification record
+
+These dated records preserve their actual source and earlier service composition,
+including the retired task prototype. Use the current matrix above and the
+retirement record for active paths; a historical pass is not current-head
+qualification.
 
 The source at `20c1664` passed the full staged gate on Windows/WSL2/Podman on
 2026-10-14: 170 tooling tests (168 passed, two POSIX-only skips), all Rust
@@ -765,70 +774,49 @@ and request/response behavior. The Python probe also checks the JetStream accoun
 API using a temporary subscription. It creates no streams or application data.
 Connections use three-second deadlines and bounded frame sizes and counts.
 
-The full suite also runs `python tests/integration/task_path.py`. This builds the
-Rust worker and Go API, installs indexes in a unique `kehila_test_` collection,
-starts two workers sharing that collection and an API on temporary loopback
-ports, and removes its processes and collection on success or failure. It needs
-FerretDB at `mongodb://127.0.0.1:27017`; override `KEHILA_TEST_MONGO_URL` with a
-single-host MongoDB URI for a different disposable development instance. It uses
-the `yaja` database. Never point regression tests at a supported user installation.
-No host Python packages or production CDC/indexer are required.
+The native container fixture runs authenticated Project/Task/Milestone paths
+against isolated PostgreSQL TLS databases and checks independent durable-state
+observers. Its selected `item-read` case includes socket-body timeout with a
+concurrent authoritative read, and an observed serving-network stall followed by
+owned shutdown and an authenticated successor read. A complete request validates
+the body harness before the incomplete request; actual held bytes validate the
+network fault before its original deadline expires. These controls retain the
+native protocol and single-active authority boundary.
 
-Each child binds port zero and reports `KEHILA_BOUND_ADDR` after binding. The
-runner discovers that owned loopback address from at most 8 KiB of startup output
-within 25 seconds, then requires HTTP health readiness. It never releases a
-probed port for another process to claim before startup. Missing, malformed,
-duplicate or incomplete address reports cannot satisfy discovery.
-If a child exits, discovery reports its exit status and up to 8 KiB of output,
-marking truncation explicitly. A live child exceeding the output limit still
-fails discovery; exit diagnostics do not relax the admission limits.
+The removed worker/API, their live scripts and controller-specific tests have
+explicit keep/adapt/retire dispositions in the
+[retirement record](implementation/ferretdb-retirement.md). They are not optional
+legacy execution lanes. Historical source and observations remain available.
 
-The Go test runner and live runner own their temporary build directories. After
-child processes exit, deletion retries only Windows access/sharing/lock errors
-(5/32/33), for at most 30 seconds. Other errors and an exhausted retry deadline
-still fail verification. Cleanup never targets a path outside the allocated
-temporary directory; an earlier test failure remains visible if cleanup also
-fails.
+The Go runner and frozen oracles retain owned temporary compiler outputs, visible
+cleanup errors and bounded diagnostics. Directory cleanup tests retain canonical
+path refusal and real symlink coverage where the host permits it. Windows hosts
+without symlink privilege skip that filesystem case; the portable redirected-path
+control still requires refusal before deletion.
 
-Directory cleanup tests exercise canonical-path refusal before deletion, with
-real directory-symlink coverage where the host permits creation. Windows hosts
-without symlink creation privilege skip that filesystem case; the portable
-redirected-path test still checks refusal and that deletion is never invoked.
+The pure command includes `kehila_query`, `task_contract`, `project_create_codec`
+and `work_item_codec`. Maintain this explicit list when adding a pure crate;
+selection tests require crate failures to propagate. The shared host suite tests
+all remaining Rust workspace crates, with the live NATS round trip in its broker
+phase. Native database qualification remains the separate fixture described above.
 
-The runner tests 48 competing create/update/identical-retry/changed-content pairs
-across two processes, replay after later updates, direct-worker request guards,
-a stalled request body while other reads proceed, a stalled database connection
-with bounded failure and recovery, and Go-to-Rust saves with search unavailable.
-Concurrent clients reach independent worker processes; the test does not rely on
-a single serial HTTP handler to establish storage exclusion. Finite race tests
-are regression evidence, not exhaustive linearizability proof.
-
-The pure command includes `kehila_query`, `task_contract` and
-`project_create_codec`; maintain this
-explicit list when adding a pure crate. Its selection tests verify that failures
-in `task_contract` and `project_create_codec` propagate. The full suite tests all
-Rust workspace crates, including adapter policy tests.
-
-The older `live_task_worker.py` and `live_go_rust.py` remain manual probes for
-already-running processes. `live_task_api.py` specifically targets the original
-Python experiment adapters with search running; it is not a Rust CDC test.
-
-### Required retesting after task-path changes
+### Required retesting after retirement or native-path changes
 
 During implementation, run the affected pure and boundary tests. After changes
-to the worker, API, storage decisions, dependencies, or verification runner, run
-`python scripts/verify.py` once with its owned disposable services on the final
-revision. This includes the live task-path runner; do not substitute `--pure` or
-a previous revision's passing CI. Run `cargo fmt --all -- --check` and check
+to native storage, dependencies, service ownership or verification, complete
+applicable native fixture/observer checks and the full shared service matrix on
+the final revision. The full exported-source container gate composes these
+checks. Do not substitute `--pure`, an unrelated focused case or a previous
+revision's CI for affected final evidence. Run `cargo fmt --all -- --check` and check
 changed Go files with `gofmt`. Required GitHub CI must pass on the final revision.
 A failed or unavailable live dependency is a failed check, not a skip.
 
 Repeat SP-001 C01-C06 when its Python adapters, physical storage mapping, CDC
 configuration, or projection behavior change, or when new evidence contradicts
-its conclusion. Changes confined to the Go/Rust mutation boundary require fresh
-Go/Rust regression evidence, not a repeat of the unchanged Python experiment.
-The new Rust operation collection still needs separate production CDC and
-recovery verification before a supported installation is claimed.
+its conclusion. Changes confined to the native application boundary require fresh
+native contract evidence rather than a repeat of an unchanged historical
+Python experiment. Native event/search delivery, supported populated upgrades
+and real-data recovery remain separately scoped work.
 
 Integration results apply to the behavior exercised. A successful handshake does
 not establish durable publication, replay, or recovery. New adapters need tests
@@ -931,11 +919,12 @@ These are tooling execution limits, not product performance requirements.
 
 Shared full/pure verification runs experiments/SP-003/check.py: eight Rust tests
 and five grouped Python checks against the actual domain types and frozen
-version-one fixtures. This builds exact artifacts using the existing locked
-workspace dependencies, including the task_worker library, without running its
-I/O. A pure build therefore requires Rust 1.88+ and may need the existing adapter
-dependencies cached. The prototype currently receives sha2 transitively through
-mongodb; production hashing must declare its own direct dependency.
+version-one fixtures. This builds `project_create_codec`, which directly owns
+the locked `task_contract`, `serde_json` and `sha2` inputs. Cargo metadata binds
+the producer manifest and direct package identities; only exact library artifacts
+are accepted. Metadata and the producer build explicitly select the compiler's
+native host target for offline cache compatibility. No obsolete adapter is built
+and no frozen codec fixture is rewritten.
 
 Native PostgreSQL BYTEA/JSONB persistence and ID-domain checks are a separate
 Podman-only experiment, not part of those pure CI checks. See the

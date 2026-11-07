@@ -1,6 +1,3 @@
 go 1.22.0
 
-use (
-    ./go/pure/sync_contract
-    ./go/io/task_api
-)
+use ./go/pure/sync_contract

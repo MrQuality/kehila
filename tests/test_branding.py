@@ -48,9 +48,9 @@ class BrandingTests(unittest.TestCase):
                 self.assertTrue(self.check_text(name.swapcase()))
                 self.assertTrue(self.check_text("", "docs/" + name + ".txt"))
 
-    def test_storage_exception_does_not_allow_old_environment(self):
+    def test_retired_worker_has_no_storage_branding_exception(self):
         name = "src/io/task_worker/src/main.rs"
-        self.assertFalse(self.check_text(
+        self.assertTrue(self.check_text(
             'let database = env::var("KEHILA_TASK_DB").unwrap_or_else(|_| "yaja".into());', name))
         self.assertTrue(self.check_text(
             'let database = env::var("YAJA_TASK_DB").unwrap_or_else(|_| "yaja".into());', name))
@@ -61,7 +61,6 @@ class BrandingTests(unittest.TestCase):
                            ("docker-compose.yml", "name: yaja"),
                            ("docker-compose.yml", "POSTGRES_DB: yaja"),
                            ("docker-compose.yml", 'test: ["CMD-SHELL", "pg_isready -U postgres -d yaja"]'),
-                           ("docker-compose.yml", "FERRETDB_POSTGRESQL_URL: postgres://postgres:postgres@postgres:5432/yaja"),
                            ("experiments/SP-001/compose.yml", "name: yaja-sp001"),
                            ("experiments/SP-001/compose.yml", "image: localhost/yaja-sp001-cdc:experiment"),
                            ("experiments/SP-001/application.properties", "debezium.source.database.dbname=yaja"),
@@ -69,8 +68,6 @@ class BrandingTests(unittest.TestCase):
                            ("experiments/SP-001/manage.py", "x['name'].startswith('yaja-sp001_')"),
                            ("experiments/SP-001/cases.py", "folder = ROOT / '.yaja/spikes/SP-001'"),
                            ("experiments/SP-001/compose.yml", "FERRETDB_POSTGRESQL_URL: postgres://postgres:disposable-sp001@postgres:5432/yaja"),
-                           ("tests/integration/task_path.py", "environment = dict(os.environ, KEHILA_TASK_DB='yaja',"),
-                           ("docs/TESTING.md", "the `yaja` database."),
                            ("docs/BRANDING.md", "- The development Compose project and database remain `yaja`. The worker's"),
                            ("docs/BRANDING.md", "- The retained SP-001 reproduction uses `yaja-sp001` for its isolated Compose"),
                            ("docs/BRANDING.md", "  `.yaja/spikes/SP-001/` for local evidence. No machine or volume is renamed."),

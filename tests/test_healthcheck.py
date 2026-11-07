@@ -14,6 +14,15 @@ spec.loader.exec_module(health)
 
 
 class ReadinessTests(unittest.TestCase):
+    def test_retired_service_is_rejected_before_any_probe(self):
+        with patch.object(sys, 'argv', ['healthcheck.py', '--services', 'FerretDB']), \
+                patch.object(health, 'probe') as probe, \
+                patch('sys.stderr', new_callable=io.StringIO):
+            with self.assertRaises(SystemExit) as result:
+                health.main()
+        self.assertEqual(result.exception.code, 2)
+        probe.assert_not_called()
+
     def test_retry_success_reports_search_http_health(self):
         with patch.object(sys, 'argv', ['healthcheck.py', '--wait', '5']), \
                 patch.object(health, 'probe', side_effect=[['starting'], []]) as probe, \
@@ -45,11 +54,11 @@ class ReadinessTests(unittest.TestCase):
         connect.assert_called_once_with(('127.0.0.1', 4222), timeout=2)
         http.assert_not_called()
 
-    def test_database_phase_checks_both_ports_and_propagates_failure(self):
+    def test_database_phase_checks_postgresql_and_propagates_failure(self):
         with patch.object(health.socket, 'create_connection', side_effect=OSError('closed')) as connect:
-            errors = health.probe('127.0.0.1', ['PostgreSQL', 'FerretDB'])
-        self.assertEqual(connect.call_count, 2)
-        self.assertEqual(len(errors), 2)
+            errors = health.probe('127.0.0.1', ['PostgreSQL'])
+        connect.assert_called_once_with(('127.0.0.1', 5432), timeout=2)
+        self.assertEqual(len(errors), 1)
 
     def test_search_still_requires_http_health_after_tcp_success(self):
         response = MagicMock()
