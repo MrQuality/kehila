@@ -4,6 +4,7 @@ use http_body_util::Full;
 use serde_json::{json, Value};
 mod admission;
 mod authorization;
+mod body;
 mod clock;
 mod competing;
 mod evidence;

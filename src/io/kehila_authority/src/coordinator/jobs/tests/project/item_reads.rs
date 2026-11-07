@@ -791,6 +791,7 @@ fn native_authorized_item_reads() {
                 .unwrap(),
                 current
             );
+            body::exercise(&handle, &browser, &json!(id), &read).await;
             let (status, replayed) = project(&handle, &browser, "execute", execute(entry)).await;
             assert_eq!(status, 200);
             assert_eq!(replayed["result"], created["result"]);
