@@ -34,6 +34,7 @@ fn command(browser: &Browser, entry: &Value) -> (Operation, Vec<String>) {
         "kehila.operations INSERT",
         "kehila.operation_payloads INSERT",
         "kehila.projects INSERT",
+        "kehila.project_operational_heads INSERT",
         "kehila.configuration_revisions INSERT",
         "kehila.project_grants INSERT",
         "kehila.project_grant_events INSERT",

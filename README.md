@@ -10,9 +10,11 @@
 Kehila is an open-source project management system in early development, designed
 around custom fields and real-time updates. This repository currently contains
 a Rust query parser, NATS connection checks, a bounded Go-to-Rust task path,
-shared synchronization types, and pure rules for the planned configurable
-project and WorkItem model. There is no application UI or supported installation
-yet; the configurable model is not wired into the task worker.
+shared synchronization types, pure rules for the configurable project and
+WorkItem model, and a product-owned authenticated native project-creation path
+with a first-party development interface. WorkItem persistence and editing are
+not yet connected to that authority. There is no supported installation or
+real-data readiness claim; actual browser qualification remains deferred.
 
 The project and repository were renamed to Kehila on 2026-10-04. Package/import
 names now use `kehila`, and launch variables use `KEHILA_*`. Existing development
@@ -28,6 +30,7 @@ storage and machine identifiers are retained to preserve data; see the
 | Go synchronization rules | Checks whether a query can run at the current schema version |
 | Go API and Rust task worker | Experimental local task save/read boundary with versioned replay against development storage; no supported application API yet |
 | Rust project and WorkItem contract | Pure typed rules for seeded project creation, delegated status administration, configuration, fields, conversion, current selection, estimates, knowledge, relationships, provenance, and scoped replay/expiry with tombstones; not connected to the worker |
+| Rust native product authority | Authenticated project creation, server-owned pending recovery, cancellation, reconciliation and independently authorized PostgreSQL read-back; bounded synthetic development profile, with actual browser qualification deferred |
 | TypeScript contracts | Shared type declarations; no JavaScript runtime |
 | Development services | PostgreSQL, FerretDB, OpenSearch, and NATS in Compose |
 

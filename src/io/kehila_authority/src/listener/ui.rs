@@ -6,6 +6,10 @@ pub(super) fn response<B>(request: &Request<B>, authority: &str) -> Option<Respo
     let (content, content_type): (&'static [u8], &'static str) = match request.uri().path() {
         "/" => (include_bytes!("page.html"), "text/html; charset=utf-8"),
         "/owner.js" => (include_bytes!("page.js"), "text/javascript; charset=utf-8"),
+        "/work-items.js" => (
+            include_bytes!("work_items.js"),
+            "text/javascript; charset=utf-8",
+        ),
         _ => return None,
     };
     let exact = |name: &str, expected: &str, optional: bool| {

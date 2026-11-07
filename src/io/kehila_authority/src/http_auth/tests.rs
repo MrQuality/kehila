@@ -86,6 +86,39 @@ fn every_project_route_requires_post_browser_cookie_origin_and_csrf_at_the_edge(
 }
 
 #[test]
+fn item_reads_retain_browser_origin_csrf_and_the_existing_body_bound() {
+    for path in ["/items/read", "/items/list"] {
+        let mut request = browser(Method::POST, path);
+        cookie(&mut request, SESSION);
+        assert!(matches!(
+            profile().admit(&request).unwrap().route,
+            Route::Item(_)
+        ));
+        for name in ["origin", CSRF, "sec-fetch-site", "cookie"] {
+            let mut missing = request.clone();
+            missing.headers_mut().remove(name);
+            assert!(profile().admit(&missing).is_err());
+        }
+        let mut oversized = request.clone();
+        oversized.headers_mut().insert(
+            header::CONTENT_LENGTH,
+            (BODY_LIMIT + 1).to_string().parse().unwrap(),
+        );
+        assert_eq!(
+            profile().admit(&oversized).err(),
+            Some(StatusCode::PAYLOAD_TOO_LARGE)
+        );
+        let mut native = cli(Method::POST, path);
+        bearer(&mut native);
+        assert!(profile().admit(&native).is_err());
+        assert!(profile().admit(&browser(Method::GET, path)).is_err());
+    }
+    assert!(profile()
+        .admit(&browser(Method::POST, "/items/edit"))
+        .is_err());
+}
+
+#[test]
 fn explicit_browser_and_cli_routes_admit_only_their_credentials() {
     let mut login = browser(Method::POST, "/auth/browser/login");
     cookie(&mut login, PRE_SESSION);
@@ -274,4 +307,122 @@ fn json_requires_exact_object_shape_without_duplicate_keys_or_type_coercion() {
         ),
         Ok(json::Input::Change { .. })
     ));
+}
+
+#[test]
+fn pending_item_lifecycle_is_a_closed_authenticated_browser_surface() {
+    for path in [
+        "/items/pending/register",
+        "/items/pending/list",
+        "/items/pending/open",
+        "/items/pending/cancel",
+    ] {
+        let mut request = browser(Method::POST, path);
+        cookie(&mut request, SESSION);
+        assert!(profile().admit(&request).is_ok(), "{path}");
+        for name in ["origin", CSRF, "sec-fetch-site", "cookie"] {
+            let mut missing = request.clone();
+            missing.headers_mut().remove(name);
+            assert!(profile().admit(&missing).is_err(), "{path} missing {name}");
+        }
+        let mut wrong_method = request;
+        *wrong_method.method_mut() = Method::GET;
+        assert!(profile().admit(&wrong_method).is_err());
+    }
+    let mut unimplemented = browser(Method::POST, "/items/pending/unknown");
+    cookie(&mut unimplemented, SESSION);
+    assert!(matches!(
+        profile().admit(&unimplemented),
+        Err(StatusCode::NOT_FOUND)
+    ));
+}
+
+#[test]
+fn pending_item_large_body_allowance_is_only_for_registration() {
+    let mut request = browser(Method::POST, "/items/pending/register");
+    cookie(&mut request, SESSION);
+    request.headers_mut().insert(
+        header::CONTENT_LENGTH,
+        project_create_codec::MAX_RECORD_BYTES
+            .to_string()
+            .parse()
+            .unwrap(),
+    );
+    assert!(profile().admit(&request).is_ok());
+    request.headers_mut().insert(
+        header::CONTENT_LENGTH,
+        (project_create_codec::MAX_RECORD_BYTES + 1)
+            .to_string()
+            .parse()
+            .unwrap(),
+    );
+    assert!(matches!(
+        profile().admit(&request),
+        Err(StatusCode::PAYLOAD_TOO_LARGE)
+    ));
+    for path in [
+        "/items/pending/list",
+        "/items/pending/open",
+        "/items/pending/cancel",
+        "/items/read",
+        "/items/list",
+        "/projects/register",
+        "/auth/browser/password",
+    ] {
+        let mut request = browser(Method::POST, path);
+        cookie(&mut request, SESSION);
+        request.headers_mut().insert(
+            header::CONTENT_LENGTH,
+            (BODY_LIMIT + 1).to_string().parse().unwrap(),
+        );
+        assert!(
+            matches!(
+                profile().admit(&request),
+                Err(StatusCode::PAYLOAD_TOO_LARGE)
+            ),
+            "{path}"
+        );
+    }
+}
+
+#[test]
+fn item_mutation_and_reconciliation_routes_share_browser_security_and_exact_body_caps() {
+    for path in [
+        "/items/pending/execute",
+        "/items/pending/reconcile",
+        "/items/edit",
+        "/items/reconcile",
+    ] {
+        let mut request = browser(Method::POST, path);
+        cookie(&mut request, SESSION);
+        let admitted = profile().admit(&request).unwrap();
+        let Route::ItemMutation(route) = admitted.route else {
+            panic!("mutation route not selected")
+        };
+        for name in ["origin", CSRF, "sec-fetch-site", "cookie"] {
+            let mut missing = request.clone();
+            missing.headers_mut().remove(name);
+            assert!(profile().admit(&missing).is_err(), "{path} missing {name}");
+        }
+        let mut oversized = request.clone();
+        oversized.headers_mut().insert(
+            header::CONTENT_LENGTH,
+            (route.body_limit() + 1).to_string().parse().unwrap(),
+        );
+        assert_eq!(
+            profile().admit(&oversized).err(),
+            Some(StatusCode::PAYLOAD_TOO_LARGE)
+        );
+        let mut bounded = request.clone();
+        bounded.headers_mut().insert(
+            header::CONTENT_LENGTH,
+            route.body_limit().to_string().parse().unwrap(),
+        );
+        assert!(profile().admit(&bounded).is_ok());
+        let mut native = cli(Method::POST, path);
+        bearer(&mut native);
+        assert!(profile().admit(&native).is_err());
+        *request.method_mut() = Method::GET;
+        assert!(profile().admit(&request).is_err());
+    }
 }

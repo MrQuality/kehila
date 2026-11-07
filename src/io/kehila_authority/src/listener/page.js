@@ -13,29 +13,34 @@
     signedIn = name === "session";
     for (const id of ["login", "session", "retiring"]) element(id).hidden = id !== name;
   };
-  async function request(path, data, project = false) {
+  async function exchange(path, body) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5000);
     try {
       const headers = {"x-kehila-client": "browser"};
-      if (data !== undefined) {
+      if (body !== undefined) {
         headers["content-type"] = "application/json";
         headers["x-kehila-csrf"] = csrf;
       }
-      const response = await fetch((project ? "/projects/" : "/auth/browser/") + path, {
-        method: data === undefined ? "GET" : "POST", headers,
-        body: data === undefined ? undefined : JSON.stringify(data),
+      const response = await fetch(path, {
+        method: body === undefined ? "GET" : "POST", headers,
+        body,
         credentials: "same-origin", cache: "no-store", redirect: "error", signal: controller.signal
       });
       return {status: response.status, data: await jsonBody(response)};
     } finally { clearTimeout(timer); }
   }
+  const request = (path, data) => exchange(path, data === undefined ? undefined : JSON.stringify(data));
+  const requestWire = (path, wire) => {
+    if (typeof wire !== "string") throw new Error("Retained request encoding unavailable.");
+    return exchange(path, wire);
+  };
   async function refresh() {
     csrf = null; clearProjects(false);
-    const proof = await request("csrf");
+    const proof = await request("/auth/browser/csrf");
     if (proof.status !== 200) { mode("login"); status("Sign in with the owner password."); return; }
     csrf = proof.data.csrf;
-    const state = await request("state");
+    const state = await request("/auth/browser/state");
     if (state.status === 200 && state.data.active) {
       mode("session"); status("Signed in.");
       try { await discover(); } catch (error) { projectStatus(error.message); }
@@ -58,11 +63,11 @@
     event.preventDefault();
     action(async () => {
       if (!csrf) {
-        const pre = await request("pre-session");
+        const pre = await request("/auth/browser/pre-session");
         if (pre.status !== 200) { status("Sign-in preparation is unavailable. Wait before trying again."); return; }
         csrf = pre.data.csrf;
       }
-      const reply = await request("login", {password: element("login-password").value});
+      const reply = await request("/auth/browser/login", {password: element("login-password").value});
       if (reply.status === 200) { csrf = reply.data.csrf; await refresh(); }
       else {
         if (reply.status === 401) csrf = null;
@@ -71,7 +76,7 @@
     });
   });
   async function logout() {
-    const reply = await request("logout", {});
+    const reply = await request("/auth/browser/logout", {});
     clearProjects();
     if (reply.status === 200) { csrf = null; mode("login"); status("Signed out; audit confirmed."); }
     else if (reply.status === 503 && reply.data.signed_out) { mode("retiring"); status("Signed out; audit not confirmed."); }
@@ -82,7 +87,7 @@
   element("change").addEventListener("submit", event => {
     event.preventDefault();
     action(async () => {
-      const reply = await request("password", {current: element("current").value, replacement: element("replacement").value});
+      const reply = await request("/auth/browser/password", {current: element("current").value, replacement: element("replacement").value});
       if (reply.status === 200) { clearProjects(); csrf = null; mode("login"); status("Password changed. Sign in again with the new password."); }
       else if (reply.status === 503) { clearProjects(); mode(""); csrf = null; status("Change outcome is uncertain. Reload when the server is available to check the session. After sign-out, try the chosen new password; do not repeat the change automatically."); }
       else { status(reply.status === 401 ? "Current password was not accepted, or this session ended." : "Password change was not accepted. Use at least 15 characters and avoid common passwords; wait if the server is busy."); }
@@ -91,7 +96,7 @@
   element("revoke").addEventListener("submit", event => {
     event.preventDefault();
     action(async () => {
-      const reply = await request("revoke-others", {password: element("revoke-password").value});
+      const reply = await request("/auth/browser/revoke-others", {password: element("revoke-password").value});
       if (reply.status === 200) status("Other sessions signed out; audit confirmed. This session remains signed in.");
       else if (reply.status === 503 && reply.data.other_sessions_revoked) status("Selected sessions signed out; audit unconfirmed. Repeating this control retries that original set while this session remains eligible.");
       else status("Other-session sign-out was not confirmed. Check the current password and session, then wait if busy.");
@@ -110,8 +115,10 @@
     element("confirm-cancel").disabled = busy || !prepared || uncertain || pendingOutcome !== null;
     element("reconcile").disabled = busy || !signedIn || !selected;
     element("read-project").disabled = busy || !signedIn || !selected || !selected.project_id;
+    workItems.controls(busy, signedIn);
   }
   function clearProjects(forget = true) {
+    workItems.clear(forget);
     if (forget) { binding = null; registrationUnknown = false; pendingOutcome = null; }
     selected = null; before = null; uncertain = false; rowButtons = [];
     element("requests").replaceChildren();
@@ -141,7 +148,7 @@
   const sameBinding = (a, b) => a && b && a.installation_id === b.installation_id && a.actor_id === b.actor_id;
   async function checkBinding() {
     let reply;
-    try { reply = await request("binding", {}, true); }
+    try { reply = await request("/projects/binding", {}); }
     catch (_) { signedIn = false; throw new Error("Owner binding unavailable. Reload and sign in before using project controls."); }
     if (reply.status !== 200 || !reply.data || typeof reply.data.installation_id !== "string" || typeof reply.data.actor_id !== "string") {
       signedIn = false;
@@ -153,8 +160,10 @@
       throw new Error("The installation or owner changed. Old selections were discarded. Reload and sign in again.");
     }
     binding = reply.data;
+    return Object.freeze({installation_id:binding.installation_id,actor_id:binding.actor_id});
   }
   function choose(entry, observed = false) {
+    workItems.clear();
     selected = entry;
     if (pendingOutcome === entry.request_id && (observed || entry.state !== "prepared")) pendingOutcome = null;
     uncertain = pendingOutcome === entry.request_id;
@@ -172,14 +181,14 @@
   };
   async function openEntry(id) {
     await checkBinding();
-    const reply = await request("open", {request_id: id}, true);
+    const reply = await request("/projects/open", {request_id: id});
     if (reply.status !== 200 || !reply.data.entry) throw new Error("Saved request could not be opened. Refresh discovery or sign in again.");
     choose(reply.data.entry);
     projectStatus(pendingOutcome !== null ? "Request " + pendingOutcome + " remains unconfirmed and may still complete. Check that same request outcome before another creation." : "Opened the saved request. Creation requires your explicit action.");
   }
   async function discover(cursor = null) {
     await checkBinding();
-    const reply = await request("list", {before: cursor}, true);
+    const reply = await request("/projects/list", {before: cursor});
     if (reply.status !== 200 || !Array.isArray(reply.data.entries)) throw new Error("Saved requests unavailable. No creation was attempted.");
     before = reply.data.before;
     rowButtons = [];
@@ -201,6 +210,7 @@
   element("new-request").addEventListener("click", () => projectAction(async () => {
     await checkBinding();
     if (pendingOutcome !== null) throw new Error("Check unconfirmed request " + pendingOutcome + " before starting a separate request.");
+    workItems.clear();
     selected = null; uncertain = false;
     show("selected", false); show("project-form", true);
     projectStatus(registrationUnknown ? "This is a separate request. The earlier unconfirmed save may still exist; find it to avoid unintended duplicate work." : "Save a separate creation intent. Saving does not execute it.");
@@ -212,7 +222,7 @@
       const previousUnknown = registrationUnknown;
       registrationUnknown = true; show("project-form", false);
       projectStatus("Save acknowledgement pending. If interrupted, discover its server entry; do not repeat automatically.");
-      const reply = await request("register", form, true);
+      const reply = await request("/projects/register", form);
       if ([400, 429].includes(reply.status)) {
         registrationUnknown = previousUnknown; show("project-form", true);
         projectStatus(reply.status === 400 ? "The form was rejected; correct its exact values and save again." : "Save rejected because capacity or pending quota is exhausted. Wait or resolve saved requests before trying again.");
@@ -235,7 +245,7 @@
     show("cancel-confirmation", false);
     if (kind !== "reconcile") { uncertain = true; pendingOutcome = entry.request_id; }
     projectStatus("Checking request " + entry.request_id + ". Interrupted responses do not cancel backend work.");
-    const reply = await request(kind, data, true);
+    const reply = await request("/projects/" + kind, data);
     if (![200, 201, 410].includes(reply.status) || !reply.data.entry) throw new Error("Request " + entry.request_id + " has no confirmed outcome. Check this same request; do not register a replacement as recovery.");
     choose(reply.data.entry, kind === "reconcile");
     if (reply.data.result) element("project-result").textContent = JSON.stringify(reply.data.result, null, 2);
@@ -257,11 +267,15 @@
   element("keep-request").addEventListener("click", () => { show("cancel-confirmation", false); });
   element("confirm-cancel").addEventListener("click", () => projectAction(() => operate("cancel")));
   element("read-project").addEventListener("click", () => projectAction(async () => {
+    workItems.clear();
     await checkBinding(); if (!selected || !selected.project_id) return;
-    const reply = await request("read", {project_id: selected.project_id}, true);
+    const projectId = selected.project_id;
+    const reply = await request("/projects/read", {project_id: projectId});
     if (reply.status !== 200) throw new Error("Current read-back unavailable. Recorded creation identity is retained; do not create a replacement.");
     element("project-result").textContent = JSON.stringify(reply.data, null, 2);
+    workItems.useProject(reply.data, projectId);
     projectStatus("Current project and configuration read under fresh server authority.");
   }));
+  const workItems = KehilaWorkItems({document, request, requestWire, run: projectAction, checkBinding});
   action(refresh);
 })();

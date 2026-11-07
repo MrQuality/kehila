@@ -1,5 +1,27 @@
 # Implementation status
 
+## Current native product checkpoint
+
+[PR #92](https://github.com/MrQuality/kehila/pull/92), merged on 2026-11-03,
+delivered the product-owned Rust authority for authenticated native project
+creation, server-owned pending requests, explicit execution/cancellation,
+reconciliation and independently authorized PostgreSQL read-back. It includes a
+first-party development interface. The
+[verification record](implementation/project-authority-verification.md) retains
+the scoped native HTTP/TLS, concurrency, restart and synthetic-copy evidence;
+the merged PR records its final-head checks and review. Actual browser behavior,
+supported installation/real-data use and full M1 remain unqualified.
+
+The [native WorkItem delivery brief](implementation/native-work-items.md)
+records the next user-selected outcome and its proposed architectural gates.
+WorkItem create/read/list/edit integration is not implemented yet. The legacy
+Go/FerretDB task path remains separate and unauthenticated.
+
+Older progress sections below retain earlier component boundaries and dated
+observations. Statements that the native application adapter is absent are
+superseded for PR #92's bounded project-creation scope only; they remain relevant
+to unfinished WorkItem and broader M1 integration.
+
 The [engineering standard](engineering/ENGINEERING-STANDARD.md) assesses Kehila as
 E0 Experimental, independently of product delivery milestones. The register and
 its generated document are checked in shared verification; Go formatting/vet

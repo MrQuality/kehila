@@ -63,6 +63,14 @@ as optional implementation advice or deferring them past native-route exposure.
 
 ### Contract 1: Authoritative ingress admission boundary
 
+Accepted scoped amendment, 2026-11-04:
+[ADR-111 revision 3](ADR-111-native-work-items.md#3-two-stage-admission-for-state-dependent-results)
+permits bounded authenticated read-only preparation for ItemCreate/ItemEdit after
+raw ingress admission and before generated-envelope admission. Generated item
+envelopes must pass admission before any write transaction. Project creation and
+all other boundaries retain the requirements below. This does not permit malformed
+raw input into database/application admission or add an independent resource pool.
+
 Every future transport/ingress adapter MUST enforce the codec admission ceilings
 at the edge: at most 1 MiB of encoded JSON record bytes, 64 KiB per decoded UTF8
 key/string, depth 16 with the root at zero, 1,024 entries per array/object and

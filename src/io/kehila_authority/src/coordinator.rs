@@ -21,10 +21,15 @@ use std::{
 use tokio::sync::Mutex as AsyncMutex;
 use zeroize::Zeroizing;
 
+mod item;
+mod item_pending;
+pub(crate) mod item_write;
 pub(crate) mod jobs;
 mod management;
+mod native_delivery;
 mod project;
-pub(crate) use project::ProjectDelivery;
+pub(crate) use native_delivery::NativeDelivery;
+use native_delivery::{reply, Reply};
 
 const WORK_DEADLINE: Duration = Duration::from_secs(5);
 
@@ -37,6 +42,7 @@ pub(crate) enum Error {
     Unavailable,
     AuditUnconfirmed,
     OtherAuditUnconfirmed,
+    PendingIdentityExhausted,
     Project(crate::project::Failure),
 }
 
@@ -73,6 +79,18 @@ pub(crate) enum Operation {
         credential: Credential,
         command: crate::project::Command,
     },
+    ItemPending {
+        credential: Credential,
+        command: crate::item_pending::Command,
+    },
+    ItemMutation {
+        credential: Credential,
+        command: item_write::Command,
+    },
+    Item {
+        credential: Credential,
+        input: crate::item_ingress::Input,
+    },
 }
 
 pub(crate) enum Output {
@@ -90,7 +108,8 @@ pub(crate) enum Output {
     OthersRevoked {
         count: usize,
     },
-    Project(ProjectDelivery),
+    Project(NativeDelivery),
+    Item(NativeDelivery),
 }
 
 // The adapter retains this through its observed exchange outcome. Channel
@@ -582,7 +601,12 @@ impl Engine {
         Ok(Output::PasswordChanged)
     }
 
-    async fn execute(&self, operation: Operation, deadline: Instant) -> Result<Output, Error> {
+    async fn execute(
+        &self,
+        operation: Operation,
+        execution: jobs::Execution,
+    ) -> Result<Output, Error> {
+        let deadline = execution.deadline();
         self.check(deadline)?;
         match operation {
             Operation::PreSession(bearer) => self.pre_session(bearer, deadline).await,
@@ -615,6 +639,18 @@ impl Engine {
                 credential,
                 command,
             } => self.project(credential, command, deadline).await,
+            Operation::ItemPending {
+                credential,
+                command,
+            } => self.item_pending(credential, command, deadline).await,
+            Operation::ItemMutation {
+                credential,
+                command,
+            } => {
+                self.execute_item_mutation(credential, command, &execution)
+                    .await
+            }
+            Operation::Item { credential, input } => self.item(credential, input, deadline).await,
         }
     }
 }

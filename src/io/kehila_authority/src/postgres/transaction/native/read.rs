@@ -21,6 +21,10 @@ pub(crate) struct Current {
     pub(crate) project: Project,
     pub(crate) configuration: Configuration,
     pub(crate) creation_operation: i64,
+    pub(crate) configuration_project: Project,
+    pub(crate) configuration_operation: i64,
+    pub(crate) state_version: u64,
+    pub(crate) state_operation: i64,
 }
 
 fn phase(value: String) -> Result<Phase> {
@@ -164,12 +168,12 @@ impl<P> Fenced<'_, P> {
         let (recorded_project, recorded_configuration) = self
             .revision_pair(id, project.configuration_revision, creation_operation)
             .await?;
-        let statuses=self.rows("SELECT status_id::text,name,phase::text,archived,position \
+        let status_rows=self.rows("SELECT status_id::text,name,phase::text,archived,position \
           FROM kehila.statuses WHERE project_id=$1::text::kehila.ident ORDER BY position LIMIT 1025",&[&id]).await?;
-        if statuses.len() > MAX_COLLECTION_ENTRIES {
+        if status_rows.len() > MAX_COLLECTION_ENTRIES {
             return Err(NativeError::Integrity);
         }
-        let statuses = statuses
+        let statuses = status_rows
             .iter()
             .enumerate()
             .map(|(i, row)| {
@@ -183,6 +187,7 @@ impl<P> Fenced<'_, P> {
                 })
             })
             .collect::<Result<Vec<_>>>()?;
+        drop(status_rows);
         let member_rows = self
             .rows(
                 "SELECT workflow_id::text,status_id::text,position \
@@ -292,12 +297,12 @@ impl<P> Fenced<'_, P> {
         if !by_type.is_empty() {
             return Err(NativeError::Integrity);
         }
-        let fields=self.rows("SELECT field_id::text,owner_type_id::text,name,value_kind,origin,usage,archived,position \
+        let field_rows=self.rows("SELECT field_id::text,owner_type_id::text,name,value_kind,origin,usage,archived,position \
           FROM kehila.fields WHERE project_id=$1::text::kehila.ident ORDER BY position LIMIT 1025",&[&id]).await?;
-        if fields.len() > MAX_COLLECTION_ENTRIES {
+        if field_rows.len() > MAX_COLLECTION_ENTRIES {
             return Err(NativeError::Integrity);
         }
-        let fields = fields
+        let fields = field_rows
             .iter()
             .enumerate()
             .map(|(i, row)| {
@@ -321,6 +326,7 @@ impl<P> Fenced<'_, P> {
                 })
             })
             .collect::<Result<Vec<_>>>()?;
+        drop(field_rows);
         let configuration = Configuration {
             project_id: project.id.clone(),
             revision: project.configuration_revision,
@@ -332,13 +338,34 @@ impl<P> Fenced<'_, P> {
             fields,
             relationship_types: vec![],
         };
-        if project != recorded_project || configuration != recorded_configuration {
+        let mut stable = project.clone();
+        stable.next_sequence = recorded_project.next_sequence;
+        stable.ever_estimated = recorded_project.ever_estimated;
+        if stable != recorded_project || configuration != recorded_configuration {
             return Err(NativeError::Integrity);
         }
+        // Release the historical configuration and driver buffers before the
+        // indexed operational history. Retain only its bounded Project metadata
+        // for project preparation dependencies; no second configuration clone.
+        drop(recorded_configuration);
+        drop(stable);
+        drop(types);
+        drop(workflows);
+        drop(projects);
+        drop(grants);
+        let (state_version, state_operation) = self
+            .verify_operational_head(&project, creation_operation)
+            .await?;
         Ok(Current {
             project,
             configuration,
             creation_operation,
+            configuration_project: recorded_project,
+            // The current fresh profile has no configuration writer. Its
+            // revision pair was verified against the creation operation above.
+            configuration_operation: creation_operation,
+            state_version,
+            state_operation,
         })
     }
 }
@@ -350,6 +377,13 @@ impl Fenced<'_, SessionProof> {
 }
 impl Fenced<'_, ReadProof> {
     pub(crate) async fn read_project(&mut self, id: &str) -> Result<Current> {
+        self.current_project(id).await
+    }
+}
+
+// Fixed validation reload only; the dedicated proof gains no project mutation.
+impl Fenced<'_, ItemWriteProof> {
+    pub(super) async fn reload_item_project(&mut self, id: &str) -> Result<Current> {
         self.current_project(id).await
     }
 }

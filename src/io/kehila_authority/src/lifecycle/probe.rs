@@ -28,6 +28,9 @@ pub(crate) struct Probe {
     settled_notice: tokio::sync::Notify,
     transaction_gate: Mutex<Option<TransactionHold>>,
     sql_state: Mutex<Option<String>>,
+    registration_identities: Mutex<Option<crate::item_pending::Identities>>,
+    item_replay: Mutex<Option<ItemReplayObservation>>,
+    item_repreparations: AtomicUsize,
 }
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub(crate) enum Point {
@@ -36,6 +39,21 @@ pub(crate) enum Point {
     CancelCommit,
     BeforeCompletion,
     ReadSnapshot,
+    RegistrationRollback,
+    PendingCommit,
+    ItemBeforeCommit,
+    ItemMutationPrepared,
+    ItemHistoryLoaded,
+    ItemReplayFenced,
+    ItemReplayCleanup,
+}
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ItemReplayObservation {
+    Prepared,
+    Authorized,
+    Expired,
+    BeforeOrigin,
+    RollbackFailed,
 }
 struct TransactionHold {
     request_id: i64,
@@ -48,6 +66,33 @@ pub(crate) struct TransactionGate {
     pub(crate) release: tokio::sync::oneshot::Sender<()>,
 }
 impl Probe {
+    pub(crate) fn item_reprepared(&self) {
+        self.item_repreparations.fetch_add(1, Ordering::SeqCst);
+    }
+    pub(crate) fn item_repreparations(&self) -> usize {
+        self.item_repreparations.load(Ordering::SeqCst)
+    }
+    pub(crate) fn record_item_replay(&self, value: ItemReplayObservation) {
+        *self.item_replay.lock().unwrap() = Some(value);
+    }
+    pub(crate) fn take_item_replay(&self) -> Option<ItemReplayObservation> {
+        self.item_replay.lock().unwrap().take()
+    }
+    pub(crate) fn registration_identities(
+        &self,
+        identities: crate::item_pending::Identities,
+    ) -> RegistrationFault<'_> {
+        let mut value = self.registration_identities.lock().unwrap();
+        assert!(
+            value.is_none(),
+            "one registration identity override per runtime"
+        );
+        *value = Some(identities);
+        RegistrationFault { probe: self }
+    }
+    pub(crate) fn take_registration_identities(&self) -> Option<crate::item_pending::Identities> {
+        self.registration_identities.lock().unwrap().take()
+    }
     pub(crate) fn record_sql_state(&self, code: &str) {
         assert_eq!(code.len(), 5);
         *self.sql_state.lock().unwrap() = Some(code.to_owned());
@@ -172,5 +217,23 @@ impl Drop for SeedFault<'_> {
             .fault
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
+    }
+}
+
+pub(crate) struct RegistrationFault<'a> {
+    probe: &'a Probe,
+}
+impl RegistrationFault<'_> {
+    pub(crate) fn consumed(&self) -> bool {
+        self.probe.registration_identities.lock().unwrap().is_none()
+    }
+}
+impl Drop for RegistrationFault<'_> {
+    fn drop(&mut self) {
+        self.probe
+            .registration_identities
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take();
     }
 }

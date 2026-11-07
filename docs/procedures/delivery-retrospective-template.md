@@ -10,6 +10,8 @@ and demonstrated effectiveness remain separate matters.
 - Actual result, unresolved work, stopped/deferred cases and evidence limits:
 - Commit/publication, decision and failure timeline (source-backed dates):
 - What worked and should remain:
+- Generalizable practice supported by each incident; distinguish principle,
+  concrete mechanism, acceptance, implementation, exercise and effectiveness:
 
 | Observation and supporting source | Category / consequence | Established cause or bounded hypothesis | Improvement / priority / owner | Acceptance / implementation state | Next observation / validity limit |
 | --- | --- | --- | --- | --- | --- |

@@ -21,6 +21,78 @@ results and link experiments to decisions and reusable regression coverage.
 
 ## Automated checks and user-assisted final verification
 
+On 2026-11-06 the maintainer directed risk-based testing during development and
+full testing only when the delivery goal is finished. Select development checks
+from the changed invariant, its consumers and the consequence of failure. Use
+real service-backed tests when the question concerns storage, authorization,
+atomicity or concurrent behavior; pure tests and mocks cannot establish those
+contracts. Broaden affected coverage when shared contracts change or contrary
+evidence invalidates an earlier result. Do not repeat unrelated journeys simply
+because another implementation checkpoint has been reached.
+
+In the existing delivery record, name the selected checks and their decisive
+oracles, retained evidence and its validity conditions, and deferred final cases.
+Reserve full applicable qualification and final exact-head composition review for
+the completed goal. A component checkpoint does not redefine that goal. Deferred
+checks remain incomplete, and failures remain retained evidence.
+
+The hook/CI selectors below distinguish development from final qualification.
+They provide an automated backstop; they cannot infer every affected contract or
+replace risk-selected boundary tests. Do not bypass them or describe a focused
+development run as a full gate pass. Resource, container, privacy and trust
+restrictions continue to apply.
+
+## Risk-based selection and fault testing
+
+Risk-based testing is in use as a manual selection practice with automated
+execution and coarse scheduling backstops. The hook/CI modes distinguish
+development from final qualification; focused native selectors execute explicitly
+chosen cases. They do not automatically infer changed contracts, consequences or
+all affected tests. The broader [test strategy](TEST_STRATEGY.md) remains Proposed.
+
+For material changes, record the changed contract, consequential failure mechanism,
+selected checks and decisive oracles, reusable evidence/validity conditions and
+deferred final checks in the existing
+[delivery record](procedures/engineering-delivery-record.md#risk-and-review-map).
+Trace producers, consumers, permission boundaries and old assertions as well as
+edited files. Prioritize consequence and uncertainty; avoid an automatic test
+matrix or a numerical score that substitutes for judgment. Run cheap relevant
+format/lint checks early where practical, then the smallest meaningful affected
+behavior and integration checks. Required backstops still apply.
+
+Test allowed and denied behavior against the current contract. Keep unrelated
+inputs valid when varying one rejection condition, and use a positive control
+where it establishes reachability. Require evidence of the intended rejection
+boundary and unchanged durable state when applicable. A parse failure, timeout
+or unrelated error cannot qualify a different security or integrity rejection.
+Use actual relevant roles, storage and transport when those interactions are the
+question; passing component tests alone does not establish their composition.
+
+Controlled fault injection is a technique within this risk-based selection.
+Existing native fixtures exercise selected reply loss, restart, backend loss,
+disposable database-clock changes and interleavings; shared integration checks
+exercise selected dependency stalls/unavailability. See the bounded
+[WorkItem qualification](implementation/native-work-items.md#final-qualification-2026-11-06).
+This is not a general chaos platform or exhaustive failure qualification.
+
+When a risk warrants an automated fault experiment, identify the invariant and
+permitted outcomes, applicable no-fault control, exact owned target and observed
+fault activation. Check application results and independent durable state where
+relevant, then joining, cleanup and recovery within bounded resources/time.
+Record source/environment, fault point and observed order; retain a seed when
+used, without claiming it reproduces uncontrolled OS/network scheduling. Keep
+fault-injection, application and cleanup failures distinct; preserve first failures.
+Use existing fixtures where practical. Broader randomized, multi-fault or long
+campaigns need a separately justified scope and applicable execution authority.
+No new chaos automation or default campaign is introduced by this guidance.
+
+Schedule relevant bounded fault checks during development and include applicable
+regressions in final qualification. Do not reopen a completed goal merely to add
+unrelated fault cases. The author and relevant reviewer own selection and evidence
+adequacy; the maintainer retains architectural and other nondelegated acceptance.
+
+### User-assisted final verification
+
 The maintainer directed this scheduling rule on 2026-10-31: checks that require
 someone to operate a separate device, handle an operating-system confirmation
 or make a temporary trust change belong to final qualification before the PR
@@ -47,6 +119,35 @@ Deferred or unexecuted cases remain incomplete. It neither grants security or
 trust permissions nor authorizes changing a PR's status.
 
 ## Commands
+
+The shared development backstop is `python scripts/verify.py --development` on
+the CI host, or `python scripts/container_verify.py --development` through the
+exported-source Podman procedure on Windows. It runs tooling/static checks,
+page controls, Go/frozen checks and Rust workspace tests excluding the live-NATS
+test crate. It does not provision the external service stack or run the native
+PostgreSQL journeys. Some unit tests own local listeners; this is not a claim of
+pure execution or absence of runtime activity. Reassess the service-independent
+workspace inventory when adding tests/crates. Select affected real service cases
+separately during development.
+
+For a focused native WorkItem development check, the exported-source Podman
+runner accepts `--native-item item-read` or `--native-item item-pending`.
+Repeat `--native-item` to select both; duplicates and unknown cases fail before
+runtime entry. Cases run in the fixture's canonical order, each with its isolated
+pristine database, native runtime path and independent SQL observer. The runner
+retains its compilation, source checks, execution budgets and owned cleanup.
+Its output and retained failure diagnostics identify the focused scope.
+
+This selects WorkItem journeys only; `item-write` and `item-mutation` are also
+available. It supplies neither the other native journeys nor shared full
+verification. `--native-authority` and the default full runner retain their
+complete native sequence. Mocked controls cover selector orchestration; later
+[WorkItem evidence](implementation/native-work-items.md#current-implementation-checkpoint-2026-11-06)
+records actual focused mutation/read execution and independent observers,
+superseding the earlier pending-execution status. That evidence has its stated
+source/fixture limits; availability of a selector does not qualify future changes.
+Use the existing exported-source and explicit dependency-preparation procedure;
+do not run the container verifier directly from a checkout.
 
 Full and pure verification validate the [engineering register](engineering/ENGINEERING-STANDARD.md)
 and run Go formatting/vet checks in addition to the existing matrix. CI retains
@@ -168,6 +269,31 @@ extend total elapsed time beyond the work budget. Normal interruption unwinds
 these contexts. Forced process termination or host
 failure can prevent cleanup; inspect resources carrying the printed unique
 `kehila-test-...` project label before removing any leftover test project.
+
+The Windows container coordinator can additionally write a new external host
+record with `--ownership-file`. A supervising caller can supply its own fresh
+32-character lowercase hexadecimal `--resource-owner` (or
+`KEHILA_VERIFICATION_RESOURCE_OWNER`) to bind that record to the launched run.
+The owner is validated and recorded before executor resource creation; this
+does not imply validation before VM startup. Keep records outside the source
+checkout: they include machine-local routing/source metadata and are never
+copied into the application container.
+
+The version-one record reserves the applicable finite service groups before
+creation. A reservation becomes actionable only after its namespace is verified
+empty and that authorization is persisted before Compose startup. Tracked normal
+cleanup also records partial-start identities before deleting their containers.
+Recovery requires a fresh caller-bound record, the original source/route/owner
+bindings, and confirmed termination/join of the lifecycle process and its
+descendants. Use the same bounded `ComposeResources` instance across recovery
+of all groups to retain one absolute deadline. Recovery validates resources
+before removal, targets full container/network IDs and refuses replacements,
+foreign endpoints, binds or named volumes. Anonymous volumes remain tied to
+their exact container; known retained volumes prevent a successful cleanup
+result. Old owner-only records are not version-one service recovery authority.
+A recovered resource set does not change the original verification failure
+into a pass. These controls cover surviving host supervision, not arbitrary
+host failure or a general resource-pruning command.
 
 Default engine selection tries a ready Podman runtime, then Docker. Use
 `--engine docker` or `--engine podman` to select explicitly. On Windows an
@@ -486,16 +612,35 @@ python scripts/verify.py --docs
 
 This mode runs Python tooling regressions, naming and engineering metadata/
 generated-document checks without compilers or external services. CI keeps the
-always-triggered `verify` job and selects this path only when every changed file
-is a known ordinary prose document. The shared hook policy excludes engineering
-register/preamble/generated-standard inputs from that shortcut. All other CI
-changes retain full verification; an empty diff, unavailable event base, unknown
-input or code deletion/rename into documentation selects full verification.
-The hook retains its pure/full source distinction; CI is deliberately more
-conservative for every non-prose change. Workflow changes themselves select full
-verification. No workflow-level path ignore or commit-message bypass is added.
-Lightweight results establish only their documented scope; release qualification
-still requires full verification of its subject source and maintainer assessment.
+always-triggered `verify` job and selects this shortcut only after a valid diff
+shows known ordinary prose documents. Engineering register/preamble/generated
+standard inputs cannot take it. Non-prose, unknown and empty diffs select the
+development backstop for validated draft PRs and full verification for ready PRs
+or main pushes. Code deletions/renames cannot become prose-only by similarity.
+For unknown draft paths, the backstop covers its explicit inventories only.
+The author must trace affected contracts and select relevant checks; it does not
+prove coverage of an arbitrary new subsystem. Hold affected dependent work when
+that scope cannot be established. This deliberately avoids an automatic full
+campaign during unfinished development; it does not reduce final qualification.
+Malformed events, invalid draft state and unavailable comparison bases fail
+selection explicitly. No workflow-level path ignore or commit-message bypass is
+added. Lightweight results establish only their documented scope.
+
+At the finished goal, an authenticated author requests full draft-PR qualification
+by applying the exact `qualification` label. This `pull_request: labeled` event
+forces full checks even for prose/empty diffs. It uses the event's added label,
+not the PR's retained label list: later draft updates remain development runs.
+Remove/reapply the label for a fresh final request, or rerun prior evidence only
+when its exact source remains applicable. Do not add an automated token-driven
+label step or mark the PR ready to obtain its first full qualification. Resolve
+merge conflicts before using PR workflows.
+
+Record the checked-out head SHA, event/action, mode and workflow URL with final
+evidence. The workflow checks out the PR head, not GitHub's default merge ref.
+The native job explicitly defers its journeys outside full scope; its successful
+development job status is not executed native evidence. A readiness event runs
+full qualification conservatively and can repeat the already completed final
+run; it does not replace the full pass required before readiness.
 
 The full suite runs Python tests for the development tools, service readiness
 checks, the NATS account API check, Rust workspace tests, and Go tests. Missing
@@ -696,17 +841,25 @@ test doubles may complement these checks.
 the hook, run `python scripts/setup_env.py --hooks-only`.
 
 The hook exports staged files into a temporary directory and tests that snapshot.
-Unstaged edits cannot fix failing staged code. Changes to adapters, dependencies,
-test tools, or CI run the full suite; changes limited to pure code use unit tests.
-Documentation-only changes do not run tests locally. Documentation updates are
-expected when behavior changes, but are not required for every code edit.
+Unstaged edits cannot fix failing staged code. Changes limited to pure code use
+the pure matrix. Other non-prose changes use the development backstop, including
+adapter, dependency, tool and CI changes. Documentation-only changes do not run
+tests locally. Run `python .githooks/pre_commit.py --qualification` for the full
+staged-tree gate at goal completion; this explicit request also tests an empty
+or prose-only diff. Documentation updates are expected when behavior changes,
+but are not required for every code edit.
 
 The snapshot verifier rejects symlinks and submodules and checks that the index
 has not changed during execution. It cannot judge test completeness or relevance;
 these remain part of review.
 
-CI runs the full suite, then verifies changes relative to the event's base commit.
-Initial pushes are checked in a disposable clone with the staged tree preserved.
+CI selects development or full scope as described above, then exercises the same
+snapshot gate against the event base. Full scope propagates `--qualification`;
+an initial main push uses a disposable clone with its staged tree preserved and
+full qualification retained. Invalid event metadata never silently selects a
+lighter gate. Draft development keeps formatting/lint, standalone transport and
+Windows client checks separately visible; service preparation/native journeys
+are deferred. Whole-goal readiness still requires full applicable qualification.
 Required CI settings on the hosting service provide the shared automated merge
 gate; local hooks alone cannot enforce it. Independent review is optional during
 the sole-contributor phase described in the contribution guide. Consult the

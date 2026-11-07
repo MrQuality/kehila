@@ -21,14 +21,16 @@ manual pilot execution, not new CI enforcement or an independent GitHub approval
 Follow the [development setup](README.md#development-setup), then run:
 
 ```text
-python scripts/verify.py
+python scripts/verify.py --development
 ```
 
-Use `python scripts/verify.py --pure` when working on pure logic without the
-development services. Full verification builds first, then owns and cleans up
-only the services needed by each phase. Integration changes still require the
-complete service-backed suite. See [the testing guide](docs/TESTING.md) for
-coverage and limitations.
+Use `python scripts/verify.py --pure` for the applicable pure-logic matrix.
+During development, select additional checks from changed contracts and failure
+risks, including real service-backed checks for affected integration boundaries.
+The development backstop does not provision the service stack. At goal completion,
+run full applicable qualification; full verification builds first, then owns and
+cleans up the services needed by each phase. Windows execution follows the
+exported-source container procedure in [the testing guide](docs/TESTING.md).
 
 Use the [test strategy](docs/TEST_STRATEGY.md) to identify the evidence relevant
 to a change. It is proposed; [the testing guide](docs/TESTING.md) describes the
@@ -84,6 +86,12 @@ cancellation/material suspension), complete a proportional
 challenge and owned follow-up. Coincident boundaries may share one report; routine
 commits do not require another ceremony.
 
+The maintainer accepted the [general verification practices](docs/procedures/engineering-delivery.md#contract-based-verification)
+on 2026-11-07: discriminating acceptance/rejection tests, changed-contract impact
+review, meaningful integration boundaries, interruption/recovery behavior and
+explicit current evidence. Apply them proportionally within the existing delivery
+record. Acceptance does not imply automatic risk analysis or a new chaos platform.
+
 Apply the [Definition of Done](docs/engineering/DEFINITION-OF-DONE.md), recording
 applicable evidence and justified not-applicable criteria. Link existing
 requirement/decision/backlog IDs and engineering IDs where relevant. Material
@@ -104,11 +112,22 @@ Include relevant service versions and results for integration changes. Keep
 credentials, local environment files, and unrelated changes out of the PR.
 
 The local commit hook tests staged source files in an isolated directory. Stage
-test fixes before retrying a failed commit. CI runs the full suite for executable,
-dependency, workflow, engineering qualification-input and unclassified changes
-in pull requests and pushes to `main`. Known ordinary prose-only changes run the
-shared documentation checks described in [the testing guide](docs/TESTING.md).
-Documentation-check results do not establish full-suite or release qualification.
+test fixes before retrying a failed commit. During development, select additional
+checks from the affected contracts and failure risks. Ordinary commits run the
+pure or development backstop; draft PR CI runs development checks for non-prose
+changes without provisioning the external service stack. These checks do not
+establish full qualification. Known ordinary prose changes retain the shared
+documentation checks described in [the testing guide](docs/TESTING.md).
+
+When the complete delivery goal is implemented, run full final qualification.
+The local staged gate accepts `--qualification`. While the PR remains draft,
+applying the `qualification` label requests full hosted verification of its exact
+head. If another final attempt needs a new event, remove and reapply the label;
+a retained label does not make later draft updates run the full suite. Ready PRs
+and pushes to `main` retain full non-prose verification. Invalid CI event/base
+metadata fails selection. Full evidence and independent exact-head review must
+pass before marking ready; a label, draft flag or green development run does not
+establish completion. Merging remains the maintainer's decision.
 
 Changes to `main` require passing CI. During the sole-contributor phase, an
 independent approving PR review is optional. Before merging, the maintainer

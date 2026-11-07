@@ -6,9 +6,26 @@ use tokio::{
 };
 
 const CAPACITY: usize = 16;
+mod item_mutation;
+mod item_pending;
 mod preparation;
 mod project;
 use preparation::{Reservation, Tracker};
+
+// Constructed only by this message owner; callers cannot replace its deadline
+// or acquire a second allowance for later state-dependent CPU work.
+pub(super) struct Execution {
+    deadline: Instant,
+    permit: Arc<OwnedSemaphorePermit>,
+}
+impl Execution {
+    pub(super) fn deadline(&self) -> Instant {
+        self.deadline
+    }
+    pub(super) fn admission(&self) -> Arc<OwnedSemaphorePermit> {
+        Arc::clone(&self.permit)
+    }
+}
 
 struct Message {
     operation: Operation,
@@ -45,7 +62,7 @@ impl Response {
         if let Ok(Output::Issued(delivery)) = &mut self.result {
             delivery.confirm_exchange()?;
         }
-        if let Ok(Output::Project(delivery)) = &self.result {
+        if let Ok(Output::Project(delivery) | Output::Item(delivery)) = &self.result {
             delivery.check()?;
         }
         Ok(())
@@ -68,6 +85,13 @@ impl Handle {
     ) -> Result<oneshot::Receiver<Response>, Error> {
         let reservation = self.reserve(deadline)?;
         self.submit_reserved(operation, reservation)
+    }
+
+    pub(crate) fn submit_prepared(
+        &self,
+        prepared: preparation::Prepared<Operation>,
+    ) -> Result<oneshot::Receiver<Response>, Error> {
+        self.submit_reserved(prepared.value, prepared.reservation)
     }
 
     fn reserve(&self, deadline: Instant) -> Result<Reservation, Error> {
@@ -223,7 +247,7 @@ impl Owner {
                     let permit = message.permit.clone();
                     let task = self.jobs.spawn(async move {
                         let mut failure = StopOnAbandonment { live: engine.live.clone(), completed: false };
-                        let result = engine.execute(message.operation, message.deadline).await;
+                        let result = engine.execute(message.operation, Execution{deadline:message.deadline,permit:Arc::clone(&message.permit)}).await;
                         let result = if engine.check(message.deadline).is_ok()
                             || matches!(result, Err(Error::AuditUnconfirmed | Error::OtherAuditUnconfirmed
                                 | Error::Project(crate::project::Failure::OutcomeUnknown))) { result }

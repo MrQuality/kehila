@@ -6,46 +6,6 @@ use crate::{
 };
 use serde_json::{json, Value};
 
-pub(crate) struct ProjectDelivery {
-    status: u16,
-    body: Arc<Zeroizing<Vec<u8>>>,
-    entry: Arc<Session>,
-    snapshot: Snapshot,
-    deadline: Instant,
-}
-pub(crate) struct ProjectMaterial {
-    pub(crate) status: u16,
-    pub(crate) body: Arc<Zeroizing<Vec<u8>>>,
-}
-impl ProjectDelivery {
-    pub(crate) fn check(&self) -> Result<(), Error> {
-        if Instant::now() >= self.deadline || !self.entry.eligible(&self.snapshot, Instant::now()) {
-            Err(Error::Unauthorized)
-        } else {
-            Ok(())
-        }
-    }
-    pub(crate) fn material(&self) -> Result<ProjectMaterial, Error> {
-        self.check()?;
-        Ok(ProjectMaterial {
-            status: self.status,
-            body: self.body.clone(),
-        })
-    }
-}
-
-struct Reply {
-    status: u16,
-    value: Value,
-    business: bool,
-}
-fn reply(status: u16, value: Value) -> Reply {
-    Reply {
-        status,
-        value,
-        business: status < 400,
-    }
-}
 fn pending_value(value: &Pending) -> Value {
     json!({"request_id":value.id.to_string(),"token":value.token,
         "form_version":1,"form":value.form.as_ref().map(|form|json!({"name":form.name,
@@ -102,7 +62,7 @@ fn needs_reconciliation(error: &NativeError) -> bool {
         || matches!(error,NativeError::Database(DbError::Rejected(code)) if code=="P0002")
 }
 
-fn native_error(live: &RuntimeLiveness, error: NativeError) -> Error {
+pub(super) fn native_error(live: &RuntimeLiveness, error: NativeError) -> Error {
     #[cfg(test)]
     if let NativeError::Database(DbError::Rejected(code) | DbError::Constraint { code, .. }) =
         &error
@@ -126,23 +86,6 @@ fn native_error(live: &RuntimeLiveness, error: NativeError) -> Error {
 }
 
 impl Engine {
-    fn project_eligibility(
-        &self,
-        entry: &Session,
-        credential: &Credential,
-        fresh: &Snapshot,
-    ) -> Result<(), Error> {
-        if credential.kind != Kind::Browser {
-            return Err(Error::Unauthorized);
-        }
-        self.csrf(entry, credential, fresh)
-            .map_err(|_| Error::Project(Failure::Forbidden))?;
-        if entry.eligible(fresh, Instant::now()) {
-            Ok(())
-        } else {
-            Err(Error::Unauthorized)
-        }
-    }
     fn project_delivery(
         &self,
         entry: Arc<Session>,
@@ -150,21 +93,9 @@ impl Engine {
         reply: Reply,
         deadline: Instant,
     ) -> Result<Output, Error> {
-        self.check(deadline)?;
-        let body = domain::wire::encode(&reply.value)?;
-        if !entry.eligible(&fresh, Instant::now())
-            || (reply.business && !entry.successful_business(&fresh, Instant::now()))
-        {
-            return Err(Error::Unauthorized);
-        }
-        self.check(deadline)?;
-        Ok(Output::Project(ProjectDelivery {
-            status: reply.status,
-            body: Arc::new(body),
-            entry,
-            snapshot: fresh,
-            deadline,
-        }))
+        Ok(Output::Project(
+            self.native_delivery(entry, fresh, reply, deadline)?,
+        ))
     }
 
     pub(super) async fn project(

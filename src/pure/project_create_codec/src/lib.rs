@@ -2,6 +2,7 @@
 //!
 //! Decoding reconstructs historical values; it never re-runs current domain
 //! acceptance. New native writes must enter through [`NativeRequest`].
+pub mod composition;
 mod json;
 mod request;
 mod revision;
@@ -49,6 +50,7 @@ pub const MAX_COLLECTION_ENTRIES: usize = 1024;
 pub const MAX_NODES: usize = 16384;
 
 mod limits;
+pub use limits::RecordBudget;
 mod v1;
 use task_contract::project::Project;
 use task_contract::project_create::ProjectCreateResult;

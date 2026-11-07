@@ -1093,6 +1093,7 @@ dependencies = [
  "tokio-postgres-rustls",
  "tokio-rustls 0.26.6",
  "unicode-normalization",
+ "work_item_codec",
  "x509-cert 0.3.0",
  "zeroize",
 ]
@@ -2824,6 +2825,15 @@ name = "wit-bindgen"
 version = "0.57.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
+
+[[package]]
+name = "work_item_codec"
+version = "0.1.0"
+dependencies = [
+ "project_create_codec",
+ "serde_json",
+ "task_contract",
+]
 
 [[package]]
 name = "writeable"
