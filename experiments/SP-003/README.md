@@ -128,7 +128,7 @@ in the shared Python suite complement these real Podman checks.
 ## Dependencies and reuse
 
 The prototype links Cargo-reported artifacts from the existing locked workspace:
-task_contract, serde_json 1.0.151 and sha2 0.10.9. It adopts no new versions or
+task_contract, serde_json 1.0.154 and sha2 0.10.9. It adopts no new versions or
 runtime dependencies. Serialization and digest libraries retain their registry
 provenance/checksums in the root Cargo.lock; their actual cached Apache-2.0 and
 MIT texts were inspected. Apache-2.0 is the selected license for this use; preserve
@@ -137,13 +137,17 @@ dependency security/maintenance qualification remains subject to the repository
 dependency policy, not established by this experiment. Changes use the existing
 locked update/review process. No library source was copied into this prototype.
 
-The build temporarily obtains sha2 through task_worker -> mongodb -> sha2.
-Changing the legacy worker's dependency graph can therefore break this prototype
-build even when the codec is unchanged. Building that worker also brings its
-existing Rust 1.88 minimum and adapter compilation into shared pure verification;
-pure verification still performs no service I/O. This is bounded spike coupling,
-not the production dependency design. Before promotion, the crate that owns
-hashing must declare sha2 directly and own its dependency/update review.
+The build uses `project_create_codec`, which directly owns the three locked
+dependencies, as its artifact producer. Cargo metadata identifies the producer
+by its repository manifest and resolves each direct dependency to an exact
+package identity. Only library artifacts reported for those identities are
+accepted; stale same-named artifacts and transitive substitutes cannot supply
+the oracle. Metadata resolution and the producer build explicitly select the
+Rust compiler's native host target, matching the runnable oracle and its offline
+dependency cache without requesting unrelated target-platform packages.
+This replaces the earlier worker/MongoDB transitive build coupling
+without changing frozen codec fixtures or historical results. Pure verification
+performs no service I/O.
 
 The build selects exact Cargo-reported artifacts, rejects ambiguous libraries
 and creates uniquely owned temporary compiler outputs under Cargo's artifact
