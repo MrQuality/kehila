@@ -11,9 +11,15 @@ evidence and accepted save/replay/projection behavior.
 
 ## Context
 
+> Historical source note: retired worker/API references in this section point to
+> the pre-retirement snapshot. Prototype implementation descriptions retain their
+> recorded meaning; see the [retirement dispositions](../implementation/ferretdb-retirement.md)
+> for the active native path. Accepted decisions are unchanged.
+
+
 The bounded task path separates database acknowledgment from asynchronous search
 visibility. [SP-001](../spikes/SP-001-task-path.md) used Python adapters;
-[the current worker](../../src/io/task_worker/src/lib.rs) has separate Go/Rust
+[the current worker](https://github.com/MrQuality/kehila/blob/30a8fe5372959d99c2855af3b602961cc1aec034/src/io/task_worker/src/lib.rs) has separate Go/Rust
 regression evidence described in [implementation status](../IMPLEMENTATION.md).
 Neither establishes a supported application or general cross-document consistency.
 
@@ -81,7 +87,7 @@ Multi-active deployment/migration remains B-032/#65, not the local singleton.
 
 ## Verification and follow-up
 
-[Live worker tests](../../tests/integration/live_task_worker.py) provide finite
+[Live worker tests](https://github.com/MrQuality/kehila/blob/30a8fe5372959d99c2855af3b602961cc1aec034/tests/integration/live_task_worker.py) provide finite
 cross-process races, replay and failure-boundary evidence. Finite races are not a
 linearizability proof. Production projection/client monotonicity needs integrated
 tests. [B-005](../product/backlog.md#b-005),

@@ -1,8 +1,9 @@
 # FerretDB prototype retirement
 
-Status: implementation in progress in [PR #97](https://github.com/MrQuality/kehila/pull/97).
-Final qualification of the changed build, setup and verification composition is
-pending. Earlier results below have their own source and scope.
+Implemented in [PR #97](https://github.com/MrQuality/kehila/pull/97).
+Local final qualification of the changed build, setup and verification composition
+passed at `2ec9794`. The PR tracks exact-head hosted checks and review readiness.
+Earlier results below retain their own source and scope.
 
 ## Application and preservation boundary
 
@@ -88,8 +89,23 @@ Retained package versions and checksums did not change; the new manifest-scoped
 dependency cache was prepared separately. These are development observations,
 not final runtime qualification.
 
-Full applicable retirement qualification, remaining service failure/interruption
-evidence, required exact-head CI and final composition review remain pending. The PR stays draft
-until those requirements are satisfied. These synthetic fresh-database checks do
+The full local qualification at `2ec9794` passed all fifteen native modes with
+independent database observers, the retained seed/frozen-codec checks, shared
+workspace/page/Go checks and PostgreSQL, NATS and OpenSearch service groups.
+The normal PostgreSQL-only group passed readiness and exact owned cleanup.
+Separate real PostgreSQL-only controls passed a controller failure after resource
+creation but before normal ownership observation, and forced owner interruption
+at that armed boundary. Both captured actual container, network and anonymous
+volume identities before removal; interruption recovery followed the writer's
+confirmed termination/join. These observations cover the selected fault stages,
+not every possible internal Compose startup failure. All owned groups completed,
+the runner/network were removed, and the initially stopped provider was stopped.
+
+Local qualification used the existing pinned toolchain image. The revised
+Containerfile only removes an unused prototype output directory; hosted native
+CI builds and uses that current Containerfile. Documentation-only historical-link
+and result updates after `2ec9794` preserve the runtime evidence's source premises.
+Readiness also requires exact-head hosted checks and independent final composition
+review, tracked on the PR. These synthetic fresh-database checks do
 not establish real-data import, populated upgrade, general restore, browser-loss
 recovery or a multi-active authority capability.

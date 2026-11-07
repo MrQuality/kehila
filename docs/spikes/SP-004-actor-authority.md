@@ -22,13 +22,19 @@ the local-MVP direction, with actual authentication evidence still outstanding.
 
 ## Source inventory
 
+> Historical source note: retired worker/API references in this section point to
+> the pre-retirement snapshot. Prototype implementation descriptions retain their
+> recorded meaning; see the [retirement dispositions](../implementation/ferretdb-retirement.md)
+> for the active native path. Accepted decisions are unchanged.
+
+
 Inspected at main `2efd444e38a4d60eaeb195a00359813174aa3d23`. These are source
 observations, not new runtime verification.
 
 | Boundary | Existing behavior | Missing contract |
 | --- | --- | --- |
-| [Go API](../../go/io/task_api/server.go) | POST checks loopback Host, browser origin and a 4 KiB body bound; worker requests are freshly constructed without forwarding browser headers. Task/search reads have no actor check. | No owner authentication, session, current permissions or authenticated worker identity. Origin checking does not identify a caller. |
-| [Rust worker](../../src/io/task_worker/src/main.rs) and [store](../../src/io/task_worker/src/lib.rs) | Internal listener checks Host, rejects browser context headers, bounds execution and serves the provisional FerretDB task path. Mutation replay is keyed by task and operation ID. | No authenticated actor or M1 scoped operation lookup. Loopback and an expected Host do not authenticate the Go process. |
+| [Go API](https://github.com/MrQuality/kehila/blob/2efd444e38a4d60eaeb195a00359813174aa3d23/go/io/task_api/server.go) | POST checks loopback Host, browser origin and a 4 KiB body bound; worker requests are freshly constructed without forwarding browser headers. Task/search reads have no actor check. | No owner authentication, session, current permissions or authenticated worker identity. Origin checking does not identify a caller. |
+| [Rust worker](https://github.com/MrQuality/kehila/blob/2efd444e38a4d60eaeb195a00359813174aa3d23/src/io/task_worker/src/main.rs) and [store](https://github.com/MrQuality/kehila/blob/2efd444e38a4d60eaeb195a00359813174aa3d23/src/io/task_worker/src/lib.rs) | Internal listener checks Host, rejects browser context headers, bounds execution and serves the provisional FerretDB task path. Mutation replay is keyed by task and operation ID. | No authenticated actor or M1 scoped operation lookup. Loopback and an expected Host do not authenticate the Go process. |
 | [Pure creation](../../src/pure/task_contract/src/project_create.rs) and [replay](../../src/pure/task_contract/src/operation.rs) | Creation accepts `authorized: bool`; `OperationKey` carries actor/family/target/token; replay requests current original grants. | Caller must supply trusted actor, authoritative scope and protected current grants. Public types and booleans are not proofs. |
 | [Native actors/operations](../../storage/postgresql/operations.sql) | Actor has `active` and `can_create_project`; operation stores actor, original grant and policy version. | No sessions, enrollment, authentication provider or session-revocation protocol. |
 | [Native grants](../../storage/postgresql/project_create.sql) and [capability](../../storage/postgresql/access.sql) | `initial_owner` profile, current grant row and append-only events; actor locking helper. Creator cannot administer actors or update grants. Grant-event guard permits only revision-one self-grant at creation. | No enforced current/event agreement, owner permission expansion or management/revocation capability. Later mutation cannot work by simply removing the creation-only guard. |

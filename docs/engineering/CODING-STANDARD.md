@@ -134,6 +134,12 @@ it is not a complete guide to the current module, generic or library ecosystem.
 
 ## Current enforcement and existing gaps
 
+> Historical source note: retired worker/API references in this section point to
+> the pre-retirement snapshot. Prototype implementation descriptions retain their
+> recorded meaning; see the [retirement dispositions](../implementation/ferretdb-retirement.md)
+> for the active native path. Accepted decisions are unchanged.
+
+
 Inspection baseline: 2026-10-02. This is a scoped inventory, not a complete code
 audit or certification. The listed destinations extend existing backlog work.
 
@@ -148,10 +154,10 @@ audit or certification. The listed destinations extend existing backlog work.
 | Review evidence | Contribution policy and Definition of Done require final maintainer assessment. The PR template prompts coding scope, applicable rules and gaps; a prompt is not proof that assessment occurred. | [B-019](../product/backlog.md#b-019) |
 
 Sources for the inventory are [workspace configuration](../../Cargo.toml),
-[worker configuration](../../src/io/task_worker/Cargo.toml),
-[worker execution ownership](../../src/io/task_worker/src/lib.rs),
-[Go adapter](../../go/io/task_api/server.go),
-[task-path harness](../../tests/integration/task_path.py),
+[worker configuration](https://github.com/MrQuality/kehila/blob/30a8fe5372959d99c2855af3b602961cc1aec034/src/io/task_worker/Cargo.toml),
+[worker execution ownership](https://github.com/MrQuality/kehila/blob/30a8fe5372959d99c2855af3b602961cc1aec034/src/io/task_worker/src/lib.rs),
+[Go adapter](https://github.com/MrQuality/kehila/blob/30a8fe5372959d99c2855af3b602961cc1aec034/go/io/task_api/server.go),
+[task-path harness](https://github.com/MrQuality/kehila/blob/30a8fe5372959d99c2855af3b602961cc1aec034/tests/integration/task_path.py),
 [contracts package](../../packages/contracts/package.json),
 [CI](../../.github/workflows/ci.yml) and [assessment](ASSESSMENT.md).
 

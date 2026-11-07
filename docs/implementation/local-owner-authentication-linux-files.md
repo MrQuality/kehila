@@ -275,6 +275,12 @@ CC0 text with that provenance in any broader source-notice bundle before shipmen
 
 ### Advisory, maintenance and reviewer findings
 
+> Historical source note: retired worker/API references in this section point to
+> the pre-retirement snapshot. Prototype implementation descriptions retain their
+> recorded meaning; see the [retirement dispositions](ferretdb-retirement.md)
+> for the active native path. Accepted decisions are unchanged.
+
+
 An OSV package/version batch on 2026-10-26 covered all **98** candidate registry
 entries. No finding matched the four additions, but the full query returned
 **RUSTSEC-2026-0386 for existing Tokio 1.53.1**. Both the experimental and production
@@ -292,7 +298,7 @@ ownership contract and is not an incidental workaround under application
 `unsafe_code = "forbid"`. The pre-existing rustls follow-up remains separate.
 
 Bounded triage scope at the research baseline: both the experiment and
-[`task_worker`](../../src/io/task_worker/Cargo.toml) explicitly enable Tokio's
+[`task_worker`](https://github.com/MrQuality/kehila/blob/30a8fe5372959d99c2855af3b602961cc1aec034/src/io/task_worker/Cargo.toml) explicitly enable Tokio's
 `net` feature. In Tokio 1.53.1's ordinary Unix configuration, that makes the
 AsyncFd API available; API availability is not evidence of calling an affected
 constructor. Source-audit searches must use the exact affected symbols:
