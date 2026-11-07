@@ -833,6 +833,7 @@ fn native_authorized_item_reads() {
             evidence::fences_released(&admin).await;
             handle.stop();
             running.await.unwrap().unwrap();
+            network::exercise(&endpoint, &installation, &attempt, &admin, &id, &read).await;
             faults::exercise(&endpoint, &installation, &attempt, &admin, &id).await;
             admin.close().await;
             mark(&controls, "item-read-passed");

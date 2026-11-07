@@ -13,6 +13,7 @@ mod item_mutations;
 mod item_pending;
 mod item_reads;
 mod item_writes;
+mod network;
 mod restored;
 mod write_faults;
 
