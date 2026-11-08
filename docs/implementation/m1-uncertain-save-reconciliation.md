@@ -1,5 +1,9 @@
 # M1 uncertain-save reconciliation proposal
 
+The [crash/recovery evidence map](native-qualification-boundaries.md#crash-and-recovery-evidence-boundaries)
+distinguishes retained observations from unqualified scenarios and records their
+existing owners. It does not implement or accept the journal proposal below.
+
 Status: Proposed for maintainer review, 2026-10-24. No client/API implementation.
 Related: B-006/M1-08, #49, D-032/D-033/D-034,
 [authority and replay](../architecture/ADR-101-task-authority.md).
