@@ -65,9 +65,15 @@ def violations(root):
         if any(RETIRED.search(entry) for entry in entries):
             errors.append(name + ': retired binding in active inventory')
     for path in active_paths(root):
-        for number, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+        name = path.relative_to(root).as_posix()
+        try:
+            text = path.read_text(encoding='utf-8')
+        except UnicodeDecodeError:
+            errors.append(f'{name}: active input is not UTF-8')
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
             if RETIRED.search(line):
-                errors.append(f'{path.relative_to(root).as_posix()}:{number}: retired active binding')
+                errors.append(f'{name}:{number}: retired active binding')
     return errors
 
 

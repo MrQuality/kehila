@@ -835,6 +835,11 @@ test modules, helpers or other fixture files. The naming checker uses the same
 rejection data. Neither check is a semantic proof against dynamically constructed
 or externally supplied dependencies.
 
+Active inputs must decode as UTF-8. A malformed input produces a path-specific
+violation while scanning continues to collect other violations. The guard leaves
+the input unchanged and returns failure; it does not replace undecodable bytes
+or silently omit the file.
+
 `scripts/setup_env.py` installs the repository's commit hook. To configure only
 the hook, run `python scripts/setup_env.py --hooks-only`.
 

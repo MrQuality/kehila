@@ -1,6 +1,7 @@
 """The retirement backstop distinguishes active inputs from historical records."""
 from pathlib import Path
 import json
+import io
 import sys
 import tempfile
 import unittest
@@ -116,3 +117,20 @@ class RetirementGuardTests(unittest.TestCase):
         self.write('tests/fixtures/other.json', json.dumps(RETIRED))
         self.assertTrue(any('tests/fixtures/other.json' in item
                             for item in guard.violations(self.root)))
+
+    def test_invalid_utf8_reports_its_path_and_preserves_other_violations(self):
+        self.assertEqual(guard.violations(self.root), [])
+        path = self.write('scripts/a_invalid.py', '')
+        path.write_bytes(b'\xff')
+        self.write('scripts/z_legacy.py', RETIRED['verifier_source'])
+        errors = guard.violations(self.root)
+        self.assertIn('scripts/a_invalid.py: active input is not UTF-8', errors)
+        self.assertTrue(any('scripts/z_legacy.py' in item for item in errors))
+        self.assertEqual(path.read_bytes(), b'\xff')
+
+    def test_invalid_utf8_cli_returns_failure_with_actionable_diagnostic(self):
+        path = self.write('config/invalid.json', '')
+        path.write_bytes(b'\xff')
+        with patch.object(guard, 'ROOT', self.root), patch.object(sys, 'stderr', io.StringIO()) as error:
+            self.assertEqual(guard.main(), 1)
+        self.assertIn('config/invalid.json: active input is not UTF-8', error.getvalue())
