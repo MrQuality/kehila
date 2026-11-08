@@ -106,8 +106,9 @@ pub(super) async fn exercise(
     });
     let tested = joined(work).await;
     // Parent owns cleanup even when any fault assertion panics or times out.
-    // Releasing after the original deadline permits orderly driver shutdown.
-    relay.release();
+    // Explicit cleanup releases the gate after the original deadline. A closed
+    // serving peer may terminate the downstream relay write during shutdown.
+    relay.begin_cleanup();
     handle.stop();
     let stopped = joined(running)
         .await
