@@ -33,7 +33,7 @@ ENV PATH="/opt/kehila-node/bin:/usr/local/cargo/bin:/usr/local/go/bin:${PATH}" \
 RUN git --version && cc --version && python --version && cargo --version && rustfmt --version && go version \
     && groupadd --gid 10001 verify \
     && useradd --no-log-init --uid 10001 --gid 10001 --create-home verify \
-    && mkdir -p /workspace /work/cargo /work/target /work/temp /work/go-temp /work/go-cache /work/go-mod /work/task-path \
+    && mkdir -p /workspace /work/cargo /work/target /work/temp /work/go-temp /work/go-cache /work/go-mod \
     && chown -R 10001:10001 /workspace /work \
     && chmod -R go-w /usr/local/cargo /usr/local/rustup /usr/local/go
 USER 10001:10001

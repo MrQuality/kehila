@@ -7,7 +7,7 @@ import sys
 import time
 import urllib.request
 
-PORTS = {"PostgreSQL": 5432, "FerretDB": 27017, "NATS": 4222, "OpenSearch": 9200}
+PORTS = {"PostgreSQL": 5432, "NATS": 4222, "OpenSearch": 9200}
 
 
 def probe(host, services=None):

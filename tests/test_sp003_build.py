@@ -22,14 +22,25 @@ class BuildLifecycleTests(IsolatedEnvironmentTests):
         self.addCleanup(temporary.cleanup)
         self.dependencies = Path(temporary.name) / "deps"
         self.dependencies.mkdir()
+        producer = 'path+file:///source/codec#project_create_codec@0.1.0'
+        dependencies = []
+        packages = [{'id': producer, 'name': 'project_create_codec',
+                     'manifest_path': str(SOURCE.parents[1] / 'src/pure/project_create_codec/Cargo.toml')}]
         artifacts = []
         for name in ("task_contract", "serde_json", "sha2"):
+            identity = 'registry+test#' + name + '@1.0.0'
+            dependencies.append({'name': name, 'pkg': identity})
+            packages.append({'id': identity, 'name': name})
             library = self.dependencies / (name + ".rlib")
             library.touch()
-            artifacts.append(json.dumps({"reason": "compiler-artifact", "target": {"name": name},
+            artifacts.append(json.dumps({"reason": "compiler-artifact", "package_id": identity,
+                                         "target": {"name": name, "kind": ["lib"]},
                                          "filenames": [str(library)]}))
+        self.metadata = json.dumps({'packages': packages, 'resolve': {'nodes': [
+            {'id': producer, 'deps': dependencies}]}}).encode()
         self.artifacts = "\n".join(artifacts).encode()
         self.failure = None
+        self.host = b'host: x86_64-unknown-linux-gnu\n'
         self.commands = []
         self.actual_command = BUILD.command
         patcher = patch.object(BUILD, "command", side_effect=self.command)
@@ -38,8 +49,10 @@ class BuildLifecycleTests(IsolatedEnvironmentTests):
 
     def command(self, args, **kwargs):
         self.commands.append(args)
+        if args == ['rustc', '-vV']:
+            return self.host
         if args[0] == "cargo":
-            return self.artifacts
+            return self.metadata if args[1] == 'metadata' else self.artifacts
         if args[0] == "rustfmt":
             stage = "format"
         elif args[0] == "rustc":
@@ -127,6 +140,17 @@ class BuildLifecycleTests(IsolatedEnvironmentTests):
                                          str(SOURCE / "main.rs"), str(SOURCE / "codec.rs"),
                                          str(SOURCE / "tests.rs")]])
         self.assert_no_builds()
+
+    def test_missing_or_ambiguous_host_prevents_cargo_resolution(self):
+        for host in (b'', b'host: \n', b'host: first\nhost: second\n'):
+            with self.subTest(host=host):
+                self.host = host
+                self.commands.clear()
+                with self.assertRaisesRegex(RuntimeError, 'native host target'):
+                    with BUILD.build():
+                        self.fail('Unknown host admitted dependency resolution')
+                self.assertFalse(any(args[0] == 'cargo' for args in self.commands))
+                self.assert_no_builds()
 
     def test_command_failure_retains_stdout_diagnostics(self):
         completed = subprocess.CompletedProcess([], 1, b"format diff", b"")

@@ -19,23 +19,56 @@ def command(args, *, input=None, timeout=120):
     return result.stdout
 
 
+def oracle_libraries(metadata, messages):
+    """Resolve the producer's direct edges before accepting compiler artifacts."""
+    manifest = (REPO / 'src/pure/project_create_codec/Cargo.toml').resolve()
+    producers = [package for package in metadata['packages']
+                 if package['name'] == 'project_create_codec'
+                 and Path(package['manifest_path']).resolve() == manifest]
+    if len(producers) != 1:
+        raise RuntimeError('Cargo must resolve the owned oracle dependency producer')
+    nodes = [node for node in metadata['resolve']['nodes']
+             if node['id'] == producers[0]['id']]
+    if len(nodes) != 1:
+        raise RuntimeError('Cargo must resolve one producer dependency node')
+    packages = {package['id']: package for package in metadata['packages']}
+    libraries = {}
+    for name in ('task_contract', 'serde_json', 'sha2'):
+        dependencies = [dependency['pkg'] for dependency in nodes[0]['deps']
+                        if dependency['name'] == name]
+        if (len(dependencies) != 1
+                or packages[dependencies[0]]['name'] != name):
+            raise RuntimeError('Oracle producer must own direct dependency ' + name)
+        paths = {Path(filename) for record in messages
+                 if record.get('reason') == 'compiler-artifact'
+                 and record.get('package_id') == dependencies[0]
+                 and record.get('target', {}).get('name') == name
+                 and record.get('target', {}).get('kind') == ['lib']
+                 for filename in record['filenames'] if filename.endswith('.rlib')}
+        if len(paths) != 1:
+            raise RuntimeError('Cargo must report one library for each exact dependency')
+        libraries[name] = paths.pop()
+    if len({path.parent for path in libraries.values()}) != 1:
+        raise RuntimeError('Oracle libraries must share the Cargo dependency directory')
+    return libraries
+
+
 @contextmanager
 def build():
     """Keep unique compiler outputs alive only while the caller uses the oracle."""
     command(["rustfmt", "--edition", "2021", "--check",
              *(str(SOURCE / name) for name in ("main.rs", "codec.rs", "tests.rs"))])
-    messages = command(["cargo", "build", "--locked", "--offline", "-p", "task_worker",
-                        "--lib", "--message-format=json"], timeout=450)
-    artifacts = {name: set() for name in ("task_contract", "serde_json", "sha2")}
-    for line in messages.splitlines():
-        record = json.loads(line)
-        target = record.get("target", {})
-        name = target.get("name")
-        if record.get("reason") == "compiler-artifact" and name in artifacts:
-            artifacts[name].update(Path(p) for p in record["filenames"] if p.endswith(".rlib"))
-    if any(len(paths) != 1 for paths in artifacts.values()):
-        raise RuntimeError("Cargo must report one library for each exact dependency")
-    libraries = {name: paths.pop() for name, paths in artifacts.items()}
+    hosts = [line.removeprefix('host: ').strip()
+             for line in command(['rustc', '-vV']).decode().splitlines()
+             if line.startswith('host: ')]
+    if len(hosts) != 1 or not hosts[0]:
+        raise RuntimeError('Rust compiler must report one native host target')
+    host = hosts[0]
+    metadata = json.loads(command(['cargo', 'metadata', '--locked', '--offline',
+                                   '--format-version=1', '--filter-platform', host]))
+    messages = command(["cargo", "build", "--locked", "--offline", "-p", "project_create_codec",
+                        "--lib", "--target", host, "--message-format=json"], timeout=450)
+    libraries = oracle_libraries(metadata, [json.loads(line) for line in messages.splitlines()])
     parent = libraries["task_contract"].parent / "sp003"
     parent.mkdir(exist_ok=True)
     with owned_directory('run-', parent=parent, retry_seconds=5) as root:

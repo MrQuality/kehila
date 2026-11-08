@@ -1,5 +1,9 @@
 # Owner authentication: first capability delivery
 
+The [qualification boundary map](native-qualification-boundaries.md#windows-client-contract-and-retained-evidence)
+indexes the retained client results and remaining broader applicability gaps.
+It preserves this bounded delivery's completion and the handoff audit below.
+
 Status: bounded implementation and recorded verification complete; final
 maintainer review remains. Unaccepted contracts remain Proposed. Related: #40/#49 W2,
 B-007/B-020/B-022 and the [authentication verification plan](local-owner-authentication-verification.md).

@@ -17,7 +17,7 @@ from verification_settings import load as verification_settings
 from verification_budget import cleanup_time, command_timeout
 
 ROOT = Path(__file__).resolve().parents[1]
-SERVICES = {'postgres', 'ferretdb', 'nats', 'opensearch'}
+SERVICES = {'postgres', 'nats', 'opensearch'}
 
 
 @dataclass(frozen=True)

@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
+from retired_bindings import RETIRED
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import verification_ownership as ownership
@@ -44,6 +45,20 @@ class ReceiptTests(unittest.TestCase):
         resources.assert_not_called()
         self.assertEqual(resources.mock_calls, [])
         self.assertEqual(json.loads(self.path.read_text())['groups'][0]['state'], 'reserved')
+
+    def test_retired_service_scope_is_refused_without_rewriting_or_recovery(self):
+        self.receipt = self.create()
+        self.assertIsInstance(self.reopen(), ownership.ServiceOwnership)
+        data = json.loads(self.path.read_text())
+        data['groups'][0]['services'] = RETIRED['service_group'].copy()
+        self.path.write_text(json.dumps(data), encoding='utf-8')
+        retained = self.path.read_bytes()
+        resources = Mock()
+        with self.assertRaisesRegex(ValueError, 'Invalid group authority'):
+            self.reopen().recover(resources)
+        self.assertEqual(self.path.read_bytes(), retained)
+        self.assertEqual(resources.mock_calls, [])
+        self.assertEqual(self.runtime.mock_calls, [])
 
     def test_occupied_preflight_never_arms_or_deletes_existing_resources(self):
         self.receipt = self.create()

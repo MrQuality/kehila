@@ -184,7 +184,7 @@ class ServiceOwnershipTests(unittest.TestCase):
         with patch.object(services, 'run', side_effect=[failure, None, None]) as run, \
                 patch.object(services, '_containers', return_value=[]):
             with self.assertRaises(subprocess.CalledProcessError):
-                with services.service_group(services.ComposeRuntime(['docker', 'compose'], {}), ['postgres', 'ferretdb']):
+                with services.service_group(services.ComposeRuntime(['docker', 'compose'], {}), ['postgres', 'nats']):
                     self.fail('startup failure admitted')
         self.assertEqual(run.call_args_list[-1].args[0][-2:], ['down', '--volumes'])
 

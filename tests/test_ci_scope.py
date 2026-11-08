@@ -155,6 +155,7 @@ class DocumentationMatrixTests(unittest.TestCase):
         self.assertEqual(commands, [
             [sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-v'],
             [sys.executable, 'scripts/check_branding.py'],
+            [sys.executable, 'scripts/check_retired_paths.py'],
             [sys.executable, 'scripts/check_engineering.py']])
         self.assertTrue(all(call.kwargs['check'] for call in run.call_args_list))
 

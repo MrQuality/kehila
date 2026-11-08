@@ -791,6 +791,7 @@ fn native_authorized_item_reads() {
                 .unwrap(),
                 current
             );
+            body::exercise(&handle, &browser, &json!(id), &read).await;
             let (status, replayed) = project(&handle, &browser, "execute", execute(entry)).await;
             assert_eq!(status, 200);
             assert_eq!(replayed["result"], created["result"]);
@@ -832,6 +833,7 @@ fn native_authorized_item_reads() {
             evidence::fences_released(&admin).await;
             handle.stop();
             running.await.unwrap().unwrap();
+            network::exercise(&endpoint, &installation, &attempt, &admin, &id, &read).await;
             faults::exercise(&endpoint, &installation, &attempt, &admin, &id).await;
             admin.close().await;
             mark(&controls, "item-read-passed");

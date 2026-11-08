@@ -15,11 +15,17 @@ Related: D-016/D-017/D-037; B-007/B-020/B-022; Q-002/Q-014;
 
 ## Context
 
+> Historical source note: retired worker/API references in this section point to
+> the pre-retirement snapshot. Prototype implementation descriptions retain their
+> recorded meaning; see the [retirement dispositions](../implementation/ferretdb-retirement.md)
+> for the active native path. Accepted decisions are unchanged.
+
+
 The [SP-004 contract](../spikes/SP-004-actor-authority.md) defines stable actors,
 current authority, original-scope replay and revocation/read ordering. PR #59
 verified selected database fixtures; it supplied no caller authentication.
-The current [Go API](../../go/io/task_api/server.go) proxies to an unauthenticated
-[Rust worker](../../src/io/task_worker/src/main.rs) and queries search directly.
+The current [Go API](https://github.com/MrQuality/kehila/blob/30a8fe5372959d99c2855af3b602961cc1aec034/go/io/task_api/server.go) proxies to an unauthenticated
+[Rust worker](https://github.com/MrQuality/kehila/blob/30a8fe5372959d99c2855af3b602961cc1aec034/src/io/task_worker/src/main.rs) and queries search directly.
 Their Host/origin/loopback checks do not identify an owner or authenticate a peer.
 
 ### Review summary

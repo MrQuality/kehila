@@ -42,9 +42,12 @@ environment variables. Existing launch configurations must use `KEHILA_*` in
 place of the former environment-variable prefix. This is a naming change, not
 a domain, wire-format, or persistence migration.
 
-Update consumer imports and launch configuration using this migration table:
+The following table records that rename. The prototype task API and worker were
+subsequently retired; their former module and startup settings are historical,
+as described in the [retirement record](implementation/ferretdb-retirement.md).
+Use the current workspace inventories for active modules.
 
-| Former identifier | Current identifier |
+| Former identifier | Identifier after the rename |
 | --- | --- |
 | `YAJA_*` | `KEHILA_*` (same suffix) |
 | `yaja_query` / `src/pure/yaja_query/` | `kehila_query` / `src/pure/kehila_query/` |
@@ -54,18 +57,14 @@ Update consumer imports and launch configuration using this migration table:
 | `docs/reference/YAJA-v0.2.md` | `docs/reference/Kehila-v0.2.md` |
 | `MrQuality/yaja` | `MrQuality/kehila` |
 
-The environment prefix changes for the worker's storage, operation-policy and
-listen settings, the API's worker/search URLs and listen setting, and integration
-test URLs and NATS settings. Retained storage identities below remain unchanged.
-
-The API and worker reject their recognized former-prefix settings at startup,
-even when empty or accompanied by the current replacement; see
-[startup configuration migration](IMPLEMENTATION.md#startup-configuration-migration).
+The rename covered the former worker/API settings and current NATS/verifier
+settings. The removed binaries' startup rejection behavior is recorded in the
+[historical configuration migration](IMPLEMENTATION.md#startup-configuration-migration).
+It does not create an environment compatibility interface in the native authority.
 
 Existing storage and machine identifiers intentionally remain unchanged:
 
-- The development Compose project and database remain `yaja`. The worker's
-  default database remains the same; `KEHILA_TASK_DB` can override it.
+- The development Compose project and database remain `yaja`.
 - The retained SP-001 reproduction uses `yaja-sp001` for its isolated Compose
   project and default Podman connection, its existing volume/image names, and
   `.yaja/spikes/SP-001/` for local evidence. No machine or volume is renamed.

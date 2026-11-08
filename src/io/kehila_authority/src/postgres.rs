@@ -480,6 +480,7 @@ fn authority(row: &Row) -> Result<Authority, DbError> {
 #[cfg(test)]
 pub(crate) mod tests {
     pub(crate) mod fixture_admin;
+    pub(crate) mod relay;
     use super::*;
     use std::{
         io::Read,

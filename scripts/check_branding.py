@@ -41,15 +41,8 @@ def permitted_spans(name, text):
     patterns = []
     if name == "docker-compose.yml":
         patterns.extend(STORAGE)
-        patterns.append(rf"(?<=FERRETDB_POSTGRESQL_URL: postgres://postgres:postgres@postgres:5432/){OLD}(?=$)")
     if name == ".gitignore":
         patterns.append(rf"^\.{OLD}/$")
-    if name == "src/io/task_worker/src/main.rs":
-        patterns.append(rf'(?<=env::var\("KEHILA_TASK_DB"\)\.unwrap_or_else\(\|_\| "){OLD}(?="\.into\(\)\);$)')
-    if name == "tests/integration/task_path.py":
-        patterns.append(rf"(?<=KEHILA_TASK_DB='){OLD}(?=',)")
-    if name == "docs/TESTING.md":
-        patterns.append(rf"(?<=the `){OLD}(?=` database\.)")
     if name == "docs/spikes/README.md":
         patterns.append(rf"\.{OLD}/spikes/SP-NNN/")
     if name in SP001_FILES:
@@ -108,7 +101,8 @@ def source_paths(root):
                      and (not path.name.startswith(".env") or path.name == ".env.example")
                      and path.name != "AGENTS.md")
     return sorted(path.relative_to(root).as_posix() for path in files
-                  if path.relative_to(root).as_posix() != "tests/test_branding.py")
+                  if path.relative_to(root).as_posix() not in {
+                      "tests/test_branding.py", "tests/fixtures/retired-bindings.json"})
 
 
 def main():

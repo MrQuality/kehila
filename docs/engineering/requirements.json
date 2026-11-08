@@ -250,10 +250,12 @@
       "enforcement": "Authoritative service boundaries and security integration suite.",
       "status": "partial",
       "evidence": [
-        "go/io/task_api/server.go",
-        "src/pure/task_contract/tests/operation.rs"
+        "src/pure/task_contract/tests/operation.rs",
+        "src/io/kehila_authority/src/http_auth.rs",
+        "src/io/kehila_authority/src/session.rs",
+        "docs/implementation/ferretdb-retirement.md"
       ],
-      "gap": "Origin checks and pure grant rules exist; no integrated authentication or authorization baseline.",
+      "gap": "Native owner/session and grant enforcement have bounded synthetic coverage; complete browser/session recovery and every future exposed path remain unqualified.",
       "work": [
         "docs/product/backlog.md#b-007",
         "docs/product/backlog.md#b-020",
@@ -365,11 +367,11 @@
       "enforcement": "Future contract validation and API integration tests; design review now.",
       "status": "partial",
       "evidence": [
-        "go/io/task_api/server.go",
-        "src/io/task_worker/src/main.rs",
-        "packages/contracts/index.d.ts"
+        "packages/contracts/index.d.ts",
+        "src/io/kehila_authority/src/listener.rs",
+        "docs/implementation/ferretdb-retirement.md"
       ],
-      "gap": "Experimental errors include operation_id_reused/version_conflict; no supported OpenAPI contract exists.",
+      "gap": "The anonymous prototype contract is retired. The native HTTP boundary exists; a supported OpenAPI specification, compatibility policy and complete endpoint conformance remain pending.",
       "work": [
         "docs/product/backlog.md#b-004",
         "docs/product/backlog.md#b-022",
@@ -392,11 +394,12 @@
       "enforcement": "Domain replay logic, immutable storage uniqueness, service access checks and integration tests.",
       "status": "partial",
       "evidence": [
-        "src/io/task_worker/src/lib.rs",
-        "tests/integration/live_task_worker.py",
-        "src/pure/task_contract/tests/operation.rs"
+        "src/pure/task_contract/tests/operation.rs",
+        "src/io/kehila_authority/src/postgres/transaction/native/replay.rs",
+        "scripts/native_authority_fixture.py",
+        "docs/implementation/ferretdb-retirement.md"
       ],
-      "gap": "Bounded single-task ledger exists; scoped configurable replay/access/compaction/restore integration is pending.",
+      "gap": "Native Project and WorkItem replay have bounded real-storage coverage; configurable replay/compaction/restore qualification remains pending. Native protocol/error mapping is not literal prototype envelope conformance.",
       "work": [
         "docs/product/backlog.md#b-005",
         "docs/product/backlog.md#b-007",
@@ -422,11 +425,12 @@
       "enforcement": "Domain rules, database keys and service tests; unresolved Q-019 blocks affected routes.",
       "status": "partial",
       "evidence": [
-        "src/io/task_worker/src/lib.rs",
         "docs/product/B-003-contract.md",
-        "tests/integration/live_task_worker.py"
+        "src/io/kehila_authority/src/postgres/transaction/native/item_write.rs",
+        "scripts/native_authority_fixture.py",
+        "docs/implementation/ferretdb-retirement.md"
       ],
-      "gap": "Finite single-task race evidence is not linearizability proof or cross-document consistency.",
+      "gap": "Native Project and WorkItem transaction/replay races have bounded fresh-database evidence; this does not establish all future cross-record contracts or general linearizability.",
       "work": [
         "docs/product/backlog.md#b-005",
         "docs/product/backlog.md#b-009",
@@ -452,11 +456,11 @@
       "enforcement": "Schema/contract tests, consumer version gates, client merge rules and recovery tooling.",
       "status": "partial",
       "evidence": [
-        "go/io/task_api/server.go",
         "packages/contracts/index.d.ts",
-        "docs/spikes/SP-001-task-path.md"
+        "docs/spikes/SP-001-task-path.md",
+        "docs/implementation/ferretdb-retirement.md"
       ],
-      "gap": "Minimum-version search check and bounded Python spike evidence exist; production CDC/indexer/event envelope is absent.",
+      "gap": "The prototype minimum-version search adapter is retired. Retained type contracts and historical spike evidence do not establish a production CDC/indexer/event envelope.",
       "work": [
         "docs/product/backlog.md#b-005",
         "docs/product/backlog.md#b-022",
@@ -480,9 +484,10 @@
       "status": "partial",
       "evidence": [
         "docs/spikes/SP-001-task-path.md",
-        "src/io/task_worker/src/lib.rs"
+        "scripts/native_authority_fixture.py",
+        "docs/implementation/ferretdb-retirement.md"
       ],
-      "gap": "Bounded worker/spike evidence exists; main Compose has ephemeral data and no supported durability qualification.",
+      "gap": "Native synthetic PostgreSQL fixtures cover bounded commit/replay/recovery behavior. Supported populated installations, retained-volume machine restarts and production durability remain unqualified.",
       "work": [
         "docs/product/backlog.md#b-005",
         "docs/product/backlog.md#b-024",
@@ -590,11 +595,12 @@
       "enforcement": "Real-service release campaigns and bounded CI regressions.",
       "status": "partial",
       "evidence": [
-        "tests/integration/live_task_worker.py",
         "docs/TEST_STRATEGY.md",
-        "docs/spikes/SP-001-task-path.md"
+        "docs/spikes/SP-001-task-path.md",
+        "scripts/native_authority_fixture.py",
+        "docs/implementation/ferretdb-retirement.md"
       ],
-      "gap": "Finite races/stalls and prototype failure cases exist; full production path and sustained/model qualification are pending.",
+      "gap": "Native synthetic races, body deadlines and serving-network recovery have bounded evidence; sustained/model and full supported-environment qualification remain pending.",
       "work": [
         "docs/product/backlog.md#b-023",
         "docs/product/backlog.md#b-024"
@@ -675,11 +681,11 @@
       "enforcement": "Domain limits, adapter admission and queue retention policies.",
       "status": "partial",
       "evidence": [
-        "src/io/task_worker/src/main.rs",
         "src/pure/task_contract/tests/payload_limits.rs",
-        "go/io/task_api/server.go"
+        "src/io/kehila_authority/src/listener.rs",
+        "docs/implementation/ferretdb-retirement.md"
       ],
-      "gap": "Worker and logical model have bounds; full API/query/queue/event limits and retained-history policy remain incomplete.",
+      "gap": "Native listener and pure model bounds exist. Complete API/query/queue/event limits and retained-history qualification remain incomplete.",
       "work": [
         "docs/product/backlog.md#b-004",
         "docs/product/backlog.md#b-005",
@@ -767,10 +773,11 @@
       "enforcement": "Startup/service validation and dependency matrix in QUALIFICATION; future config validation CLI requires design.",
       "status": "partial",
       "evidence": [
-        "src/io/task_worker/src/main.rs",
-        "scripts/healthcheck.py"
+        "scripts/healthcheck.py",
+        "src/io/kehila_authority/src/startup.rs",
+        "docs/implementation/ferretdb-retirement.md"
       ],
-      "gap": "Development bounds and index health exist; supported config schema and complete health model do not.",
+      "gap": "Native startup validation and development service/index probes exist; a complete supported configuration schema and operational health model remain incomplete.",
       "work": [
         "docs/product/backlog.md#b-005",
         "docs/product/backlog.md#b-027"

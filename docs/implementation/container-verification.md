@@ -1,24 +1,25 @@
 # Container execution for the shared verification gate
 
-Status: the pinned toolchain image, explicit dependency preparation and full
-containerized gate passed. Earlier preparation, assertion and deadline failures
-remain recorded. Committed-head review and CI remain separate delivery gates.
+Status: the original pinned-image/dependency/container lane passed at the sources
+recorded below. The current native-only application direction and prototype
+retirement are tracked in the [retirement record](ferretdb-retirement.md); changed
+composition still needs its own final qualification. Earlier failures remain
+recorded. Committed-head review and CI remain separate delivery gates.
 
 ## Outcome and scope
 
-Run the existing Python, Rust, Go, oracle, readiness and task-path workload matrix
+Run the Python, Rust, retained Go, frozen-oracle, native authority and readiness matrix
 inside an owned Linux toolchain container controlled by Podman. This lane has no
 Docker fallback. The Windows local hook selects this lane. Existing Linux CI verification and the
 separate Windows-client CI job remain mandatory and unchanged. Host code selects/copies the exact
 source snapshot, controls provider/container/network lifetimes and records output.
-It must not launch task workers, API servers, fault proxies or compiled test
-workloads on the host. This additional delivery scope was explicitly requested;
-it does not change the product architecture or complete project allocation.
+Application listeners, fault relays and compiled test workloads run inside the
+owned container. Host lifecycle coordination does not qualify product behavior.
 
-The task-path journey retains two workers, 48 contention pairs, rejection guards,
-strict stalled-body HTTP 408, database outage/recovery, Go-to-Rust save/replay/read,
-and unavailable-search behavior. Existing checks remain mandatory. There is no
-host execution fallback. Windows-specific observations remain separately scoped;
+The native fixture checks authenticated project/WorkItem behavior, durable state
+and owned recovery against isolated PostgreSQL TLS databases. The retirement
+record gives explicit dispositions for the old anonymous worker/API checks.
+There is no host execution fallback. Windows-specific observations remain separately scoped;
 Linux results do not qualify Windows account APIs or client behavior.
 
 ## Ownership and execution
@@ -41,17 +42,23 @@ settings. This lane requires effective cgroup-v2 memory/CPU/PID controls and
 checks their files inside the runner before executing the matrix; unsupported or
 mismatched controls fail closed. Upstream defaults and external local overrides remain distinct.
 
-The host starts the runner before compiling, then preserves the existing serial
-service groups: NATS, OpenSearch, PostgreSQL/FerretDB. The runner initially uses
+The host starts the runner before compiling. Native qualification owns its
+separate PostgreSQL TLS fixture and independent observers; the remaining serial
+Compose groups are NATS, OpenSearch and PostgreSQL infrastructure. The runner initially uses
 an owned build network for dependency access. Before live checks it detaches from
 that network and attaches only to the verified group's network. Service addresses
 come from inspecting the exact owned container IDs and network identity, rather
 than Windows host forwarding. No worker/API ports are published by the runner.
 
-The runner keeps compiled Linux task binaries across phases. Worker/API processes,
-loopback listeners and the database fault proxy all run inside it. Readiness probes
+The runner retains native fixture binaries between build and execution. Application
+loopback listeners and the serving-network fault relay run inside it. Readiness probes
 and NATS tests use the actual service IPs from the owned network. Compose source
 context and provider/shared-machine ownership rules remain unchanged.
+
+Recovery binds records to their exact source, Compose content, service scope and
+resource identities. Removed service groups are rejected rather than interpreted
+as a new group; this change does not rewrite existing records or grant authority
+to remove retained resources.
 
 ## Deadlines, failure and resources
 

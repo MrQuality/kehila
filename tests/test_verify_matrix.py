@@ -1,6 +1,6 @@
 """The documented pure command must execute every pure Rust crate."""
 import importlib.util
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 import os
 import io
 from pathlib import Path
@@ -51,11 +51,9 @@ class DevelopmentMatrixTests(IsolatedEnvironmentTests):
     def test_development_runs_workspace_and_page_checks_without_service_phases(self):
         with patch.object(sys, 'argv', ['verify.py', '--development']), \
                 patch.object(VERIFY.subprocess, 'run') as run, \
-                patch.object(VERIFY, 'managed_runtime') as runtime, \
-                patch.object(VERIFY, 'owned_directory') as directory:
+                patch.object(VERIFY, 'managed_runtime') as runtime:
             VERIFY.main()
         runtime.assert_not_called()
-        directory.assert_not_called()
         commands = [call.args[0] for call in run.call_args_list]
         self.assertIn(['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher'], commands)
         self.assertTrue(any('tests/integration/work_item_page.test.cjs' in command for command in commands))
@@ -99,8 +97,7 @@ class FullLifecycleTests(IsolatedEnvironmentTests):
                 self.assertTrue(result.wasSuccessful(), result.errors + result.failures)
 
     def test_owned_mode_rejects_foreign_test_endpoints_before_any_build(self):
-        for key, value in (('KEHILA_TEST_MONGO_URL', 'mongodb://other-host:27017'),
-                           ('KEHILA_NATS_ADDRESS', '127.0.0.1:4223'),
+        for key, value in (('KEHILA_NATS_ADDRESS', '127.0.0.1:4223'),
                            ('KEHILA_NATS_HOST', 'other-host'), ('KEHILA_NATS_PORT', '4223')):
             with self.subTest(key=key), \
                     patch.dict(os.environ, {key: value, 'KEHILA_TEST_ENGINE': 'auto',
@@ -128,8 +125,7 @@ class FullLifecycleTests(IsolatedEnvironmentTests):
                 checks.assert_not_called()
 
     def test_external_mode_rejects_endpoints_that_disagree_with_local_readiness(self):
-        for key, value in (('KEHILA_TEST_MONGO_URL', 'mongodb://127.0.0.1:27018'),
-                          ('KEHILA_NATS_ADDRESS', '127.0.0.1:4223'),
+        for key, value in (('KEHILA_NATS_ADDRESS', '127.0.0.1:4223'),
                           ('KEHILA_NATS_HOST', 'other-host'), ('KEHILA_NATS_PORT', '4223')):
             with self.subTest(key=key), \
                     patch.dict(os.environ, {key: value, 'KEHILA_TEST_ENGINE': 'auto',
@@ -142,22 +138,19 @@ class FullLifecycleTests(IsolatedEnvironmentTests):
                 checks.assert_not_called()
 
     def test_external_mode_executes_every_live_check_without_resource_ownership(self):
-        folder = Path('unused-fixture')
         with patch.dict(os.environ, KEHILA_TEST_ENGINE='auto', KEHILA_TEST_PODMAN_MACHINE='',
                         KEHILA_TEST_EXCLUSIVE_PODMAN_MACHINE='0'), \
                 patch.object(sys, 'argv', ['verify.py', '--external-services']), \
-                patch.object(VERIFY, 'owned_directory', return_value=nullcontext(folder)), \
                 patch.object(VERIFY.subprocess, 'run') as run, \
                 patch.object(VERIFY, 'managed_runtime') as runtime:
             VERIFY.main()
         runtime.assert_not_called()
         commands = [call.args[0] for call in run.call_args_list]
-        self.assertEqual(commands[-4: ], [
+        self.assertEqual(commands[-3: ], [
             [sys.executable, 'scripts/healthcheck.py', '--wait', '180', '--services',
-             'PostgreSQL', 'FerretDB', 'NATS', 'OpenSearch'],
+             'PostgreSQL', 'NATS', 'OpenSearch'],
             [sys.executable, 'tests/integration/nats_probe.py'],
-            ['cargo', 'test', '--locked', '-p', 'event_dispatcher'],
-            [sys.executable, 'tests/integration/task_path.py', '--run-only', str(folder)]])
+            ['cargo', 'test', '--locked', '-p', 'event_dispatcher']])
         self.assertIn(['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher'], commands)
 
     def test_invalid_runtime_settings_fail_before_any_build_or_service(self):
@@ -208,21 +201,20 @@ class FullLifecycleTests(IsolatedEnvironmentTests):
         start = events.index('VM start')
         self.assertIn(['cargo', 'test', '--locked', '--workspace', '--no-run'], events[: start])
         self.assertIn(['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher'], events[: start])
-        self.assertTrue(any(isinstance(event, list) and '--build-only' in event for event in events[: start]))
-        self.assertFalse(any(isinstance(event, list) and '--build-only' in event for event in events[start: ]))
+        self.assertFalse(any(isinstance(event, list) and '--build-only' in event for event in events))
         lifecycle = [event for event in events if isinstance(event, tuple)]
         self.assertEqual(lifecycle, [
             ('start', ('nats', )), ('stop', ('nats', )),
             ('start', ('opensearch', )), ('stop', ('opensearch', )),
-            ('start', ('postgres', 'ferretdb')), ('stop', ('postgres', 'ferretdb'))])
+            ('start', ('postgres',)), ('stop', ('postgres',))])
         commands = [event for event in events if isinstance(event, list)]
         readiness = [command[command.index('--services') + 1: ] for command in commands if '--services' in command]
-        self.assertEqual(readiness, [['NATS'], ['OpenSearch'], ['PostgreSQL', 'FerretDB']])
+        self.assertEqual(readiness, [['NATS'], ['OpenSearch'], ['PostgreSQL']])
         self.assertIn([sys.executable, 'tests/integration/nats_probe.py'], commands)
         test = ['cargo', 'test', '--locked', '-p', 'event_dispatcher']
         self.assertLess(events.index(('start', ('nats', ))), events.index(test))
         self.assertLess(events.index(test), events.index(('stop', ('nats', ))))
-        self.assertTrue(any('--run-only' in command for command in commands))
+        self.assertFalse(any('--run-only' in command for command in commands))
         self.assertEqual(events[-1], 'VM stop')
         self.assertTrue(all(env['CARGO_BUILD_JOBS'] == '1' and env['GOFLAGS'] == '-tags=fixture -p=1'
                             for env in environments))
@@ -290,9 +282,9 @@ class OwnerDeadlineTests(IsolatedEnvironmentTests):
         import verification_budget as budget
         with budget.work_budget(10), patch.object(VERIFY.subprocess, 'run') as run:
             for script in ('scripts/go_test.py', 'experiments/SP-002/check_seed_oracle.py',
-                           'experiments/SP-003/check.py', 'tests/integration/task_path.py'):
+                           'experiments/SP-003/check.py'):
                 VERIFY.execute([sys.executable, script], {'KEHILA_FIXTURE': 'retained'})
-        self.assertEqual(run.call_count, 4)
+        self.assertEqual(run.call_count, 3)
         for call in run.call_args_list:
             self.assertIsNone(call.kwargs['timeout'])
             self.assertIn('KEHILA_VERIFICATION_DEADLINE', call.kwargs['env'])

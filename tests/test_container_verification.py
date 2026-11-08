@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import Mock, patch
 from types import SimpleNamespace
+from retired_bindings import RETIRED
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import container_executor as execution
@@ -130,12 +131,14 @@ class ExecutorTests(unittest.TestCase):
         executor.engine = Mock()
         with patch.object(execution, 'command_timeout', return_value=12):
             executor.execute([sys.executable, 'check.py'], {
-                'KEHILA_TEST_MONGO_URL': 'mongodb://10.1.0.2:27017',
+                **RETIRED['obsolete_environment'],
+                'KEHILA_NATS_ADDRESS': '10.1.0.3:4222',
                 'KEHILA_VERIFICATION_DEADLINE': '9999999', 'SECRET': 'never-forward'})
         args = executor.engine.call_args.args
         self.assertIn('12', args)
         self.assertIn('scripts/container_command.py', args)
-        self.assertIn('KEHILA_TEST_MONGO_URL=mongodb://10.1.0.2:27017', args)
+        self.assertIn('KEHILA_NATS_ADDRESS=10.1.0.3:4222', args)
+        self.assertFalse(any('MONGO' in value for value in args))
         self.assertFalse(any('SECRET' in value or '9999999' in value for value in args))
         self.assertEqual(args[-2:], ('python', 'check.py'))
 
@@ -243,25 +246,22 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual(lifecycle, [
             ('start', ('nats',)), ('stop', ('nats',)),
             ('start', ('opensearch',)), ('stop', ('opensearch',)),
-            ('start', ('postgres', 'ferretdb')), ('stop', ('postgres', 'ferretdb'))])
+            ('start', ('postgres',)), ('stop', ('postgres',))])
         commands = [event[1] for event in events if event[0] == 'command']
         self.assertIn(['cargo', 'test', '--locked', '--workspace', '--no-run'], commands)
         native_build = ('command', ['cargo', 'test', '--release', '--offline', '--locked',
             '-p', 'kehila_authority', '--lib', '--no-run'], ())
         self.assertLess(events.index(native_build), events.index(('builds-finished',)))
         self.assertIn(['cargo', 'test', '--locked', '-p', 'event_dispatcher'], commands)
-        self.assertTrue(any('--build-only' in command for command in commands))
-        self.assertTrue(any('--run-only' in command for command in commands))
+        self.assertFalse(any('--build-only' in command or '--run-only' in command for command in commands))
         self.assertTrue(any('scripts/go_test.py' in command for command in commands))
         self.assertTrue(any('experiments/SP-002/check_seed_oracle.py' in command for command in commands))
         self.assertTrue(any('experiments/SP-003/check.py' in command for command in commands))
         first_group = next(i for i, event in enumerate(events) if event[0] == 'start')
         self.assertLess(events.index(('builds-finished',)), events.index(('native',)))
         self.assertLess(events.index(('native',)), first_group)
-        self.assertTrue(any('--build-only' in event[1] for event in events[:first_group]
-                            if event[0] == 'command'))
         readies = [command for command in commands if 'scripts/healthcheck.py' in command]
-        self.assertEqual(len(readies), 4)
+        self.assertEqual(len(readies), 3)
         self.assertTrue(all('--host' in command and '127.0.0.1' not in command for command in readies))
 
     def test_native_only_mode_still_compiles_and_disconnects_before_fixture(self):
