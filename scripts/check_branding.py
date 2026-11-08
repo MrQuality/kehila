@@ -101,7 +101,8 @@ def source_paths(root):
                      and (not path.name.startswith(".env") or path.name == ".env.example")
                      and path.name != "AGENTS.md")
     return sorted(path.relative_to(root).as_posix() for path in files
-                  if path.relative_to(root).as_posix() != "tests/test_branding.py")
+                  if path.relative_to(root).as_posix() not in {
+                      "tests/test_branding.py", "tests/fixtures/retired-bindings.json"})
 
 
 def main():

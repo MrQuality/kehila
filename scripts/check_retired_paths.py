@@ -10,8 +10,16 @@ from test_services import SERVICES
 from verification_ownership import GROUPS
 
 ROOT = Path(__file__).resolve().parents[1]
-REQUIRED = ('Cargo.toml', 'Cargo.lock', 'go.work', 'docker-compose.yml',
-            'experiments/SP-003/build.py')
+# Executed/imported/compiled inputs of the shared matrix's retained oracle checks.
+# Standalone experiment entry points and historical observations are separate.
+ORACLE_INPUTS = (
+    'experiments/SP-002/check_seed_oracle.py', 'experiments/SP-002/manage.py',
+    'experiments/SP-002/seed_oracle.rs', 'experiments/SP-003/check.py',
+    'experiments/SP-003/build.py', 'experiments/SP-003/run.py',
+    'experiments/SP-003/containers.py', 'experiments/SP-003/main.rs',
+    'experiments/SP-003/codec.rs', 'experiments/SP-003/tests.rs',
+)
+REQUIRED = ('Cargo.toml', 'Cargo.lock', 'go.work', 'docker-compose.yml', *ORACLE_INPUTS)
 RETIRED_PATHS = ('src/io/task_worker', 'go/io/task_api',
                  'tests/integration/task_path.py', 'tests/integration/live_task_worker.py',
                  'tests/integration/live_task_api.py', 'tests/integration/live_go_rust.py')
@@ -21,8 +29,7 @@ RETIRED = re.compile(
     r'|\b(?:KEHILA_)?MONGO(?:DB)?_[A-Z_]+\b'
     r'|\bKEHILA_(?:WORKER_URL|WORKER_LISTEN_ADDR|TASK_DB|TASK_COLLECTION|API_URL)\b',
     re.IGNORECASE)
-DIRECTORIES = ('src', 'go', 'scripts', 'packages', '.github', 'config', 'tools',
-               'tests/integration')
+DIRECTORIES = ('src', 'go', 'scripts', 'packages', '.github', 'config', 'tools', 'tests')
 SUFFIXES = {'.py', '.rs', '.go', '.toml', '.lock', '.mod', '.sum', '.json',
             '.yml', '.yaml', '.js', '.cjs', '.ts', '.sql'}
 
@@ -38,10 +45,11 @@ def active_paths(root):
                      if path.suffix in SUFFIXES
                      and not {'__pycache__', 'node_modules', 'target', '.git'}.intersection(
                          path.relative_to(root).parts))
-    # These two policies contain historical spellings deliberately. Ordinary
-    # application/verifier code, including retained oracle producers, is checked.
+    # Policies and the single non-executable rejection-data file deliberately
+    # contain retired spellings. No executable test module is exempted.
     paths.difference_update(root / name for name in (
-        'scripts/check_retired_paths.py', 'scripts/check_branding.py'))
+        'scripts/check_retired_paths.py', 'scripts/check_branding.py',
+        'tests/fixtures/retired-bindings.json'))
     return sorted(path for path in paths if path.is_file())
 
 

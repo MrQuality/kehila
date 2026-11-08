@@ -1,0 +1,15 @@
+{
+  "branding_mongo": "YAJA_MONGO_URL",
+  "branding_go_module": "yaja/task_api",
+  "worker_source": "src/io/task_worker/src/main.rs",
+  "worker_database_assignment": "let database = env::var(\"KEHILA_TASK_DB\").unwrap_or_else(|_| \"yaja\".into());",
+  "obsolete_environment": {"KEHILA_TEST_MONGO_URL": "mongodb://10.1.0.2:27017"},
+  "service": "FerretDB",
+  "service_group": ["postgres", "ferretdb"],
+  "historical": "Historical FerretDB mongodb task_worker go/io/task_api\n",
+  "go_module": "go/io/task_api",
+  "go_manifest": "go/io/task_api/go.mod",
+  "verifier_source": "command = \"tests/integration/task_path.py\"\n",
+  "cargo_dependency": "\n[workspace.dependencies]\nmongodb = \"=2.8.2\"\n",
+  "settings": ["task-api", "KEHILA_WORKER_URL", "KEHILA_WORKER_LISTEN_ADDR", "KEHILA_TASK_DB", "KEHILA_TASK_COLLECTION", "KEHILA_API_URL"]
+}

@@ -3,6 +3,7 @@ from pathlib import Path
 import importlib.util
 import tempfile
 import unittest
+from retired_bindings import RETIRED
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("branding", ROOT / "scripts/check_branding.py")
@@ -41,17 +42,27 @@ class BrandingTests(unittest.TestCase):
             self.assertEqual(BRANDING.check_paths(root, ["asset.bin"]), [])
         self.assertIn("README.md:2:", self.check_text("Heading\njql_core")[0])
 
+    def test_rejection_data_does_not_exempt_other_test_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            data = root / 'tests/fixtures/retired-bindings.json'
+            data.parent.mkdir(parents=True)
+            data.write_text('{}', encoding='utf-8')
+            code = root / 'tests/test_new.py'
+            code.write_text('value = 1', encoding='utf-8')
+            self.assertNotIn(data.relative_to(root).as_posix(), BRANDING.source_paths(root))
+            self.assertIn(code.relative_to(root).as_posix(), BRANDING.source_paths(root))
+
     def test_rejects_rename_identifiers_case_insensitively(self):
-        for name in ("yaja_query", "@yaja/contracts", "YAJA_MONGO_URL", "yaja/task_api",
+        for name in ("yaja_query", "@yaja/contracts", RETIRED['branding_mongo'], RETIRED['branding_go_module'],
                      "yaja.local/sync_contract", "YAJA-v0.2.md", "YAJA", "MrQuality/yaja"):
             with self.subTest(name=name):
                 self.assertTrue(self.check_text(name.swapcase()))
                 self.assertTrue(self.check_text("", "docs/" + name + ".txt"))
 
     def test_retired_worker_has_no_storage_branding_exception(self):
-        name = "src/io/task_worker/src/main.rs"
-        self.assertTrue(self.check_text(
-            'let database = env::var("KEHILA_TASK_DB").unwrap_or_else(|_| "yaja".into());', name))
+        name = RETIRED['worker_source']
+        self.assertTrue(self.check_text(RETIRED['worker_database_assignment'], name))
         self.assertTrue(self.check_text(
             'let database = env::var("YAJA_TASK_DB").unwrap_or_else(|_| "yaja".into());', name))
         self.assertTrue(self.check_text('let title = "YAJA";', name))

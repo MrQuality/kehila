@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import Mock, patch
 from types import SimpleNamespace
+from retired_bindings import RETIRED
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import container_executor as execution
@@ -130,7 +131,7 @@ class ExecutorTests(unittest.TestCase):
         executor.engine = Mock()
         with patch.object(execution, 'command_timeout', return_value=12):
             executor.execute([sys.executable, 'check.py'], {
-                'KEHILA_TEST_MONGO_URL': 'mongodb://10.1.0.2:27017',
+                **RETIRED['obsolete_environment'],
                 'KEHILA_NATS_ADDRESS': '10.1.0.3:4222',
                 'KEHILA_VERIFICATION_DEADLINE': '9999999', 'SECRET': 'never-forward'})
         args = executor.engine.call_args.args

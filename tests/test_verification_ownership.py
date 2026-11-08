@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
+from retired_bindings import RETIRED
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import verification_ownership as ownership
@@ -49,7 +50,7 @@ class ReceiptTests(unittest.TestCase):
         self.receipt = self.create()
         self.assertIsInstance(self.reopen(), ownership.ServiceOwnership)
         data = json.loads(self.path.read_text())
-        data['groups'][0]['services'] = ['postgres', 'ferretdb']
+        data['groups'][0]['services'] = RETIRED['service_group'].copy()
         self.path.write_text(json.dumps(data), encoding='utf-8')
         retained = self.path.read_bytes()
         resources = Mock()

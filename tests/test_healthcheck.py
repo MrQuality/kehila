@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import unittest
 from unittest.mock import MagicMock, patch
+from retired_bindings import RETIRED
 
 spec = importlib.util.spec_from_file_location(
     'healthcheck', Path(__file__).resolve().parents[1] / 'scripts/healthcheck.py')
@@ -15,7 +16,7 @@ spec.loader.exec_module(health)
 
 class ReadinessTests(unittest.TestCase):
     def test_retired_service_is_rejected_before_any_probe(self):
-        with patch.object(sys, 'argv', ['healthcheck.py', '--services', 'FerretDB']), \
+        with patch.object(sys, 'argv', ['healthcheck.py', '--services', RETIRED['service']]), \
                 patch.object(health, 'probe') as probe, \
                 patch('sys.stderr', new_callable=io.StringIO):
             with self.assertRaises(SystemExit) as result:

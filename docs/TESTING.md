@@ -825,6 +825,16 @@ test doubles may complement these checks.
 
 ## Local hooks and CI
 
+The retirement guard scans executable tests as well as application and verifier
+inputs. Its explicit retained-oracle inventory includes the shared SP-002/SP-003
+checkers and their imported/compiled source inputs; a missing inventoried input
+fails the check. Historical experiment observations and frozen JSON goldens are
+preserved. Deliberate negative-test bindings live in the single non-executable
+`tests/fixtures/retired-bindings.json` file. That data exception does not exclude
+test modules, helpers or other fixture files. The naming checker uses the same
+rejection data. Neither check is a semantic proof against dynamically constructed
+or externally supplied dependencies.
+
 `scripts/setup_env.py` installs the repository's commit hook. To configure only
 the hook, run `python scripts/setup_env.py --hooks-only`.
 
