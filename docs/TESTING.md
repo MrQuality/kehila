@@ -138,8 +138,17 @@ pristine database, native runtime path and independent SQL observer. The runner
 retains its compilation, source checks, execution budgets and owned cleanup.
 Its output and retained failure diagnostics identify the focused scope.
 
-This selects WorkItem journeys only; `item-write` and `item-mutation` are also
-available. It supplies neither the other native journeys nor shared full
+This selects WorkItem journeys only; `item-write`, `item-mutation` and
+`item-retry` are also available. The isolated `item-retry` case schedules three
+real operational-head invalidations around one pending creation. It checks
+initial-inclusive preparation/write counts, the exact exhaustion response,
+unchanged request identity/deadline/admission, no victim acceptance, and explicit
+same-identity recovery after reconciliation. Competing commits are observed
+separately from the victim's state; a final SQL observer checks durable history
+and authority release. These controls test provisional containment, not a
+supported contention capacity or latency guarantee.
+
+Focused execution supplies neither the other native journeys nor shared full
 verification. `--native-authority` and the default full runner retain their
 complete native sequence. Mocked controls cover selector orchestration; later
 [WorkItem evidence](implementation/native-work-items.md#current-implementation-checkpoint-2026-11-06)

@@ -298,10 +298,28 @@ impl Engine {
         let deadline = execution.deadline();
         self.check(deadline).map_err(AttemptFailure::Owner)?;
         let mut entries = Entries::default();
+        #[cfg(test)]
+        let watched = match &intent {
+            Intent::Create { project, handle } => self.live.probe.begin_item_attempt(
+                project,
+                handle,
+                deadline,
+                &execution.admission(),
+            ),
+            Intent::Edit(_) => false,
+        };
         let mut next = Next::Initial(intent);
         loop {
             self.check(deadline).map_err(AttemptFailure::Owner)?;
             entries.preparation()?;
+            #[cfg(test)]
+            if watched {
+                self.live.probe.item_attempt_entry(
+                    crate::lifecycle::probe::AttemptEntry::Preparation,
+                    deadline,
+                    &execution.admission(),
+                );
+            }
             // This block can yield only owned data. The RR rollback and mutex guard
             // are both gone before waiting for or entering the CPU lane.
             let preparation = {
@@ -389,7 +407,27 @@ impl Engine {
                 )
                 .await;
             self.check(deadline).map_err(AttemptFailure::Owner)?;
+            #[cfg(test)]
+            if watched {
+                self.live.probe.item_attempt_bytes(packet.request_bytes());
+                self.live
+                    .probe
+                    .transaction_point(
+                        0,
+                        crate::lifecycle::probe::Point::ItemAttemptPrepared,
+                        deadline,
+                    )
+                    .await;
+            }
             entries.write()?;
+            #[cfg(test)]
+            if watched {
+                self.live.probe.item_attempt_entry(
+                    crate::lifecycle::probe::AttemptEntry::Write,
+                    deadline,
+                    &execution.admission(),
+                );
+            }
             let written = {
                 #[cfg(test)]
                 self.live
@@ -449,6 +487,14 @@ impl Engine {
                         Written::Committed { reply, fresh }
                     }
                     ItemSaveOutcome::Reprepare(identity) => {
+                        #[cfg(test)]
+                        if watched {
+                            self.live.probe.item_attempt_entry(
+                                crate::lifecycle::probe::AttemptEntry::Reprepare,
+                                deadline,
+                                &execution.admission(),
+                            );
+                        }
                         #[cfg(test)]
                         self.live.probe.item_reprepared();
                         drop(reply);

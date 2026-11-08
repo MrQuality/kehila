@@ -173,6 +173,26 @@ class CleanupTests(unittest.TestCase):
         self.assertLess(invocation, observations[0])
         self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
 
+    def test_focused_retry_exhaustion_runs_its_isolated_fixture_and_observer(self):
+        executor = Executor()
+        native.check(executor, item_cases=('item-retry',))
+        modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
+                 for args in executor.events if 'scripts/native_authority_fixture.py' in args]
+        self.assertEqual(modes, ['prepare', 'item-retry'])
+        self.assertEqual([args[-1] for args in executor.events if 'createdb' in args], ['native_item_retry'])
+        invocation = next(i for i, args in enumerate(executor.events) if 'item-retry' in args)
+        observer = next(i for i, args in enumerate(executor.events)
+                        if '/tmp/native_item_retry_state.sql' in args and 'native_item_retry' in args)
+        self.assertLess(invocation, observer)
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+
+    def test_failed_retry_observer_cannot_report_success(self):
+        executor = Executor(fail_observer='/tmp/native_item_retry_state.sql')
+        with patch('builtins.print') as output, self.assertRaisesRegex(RuntimeError, 'item-retry-independent-observer'):
+            native.check(executor, item_cases=('item-retry',))
+        self.assertFalse(any(str(call.args[0]).startswith('PASS:') for call in output.call_args_list))
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+
     def test_failed_write_observer_retains_failure_and_stops_before_later_cases(self):
         executor = Executor(fail_observer='/tmp/native_item_write_state.sql')
         with self.assertRaisesRegex(RuntimeError, 'item-write-independent-observer'):
@@ -233,7 +253,7 @@ class CleanupTests(unittest.TestCase):
         self.assertEqual(removals, [('rm', '--force', '--volumes', DATABASE)])
         modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
                  for args in executor.events if 'scripts/native_authority_fixture.py' in args]
-        self.assertEqual(modes, ['prepare', 'item-write', 'item-read', 'item-pending', 'item-mutation', 'journey', 'clock', 'restored',
+        self.assertEqual(modes, ['prepare', 'item-write', 'item-read', 'item-pending', 'item-mutation', 'item-retry', 'journey', 'clock', 'restored',
             'auth-expiry', 'auth-delivery', 'auth-unknown', 'auth-owned', 'auth-revoke', 'auth-fenced',
             'auth-read', 'auth-lifetime'])
 
@@ -265,7 +285,8 @@ class CleanupTests(unittest.TestCase):
             expected_observer = {'item-write': '/tmp/native_item_write_state.sql',
                                  'item-read': '/tmp/native_item_read_state.sql',
                                  'item-pending': '/tmp/native_item_pending_state.sql',
-                                 'item-mutation': '/tmp/native_item_mutation_state.sql'}[mode]
+                                 'item-mutation': '/tmp/native_item_mutation_state.sql',
+                                 'item-retry': '/tmp/native_item_retry_state.sql'}[mode]
             creations = [i for i, args in enumerate(executor.events)
                          if args[0] == 'exec' and 'createdb' in args and args[-1] == database]
             invocations = [i for i, args in enumerate(executor.events)
