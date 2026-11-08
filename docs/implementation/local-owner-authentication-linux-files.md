@@ -1,5 +1,9 @@
 # A0: Linux server-key file-admission API review
 
+The [storage-provider support map](native-qualification-boundaries.md#storage-provider-support-gate)
+indexes retained observations and the existing profile-specific evidence gates.
+This dated review and its original limitations remain in place.
+
 Status: Research / Proposed adapter outline; no dependency or production storage adoption.
 Owner: project maintainer. Recorded: 2026-10-23. Related #40/#49;
 [container plan](local-owner-authentication-container-plan.md),
