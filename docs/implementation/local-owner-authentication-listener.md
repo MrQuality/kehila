@@ -1,5 +1,9 @@
 # Experimental owner listener and Windows clients
 
+The [Windows contract/evidence map](native-qualification-boundaries.md#windows-client-contract-and-retained-evidence)
+indexes the retained results, their limits and existing follow-up owners. This
+dated record preserves the individual observations and failure dispositions.
+
 Status: prepared implementation within [PR #87](https://github.com/MrQuality/kehila/pull/87).
 Source review and component checks do not qualify a live owner-login capability.
 The [delivery definition of done](local-owner-authentication-delivery.md) remains
