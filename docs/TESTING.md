@@ -662,8 +662,9 @@ and UTF-8 text. Its explicit inventory covers public root files, source, package
 Go modules, documentation, scripts, tests, experiments, GitHub configuration,
 tracked commit-hook entry points, `.gitignore`, `.gitattributes` and `.env.example`.
 The inventory works in Git-free staged snapshots. Local instructions, environment
-files, local evidence, build/dependency directories and the exact naming regression
-fixture are excluded; binary and non-UTF-8 content is skipped.
+files, local evidence, build/dependency directories, the exact naming regression
+module and its shared rejection-data JSON are excluded; binary and non-UTF-8
+content is skipped.
 Retained storage and SP-001 identities have path-and-context exceptions, and the
 exact migration rows in [the naming policy](BRANDING.md) are allowed. Exceptions
 do not exempt whole files. Factual third-party references and attribution remain
@@ -825,6 +826,15 @@ test doubles may complement these checks.
 
 ## Local hooks and CI
 
+The POSIX real-Git hook tests require executable external temporary storage.
+Before initializing each test repository, a bounded, directly invoked `/bin/sh`
+script checks that execution is permitted in the selected scratch directory.
+It is removed before fixture staging. Failure reports how to configure `TMPDIR`,
+`TEMP` or `TMP` before starting Python; the tests do not change mount settings,
+fall back to the checkout or silently skip real dispatch. Windows launcher
+behavior is unchanged. The probe establishes a prerequisite; actual Git commit
+tests still prove that Git invokes the hook and obeys its verification result.
+
 The retirement guard scans executable tests as well as application and verifier
 inputs. Its explicit retained-oracle inventory includes the shared SP-002/SP-003
 checkers and their imported/compiled source inputs; a missing inventoried input
@@ -839,6 +849,11 @@ Active inputs must decode as UTF-8. A malformed input produces a path-specific
 violation while scanning continues to collect other violations. The guard leaves
 the input unchanged and returns failure; it does not replace undecodable bytes
 or silently omit the file.
+
+Test counts and verification elapsed time describe functional evidence, not
+production throughput, latency or memory benchmarks. These checks do not
+establish a performance-regression baseline; this retirement follow-up introduces
+no new benchmark campaign.
 
 `scripts/setup_env.py` installs the repository's commit hook. To configure only
 the hook, run `python scripts/setup_env.py --hooks-only`.

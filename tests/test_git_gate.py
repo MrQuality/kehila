@@ -7,8 +7,59 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def require_executable_scratch(root, environment):
+    """Establish a POSIX execution precondition; real Git tests prove dispatch."""
+    if os.name != 'posix':
+        return
+    probe = root / 'execution-probe'
+    message = ('Cannot execute a script from the selected temporary directory. '
+               'Set TMPDIR, TEMP or TMP to an executable external scratch location '
+               'before starting Python; do not disable the real hook tests.')
+    try:
+        try:
+            probe.write_text('#!/bin/sh\nprintf "%s\\n" kehila-scratch-executable\n',
+                             encoding='utf-8')
+            probe.chmod(probe.stat().st_mode | stat.S_IXUSR)
+            result = subprocess.run([str(probe)], cwd=root, env=environment, shell=False,
+                                    capture_output=True, text=True, timeout=5)
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise RuntimeError(message) from error
+        if result.returncode != 0 or result.stdout != 'kehila-scratch-executable\n':
+            raise RuntimeError(message)
+    finally:
+        probe.unlink(missing_ok=True)
+
+
+@unittest.skipUnless(os.name == 'posix', 'POSIX executable scratch precondition')
+class ScratchProbeTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix='kehila-exec-test-')
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+
+    def test_execution_restrictions_report_external_temp_configuration_and_cleanup(self):
+        for failure in (PermissionError('execution prohibited'), FileNotFoundError('interpreter absent'),
+                        subprocess.TimeoutExpired(['probe'], 5)):
+            with self.subTest(failure=type(failure).__name__), \
+                    patch.object(subprocess, 'run', side_effect=failure):
+                with self.assertRaisesRegex(RuntimeError, 'TMPDIR') as raised:
+                    require_executable_scratch(self.root, os.environ.copy())
+                self.assertIs(raised.exception.__cause__, failure)
+                self.assertEqual(list(self.root.iterdir()), [])
+
+    def test_unsuccessful_or_wrong_probe_result_is_not_execution_evidence(self):
+        for result in (Mock(returncode=7, stdout='kehila-scratch-executable\n'),
+                       Mock(returncode=0, stdout='unexpected output\n')):
+            with self.subTest(returncode=result.returncode), \
+                    patch.object(subprocess, 'run', return_value=result):
+                with self.assertRaisesRegex(RuntimeError, 'TMPDIR'):
+                    require_executable_scratch(self.root, os.environ.copy())
+                self.assertEqual(list(self.root.iterdir()), [])
 
 
 class GitGateTests(unittest.TestCase):
@@ -23,6 +74,7 @@ class GitGateTests(unittest.TestCase):
                 self.environment.pop(key)
         self.environment.update({"GIT_AUTHOR_NAME": "Policy Test", "GIT_COMMITTER_NAME": "Policy Test",
                                  "GIT_AUTHOR_EMAIL": "test@example.invalid", "GIT_COMMITTER_EMAIL": "test@example.invalid"})
+        require_executable_scratch(self.root, self.environment)
         self.git("init", "-b", "main")
         self.git("config", "core.autocrlf", "false")
         for relative in (".githooks/pre_commit.py", ".githooks/pre-commit",
