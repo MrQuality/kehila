@@ -3,6 +3,8 @@ use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     Mutex,
 };
+mod item_attempt;
+pub(crate) use item_attempt::{AttemptEntry, ItemAttempt};
 
 #[derive(Clone, Copy)]
 pub(crate) enum Stage {
@@ -31,6 +33,7 @@ pub(crate) struct Probe {
     registration_identities: Mutex<Option<crate::item_pending::Identities>>,
     item_replay: Mutex<Option<ItemReplayObservation>>,
     item_repreparations: AtomicUsize,
+    item_attempt: Mutex<Option<ItemAttempt>>,
 }
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub(crate) enum Point {
@@ -43,6 +46,7 @@ pub(crate) enum Point {
     PendingCommit,
     ItemBeforeCommit,
     ItemMutationPrepared,
+    ItemAttemptPrepared,
     ItemHistoryLoaded,
     ItemReplayFenced,
     ItemReplayCleanup,
