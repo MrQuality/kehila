@@ -784,6 +784,23 @@ the body harness before the incomplete request; actual held bytes validate the
 network fault before its original deadline expires. These controls retain the
 native protocol and single-active authority boundary.
 
+The body reader uses the earlier of the original connection deadline and two
+seconds after body reading starts; the socket-body fixture has a five-second
+total budget. Prompt admission leaves time for the 408 response and closure.
+Late admission or an exhausted total budget can prevent response delivery; no
+additional response grace period or production deadline extension is implied.
+
+The serving-response relay enters explicit cleanup before releasing held bytes.
+Release is not a delivery acknowledgment. Only a downstream serving-client write
+that encounters `BrokenPipe` or `ConnectionReset` after the observed gate is
+released in cleanup may terminate normally. Implicit gate release from join or
+drop does not establish that phase. Database reads, upstream traffic, control
+failures and other write errors remain strict, as do task panics and join
+deadlines. Existing owner/relay joins, independent database release and successor
+read checks remain required. Paired injected-error and closed in-memory duplex
+peer tests cover classification; they do not reproduce a TCP reset or replace
+the native PostgreSQL/TLS composition fixture.
+
 The removed worker/API, their live scripts and controller-specific tests have
 explicit keep/adapt/retire dispositions in the
 [retirement record](implementation/ferretdb-retirement.md). They are not optional
