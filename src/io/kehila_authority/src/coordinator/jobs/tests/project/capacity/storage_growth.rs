@@ -40,7 +40,7 @@ impl Sample {
             // Pure candidate, checked against ingress/native codecs before use
             // and the actual rendered PostgreSQL history after every insertion.
             bytes: [64, 1024, 7600][index / 8],
-            repeated: index / 4 % 2 == 0,
+            repeated: (index / 4).is_multiple_of(2),
             all_fields: index / 2 % 2 == 1,
             data_limit_mib,
         }
@@ -161,6 +161,13 @@ async fn headroom(admin: &Admin, sample: Sample) {
     );
 }
 
+#[derive(Clone, Copy)]
+enum PayloadState {
+    Present,
+    Retired,
+    Pruned,
+}
+
 async fn checkpoint(
     admin: &Admin,
     folder: &std::path::Path,
@@ -168,9 +175,10 @@ async fn checkpoint(
     stage: &str,
     records: &[Expected],
     sample: Sample,
-    retired: bool,
-    pruned: bool,
+    payloads: PayloadState,
 ) {
+    let retired = !matches!(payloads, PayloadState::Present);
+    let pruned = matches!(payloads, PayloadState::Pruned);
     let count = admin
         .client()
         .query_one(
@@ -360,8 +368,7 @@ async fn native(
         "baseline",
         &[],
         sample,
-        false,
-        false,
+        PayloadState::Present,
     )
     .await;
     headroom(admin, sample).await;
@@ -405,7 +412,13 @@ async fn native(
     assert_eq!(response["result"], first.result);
     let mut records = vec![first];
     checkpoint(
-        admin, folder, "native", "create", &records, sample, false, false,
+        admin,
+        folder,
+        "native",
+        "create",
+        &records,
+        sample,
+        PayloadState::Present,
     )
     .await;
     let mut current_item = created.item;
@@ -473,8 +486,7 @@ async fn native(
                 &format!("edit-{edit}"),
                 &records,
                 sample,
-                false,
-                false,
+                PayloadState::Present,
             )
             .await;
         }
@@ -511,8 +523,7 @@ async fn historical(admin: &Admin, folder: &std::path::Path, sample: Sample, rec
         "baseline",
         &[],
         sample,
-        false,
-        false,
+        PayloadState::Present,
     )
     .await;
     for record in records {
@@ -544,8 +555,7 @@ async fn historical(admin: &Admin, folder: &std::path::Path, sample: Sample, rec
                 &stage,
                 &records[..record.version as usize],
                 sample,
-                false,
-                false,
+                PayloadState::Present,
             )
             .await;
         }
@@ -560,8 +570,7 @@ async fn historical(admin: &Admin, folder: &std::path::Path, sample: Sample, rec
         "retired",
         records,
         sample,
-        true,
-        false,
+        PayloadState::Retired,
     )
     .await;
     admin
@@ -579,8 +588,7 @@ async fn historical(admin: &Admin, folder: &std::path::Path, sample: Sample, rec
         "pruned",
         records,
         sample,
-        true,
-        true,
+        PayloadState::Pruned,
     )
     .await;
 }
