@@ -1,4 +1,6 @@
 //! Bounded test observations. Context owns numeric evidence, never runtime resources.
+#[cfg(target_os = "linux")]
+mod cpu;
 use std::{
     future::Future,
     sync::{Arc, Mutex},
@@ -39,6 +41,8 @@ pub(crate) struct Event {
     pub(crate) stage: Stage,
     pub(crate) offset_ns: u64,
     pub(crate) duration_ns: Option<u64>,
+    // Actual OS-thread CPU time, separate from elapsed wall time.
+    pub(crate) cpu_time_ns: Option<u64>,
     pub(crate) completed: bool,
 }
 
@@ -150,10 +154,17 @@ impl Collector {
 
 impl Request {
     pub(crate) fn event(&self, stage: Stage) {
-        self.append(stage, Instant::now(), None, true);
+        self.append(stage, Instant::now(), None, None, true);
     }
 
-    fn append(&self, stage: Stage, at: Instant, duration_ns: Option<u64>, completed: bool) {
+    fn append(
+        &self,
+        stage: Stage,
+        at: Instant,
+        duration_ns: Option<u64>,
+        cpu_time_ns: Option<u64>,
+        completed: bool,
+    ) {
         // Span destruction also runs during unwinding. It must never panic,
         // including when a prior observer failure poisoned this numeric state.
         let mut row = match self.row.lock() {
@@ -182,6 +193,7 @@ impl Request {
             stage,
             offset_ns,
             duration_ns,
+            cpu_time_ns,
             completed,
         });
     }
@@ -191,6 +203,7 @@ impl Request {
             request: self.clone(),
             stage,
             started: Instant::now(),
+            cpu_time_ns: None,
             completed: false,
         }
     }
@@ -207,6 +220,7 @@ pub(crate) struct Span {
     request: Request,
     stage: Stage,
     started: Instant,
+    cpu_time_ns: Option<u64>,
     completed: bool,
 }
 
@@ -222,8 +236,13 @@ impl Drop for Span {
             self.request.invalidate("capacity duration overflow");
             return;
         };
-        self.request
-            .append(self.stage, self.started, Some(duration_ns), self.completed);
+        self.request.append(
+            self.stage,
+            self.started,
+            Some(duration_ns),
+            self.cpu_time_ns,
+            self.completed,
+        );
     }
 }
 
@@ -271,6 +290,7 @@ mod tests {
         assert_eq!(rows[0].events[0].stage, Stage::ReadMutex);
         assert!(rows[0].events[0].completed);
         assert!(rows[0].events[0].duration_ns.is_some());
+        assert!(rows[0].events[0].cpu_time_ns.is_none());
     }
 
     #[test]

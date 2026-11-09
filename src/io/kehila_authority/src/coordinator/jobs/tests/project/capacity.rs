@@ -262,6 +262,20 @@ async fn cases(handle: &Handle, client: &Client, admin: &Admin) -> usize {
                 .count(),
             3 // Canonical command, notice catalogue, state-dependent admission.
         );
+        for event in rows[0]
+            .events
+            .iter()
+            .filter(|event| event.stage == Stage::CpuWork)
+        {
+            assert!(
+                event.cpu_time_ns.is_some(),
+                "native CPU work lacked thread measurement"
+            );
+        }
+        assert!(rows[1]
+            .events
+            .iter()
+            .all(|event| event.cpu_time_ns.is_none()));
         for stage in [
             Stage::PrepareMutex,
             Stage::PrepareService,

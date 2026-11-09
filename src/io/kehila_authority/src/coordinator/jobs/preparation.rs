@@ -435,6 +435,7 @@ mod tests {
             [Stage::Preparation, Stage::CpuWork]
         );
         assert!(rows[0].events[1].completed);
+        assert!(rows[0].events[1].cpu_time_ns.is_some());
     }
 
     #[tokio::test(flavor = "current_thread")]

@@ -166,6 +166,13 @@ this control establishes input/observer validity, not a supported four-request
 capacity, latency result or completed capacity study. Timed workload results and
 their acceptance must be assessed separately.
 
+Linux test observations record elapsed wall time and OS-worker thread CPU time
+separately. Thread CPU intervals begin and end inside the same synchronous work
+closure; skipped work has no CPU measurement. Ordinary queue and storage spans
+have no CPU value. Incomplete work stays distinguishable during unwinding, and
+invalid numeric observations invalidate the cell. These controls do not establish
+clock calibration or negligible observer overhead.
+
 Focused execution supplies neither the other native journeys nor shared full
 verification. `--native-authority` and the default full runner retain their
 complete native sequence. Mocked controls cover selector orchestration; later
