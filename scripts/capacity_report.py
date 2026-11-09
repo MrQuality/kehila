@@ -99,6 +99,11 @@ def _group(values):
             'per_repetition_success_p95_ms':[None if value['measured']['successful_latency_ns']['p95'] is None
                 else value['measured']['successful_latency_ns']['p95']/1e6 for value in values],
             'successful_per_second':[value['measured']['successful_per_second'] for value in values],
+            'observed_peak_inflight':[value['measured']['peak_client_inflight'] for value in values],
+            'observed_mean_inflight':[value['measured']['mean_client_inflight'] for value in values],
+            'active_items':[value['measured']['active_items'] for value in values],
+            'active_projects':[value['measured']['active_projects'] for value in values],
+            'active_sessions':[value['measured']['active_sessions'] for value in values],
             'stages_by_repetition':[value['measured']['stages'] for value in values],
             'sampling_by_repetition':[value['measured']['sampling'] for value in values],
             'warmup_outcomes':[value['warmup']['outcomes'] for value in values],
@@ -110,7 +115,10 @@ def _group(values):
             'database_bytes_after':[value['postgres']['database_bytes_after'] for value in values],
             'wal_bytes_after':[value['postgres']['wal_bytes_after'] for value in values],
             'normal_four_request_target_met_all_repetitions':
-                all(value['normal_four_request_target_met'] is True for value in values) if first['concurrency']==4 else None}
+                (None if any(value['normal_four_request_target_met'] is None for value in values)
+                 else all(value['normal_four_request_target_met'] is True for value in values)) if first['concurrency']==4 else None,
+            'normal_four_request_target_observed_all_repetitions':
+                all(value['normal_four_request_target_observed'] is True for value in values) if first['concurrency']==4 else None}
 
 
 def group_matrix(values, *, complete=True):
@@ -174,7 +182,7 @@ def main():
     report={'schema':1,'kind':'observer_comparison' if args.comparisons else 'ordinary_matrix',
             'source_sha256':measurements[0]['source_sha256'],'environment':measurements[0]['environment'],
             'latency_boundary':LATENCY_BOUNDARY,'throughput_boundary':THROUGHPUT_BOUNDARY,
-            'target_population':'100 original measured requests at concurrency4; p95 <=1 second and all100 succeed; whole-cell transport failures also reject target. Warmup/control/recovery reported separately.',
+            'target_population':'100 original measured requests with observed overlap4; p95 <=1 second and all100 succeed; whole-cell transport failures also reject target. Unobserved overlap leaves target unqualified. Warmup/control/recovery reported separately.',
             'percentile_method':'nearest rank within each100 original requests; report repetition p95 values and median, not pooled p95',
             'groups':groups}
     with args.output.open('x',encoding='utf-8') as stream:json.dump(report,stream,sort_keys=True,indent=2)

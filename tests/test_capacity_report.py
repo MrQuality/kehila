@@ -17,10 +17,13 @@ def measurement(index, observer='sampled', successful=100, p95=10_000_000):
     return {'schema':1,'plan':cell.document(),'observer':observer,'calibration':False,
             'latency_boundary':report.LATENCY_BOUNDARY,'throughput_boundary':report.THROUGHPUT_BOUNDARY,
             'normal_four_request_target_met':successful==100 if cell.concurrency==4 else None,
+            'normal_four_request_target_observed':True if cell.concurrency==4 else None,
             'measured':{'attempted':100,'successful':successful,'outcomes':{'success':successful,'busy':100-successful},
                         'latency_ns':{'p95':p95},'successful_latency_ns':{'p95':p95},
                         'attempts_per_second':100.0,'successful_per_second':float(successful),
-                        'stages':{},'sampling':None,'recoveries':0},
+                        'stages':{},'sampling':None,'recoveries':0,'peak_client_inflight':cell.concurrency,
+                        'mean_client_inflight':1.0,'active_items':cell.concurrency,
+                        'active_projects':min(cell.concurrency,cell.document()['projects']),'active_sessions':4},
             'warmup':{'outcomes':{'success':10},'recoveries':0},
             'control':{'outcomes':{'success':1},'recoveries':0},'connections':{},'setup_ns':24_000_000_000,
             'postgres':{'server_version':'16.test','max_connections':'8','ssl':'on',
@@ -28,6 +31,15 @@ def measurement(index, observer='sampled', successful=100, p95=10_000_000):
 
 
 class CapacityReportTests(unittest.TestCase):
+    def test_unobserved_four_request_overlap_remains_unqualified(self):
+        values=[measurement(index) for index in (6,7,8)]
+        values[0]['measured']['peak_client_inflight']=3
+        values[0]['normal_four_request_target_observed']=False
+        values[0]['normal_four_request_target_met']=None
+        group=report.group_matrix(values,complete=False)[0]
+        self.assertIsNone(group['normal_four_request_target_met_all_repetitions'])
+        self.assertFalse(group['normal_four_request_target_observed_all_repetitions'])
+
     def test_analysis_reads_only_manifest_bound_inputs_and_sanitizes_profile(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory).resolve()/'cell';root.mkdir()

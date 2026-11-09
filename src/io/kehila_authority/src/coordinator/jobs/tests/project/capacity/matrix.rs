@@ -249,7 +249,7 @@ async fn phase(
                     };
                     let command = slot.command(cell, kind, ordinal, &texts[text_index]);
                     let attempt = slot
-                        .send(cell, command, &client, &browsers[ordinal % 4])
+                        .send(cell, command, &client, &browsers[ordinal % 4], origin)
                         .await;
                     let stop = attempt.integrity_error.is_some() || attempt.uncertain;
                     attempts.push(attempt);
@@ -330,7 +330,7 @@ async fn phase(
     let mut recoveries = Vec::new();
     if mode == Observation::Off || rows.is_some() {
         for slot in &mut slots {
-            if let Some(recovery) = slot.recover(cell, client, &browsers).await {
+            if let Some(recovery) = slot.recover(cell, client, &browsers, origin).await {
                 if recovery.uncertain || recovery.integrity_error.is_some() {
                     errors.push("original edit outcome remains unresolved".into());
                 }

@@ -138,7 +138,7 @@ pub(super) async fn phase(
             (recorded, observed, release_ns, rollback)
         };
         let (attempt, (mut recorded, observed, release_ns, rollback)) = tokio::join!(
-            setup.slots[0].send(cell, command, client, &setup.browsers[ordinal % 4]),
+            setup.slots[0].send(cell, command, client, &setup.browsers[ordinal % 4], origin),
             observe_and_release
         );
         let response_ns = nanos(origin);

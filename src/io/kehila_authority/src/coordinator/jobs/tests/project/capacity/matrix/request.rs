@@ -47,6 +47,8 @@ pub(super) struct Attempt {
     pub(super) response_base64: Option<String>,
     pub(super) status: Option<u16>,
     pub(super) latency_ns: u64,
+    pub(super) started_ns: u64,
+    pub(super) finished_ns: u64,
     pub(super) outcome: &'static str,
     pub(super) transport_error: Option<String>,
     pub(super) integrity_error: Option<String>,
@@ -198,6 +200,7 @@ impl Slot {
         command: Command,
         client: &Client,
         browser: &Browser,
+        phase_origin: Instant,
     ) -> Attempt {
         let recovery = command.phase == Phase::Recovery;
         let path = if recovery {
@@ -275,8 +278,13 @@ impl Slot {
             uncertain = true;
             integrity_error.get_or_insert_with(|| "original operation was not reconciled".into());
         }
-        let latency_ns =
-            u64::try_from(started.elapsed().as_nanos()).expect("capacity client duration overflow");
+        let finished = Instant::now();
+        let latency_ns = u64::try_from(finished.duration_since(started).as_nanos())
+            .expect("capacity client duration overflow");
+        let started_ns = u64::try_from(started.duration_since(phase_origin).as_nanos())
+            .expect("capacity client start offset overflow");
+        let finished_ns = u64::try_from(finished.duration_since(phase_origin).as_nanos())
+            .expect("capacity client finish offset overflow");
         let response_base64 = raw_response.map(|bytes| base64(&bytes));
         let attempt = Attempt {
             phase: command.phase,
@@ -294,6 +302,8 @@ impl Slot {
             response_base64,
             status,
             latency_ns,
+            started_ns,
+            finished_ns,
             outcome,
             transport_error,
             integrity_error,
@@ -310,6 +320,7 @@ impl Slot {
         cell: Cell,
         client: &Client,
         browsers: &[Browser],
+        phase_origin: Instant,
     ) -> Option<Attempt> {
         let original = self.pending.take()?;
         let browser = &browsers[original.session];
@@ -321,7 +332,10 @@ impl Slot {
             body: original.request,
             canonical: original.canonical_base64,
         };
-        Some(self.send(cell, command, client, browser).await)
+        Some(
+            self.send(cell, command, client, browser, phase_origin)
+                .await,
+        )
     }
 }
 

@@ -75,6 +75,7 @@ def fixture(index=0):
                 'canonical_base64':base64.b64encode(encoded(canonical)).decode() if canonical else None,
                 'request_json_bytes':len(encoded(body)),'response_body_bytes':len(raw),
                 'response_base64':base64.b64encode(raw).decode(),'status':200,'latency_ns':10_000,
+                'started_ns':ordinal*100_000,'finished_ns':ordinal*100_000+10_000,
                 'outcome':'success','transport_error':None,'integrity_error':None,'uncertain':False})
             global_ordinal += 1
         phases.append({'phase':phase,'configured_concurrency':1,'planned_requests':count,
@@ -100,6 +101,36 @@ def fixture(index=0):
 
 
 class CapacityResultTests(unittest.TestCase):
+    def test_serial_trace_cannot_qualify_configured_four_request_target(self):
+        _,work,owned=fixture()
+        cell=plan.cell(6)
+        work['plan']=cell.document()
+        for phase in work['phases'][:2]:phase['configured_concurrency']=4
+        validated=results.validate(work,owned,cell,'off')
+        self.assertEqual(validated.summary['measured']['successful'],100)
+        self.assertEqual(validated.summary['measured']['peak_client_inflight'],1)
+        self.assertIsNone(validated.summary['normal_four_request_target_met'])
+        self.assertIs(validated.summary['normal_four_request_target_observed'],False)
+
+    def test_actual_overlap_uses_half_open_intervals_and_rejects_impossible_traces(self):
+        def attempt(slot,start,end):
+            return {'slot':slot,'project':'project-'+str(slot),'item':'item-'+str(slot),'session':slot,
+                    'started_ns':start,'finished_ns':end,'latency_ns':end-start}
+        phase={'configured_concurrency':2,'request_window_ns':30,'attempts':[
+            attempt(0,0,10),attempt(1,5,15),attempt(0,10,20)]}
+        observed=results.client_overlap(phase)
+        self.assertEqual(observed['peak_client_inflight'],2)
+        self.assertEqual(observed['mean_client_inflight'],1)
+        self.assertEqual(observed['client_occupancy_ns'],{'0':10,'1':10,'2':10})
+        self.assertEqual((observed['active_items'],observed['active_projects'],observed['active_sessions']),(2,2,2))
+        for mutation in ('slot','overflow','window','duration'):
+            changed=copy.deepcopy(phase)
+            if mutation=='slot':changed['attempts'][1]['slot']=0
+            elif mutation=='overflow':changed['attempts'][2]=attempt(2,6,16)
+            elif mutation=='window':changed['attempts'][2]=attempt(0,21,31)
+            else:changed['attempts'][0]['latency_ns']=9
+            with self.subTest(mutation=mutation),self.assertRaises(ValueError):results.client_overlap(changed)
+
     def test_known_blocker_control_requires_actual_sampled_transaction_edge(self):
         def control(target, xid, dispatch):
             fingerprint = ' FROM kehila_auth.' + ('fence(' if target=='actor' else 'save_item_edit(')
@@ -114,7 +145,8 @@ class CapacityResultTests(unittest.TestCase):
              'query':'SELECT *'+c['query_fingerprint']+'...)','backend_start':'waiter-start',
              'transaction_start':'waiter-transaction','ungranted_locks_json':json.dumps([
                  {'locktype':'transactionid','transaction_id':c['blocker_transaction_id']}])}]} for c in controls]
-        phase = {'controls':controls,'attempts':[{'outcome':'success','edit':True}]*2,
+        phase = {'controls':controls,'attempts':[{'outcome':'success','edit':True,'finished_ns':4},
+                                               {'outcome':'success','edit':True,'finished_ns':14}],
                  'recoveries':[],'sampling':{'samples':samples}}
         results.validate_calibration(phase,'project')
         for mutation in ('xid','edge','query','release'):
@@ -140,6 +172,11 @@ class CapacityResultTests(unittest.TestCase):
         self.assertEqual(summary['stages']['Execution']['wall_ns']['p95'],100)
         self.assertEqual(summary['stages']['Execution']['thread_cpu_ns']['count'],0)
         self.assertEqual(summary['sampling']['backend_observations'][0]['count'],1)
+        cancelled=event('Queue',1,None);cancelled['completed']=False
+        phase['rows'][0]['events'].extend([event('Queue',100,None),cancelled])
+        queue=results.observation_summary(phase)['stages']['Queue']
+        self.assertEqual(queue['completed_wall_ns']['p95'],100)
+        self.assertEqual(queue['incomplete_wall_ns']['p95'],1)
         phase['rows'][0]['events'][0]['cpu_time_ns']=20
         with self.assertRaises(ValueError): results.observation_summary(phase)
 
@@ -203,6 +240,8 @@ class CapacityResultTests(unittest.TestCase):
         original = work['phases'][0]['attempts'][-1]
         recovery = copy.deepcopy(original)
         recovery['phase']='recovery'
+        recovery['started_ns']=work['phases'][0]['request_window_ns']+1
+        recovery['finished_ns']=recovery['started_ns']+recovery['latency_ns']
         work['phases'][0]['recoveries'].append(recovery)
         original.update(status=503,outcome='uncertain',uncertain=True)
         raw=encoded({'error':'outcome_unknown'})

@@ -141,6 +141,44 @@ def percentiles(values):
             for name, quantile in [('p50', .5), ('p95', .95), ('p99', .99)]}}
 
 
+def client_overlap(phase):
+    window = number(phase['request_window_ns'], positive=True)
+    configured = number(phase['configured_concurrency'], positive=True)
+    intervals, events = {}, []
+    total = 0
+    for attempt in phase['attempts']:
+        start, end = number(attempt['started_ns']), number(attempt['finished_ns'])
+        duration = number(attempt['latency_ns'], positive=True)
+        require(start < end <= window and end-start == duration,
+                'Client interval differs from latency or phase window')
+        slot = number(attempt['slot'])
+        intervals.setdefault(slot,[]).append((start,end))
+        events.extend(((start,1),(end,-1)))
+        total += duration
+    for owned in intervals.values():
+        owned.sort()
+        require(all(previous[1] <= current[0] for previous,current in zip(owned,owned[1:])),
+                'One item slot has overlapping original requests')
+    previous, active, peak = 0,0,0
+    occupancy = Counter()
+    # Half-open intervals: end (-1) precedes start (+1) at equal offsets.
+    for offset, change in sorted(events):
+        occupancy[active] += offset-previous
+        active += change
+        require(0 <= active <= configured, 'Observed client overlap exceeds configured concurrency')
+        peak = max(peak,active)
+        previous = offset
+    require(active == 0, 'Client interval population did not settle')
+    occupancy[0] += window-previous
+    require(sum(occupancy.values()) == window and sum(count*duration for count,duration in occupancy.items()) == total,
+            'Client occupancy does not account for original intervals')
+    return {'peak_client_inflight':peak,'mean_client_inflight':total/window,
+            'client_occupancy_ns':{str(count):duration for count,duration in sorted(occupancy.items())},
+            'active_items':len({(attempt['project'],attempt['item']) for attempt in phase['attempts']}),
+            'active_projects':len({attempt['project'] for attempt in phase['attempts']}),
+            'active_sessions':len({attempt['session'] for attempt in phase['attempts']})}
+
+
 def observation_summary(phase):
     rows = phase['rows']
     stages = None
@@ -153,15 +191,21 @@ def observation_summary(phase):
                 require(isinstance(event['stage'], str) and type(event['completed']) is bool,
                         'Malformed stage observation')
                 number(event['offset_ns'])
-                group = grouped.setdefault(event['stage'], {'count': 0, 'incomplete': 0, 'wall': [], 'cpu': []})
+                group = grouped.setdefault(event['stage'], {'count': 0, 'incomplete': 0, 'wall': [], 'cpu': [],
+                                                           'complete_wall':[], 'incomplete_wall':[]})
                 group['count'] += 1
                 group['incomplete'] += not event['completed']
-                if event['duration_ns'] is not None: group['wall'].append(number(event['duration_ns']))
+                if event['duration_ns'] is not None:
+                    duration = number(event['duration_ns'])
+                    group['wall'].append(duration)
+                    group['complete_wall' if event['completed'] else 'incomplete_wall'].append(duration)
                 if event['cpu_time_ns'] is not None:
                     require(event['stage'] == 'CpuWork', 'CPU observation attached to a non-worker stage')
                     group['cpu'].append(number(event['cpu_time_ns']))
         stages = {name: {'events': value['count'], 'incomplete_events': value['incomplete'],
-                        'wall_ns': percentiles(value['wall']), 'thread_cpu_ns': percentiles(value['cpu'])}
+                        'wall_ns': percentiles(value['wall']), 'thread_cpu_ns': percentiles(value['cpu']),
+                        'completed_wall_ns':percentiles(value['complete_wall']),
+                        'incomplete_wall_ns':percentiles(value['incomplete_wall'])}
                   for name, value in sorted(grouped.items())}
     sampling = phase['sampling']
     waits = None
@@ -199,6 +243,7 @@ def phase_summary(phase):
             'request_window_ns': window, 'checkpoint_ns': number(phase['checkpoint_ns']),
             'attempts_per_second': len(attempts) * 1e9 / window,
             'successful_per_second': len(successful) * 1e9 / window,
+            **client_overlap(phase),
             **observation_summary(phase)}
 
 
@@ -215,8 +260,8 @@ def validate_calibration(phase, project):
     samples = phase['sampling']['samples']
     offset = 0
     identities, transactions = set(), set()
-    for control, target, fingerprint, key in zip(controls, ('actor','project'),
-            (' FROM kehila_auth.fence(', ' FROM kehila_auth.save_item_edit('), ('owner',project)):
+    for ordinal, (control, target, fingerprint, key) in enumerate(zip(controls, ('actor','project'),
+            (' FROM kehila_auth.fence(', ' FROM kehila_auth.save_item_edit('), ('owner',project))):
         require(control['target'] == target and control['target_key'] == key
                 and control['query_fingerprint'] == fingerprint and isinstance(control['target_ctid'], str)
                 and control['known_blocker_observed'] is True and control['edge_gone'] is True
@@ -230,6 +275,8 @@ def validate_calibration(phase, project):
         transactions.add(xid)
         dispatch, release, response_ns = (number(control[name]) for name in ('dispatch_ns','release_ns','response_ns'))
         require(dispatch <= release <= response_ns, 'Calibration dispatch/release/response order differs')
+        require(phase['attempts'][ordinal]['finished_ns'] >= release,
+                'Controlled edit response preceded known-blocker release')
         count = number(control['sample_count'], positive=True)
         recorded = samples[offset:offset+count]
         require(len(recorded) == count and all(dispatch <= number(sample['started_ns'])
@@ -383,6 +430,9 @@ def validate(work, owned, cell, observer, calibration=False):
             original, record = pending.pop(index)
             number(recovery['ordinal'])
             number(recovery['session'])
+            require(number(recovery['started_ns']) >= phase['request_window_ns']
+                    and number(recovery['finished_ns'])-recovery['started_ns'] == number(recovery['latency_ns'], positive=True),
+                    'Reconciliation interval overlaps original phase or differs from latency')
             require(recovery['phase'] == 'recovery' and recovery['ordinal'] == original['ordinal']
                     and recovery['session'] == original['session'] and recovery['edit'] is True
                     and recovery['integrity_error'] is None and recovery['uncertain'] is False
@@ -416,14 +466,18 @@ def validate(work, owned, cell, observer, calibration=False):
             and sum(connection[key] for key in ('tls_rejected', 'http_rejected', 'tls_shutdown_rejected', 'peer_close_rejected')) == connection['protocol_rejected'],
             'Owned transport population differs from original and recovery requests')
     target = None
+    target_observed = None
     if cell.concurrency == 4:
-        target = (summaries['measured']['successful'] == 100 and summaries['measured']['latency_ns']['p95'] <= 1_000_000_000
-                  and not any(connection[key] for key in ('capacity_rejected', 'protocol_rejected', 'timed_out')))
+        target_observed = summaries['measured']['peak_client_inflight'] == 4
+        if target_observed:
+            target = (summaries['measured']['successful'] == 100 and summaries['measured']['latency_ns']['p95'] <= 1_000_000_000
+                      and not any(connection[key] for key in ('capacity_rejected', 'protocol_rejected', 'timed_out')))
     return Validated(records, {'schema': 1, 'plan': cell.document(), 'observer': observer,
         'calibration': calibration, **summaries,
         'latency_boundary': work['latency_boundary'], 'throughput_boundary': work['throughput_boundary'],
         'normal_four_request_target_met': target, 'connections': connection,
-        'target_population': '100 original measured requests; warmup, control and recovery reported separately; transport counters cover the entire cell',
+        'normal_four_request_target_observed':target_observed,
+        'target_population': '100 original measured requests with observed overlap4; otherwise target unqualified; warmup, control and recovery reported separately; transport counters cover the entire cell',
         'setup_ns': setup['elapsed_ns'], 'authentication_pacing_ns': setup['authentication_pacing_ns'],
         'configuration_json_bytes': [entry['configuration_json_bytes'] for entry in setup['projects']],
         'postgres': work['postgres'], 'total_ns': owned['total_ns']})

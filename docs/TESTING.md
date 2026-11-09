@@ -198,6 +198,15 @@ measured requests retain every original outcome. A separate serial full-field
 edit checks progress after load. Setup, authentication pacing, reconciliation
 and that control are outside the measured-request population.
 
+Concurrency counts closed-loop HTTP requests to the application. Database work
+follows the existing serving topology. Every phase records client start/finish
+offsets on its shared clock, observed peak/mean overlap, and active item, project
+and session counts. Each client keeps one item slot, chosen from the first
+configured number of the sixteen seeded slots. Consequently, the independent
+layout exercises one/two active projects at concurrency one/two and all four at
+concurrency four or higher. The four-request target remains unqualified if the
+measured phase never observes four overlapping originals.
+
 The client latency boundary includes verified TLS, response-driver cleanup and
 result validation. Throughput uses the complete phase window, including request
 preparation and evidence encoding. Uncertain edits stop their item slot and
@@ -222,6 +231,8 @@ have different populations and can overlap. Five-millisecond backend samples
 report observed waits and blockers, not exact wait durations or automatic
 actor/project attribution. These entry points alone do not establish an accepted
 capacity envelope or a completed observer-overhead qualification.
+Completed and incomplete stage-wall distributions remain separate; cancelled
+queue entries cannot stand in for completed queue waits.
 
 `scripts/capacity_report.py` reads explicitly selected export directories with
 `--observation` and their sibling receipts. Ordinary reports require all 180
