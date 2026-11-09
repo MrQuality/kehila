@@ -249,6 +249,13 @@ observed source and resource profile, omits raw identities and private metadata,
 and retains success/failure populations and separate repetition percentiles.
 Its median repetition p95 is not a pooled request p95.
 
+The [2026-11-09 synthetic capacity observations](measurements/native-capacity-2026-11-09/README.md)
+record the complete 180-cell baseline, per-repetition outcomes, observer
+comparisons and measured target shortfalls. They preserve the declared workload,
+resource and sampling limits and document the retained-design disposition for
+constrained pre-MVP use. Measurement completion does not establish full
+application qualification or reliable four-request capacity.
+
 Focused execution supplies neither the other native journeys nor shared full
 verification. `--native-authority` and the default full runner retain their
 complete native sequence. Mocked controls cover selector orchestration; later
