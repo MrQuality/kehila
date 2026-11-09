@@ -5,6 +5,7 @@ use serde_json::{json, Value};
 mod admission;
 mod authorization;
 mod body;
+mod capacity;
 mod clock;
 mod competing;
 mod evidence;
@@ -66,6 +67,14 @@ async fn call(
         wire_request(browser, path, body),
     ))
     .await;
+    decode_exchange(status, headers, bytes)
+}
+
+fn decode_exchange(
+    status: hyper::StatusCode,
+    headers: hyper::HeaderMap,
+    bytes: bytes::Bytes,
+) -> (u16, Value, Option<String>) {
     let status = status.as_u16();
     let cookie = headers
         .get_all("set-cookie")

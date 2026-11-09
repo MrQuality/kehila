@@ -1,5 +1,7 @@
 //! Owned product authentication jobs. Transport adapters receive replies,
 //! never ownership of database/hash futures or an authority-selection API.
+#[cfg(test)]
+use crate::lifecycle::probe::capacity;
 use crate::{
     lifecycle::RuntimeLiveness,
     password::{
@@ -245,11 +247,13 @@ impl Engine {
         start: impl FnOnce(&mut Worker) -> Result<HashPending<T>, WorkerError>,
     ) -> Result<T, Error> {
         self.check(deadline)?;
-        let worker = self
-            .hash
-            .clone()
-            .try_lock_owned()
-            .map_err(|_| Error::Busy)?;
+        let worker = self.hash.clone().try_lock_owned().map_err(|_| {
+            #[cfg(test)]
+            capacity::event(capacity::Stage::CpuBusy);
+            Error::Busy
+        })?;
+        #[cfg(test)]
+        let lane = capacity::span(capacity::Stage::CpuLane);
         let mut lease = HashLease {
             worker,
             live: self.live.clone(),
@@ -270,6 +274,12 @@ impl Engine {
             .join_completed()
             .map_err(|_| Error::Unavailable)?;
         lease.dirty = false;
+        #[cfg(test)]
+        capacity::event(capacity::Stage::CpuJoined);
+        #[cfg(test)]
+        if let Some(lane) = lane {
+            lane.complete();
+        }
         self.check(deadline)?;
         result
             .map_err(|_| Error::Unavailable)?

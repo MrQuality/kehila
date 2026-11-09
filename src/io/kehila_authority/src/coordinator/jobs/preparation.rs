@@ -17,6 +17,8 @@ use tokio::{
 pub(super) struct Reservation {
     pub(super) permit: Arc<OwnedSemaphorePermit>,
     pub(super) deadline: Instant,
+    #[cfg(test)]
+    pub(super) capacity: Option<crate::lifecycle::probe::capacity::Request>,
 }
 pub(crate) struct Prepared<T> {
     pub(super) value: T,
@@ -74,6 +76,8 @@ impl Tracker {
         F: FnOnce(Arc<E>, Arc<OwnedSemaphorePermit>, Instant) -> U + Send + 'static,
         U: Future<Output = Result<T, Error>> + Send + 'static,
     {
+        #[cfg(test)]
+        let capacity = active.reservation.capacity.clone();
         // Keep the same lock order as registration: open, then task set. There
         // is no await between begin and storing the owned continuation.
         let open = self.open.lock().map_err(|_| {
@@ -99,10 +103,14 @@ impl Tracker {
             return Err(Error::Unavailable);
         }
         if tasks.len() >= CAPACITY {
+            #[cfg(test)]
+            if let Some(request) = &capacity {
+                request.event(crate::lifecycle::probe::capacity::Stage::PreparationBusy);
+            }
             return Err(Error::Busy);
         }
         let (sender, receiver) = oneshot::channel();
-        tasks.spawn(async move {
+        let work = async move {
             let mut failure = super::StopOnAbandonment {
                 live: live.clone(),
                 completed: false,
@@ -121,7 +129,19 @@ impl Tracker {
             });
             let _ = sender.send(result);
             failure.completed = true;
-        });
+        };
+        #[cfg(test)]
+        tasks.spawn(crate::lifecycle::probe::capacity::scope(
+            capacity,
+            async move {
+                crate::lifecycle::probe::capacity::event(
+                    crate::lifecycle::probe::capacity::Stage::Preparation,
+                );
+                work.await
+            },
+        ));
+        #[cfg(not(test))]
+        tasks.spawn(work);
         Ok(receiver)
     }
 
@@ -139,11 +159,13 @@ impl Tracker {
         if !*open || !live.is_live() || Instant::now() >= reservation.deadline {
             return Err(Error::Unavailable);
         }
-        let barrier = self
-            .slots
-            .clone()
-            .try_acquire_owned()
-            .map_err(|_| Error::Busy)?;
+        let barrier = self.slots.clone().try_acquire_owned().map_err(|_| {
+            #[cfg(test)]
+            if let Some(request) = &reservation.capacity {
+                request.event(crate::lifecycle::probe::capacity::Stage::PreparationBusy);
+            }
+            Error::Busy
+        })?;
         let engine = engine.upgrade().ok_or(Error::Unavailable)?;
         if !live.is_live() || Instant::now() >= reservation.deadline {
             return Err(Error::Unavailable);
@@ -220,6 +242,7 @@ mod tests {
         Reservation {
             permit: Arc::new(capacity.clone().try_acquire_owned().unwrap()),
             deadline: Instant::now() + Duration::from_secs(5),
+            capacity: None,
         }
     }
 
@@ -347,6 +370,72 @@ mod tests {
         assert!(live.is_live());
         assert_eq!(capacity.available_permits(), CAPACITY);
         assert_eq!(Arc::strong_count(&engine), 1);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    #[cfg(target_os = "linux")]
+    async fn capacity_context_crosses_real_preparation_and_cpu_owners_without_retaining_permits() {
+        use crate::lifecycle::probe::capacity::{self as evidence, Stage};
+        use crate::password::worker::Worker;
+        let tracker = Tracker::new();
+        let engine = Arc::new(7);
+        let capacity = Arc::new(Semaphore::new(CAPACITY));
+        let live = RuntimeLiveness::new();
+        live.probe.capacity.start(1, 16);
+        let mut reservation = reserve(&capacity);
+        let original_permit = Arc::downgrade(&reservation.permit);
+        reservation.capacity = live.probe.capacity.begin();
+        let active = tracker
+            .begin(&Arc::downgrade(&engine), &live, reservation)
+            .unwrap();
+        let worker_live = live.clone();
+        let receiver = tracker
+            .spawn(
+                active,
+                live.clone(),
+                move |_, permit, deadline| async move {
+                    assert!(
+                        evidence::capture().is_some(),
+                        "preparation lost its original context"
+                    );
+                    let mut worker = Worker::new(worker_live);
+                    let pending = worker.owned_preparation(deadline, permit, || 27).unwrap();
+                    let value = pending.result().await.unwrap().unwrap();
+                    while !worker.finished() {
+                        tokio::task::yield_now().await;
+                    }
+                    worker.shutdown().unwrap();
+                    Ok(value)
+                },
+            )
+            .unwrap();
+        let prepared = receiver.await.unwrap().unwrap();
+        assert_eq!(prepared.value, 27);
+        assert!(
+            live.probe.capacity.finish().is_err(),
+            "live prepared result was frozen"
+        );
+        drop(prepared);
+        tracker.close();
+        let settled = tracker.settle().await.unwrap();
+        assert!(!settled.failed);
+        assert!(
+            original_permit.upgrade().is_none(),
+            "evidence retained original admission"
+        );
+        assert_eq!(capacity.available_permits(), CAPACITY);
+        let rows = live.probe.capacity.finish().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(
+            rows[0]
+                .events
+                .iter()
+                .map(|event| event.stage)
+                .collect::<Vec<_>>(),
+            [Stage::Preparation, Stage::CpuWork]
+        );
+        assert!(rows[0].events[1].completed);
+        assert!(rows[0].events[1].cpu_time_ns.is_some());
     }
 
     #[tokio::test(flavor = "current_thread")]

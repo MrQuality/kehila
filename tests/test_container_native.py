@@ -11,6 +11,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import container_native as native
 from container_executor import LABEL
+import native_fixture_assets as assets
 from verification_budget import DeadlineExceeded, command_timeout, work_budget
 
 OWNER, RUNNER, DATABASE = 'a' * 32, 'b' * 64, 'c' * 64
@@ -32,6 +33,12 @@ def runner():
 
 
 class AdmissionTests(unittest.TestCase):
+    def test_calibration_cannot_enter_ordinary_or_nonserial_capacity_selection(self):
+        for kwargs in ({'capacity_calibration':True},
+                       {'capacity_cell':0,'capacity_calibration':True,'evidence_directory':Path('/external/new')},
+                       {'capacity_cell':15,'capacity_observer':'off','capacity_calibration':True,'evidence_directory':Path('/external/new')}):
+            with self.subTest(kwargs=kwargs),self.assertRaises(ValueError): native.check(None,**kwargs)
+
     def test_write_trace_requires_each_ordinal_in_exact_order_once(self):
         expected = ['kehila.operations INSERT', 'kehila_auth.pending_projects UPDATE']
         log = ('WARNING: NATIVE_WRITE 1 kehila.operations INSERT\n'
@@ -142,6 +149,73 @@ class CleanupTests(unittest.TestCase):
         temporary.start()
         self.addCleanup(temporary.stop)
 
+    def test_successful_export_precedes_reset_after_owned_database_cleanup(self):
+        class ExportExecutor(Executor):
+            def engine(self, *args, **kwargs):
+                if args[0] == 'cp' and args[1] == RUNNER + ':/work/native-authority':
+                    copied = Path(args[2])
+                    copied.mkdir()
+                    assets.write_owner(copied, OWNER)
+                    (copied / 'passed').write_text('complete', encoding='utf-8')
+                    assets.write_manifest(copied, OWNER)
+                elif args[0] == 'cp' and args[1] == RUNNER + ':/work/source.json':
+                    Path(args[2]).write_text('{}', encoding='utf-8')
+                return super().engine(*args, **kwargs)
+
+        executor = ExportExecutor()
+        destination = self.root / 'retained-cell'
+        native.check(executor, item_cases=('item-capacity',), evidence_directory=destination,
+                     reset_assets=True)
+        self.assertTrue((destination / 'item-capacity-observation.txt').is_file())
+        self.assertTrue((destination / 'postgres.log').is_file())
+        self.assertTrue((destination / 'source-sha256.json').is_file())
+        self.assertTrue((destination / 'runner-evidence' / assets.MANIFEST_FILE).is_file())
+        removal = next(i for i, args in enumerate(executor.events) if args[0] == 'rm')
+        manifest = next(i for i, args in enumerate(executor.events) if 'manifest' in args)
+        copied = next(i for i, args in enumerate(executor.events)
+                      if args[0] == 'cp' and args[1] == RUNNER + ':/work/native-authority')
+        reset = next(i for i, args in enumerate(executor.events) if 'reset' in args)
+        self.assertLess(removal, manifest)
+        self.assertLess(manifest, copied)
+        self.assertLess(copied, reset)
+        with self.assertRaises(ValueError):
+            native.check(executor, item_cases=('item-capacity',), evidence_directory=destination,
+                         reset_assets=True)
+
+    def test_unverified_export_cannot_reset_or_report_success(self):
+        executor = Executor()
+        destination = self.root / 'retained-cell'
+        with patch('builtins.print') as output, self.assertRaises((ValueError, OSError)):
+            native.check(executor, item_cases=('item-capacity',), evidence_directory=destination,
+                         reset_assets=True)
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+        self.assertFalse(any('reset' in args for args in executor.events))
+        self.assertFalse(any(str(call.args[0]).startswith('PASS:') for call in output.call_args_list))
+        self.assertTrue(any(self.root.glob('kehila-native-diagnostics-*')))
+
+    def test_failed_database_cleanup_cannot_export_success_or_reset_assets(self):
+        executor = Executor()
+        original = executor.engine
+        def fail_removal(*args, **kwargs):
+            result = original(*args, **kwargs)
+            if args[0] == 'rm':
+                raise subprocess.CalledProcessError(1, args)
+            return result
+        with patch.object(executor, 'engine', side_effect=fail_removal), self.assertRaises(subprocess.CalledProcessError):
+            native.check(executor, item_cases=('item-capacity',),
+                         evidence_directory=self.root / 'retained-cell', reset_assets=True)
+        self.assertFalse(any('reset' in args for args in executor.events))
+        self.assertFalse((self.root / 'retained-cell').exists())
+
+    def test_reset_and_export_admission_precedes_runtime(self):
+        for options in ({'reset_assets': True}, {'reset_assets': 1},
+                        {'evidence_directory': self.root},
+                        {'evidence_directory': Path('/public-source/retained-cell')}):
+            executor = Executor()
+            with self.subTest(options=options), self.assertRaises(ValueError):
+                native.check(executor, item_cases=('item-capacity',), **options)
+            self.assertEqual(executor.events, [])
+
     def test_focused_item_case_keeps_its_pristine_database_and_observer_only(self):
         executor = Executor()
         native.check(executor, item_cases=('item-read',))
@@ -192,6 +266,24 @@ class CleanupTests(unittest.TestCase):
             native.check(executor, item_cases=('item-retry',))
         self.assertFalse(any(str(call.args[0]).startswith('PASS:') for call in output.call_args_list))
         self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+
+    def test_capacity_validity_requires_its_isolated_database_and_independent_observer(self):
+        for fail in (False, True):
+            executor = Executor(fail_observer='/tmp/native_item_capacity_state.sql' if fail else None)
+            with self.subTest(observer_fails=fail), patch('builtins.print') as output:
+                if fail:
+                    with self.assertRaisesRegex(RuntimeError, 'item-capacity-independent-observer'):
+                        native.check(executor, item_cases=('item-capacity',))
+                    self.assertFalse(any(str(call.args[0]).startswith('PASS:') for call in output.call_args_list))
+                else:
+                    native.check(executor, item_cases=('item-capacity',))
+            self.assertEqual([args[-1] for args in executor.events if 'createdb' in args],
+                             ['native_item_capacity'])
+            invocation = next(i for i, args in enumerate(executor.events) if 'item-capacity' in args)
+            observer = next(i for i, args in enumerate(executor.events)
+                            if '/tmp/native_item_capacity_state.sql' in args and 'native_item_capacity' in args)
+            self.assertLess(invocation, observer)
+            self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
 
     def test_failed_write_observer_retains_failure_and_stops_before_later_cases(self):
         executor = Executor(fail_observer='/tmp/native_item_write_state.sql')
@@ -253,7 +345,7 @@ class CleanupTests(unittest.TestCase):
         self.assertEqual(removals, [('rm', '--force', '--volumes', DATABASE)])
         modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
                  for args in executor.events if 'scripts/native_authority_fixture.py' in args]
-        self.assertEqual(modes, ['prepare', 'item-write', 'item-read', 'item-pending', 'item-mutation', 'item-retry', 'journey', 'clock', 'restored',
+        self.assertEqual(modes, ['prepare', 'item-write', 'item-read', 'item-pending', 'item-mutation', 'item-retry', 'item-capacity', 'journey', 'clock', 'restored',
             'auth-expiry', 'auth-delivery', 'auth-unknown', 'auth-owned', 'auth-revoke', 'auth-fenced',
             'auth-read', 'auth-lifetime'])
 
@@ -286,7 +378,8 @@ class CleanupTests(unittest.TestCase):
                                  'item-read': '/tmp/native_item_read_state.sql',
                                  'item-pending': '/tmp/native_item_pending_state.sql',
                                  'item-mutation': '/tmp/native_item_mutation_state.sql',
-                                 'item-retry': '/tmp/native_item_retry_state.sql'}[mode]
+                                 'item-retry': '/tmp/native_item_retry_state.sql',
+                                 'item-capacity': '/tmp/native_item_capacity_state.sql'}[mode]
             creations = [i for i, args in enumerate(executor.events)
                          if args[0] == 'exec' and 'createdb' in args and args[-1] == database]
             invocations = [i for i, args in enumerate(executor.events)

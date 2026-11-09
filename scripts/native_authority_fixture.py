@@ -16,9 +16,11 @@ import subprocess
 import sys
 
 from verification_budget import command_timeout
+import native_fixture_assets as assets
+from capacity_plan import cell as planned_capacity_cell
 
 ROOT = Path(__file__).resolve().parents[1]
-WORK = Path('/work/native-authority')
+WORK = assets.WORK
 # Operating-deadline qualification uses optimized code; ordinary debug tests
 # remain in the shared matrix. Preparation and execution must select one profile.
 NATIVE_TEST_COMMAND = ('cargo', 'test', '--release', '--offline', '--locked',
@@ -39,15 +41,21 @@ ITEM_FIXTURES = {
     'item-pending': ('native_item_pending', 'native_item_pending_state.sql'),
     'item-mutation': ('native_item_mutation', 'native_item_mutation_state.sql'),
     'item-retry': ('native_item_retry', 'native_item_retry_state.sql'),
+    'item-capacity': ('native_item_capacity', 'native_item_capacity_state.sql'),
 }
 ITEM_DATABASES = {mode: database for mode, (database, _) in ITEM_FIXTURES.items()}
 ITEM_OBSERVERS = {mode: observer for mode, (_, observer) in ITEM_FIXTURES.items()}
+CAPACITY_MODE = 'capacity-cell'
+CAPACITY_DATABASE = 'native_capacity_cell'
+CAPACITY_OBSERVER = 'native_capacity_cell_state.sql'
 
 
-def prepare(seconds):
+def prepare(seconds, asset_owner=None):
     if os.name != 'posix' or WORK.exists() or ROOT == WORK or ROOT in WORK.parents:
         raise ValueError('Fresh external Linux fixture required')
     WORK.mkdir(mode=0o700)
+    if asset_owner is not None:
+        assets.write_owner(WORK, asset_owner)
     pg = WORK / 'postgres'
     pg.mkdir(mode=0o700)
     (WORK / 'controls').mkdir(mode=0o700)
@@ -100,11 +108,13 @@ def prepare(seconds):
 
 
 SPECS = {
+    CAPACITY_MODE: ('coordinator::jobs::tests::project::capacity::matrix::native_capacity_cell', 'capacity-cell-passed'),
     'item-write': ('coordinator::jobs::tests::project::item_writes::native_item_write_identity_and_rollback', 'item-write-passed'),
     'item-read': ('coordinator::jobs::tests::project::item_reads::native_authorized_item_reads', 'item-read-passed'),
     'item-pending': ('coordinator::jobs::tests::project::item_pending::native_pending_creation_lifecycle', 'item-pending-passed'),
     'item-mutation': ('coordinator::jobs::tests::project::item_mutations::native_item_mutation_execution_and_replay', 'item-mutation-passed'),
     'item-retry': ('coordinator::jobs::tests::project::item_retry::native_item_retry_exhaustion_and_recovery', 'item-retry-passed'),
+    'item-capacity': ('coordinator::jobs::tests::project::capacity::native_capacity_input_and_observer_validity', 'item-capacity-passed'),
     'journey': (TEST, 'passed'),
     'clock': (CLOCK_TEST, 'clock-passed'),
     'restored': (RESTORE_TEST, 'restore-passed'),
@@ -149,14 +159,25 @@ def failure_metadata(mode, returncode, summary, marker_required, marker_present)
             'public_panic_location': panic}
 
 
-def journey(seconds, mode='journey'):
+def journey(seconds, mode='journey', capacity_cell=None, capacity_observer='sampled', capacity_calibration=False):
     test, marker = SPECS[mode]
     controls = WORK / 'controls'
-    databases = {**AUTH_DATABASES, **ITEM_DATABASES}
+    databases = {**AUTH_DATABASES, **ITEM_DATABASES, CAPACITY_MODE: CAPACITY_DATABASE}
     if mode in databases:
         controls /= mode
         controls.mkdir(mode=0o700)
     environment = dict(os.environ, AUTH001_DB_CONTROLS=str(controls))
+    if mode == CAPACITY_MODE:
+        selected = planned_capacity_cell(capacity_cell)
+        if capacity_observer not in {'off', 'stages', 'sampled'}:
+            raise ValueError('Unknown capacity observation mode')
+        environment['KEHILA_NATIVE_CAPACITY_CELL_INDEX'] = str(selected.index)
+        environment['KEHILA_NATIVE_CAPACITY_OBSERVER'] = capacity_observer
+        if capacity_calibration and (selected.index != 15 or capacity_observer != 'sampled'):
+            raise ValueError('Calibration requires separate sampled serial-edit cell 15')
+        environment['KEHILA_NATIVE_CAPACITY_CALIBRATION'] = '1' if capacity_calibration else '0'
+    elif any(key in environment for key in ('KEHILA_NATIVE_CAPACITY_CELL_INDEX', 'KEHILA_NATIVE_CAPACITY_OBSERVER', 'KEHILA_NATIVE_CAPACITY_CALIBRATION')):
+        raise ValueError('Unexpected capacity fixture override')
     if mode in databases:
         environment['KEHILA_NATIVE_FIXTURE_DATABASE'] = databases[mode]
     elif 'KEHILA_NATIVE_FIXTURE_DATABASE' in environment:
@@ -199,15 +220,30 @@ def journey(seconds, mode='journey'):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['prepare', *SPECS])
+    parser.add_argument('mode', choices=['prepare', 'manifest', 'reset', *SPECS])
     parser.add_argument('--seconds', type=float, required=True)
+    parser.add_argument('--asset-owner')
+    parser.add_argument('--export-digest')
+    parser.add_argument('--capacity-cell-index', type=int)
+    parser.add_argument('--capacity-observer', choices=['off', 'stages', 'sampled'], default='sampled')
+    parser.add_argument('--capacity-calibration', action='store_true')
     args = parser.parse_args()
     if not math.isfinite(args.seconds) or args.seconds <= 0:
         parser.error('Positive command allowance required')
+    if args.mode != CAPACITY_MODE and (args.capacity_cell_index is not None or args.capacity_observer != 'sampled' or args.capacity_calibration):
+        parser.error('Capacity arguments require the dedicated capacity-cell mode')
+    if args.mode == CAPACITY_MODE and args.capacity_cell_index is None:
+        parser.error('Select one explicit finite capacity cell')
     if args.mode == 'prepare':
-        prepare(args.seconds)
+        prepare(args.seconds, args.asset_owner)
+    elif args.mode == 'manifest':
+        assets.write_manifest(WORK, args.asset_owner)
+        print('FIXTURE ASSETS: manifest recorded')
+    elif args.mode == 'reset':
+        assets.reset(args.asset_owner, args.export_digest)
+        print('FIXTURE ASSETS: generated workspace removed')
     else:
-        journey(args.seconds, args.mode)
+        journey(args.seconds, args.mode, args.capacity_cell_index, args.capacity_observer, args.capacity_calibration)
 
 
 if __name__ == '__main__':

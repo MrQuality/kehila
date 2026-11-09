@@ -148,6 +148,114 @@ separately from the victim's state; a final SQL observer checks durable history
 and authority release. These controls test provisional containment, not a
 supported contention capacity or latency guarantee.
 
+`--native-item item-capacity` selects an untimed input and observer validity
+control. It uses four separately authenticated sessions, the unchanged default
+project seed, and explicitly synthetic configurations with four or 128 text
+fields per item type. Today's project-creation UI/API seeds two text fields per
+type; the larger configurations are test-only capacity inputs, initialized
+through the existing fenced storage writer. They add no product configuration
+feature. The case checks full-field edits and exact reads, bounded request-stage
+observations, verified TLS, independent durable-state SQL and owned shutdown.
+
+Its four-request read burst retains submission rejections without retrying them.
+Successful responses must match their requested snapshots; HTTP 429 counts must
+agree with observed submission-queue rejection counts. The current nonblocking
+submission channel has one queued-message slot, separate from the sixteen-job
+admission limit. A separate untimed read checks recovery after the burst. Passing
+this control establishes input/observer validity, not a supported four-request
+capacity, latency result or completed capacity study. Timed workload results and
+their acceptance must be assessed separately.
+
+Linux test observations record elapsed wall time and OS-worker thread CPU time
+separately. Thread CPU intervals begin and end inside the same synchronous work
+closure; skipped work has no CPU measurement. Ordinary queue and storage spans
+have no CPU value. Incomplete work stays distinguishable during unwinding, and
+invalid numeric observations invalidate the cell. These controls do not establish
+clock calibration or negligible observer overhead.
+
+`scripts/container_capacity.py` is a separate opt-in finite batch coordinator.
+Run it from an exported public source snapshot with an explicit `--cell` index
+(repeat for multiple cells), `--output` pointing to a new external directory,
+and the same Podman machine/image settings as container verification. It compiles
+once, then runs each cell against a fresh owned database, retains its complete
+evidence and independent SQL witness, and removes only the verified generated
+fixture assets before the next cell. It does not enter the default CI matrix.
+`--oracle-control` also requires the first cell's SQL observer to reject a
+separately altered expected final field value before checking the original input.
+`--calibration --cell 15 --observer sampled` selects a separately labelled
+known-blocker run. Two additional edits are blocked in turn by an administrative
+actor-row lock and a project-row lock. The same sampling query must observe the
+known transaction edge and expected runtime query before rollback releases each
+edit. Exact request/state SQL includes both controls. This run qualifies known
+cause detection and release; its timed phase is excluded from the ordinary matrix.
+
+Indices 0 through 179 fix the Cartesian product, in order: compact/large profile,
+shared/independent projects, read/edit/mixed workload, concurrency 1/2/4/8/16,
+and repetition 1/2/3. Each cell has sixteen distinct items and four authenticated
+sessions rotated by original request ordinal. Compact values have four 64-byte
+text fields; large values have 128 1024-byte text fields. Ten warmup and 100
+measured requests retain every original outcome. A separate serial full-field
+edit checks progress after load. Setup, authentication pacing, reconciliation
+and that control are outside the measured-request population.
+
+Concurrency counts closed-loop HTTP requests to the application. Database work
+follows the existing serving topology. Every phase records client start/finish
+offsets on its shared clock, observed peak/mean overlap, and active item, project
+and session counts. Each client keeps one item slot, chosen from the first
+configured number of the sixteen seeded slots. Consequently, the independent
+layout exercises one/two active projects at concurrency one/two and all four at
+concurrency four or higher. The four-request target remains unqualified if the
+measured phase never observes four overlapping originals.
+
+The client latency boundary includes verified TLS, response-driver cleanup and
+result validation. Throughput uses the complete phase window, including request
+preparation and evidence encoding. Uncertain edits stop their item slot and
+reconcile the exact original identity after the phase; recovery does not replace
+a failed latency sample. The independent observer compares accepted request
+bytes, results, immutable revisions, final fields and project operation chains,
+and rejects unexpected payload retirement in these fresh cells.
+
+`--observer off`, `stages` and `sampled` select progressively enabled observations
+in the same test binary. Comparisons measure their incremental cost; disabling
+them does not remove every fixed test-instrumentation cost.
+
+`--compare-observers` runs all three modes for each explicitly selected cell,
+rotating their order across repetitions. Compare outcomes and accepted-work
+populations alongside latency and throughput; a fast rejected request does not
+establish cheap successful service. Serial all-success controls provide the
+cleanest matched-work comparison, while concurrent cases retain scheduler and
+capacity-outcome differences.
+
+Stage distributions
+have different populations and can overlap. Five-millisecond backend samples
+report observed waits and blockers, not exact wait durations or automatic
+actor/project attribution. These entry points alone do not establish an accepted
+capacity envelope or a completed observer-overhead qualification.
+Completed and incomplete stage-wall distributions remain separate; cancelled
+queue entries cannot stand in for completed queue waits.
+
+`scripts/capacity_report.py` reads explicitly selected export directories with
+`--observation` and their sibling receipts. Ordinary reports require all 180
+sampled cells exactly once. `--comparisons` also requires the complete expected
+cell set through repeated `--expected-cell` arguments, so omitting an entire
+workload group cannot produce a complete comparison report. Long invocations
+can use `@arguments-file`, with one argument per line. Keep input argument files
+and raw exports outside the checkout; `--output` creates a new report file.
+
+The report checks the retained manifest and the exact summary/profile/source/SQL
+inputs used in analysis, including their recorded raw-input hash references.
+It does not freshly hash every retained raw request or key file. It requires one
+observed source and resource profile, omits raw identities and private metadata,
+and retains success/failure populations and separate repetition percentiles.
+Its median repetition p95 is not a pooled request p95.
+
+The [2026-11-09 synthetic capacity observations](measurements/native-capacity-2026-11-09/README.md)
+record the complete 180-cell baseline, per-repetition outcomes, observer
+comparisons and measured target shortfalls. They preserve the declared workload,
+resource and sampling limits and document the retained-design disposition for
+constrained pre-MVP use. Measurement completion does not establish full
+application qualification or reliable four-request capacity.
+
 Focused execution supplies neither the other native journeys nor shared full
 verification. `--native-authority` and the default full runner retain their
 complete native sequence. Mocked controls cover selector orchestration; later

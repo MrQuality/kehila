@@ -313,6 +313,8 @@ impl Engine {
             self.check(deadline).map_err(AttemptFailure::Owner)?;
             entries.preparation()?;
             #[cfg(test)]
+            capacity::event(capacity::Stage::ItemPreparationAttempt);
+            #[cfg(test)]
             if watched {
                 self.live.probe.item_attempt_entry(
                     crate::lifecycle::probe::AttemptEntry::Preparation,
@@ -324,6 +326,8 @@ impl Engine {
             // are both gone before waiting for or entering the CPU lane.
             let preparation = {
                 #[cfg(test)]
+                let wait = capacity::span(capacity::Stage::PrepareMutex);
+                #[cfg(test)]
                 self.live
                     .probe
                     .record(crate::lifecycle::probe::Stage::NativeMutex);
@@ -333,6 +337,12 @@ impl Engine {
                 )
                 .await
                 .map_err(|_| AttemptFailure::Owner(Error::Unavailable))?;
+                #[cfg(test)]
+                if let Some(wait) = wait {
+                    wait.complete();
+                }
+                #[cfg(test)]
+                let service = capacity::span(capacity::Stage::PrepareService);
                 let binding = &entry.binding;
                 let mut transaction = database
                     .read_snapshot(
@@ -364,14 +374,19 @@ impl Engine {
                 if rollback.is_some() {
                     self.live.fail(crate::lifecycle::FatalCause::OwnedExecution)
                 }
-                match (result, rollback) {
+                let preparation = match (result, rollback) {
                     (Err(primary), rollback) => {
                         self.item_native_failure(&primary);
                         return Err(AttemptFailure::Preparation { primary, rollback });
                     }
                     (Ok(_), Some(error)) => return Err(AttemptFailure::Cleanup(error)),
                     (Ok(preparation), None) => preparation,
+                };
+                #[cfg(test)]
+                if let Some(service) = service {
+                    service.complete();
                 }
+                preparation
             };
             let draft = match preparation {
                 ItemPreparation::Resolved(value) => return Ok(AttemptOutcome::Resolved(value)),
@@ -421,6 +436,8 @@ impl Engine {
             }
             entries.write()?;
             #[cfg(test)]
+            capacity::event(capacity::Stage::ItemWriteAttempt);
+            #[cfg(test)]
             if watched {
                 self.live.probe.item_attempt_entry(
                     crate::lifecycle::probe::AttemptEntry::Write,
@@ -429,6 +446,8 @@ impl Engine {
                 );
             }
             let written = {
+                #[cfg(test)]
+                let wait = capacity::span(capacity::Stage::WriteMutex);
                 #[cfg(test)]
                 self.live
                     .probe
@@ -439,6 +458,12 @@ impl Engine {
                 )
                 .await
                 .map_err(|_| AttemptFailure::Owner(Error::Unavailable))?;
+                #[cfg(test)]
+                if let Some(wait) = wait {
+                    wait.complete();
+                }
+                #[cfg(test)]
+                let service = capacity::span(capacity::Stage::WriteService);
                 let binding = &entry.binding;
                 let transaction = database
                     .fenced_item_write(
@@ -488,6 +513,8 @@ impl Engine {
                     }
                     ItemSaveOutcome::Reprepare(identity) => {
                         #[cfg(test)]
+                        capacity::event(capacity::Stage::Reprepare);
+                        #[cfg(test)]
                         if watched {
                             self.live.probe.item_attempt_entry(
                                 crate::lifecycle::probe::AttemptEntry::Reprepare,
@@ -509,6 +536,10 @@ impl Engine {
                         Written::Conflict(value)
                     }
                 };
+                #[cfg(test)]
+                if let Some(service) = service {
+                    service.complete();
+                }
                 transition
             };
             // No old transaction, packet, reply or mutex guard survives a retry.

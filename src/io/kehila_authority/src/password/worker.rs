@@ -404,15 +404,31 @@ impl Worker {
         let (sender, receiver) = oneshot::channel();
         #[cfg(test)]
         let hold = self.exit_hold.take();
+        #[cfg(test)]
+        let capacity = crate::lifecycle::probe::capacity::capture();
         let job = Box::new(move || {
             let result = if control.allowed() {
+                #[cfg(all(test, target_os = "linux"))]
+                let elapsed = capacity.as_ref().map(|request| request.cpu_span());
+                #[cfg(all(test, not(target_os = "linux")))]
+                let elapsed = capacity
+                    .as_ref()
+                    .map(|request| request.span(crate::lifecycle::probe::capacity::Stage::CpuWork));
                 let value = work(&control);
+                #[cfg(test)]
+                if let Some(elapsed) = elapsed {
+                    elapsed.complete();
+                }
                 if control.allowed() {
                     Ok(value)
                 } else {
                     Err(WorkerError::Expired)
                 }
             } else {
+                #[cfg(test)]
+                if let Some(request) = &capacity {
+                    request.event(crate::lifecycle::probe::capacity::Stage::CpuSkipped);
+                }
                 Err(WorkerError::Expired)
             };
             // A cancelled receiver discards and drops the owned result; it does
@@ -508,6 +524,91 @@ mod tests {
 
     fn deadline() -> Instant {
         Instant::now() + Duration::from_secs(3)
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test(flavor = "current_thread")]
+    async fn capacity_records_actual_worker_thread_cpu_separately_from_wall_time() {
+        use crate::lifecycle::probe::capacity::{self as evidence, Stage};
+        let live = RuntimeLiveness::new();
+        live.probe.capacity.start(1, 8);
+        let context = live.probe.capacity.begin();
+        let mut owner = Worker::new(live.clone());
+        let pending = evidence::scope(context, async {
+            owner.start(deadline(), |_| {
+                let mut checksum = std::hint::black_box(1_u64);
+                for index in 0..100_000 {
+                    checksum = std::hint::black_box(
+                        checksum
+                            .wrapping_mul(6_364_136_223_846_793_005)
+                            .wrapping_add(index),
+                    );
+                }
+                checksum
+            })
+        })
+        .await
+        .unwrap();
+        assert_ne!(pending.result().await.unwrap(), 1);
+        while !owner.finished() {
+            tokio::task::yield_now().await;
+        }
+        owner.shutdown().unwrap();
+        let rows = live.probe.capacity.finish().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].events.len(), 1);
+        let work = &rows[0].events[0];
+        assert_eq!(work.stage, Stage::CpuWork);
+        assert!(work.completed);
+        assert!(work.duration_ns.is_some());
+        assert!(
+            work.cpu_time_ns.is_some_and(|cpu| cpu > 0),
+            "actual worker CPU time was not measured"
+        );
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn capacity_does_not_report_cpu_work_when_original_caller_cancels_before_start() {
+        use crate::lifecycle::probe::capacity::{self as evidence, Stage};
+        let live = RuntimeLiveness::new();
+        live.probe.capacity.start(1, 8);
+        let context = live.probe.capacity.begin();
+        let ran = Arc::new(AtomicUsize::new(0));
+        let observed = ran.clone();
+        let mut worker = Worker::new(live.clone());
+        evidence::scope(context, async {
+            let (release, gate) = mpsc::channel();
+            let pending = worker
+                .start_with(
+                    deadline(),
+                    move |_| {
+                        observed.fetch_add(1, Ordering::SeqCst);
+                    },
+                    move |job| {
+                        thread::Builder::new().spawn(move || {
+                            gate.recv_timeout(Duration::from_secs(2)).unwrap();
+                            job();
+                        })
+                    },
+                )
+                .unwrap();
+            drop(pending); // Real receiver abandonment cancels the original work.
+            release.send(()).unwrap();
+            worker.join_active().unwrap();
+        })
+        .await;
+        assert_eq!(ran.load(Ordering::SeqCst), 0);
+        let rows = live.probe.capacity.finish().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(
+            rows[0]
+                .events
+                .iter()
+                .map(|event| event.stage)
+                .collect::<Vec<_>>(),
+            [Stage::CpuSkipped]
+        );
+        assert!(rows[0].events[0].cpu_time_ns.is_none());
     }
 
     #[tokio::test(flavor = "current_thread")]

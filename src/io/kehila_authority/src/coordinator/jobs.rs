@@ -32,6 +32,10 @@ struct Message {
     deadline: Instant,
     reply: oneshot::Sender<Response>,
     permit: Arc<OwnedSemaphorePermit>,
+    #[cfg(test)]
+    capacity: Option<capacity::Request>,
+    #[cfg(test)]
+    queued: Option<capacity::Span>,
 }
 
 pub(crate) struct Response {
@@ -39,6 +43,8 @@ pub(crate) struct Response {
     deadline: Instant,
     live: Arc<RuntimeLiveness>,
     _permit: Arc<OwnedSemaphorePermit>,
+    #[cfg(test)]
+    _capacity: Option<capacity::Request>,
 }
 impl Response {
     // Borrowing preserves the accounted reply/credential lifetime. Adapters
@@ -95,18 +101,38 @@ impl Handle {
     }
 
     fn reserve(&self, deadline: Instant) -> Result<Reservation, Error> {
+        #[cfg(test)]
+        let capacity = self.live.probe.capacity.begin();
+        #[cfg(test)]
+        if let Some(request) = &capacity {
+            request.event(capacity::Stage::Admission);
+        }
         let now = Instant::now();
         if !self.live.is_live() || now >= deadline {
+            #[cfg(test)]
+            if let Some(request) = &capacity {
+                request.event(capacity::Stage::AdmissionUnavailable);
+            }
             return Err(Error::Unavailable);
         }
         let deadline = deadline.min(now.checked_add(WORK_DEADLINE).ok_or(Error::Unavailable)?);
-        let permit = Arc::new(
-            self.capacity
-                .clone()
-                .try_acquire_owned()
-                .map_err(|_| Error::Busy)?,
-        );
-        Ok(Reservation { permit, deadline })
+        let permit = Arc::new(self.capacity.clone().try_acquire_owned().map_err(|_| {
+            #[cfg(test)]
+            if let Some(request) = &capacity {
+                request.event(capacity::Stage::AdmissionBusy);
+            }
+            Error::Busy
+        })?);
+        #[cfg(test)]
+        if let Some(request) = &capacity {
+            request.event(capacity::Stage::AdmissionAccepted);
+        }
+        Ok(Reservation {
+            permit,
+            deadline,
+            #[cfg(test)]
+            capacity,
+        })
     }
 
     fn submit_reserved(
@@ -114,20 +140,48 @@ impl Handle {
         operation: Operation,
         reservation: Reservation,
     ) -> Result<oneshot::Receiver<Response>, Error> {
+        #[cfg(test)]
+        let capacity = reservation.capacity.clone();
         if !self.live.is_live() || Instant::now() >= reservation.deadline {
+            #[cfg(test)]
+            if let Some(request) = &capacity {
+                request.event(capacity::Stage::SubmissionUnavailable);
+            }
             return Err(Error::Unavailable);
         }
         let (reply, receiver) = oneshot::channel();
+        #[cfg(test)]
+        if let Some(request) = &capacity {
+            request.event(capacity::Stage::Submission);
+        }
         self.sender
             .try_send(Message {
                 operation,
                 deadline: reservation.deadline,
                 reply,
                 permit: reservation.permit,
+                #[cfg(test)]
+                queued: capacity
+                    .as_ref()
+                    .map(|request| request.span(capacity::Stage::Queue)),
+                #[cfg(test)]
+                capacity: capacity.clone(),
             })
             .map_err(|error| match error {
-                mpsc::error::TrySendError::Full(_) => Error::Busy,
-                mpsc::error::TrySendError::Closed(_) => Error::Unavailable,
+                mpsc::error::TrySendError::Full(_) => {
+                    #[cfg(test)]
+                    if let Some(request) = &capacity {
+                        request.event(capacity::Stage::SubmissionBusy);
+                    }
+                    Error::Busy
+                }
+                mpsc::error::TrySendError::Closed(_) => {
+                    #[cfg(test)]
+                    if let Some(request) = &capacity {
+                        request.event(capacity::Stage::SubmissionUnavailable);
+                    }
+                    Error::Unavailable
+                }
             })?;
         #[cfg(test)]
         self.live
@@ -247,13 +301,24 @@ impl Owner {
                     let permit = message.permit.clone();
                     let task = self.jobs.spawn(async move {
                         let mut failure = StopOnAbandonment { live: engine.live.clone(), completed: false };
-                        let result = engine.execute(message.operation, Execution{deadline:message.deadline,permit:Arc::clone(&message.permit)}).await;
+                        #[cfg(test)]
+                        if let Some(queued) = message.queued { queued.complete(); }
+                        let work = async {
+                            #[cfg(test)]
+                            capacity::event(capacity::Stage::Execution);
+                            engine.execute(message.operation, Execution{deadline:message.deadline,permit:Arc::clone(&message.permit)}).await
+                        };
+                        #[cfg(test)]
+                        let result = capacity::scope(message.capacity.clone(), work).await;
+                        #[cfg(not(test))]
+                        let result = work.await;
                         let result = if engine.check(message.deadline).is_ok()
                             || matches!(result, Err(Error::AuditUnconfirmed | Error::OtherAuditUnconfirmed
                                 | Error::Project(crate::project::Failure::OutcomeUnknown))) { result }
                                      else { drop(result); Err(Error::Unavailable) };
                         let _ = message.reply.send(Response { result, deadline: message.deadline,
-                            live: engine.live.clone(), _permit: message.permit });
+                            live: engine.live.clone(), _permit: message.permit,
+                            #[cfg(test)] _capacity: message.capacity });
                         failure.completed = true;
                     });
                     self.slots.push((task.id(), permit));
