@@ -140,7 +140,6 @@ impl Collector {
             .into_iter()
             .map(|request| {
                 Arc::try_unwrap(request.row)
-                    .ok()
                     .expect("capacity owner changed")
                     .into_inner()
                     .unwrap()
