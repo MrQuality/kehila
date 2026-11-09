@@ -223,6 +223,21 @@ report observed waits and blockers, not exact wait durations or automatic
 actor/project attribution. These entry points alone do not establish an accepted
 capacity envelope or a completed observer-overhead qualification.
 
+`scripts/capacity_report.py` reads explicitly selected export directories with
+`--observation` and their sibling receipts. Ordinary reports require all 180
+sampled cells exactly once. `--comparisons` also requires the complete expected
+cell set through repeated `--expected-cell` arguments, so omitting an entire
+workload group cannot produce a complete comparison report. Long invocations
+can use `@arguments-file`, with one argument per line. Keep input argument files
+and raw exports outside the checkout; `--output` creates a new report file.
+
+The report checks the retained manifest and the exact summary/profile/source/SQL
+inputs used in analysis, including their recorded raw-input hash references.
+It does not freshly hash every retained raw request or key file. It requires one
+observed source and resource profile, omits raw identities and private metadata,
+and retains success/failure populations and separate repetition percentiles.
+Its median repetition p95 is not a pooled request p95.
+
 Focused execution supplies neither the other native journeys nor shared full
 verification. `--native-authority` and the default full runner retain their
 complete native sequence. Mocked controls cover selector orchestration; later

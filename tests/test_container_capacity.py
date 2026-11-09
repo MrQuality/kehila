@@ -43,8 +43,10 @@ class CapacityBatchTests(unittest.TestCase):
                 self.assertEqual(kwargs['capacity_observer'], 'sampled')
                 self.assertEqual(kwargs['capacity_oracle_control'], index == 0)
                 return {'cell_index': index, 'reset_completed': True}
-            with patch.object(capacity, 'check', side_effect=check):
+            with patch.object(capacity, 'check', side_effect=check), patch.object(capacity,'read_measurement',
+                    return_value={'source_sha256':'a'*64,'environment':{}}) as read:
                 capacity.batch(executor, select([1, 0]), 'sampled', output, oracle_control=True)
+            self.assertEqual(read.call_count,2)
             self.assertEqual([event[0] for event in executor.events], ['compile', 'finish', 'verify', 'verify'])
             self.assertEqual(json.loads((output / 'batch-complete.json').read_text())['cells'], [0, 1])
 
@@ -54,7 +56,8 @@ class CapacityBatchTests(unittest.TestCase):
             def check(executor, **kwargs):
                 if kwargs['capacity_cell'] == 1: raise RuntimeError('independent state failed')
                 return {'cell_index': 0}
-            with patch.object(capacity, 'check', side_effect=check), self.assertRaises(RuntimeError):
+            with patch.object(capacity, 'check', side_effect=check), patch.object(capacity,'read_measurement',
+                    return_value={'source_sha256':'a'*64,'environment':{}}), self.assertRaises(RuntimeError):
                 capacity.batch(Executor(), select([0, 1, 2]), 'off', output)
             self.assertTrue((output / 'cell-000-receipt.json').exists())
             self.assertFalse((output / 'batch-complete.json').exists())

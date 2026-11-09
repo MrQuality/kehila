@@ -8,6 +8,8 @@ import sys
 import time
 
 from capacity_plan import select
+from capacity_report import read_measurement
+from capacity_results import canonical, require
 from cleanup_errors import run_main
 from container_executor import ContainerExecutor, image_reference
 from container_native import check
@@ -66,6 +68,7 @@ def batch(executor, selected, observer, output, *, oracle_control=False, calibra
               'oracle_control_first_cell': oracle_control})
     executor.execute([*NATIVE_TEST_COMMAND, '--no-run'])
     executor.finish_builds()
+    baseline = None
     for offset, (entry, mode) in enumerate(jobs):
         label = ('calibration-' if calibration else '') + f'cell-{entry.index:03d}' + ('-' + mode if compare else '')
         started = time.monotonic_ns()
@@ -73,7 +76,13 @@ def batch(executor, selected, observer, output, *, oracle_control=False, calibra
                         capacity_oracle_control=oracle_control and offset == 0,
                         capacity_calibration=calibration,
                         evidence_directory=output / label, reset_assets=True)
-        write_new(output / (label + '-receipt.json'), receipt)
+        receipt_path = output / (label + '-receipt.json')
+        write_new(receipt_path, receipt)
+        if not calibration:
+            measured = read_measurement(output / label, receipt_path)
+            binding = (measured['source_sha256'],canonical(measured['environment']))
+            if baseline is None: baseline = binding
+            require(binding == baseline, 'Capacity batch source or observed environment changed')
         write_new(output / (label + '-controller.json'),
                   {'schema': 1, 'cell_index': entry.index,
                    'seconds_through_export_and_reset': (time.monotonic_ns() - started) / 1e9})
