@@ -4,6 +4,7 @@ The caller owns provider supervision. This child owns its PostgreSQL dependency
 and removes it before its namespace-owning runner can be removed.
 """
 import json
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 import re
@@ -16,7 +17,11 @@ from check_postgresql import IMAGE
 from cleanup_errors import retain_cleanup_failure
 from container_executor import LABEL, one_object
 from verification_budget import cleanup_time, command_timeout
-from native_authority_fixture import AUTH_DATABASES, ITEM_DATABASES, ITEM_OBSERVERS
+from native_authority_fixture import (AUTH_DATABASES, ITEM_DATABASES, ITEM_OBSERVERS,
+    CAPACITY_MODE, CAPACITY_DATABASE, CAPACITY_OBSERVER)
+from native_fixture_assets import write_owner, write_manifest, verify_export, MANIFEST_FILE
+from capacity_plan import cell as planned_capacity_cell
+from capacity_results import canonical
 
 
 @dataclass(frozen=True)
@@ -97,20 +102,56 @@ def selected_item_cases(cases):
     return tuple(case for case in ITEM_DATABASES if case in cases)
 
 
-def check(executor, *, item_cases=None):
+def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=False,
+          capacity_cell=None, capacity_observer='sampled', capacity_oracle_control=False,
+          capacity_calibration=False):
+    require(type(capacity_oracle_control) is bool, 'Capacity oracle control must be boolean')
+    require(type(capacity_calibration) is bool, 'Capacity calibration selector must be boolean')
+    selected_cell = None
+    if capacity_cell is not None:
+        require(item_cases is None and evidence_directory is not None,
+                'Select one explicit capacity cell with complete external evidence retention')
+        selected_cell = planned_capacity_cell(capacity_cell)
+        require(capacity_observer in {'off', 'stages', 'sampled'}, 'Unknown capacity observation mode')
+        require(not capacity_calibration or (capacity_cell == 15 and capacity_observer == 'sampled'),
+                'Known-blocker calibration requires separate sampled serial-edit cell 15')
+    else:
+        require(capacity_observer == 'sampled' and not capacity_oracle_control and not capacity_calibration,
+                'Capacity controls require the dedicated cell selector')
     item_cases = selected_item_cases(item_cases)
-    items = ITEM_DATABASES if item_cases is None else {
-        case: ITEM_DATABASES[case] for case in item_cases}
+    full = item_cases is None and selected_cell is None
+    require(type(reset_assets) is bool, 'Fixture reset selection must be boolean')
+    require(not reset_assets or evidence_directory is not None,
+            'Generated fixture reset requires complete external evidence retention')
+    destination = None
+    if evidence_directory is not None:
+        destination = Path(evidence_directory)
+        require(destination.is_absolute() and not destination.exists()
+                and destination.resolve() == destination
+                and destination != executor.source and executor.source not in destination.parents
+                and destination not in executor.source.parents
+                and destination.parent.is_dir(),
+                'Native evidence destination must be fresh and outside the source snapshot')
+        require(not any((parent / '.git').exists() for parent in (destination, *destination.parents)),
+                'Native evidence destination must be outside Git checkouts')
+    items = ({CAPACITY_MODE: CAPACITY_DATABASE} if selected_cell is not None else
+             ITEM_DATABASES if full else {case: ITEM_DATABASES[case] for case in item_cases})
+    observers = {CAPACITY_MODE: CAPACITY_OBSERVER} if selected_cell is not None else ITEM_OBSERVERS
     require(executor.build_network_detached, 'Disconnect build networking before native verification')
-    admit_runner(executor.inspect_container(executor.container), executor.container, executor.owner)
+    runner_info = executor.inspect_container(executor.container)
+    admit_runner(runner_info, executor.container, executor.owner)
     root = Path(tempfile.gettempdir()).resolve()
     require(root != executor.source and executor.source not in root.parents,
             'Native diagnostic storage must be outside the source snapshot')
     require(not any((parent / '.git').exists() for parent in (root, *root.parents)),
             'Native diagnostic storage must be outside Git checkouts')
     folder = Path(tempfile.mkdtemp(prefix='kehila-native-diagnostics-', dir=root)).resolve()
-    selection = {'scope': 'full-native' if item_cases is None else 'focused-items',
+    write_owner(folder, executor.owner)
+    receipt = None
+    selection = {'scope': 'capacity-cell' if selected_cell is not None else 'full-native' if full else 'focused-items',
                  'selected_items': list(items), 'observed_items': []}
+    if selected_cell is not None:
+        selection.update(plan=selected_cell.document(), observer=capacity_observer, calibration=capacity_calibration)
     (folder / 'selection.json').write_text(json.dumps(selection), encoding='utf-8')
     print('NATIVE SCOPE:', selection['scope'], ', '.join(items), flush=True)
     name = executor.name + '-native-db'
@@ -137,11 +178,22 @@ def check(executor, *, item_cases=None):
         return control('exec', name, 'psql', '-X', '-U', 'postgres', '-d', database,
                        *(['-q', '-A', '-t'] if tuples else []), '-v', 'ON_ERROR_STOP=1', '-f', file)
 
+    def retain_failure(error, location, evidence_name):
+        try:
+            (folder / 'failure-stage.txt').write_text(location, encoding='ascii')
+        except BaseException as metadata_error:
+            retain_cleanup_failure(error, metadata_error, 'native failure-stage retention')
+        try:
+            with cleanup_time():
+                control('cp', executor.container + ':/work/native-authority', str(folder / evidence_name))
+        except BaseException as evidence_error:
+            retain_cleanup_failure(error, evidence_error, 'native diagnostic collection')
+
     try:
         work(['python', '-c', "from pathlib import Path; assert {line.split(':')[0].strip() "
               "for line in Path('/proc/net/dev').read_text().splitlines() if ':' in line} == {'lo'}"])
         work(['python', 'scripts/native_authority_fixture.py', 'prepare', '--seconds',
-              str(executor.settings['command_seconds'])])
+              str(executor.settings['command_seconds']), '--asset-owner', executor.owner])
         control('cp', executor.container + ':/work/native-authority/postgres', str(folder / 'postgres'))
         stage, attempted = 'database-create', True
         identity = control('create', '--pull=never', '--name', name, '--label', LABEL + '=' + executor.owner,
@@ -157,13 +209,28 @@ def check(executor, *, item_cases=None):
             '-c ssl_key_file=/tmp/kehila-native/server-key.pem -c listen_addresses=127.0.0.1').strip()
         info = one_object(control('inspect', '--type', 'container', identity))
         admit_database(info, identity, executor.container, executor.owner, name)
+        host = info['HostConfig']
+        (folder / 'execution-profile.json').write_text(json.dumps({
+            'schema': 1, 'owner': executor.owner, 'runner_identity': executor.container,
+            'runner_image': runner_info.get('Image', runner_info['Config'].get('Image')),
+            'runner_memory_bytes': runner_info['HostConfig'].get('Memory'),
+            'runner_pids': runner_info['HostConfig'].get('PidsLimit'),
+            'runner_nano_cpus': runner_info['HostConfig'].get('NanoCpus', 0),
+            'runner_cpu_period': runner_info['HostConfig'].get('CpuPeriod', 0),
+            'runner_cpu_quota': runner_info['HostConfig'].get('CpuQuota', 0),
+            'database_identity': identity, 'database_image': info['Config']['Image'],
+            'database_memory_bytes': host['Memory'], 'database_pids': host['PidsLimit'],
+            'database_nano_cpus': host.get('NanoCpus', 0),
+            'database_cpu_period': host.get('CpuPeriod', 0),
+            'database_cpu_quota': host.get('CpuQuota', 0), 'database_tmpfs': host['Tmpfs'],
+        }, sort_keys=True), encoding='utf-8')
         control('cp', str(folder / 'postgres'), identity + ':/tmp/kehila-native')
         control('cp', str(executor.source / 'storage/postgresql'), identity + ':/tmp/kehila-schema')
         control('cp', str(executor.source / 'tests/integration/native_authority_state.sql'),
                 identity + ':/tmp/native-authority-state.sql')
         control('cp', str(executor.source / 'tests/integration/native_clock_state.sql'),
                 identity + ':/tmp/native-clock-state.sql')
-        for file in ('native_copy_snapshot.sql', 'native_restored_state.sql', 'native_auth_fixture_state.sql', *ITEM_OBSERVERS.values()):
+        for file in ('native_copy_snapshot.sql', 'native_restored_state.sql', 'native_auth_fixture_state.sql', *observers.values()):
             control('cp', str(executor.source / 'tests/integration' / file), identity + ':/tmp/' + file)
         stage = 'database-start'
         control('start', identity)
@@ -186,7 +253,7 @@ def check(executor, *, item_cases=None):
         stage = 'pristine-isolated-fixtures'
         baseline = "DO $$ BEGIN IF EXISTS (SELECT FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid()) OR EXISTS (SELECT FROM kehila.projects) OR (SELECT runtime_generation FROM kehila_auth.installation)<>0 OR (SELECT auth_generation<>1 OR verifier_revision<>1 FROM kehila_auth.owner_credentials) THEN RAISE EXCEPTION 'pristine quiescent fixture required'; END IF; END $$;"
         control('exec', identity, 'psql', '-X', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', baseline)
-        databases = (*AUTH_DATABASES.values(), *items.values()) if item_cases is None else items.values()
+        databases = (*AUTH_DATABASES.values(), *items.values()) if full else items.values()
         for database in databases:
             control('exec', identity, 'createdb', '-U', 'postgres', '--owner=kehila_owner',
                     '--template=postgres', database)
@@ -197,14 +264,54 @@ def check(executor, *, item_cases=None):
         # all isolated databases above were copied before any runtime started.
         for mode, database in items.items():
             stage = mode
-            work(['python', 'scripts/native_authority_fixture.py', mode, '--seconds',
-                  str(executor.settings['command_seconds'])])
+            command = ['python', 'scripts/native_authority_fixture.py', mode, '--seconds',
+                       str(executor.settings['command_seconds'])]
+            if selected_cell is not None:
+                command += ['--capacity-cell-index', str(selected_cell.index), '--capacity-observer', capacity_observer]
+                if capacity_calibration: command.append('--capacity-calibration')
+            work(command)
+            if selected_cell is not None:
+                stage = 'capacity-client-lineage'
+                controls = '/work/native-authority/controls/' + CAPACITY_MODE
+                command = ['python', 'scripts/capacity_results.py', '--work', controls + '/matrix-work.json',
+                           '--owned', controls + '/matrix-owned.json', '--cell', str(selected_cell.index),
+                           '--observer', capacity_observer, '--output', controls]
+                if capacity_oracle_control: command.append('--negative-control')
+                if capacity_calibration: command.append('--calibration')
+                work(command)
+                control('cp', executor.container + ':' + controls + '/matrix-summary.json', str(folder / 'capacity-summary.json'))
+                summary = json.loads((folder / 'capacity-summary.json').read_text(encoding='utf-8'))
+                require(type(summary.get('schema')) is int and summary['schema'] == 1
+                        and canonical(summary['plan']) == canonical(selected_cell.document())
+                        and summary['observer'] == capacity_observer and summary['calibration'] is capacity_calibration,
+                        'Capacity consumer returned another workload')
+                if capacity_oracle_control:
+                    stage = 'capacity-oracle-negative-control'
+                    control('cp', executor.container + ':' + controls + '/matrix-negative-expectations.jsonl',
+                            str(folder / 'capacity-negative-expectations.jsonl'))
+                    control('cp', str(folder / 'capacity-negative-expectations.jsonl'), identity + ':/tmp/native-capacity-expectations.jsonl')
+                    try:
+                        executor.engine('exec', name, 'psql', '-X', '-U', 'postgres', '-d', database,
+                            '-v', 'ON_ERROR_STOP=1', '-f', '/tmp/' + CAPACITY_OBSERVER, capture=True)
+                    except subprocess.CalledProcessError as rejected:
+                        observed = (rejected.stdout or '') + (rejected.stderr or '')
+                        (folder / 'capacity-oracle-negative-control.txt').write_text(observed, encoding='utf-8')
+                        require('capacity final state mismatch' in observed,
+                                'Capacity negative control failed before the intended state comparison')
+                    else:
+                        raise ValueError('Capacity SQL accepted an incorrect expected final field value')
+                stage = 'capacity-expectations-transfer'
+                control('cp', executor.container + ':' + controls + '/matrix-expectations.jsonl',
+                        str(folder / 'capacity-expectations.jsonl'))
+                require(hashlib.sha256((folder / 'capacity-expectations.jsonl').read_bytes()).hexdigest()
+                        == summary['expectations_sha256'], 'Capacity expectation transfer differs')
+                control('cp', str(folder / 'capacity-expectations.jsonl'), identity + ':/tmp/native-capacity-expectations.jsonl')
             stage = mode + '-independent-observer'
             (folder / (mode + '-observation.txt')).write_text(
-                psql('/tmp/' + ITEM_OBSERVERS[mode], database), encoding='utf-8')
+                psql('/tmp/' + observers[mode], database), encoding='utf-8')
             selection['observed_items'].append(mode)
             (folder / 'selection.json').write_text(json.dumps(selection), encoding='utf-8')
-        if item_cases is None:
+        if full:
             stage = 'journey'
             work(['python', 'scripts/native_authority_fixture.py', 'journey', '--seconds',
                   str(executor.settings['command_seconds'])])
@@ -278,14 +385,9 @@ def check(executor, *, item_cases=None):
                     psql('/tmp/native_auth_fixture_state.sql', database), encoding='utf-8')
     except BaseException as error:
         failure = error
-        (folder / 'failure-stage.txt').write_text(stage, encoding='ascii')
         # Copy failure evidence without printing its contents or installing any
         # trust. The caller may retain this external directory privately.
-        try:
-            with cleanup_time():
-                control('cp', executor.container + ':/work/native-authority', str(folder / 'runner-evidence'))
-        except BaseException as evidence_error:
-            retain_cleanup_failure(error, evidence_error, 'native diagnostic collection')
+        retain_failure(error, stage, 'runner-evidence')
         raise
     finally:
         try:
@@ -309,13 +411,47 @@ def check(executor, *, item_cases=None):
                 retain_cleanup_failure(failure, error, 'native PostgreSQL')
             else:
                 failure = error
+                retain_failure(error, 'owned-database-cleanup', 'runner-evidence')
                 raise
         finally:
             if failure is None:
-                require(folder.parent == root and folder.name.startswith('kehila-native-diagnostics-'),
-                        'Refusing cleanup outside allocated diagnostics directory')
-                shutil.rmtree(folder)
-    if item_cases is None:
+                try:
+                    if destination is not None:
+                        stage = 'evidence-manifest'
+                        work(['python', 'scripts/native_authority_fixture.py', 'manifest', '--seconds',
+                              str(executor.settings['command_seconds']), '--asset-owner', executor.owner])
+                        control('cp', executor.container + ':/work/native-authority', str(folder / 'runner-evidence'))
+                        control('cp', executor.container + ':/work/source.json', str(folder / 'source-sha256.json'))
+                        asset_digest = hashlib.sha256(
+                            (folder / 'runner-evidence' / MANIFEST_FILE).read_bytes()).hexdigest()
+                        verify_export(folder / 'runner-evidence', executor.owner, asset_digest)
+                        evidence_digest = write_manifest(folder, executor.owner)
+                        stage = 'evidence-export'
+                        shutil.copytree(folder, destination)
+                        verify_export(destination, executor.owner, evidence_digest)
+                        receipt = {'schema': 1, 'evidence_sha256': evidence_digest,
+                                   'asset_sha256': asset_digest, 'selected_items': list(items),
+                                   'reset_completed': False}
+                        if selected_cell is not None:
+                            receipt.update(cell_index=selected_cell.index, observer=capacity_observer,
+                                           calibration=capacity_calibration,
+                                           independent_state_verified=True, oracle_negative_control=capacity_oracle_control)
+                    if reset_assets:
+                        stage = 'generated-assets-reset'
+                        work(['python', 'scripts/native_authority_fixture.py', 'reset', '--seconds',
+                              str(executor.settings['command_seconds']), '--asset-owner', executor.owner,
+                              '--export-digest', receipt['asset_sha256']])
+                        receipt['reset_completed'] = True
+                    require(folder.parent == root and folder.name.startswith('kehila-native-diagnostics-'),
+                            'Refusing cleanup outside allocated diagnostics directory')
+                    shutil.rmtree(folder)
+                except BaseException as error:
+                    retain_failure(error, stage, 'runner-evidence-after-export-failure')
+                    raise
+    if full:
         print('PASS: native durable cardinalities, identity coherence and owned cleanup')
+    elif selected_cell is not None:
+        print('PASS: finite capacity cell, independent observer and owned cleanup')
     else:
         print('PASS: focused native items, independent observers and owned cleanup:', ', '.join(items))
+    return receipt

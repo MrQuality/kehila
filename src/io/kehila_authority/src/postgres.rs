@@ -521,6 +521,7 @@ pub(crate) mod tests {
                         | "native_item_mutation"
                         | "native_item_retry"
                         | "native_item_capacity"
+                        | "native_capacity_cell"
                 ) =>
             {
                 value

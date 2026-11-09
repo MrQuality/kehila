@@ -173,6 +173,56 @@ have no CPU value. Incomplete work stays distinguishable during unwinding, and
 invalid numeric observations invalidate the cell. These controls do not establish
 clock calibration or negligible observer overhead.
 
+`scripts/container_capacity.py` is a separate opt-in finite batch coordinator.
+Run it from an exported public source snapshot with an explicit `--cell` index
+(repeat for multiple cells), `--output` pointing to a new external directory,
+and the same Podman machine/image settings as container verification. It compiles
+once, then runs each cell against a fresh owned database, retains its complete
+evidence and independent SQL witness, and removes only the verified generated
+fixture assets before the next cell. It does not enter the default CI matrix.
+`--oracle-control` also requires the first cell's SQL observer to reject a
+separately altered expected final field value before checking the original input.
+`--calibration --cell 15 --observer sampled` selects a separately labelled
+known-blocker run. Two additional edits are blocked in turn by an administrative
+actor-row lock and a project-row lock. The same sampling query must observe the
+known transaction edge and expected runtime query before rollback releases each
+edit. Exact request/state SQL includes both controls. This run qualifies known
+cause detection and release; its timed phase is excluded from the ordinary matrix.
+
+Indices 0 through 179 fix the Cartesian product, in order: compact/large profile,
+shared/independent projects, read/edit/mixed workload, concurrency 1/2/4/8/16,
+and repetition 1/2/3. Each cell has sixteen distinct items and four authenticated
+sessions rotated by original request ordinal. Compact values have four 64-byte
+text fields; large values have 128 1024-byte text fields. Ten warmup and 100
+measured requests retain every original outcome. A separate serial full-field
+edit checks progress after load. Setup, authentication pacing, reconciliation
+and that control are outside the measured-request population.
+
+The client latency boundary includes verified TLS, response-driver cleanup and
+result validation. Throughput uses the complete phase window, including request
+preparation and evidence encoding. Uncertain edits stop their item slot and
+reconcile the exact original identity after the phase; recovery does not replace
+a failed latency sample. The independent observer compares accepted request
+bytes, results, immutable revisions, final fields and project operation chains,
+and rejects unexpected payload retirement in these fresh cells.
+
+`--observer off`, `stages` and `sampled` select progressively enabled observations
+in the same test binary. Comparisons measure their incremental cost; disabling
+them does not remove every fixed test-instrumentation cost.
+
+`--compare-observers` runs all three modes for each explicitly selected cell,
+rotating their order across repetitions. Compare outcomes and accepted-work
+populations alongside latency and throughput; a fast rejected request does not
+establish cheap successful service. Serial all-success controls provide the
+cleanest matched-work comparison, while concurrent cases retain scheduler and
+capacity-outcome differences.
+
+Stage distributions
+have different populations and can overlap. Five-millisecond backend samples
+report observed waits and blockers, not exact wait durations or automatic
+actor/project attribution. These entry points alone do not establish an accepted
+capacity envelope or a completed observer-overhead qualification.
+
 Focused execution supplies neither the other native journeys nor shared full
 verification. `--native-authority` and the default full runner retain their
 complete native sequence. Mocked controls cover selector orchestration; later

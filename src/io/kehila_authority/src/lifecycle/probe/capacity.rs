@@ -7,7 +7,7 @@ use std::{
     time::Instant,
 };
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
 pub(crate) enum Stage {
     Admission,
     AdmissionAccepted,
@@ -36,7 +36,7 @@ pub(crate) enum Stage {
     Reprepare,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize)]
 pub(crate) struct Event {
     pub(crate) stage: Stage,
     pub(crate) offset_ns: u64,
@@ -46,11 +46,14 @@ pub(crate) struct Event {
     pub(crate) completed: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize)]
 pub(crate) struct Row {
     pub(crate) id: usize,
+    // Add this to an event's request-relative offset to get its phase offset.
+    pub(crate) phase_offset_ns: u64,
     // Events are appended on completion. Offsets are interval starts, not sort keys.
     pub(crate) events: Vec<Event>,
+    #[serde(skip_serializing)]
     invalid: Option<&'static str>,
 }
 
@@ -64,6 +67,7 @@ pub(crate) struct Request {
 #[derive(Default)]
 struct Cell {
     enabled: bool,
+    origin: Option<Instant>,
     request_limit: usize,
     event_limit: usize,
     requests: Vec<Request>,
@@ -83,11 +87,21 @@ impl Collector {
         );
         *cell = Cell {
             enabled: true,
+            origin: Some(Instant::now()),
             request_limit,
             event_limit,
             requests: Vec::new(),
             invalid: None,
         };
+    }
+
+    pub(crate) fn phase_origin(&self) -> Option<Instant> {
+        let cell = self.0.lock().ok()?;
+        if cell.enabled {
+            cell.origin
+        } else {
+            None
+        }
     }
 
     pub(crate) fn begin(&self) -> Option<Request> {
@@ -99,13 +113,23 @@ impl Collector {
             cell.invalid = Some("capacity request evidence overflow");
             return None;
         }
+        let started = Instant::now();
+        let Some(phase_offset_ns) = cell
+            .origin
+            .and_then(|origin| started.checked_duration_since(origin))
+            .and_then(|elapsed| u64::try_from(elapsed.as_nanos()).ok())
+        else {
+            cell.invalid = Some("capacity phase timestamp invalid");
+            return None;
+        };
         let request = Request {
             row: Arc::new(Mutex::new(Row {
                 id: cell.requests.len(),
+                phase_offset_ns,
                 events: Vec::new(),
                 invalid: None,
             })),
-            origin: Instant::now(),
+            origin: started,
             event_limit: cell.event_limit,
         };
         cell.requests.push(request.clone());
@@ -273,6 +297,7 @@ mod tests {
     #[test]
     fn disabled_collector_and_unsettled_cell_cannot_create_results() {
         let collector = Collector::default();
+        assert!(collector.phase_origin().is_none());
         assert!(collector.begin().is_none());
         assert!(collector.finish().is_err());
         collector.start(2, 8);
@@ -291,6 +316,26 @@ mod tests {
         assert!(rows[0].events[0].completed);
         assert!(rows[0].events[0].duration_ns.is_some());
         assert!(rows[0].events[0].cpu_time_ns.is_none());
+        assert!(collector.phase_origin().is_none());
+    }
+
+    #[test]
+    fn request_events_and_external_samples_share_the_same_phase_clock() {
+        let collector = Collector::default();
+        collector.start(1, 4);
+        let origin = collector.phase_origin().unwrap();
+        let request = collector.begin().unwrap();
+        request.span(Stage::ReadService).complete();
+        drop(request);
+        let rows = collector.finish().unwrap();
+        let event = &rows[0].events[0];
+        let start = rows[0]
+            .phase_offset_ns
+            .checked_add(event.offset_ns)
+            .unwrap();
+        let end = start.checked_add(event.duration_ns.unwrap()).unwrap();
+        assert!(start >= rows[0].phase_offset_ns);
+        assert!(u128::from(end) <= origin.elapsed().as_nanos());
     }
 
     #[test]

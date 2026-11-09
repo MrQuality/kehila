@@ -1,4 +1,6 @@
 //! Native validity controls for capacity inputs; these are not timed capacity cells.
+mod matrix;
+mod owned;
 use super::*;
 use crate::lifecycle::probe::capacity::Stage;
 use crate::listener::tests::capacity::Client;
@@ -51,6 +53,27 @@ async fn login_client(client: &Client) -> Browser {
     }
 }
 
+async fn login_clients(client: &Client) -> (Vec<Browser>, Duration) {
+    let mut browsers = Vec::new();
+    let mut pacing = Duration::ZERO;
+    for _ in 0..4 {
+        // Existing pre-session policy: burst two, then one issuance per 12s.
+        if browsers.len() >= 2 {
+            let started = Instant::now();
+            tokio::time::sleep(Duration::from_secs(12)).await;
+            pacing += started.elapsed();
+        }
+        browsers.push(login_client(client).await);
+    }
+    for (index, first) in browsers.iter().enumerate() {
+        assert!(browsers
+            .iter()
+            .skip(index + 1)
+            .all(|other| other.cookie != first.cookie));
+    }
+    (browsers, pacing)
+}
+
 async fn initialize(
     handle: &Handle,
     client: &Client,
@@ -82,17 +105,36 @@ async fn initialize(
         )
         .unwrap();
     }
-    // Explicitly noncanonical test input. Product creation still uses Prepared::new.
-    // Preserve the fenced writer, pending completion, grants and immutable history.
-    let prepared = crate::project::Prepared::synthetic_capacity_fixture(
+    store_synthetic(
+        handle,
+        browser,
+        &registered,
         Form {
             name,
             prefix: prefix.into(),
             estimate_unit: EstimateUnit::Hours,
         },
         format!("{profile:032x}"),
-        registered["entry"]["token"].as_str().unwrap().to_owned(),
         if profile == 1 { 4 } else { 128 },
+    )
+    .await
+}
+
+async fn store_synthetic(
+    handle: &Handle,
+    browser: &Browser,
+    registered: &Value,
+    form: Form,
+    project_id: String,
+    fields: usize,
+) -> ProjectCreateResult {
+    // Explicitly noncanonical test input. Product creation still uses Prepared::new.
+    // Preserve the fenced writer, pending completion, grants and immutable history.
+    let prepared = crate::project::Prepared::synthetic_capacity_fixture(
+        form,
+        project_id,
+        registered["entry"]["token"].as_str().unwrap().to_owned(),
+        fields,
     )
     .unwrap();
     let credential = Credential {
@@ -144,21 +186,7 @@ async fn cases(handle: &Handle, client: &Client, admin: &Admin) -> usize {
             .is_err(),
         "empty trust store accepted fixture certificate"
     );
-    let mut browsers = Vec::new();
-    for _ in 0..4 {
-        // The real pre-session policy permits two initial issuances, then one
-        // per 12 seconds. Authentication/setup is outside the measured cells.
-        if browsers.len() >= 2 {
-            tokio::time::sleep(Duration::from_secs(12)).await;
-        }
-        browsers.push(login_client(client).await);
-    }
-    for (index, first) in browsers.iter().enumerate() {
-        assert!(browsers
-            .iter()
-            .skip(index + 1)
-            .all(|other| other.cookie != first.cookie));
-    }
+    let (browsers, _) = login_clients(client).await;
     let mut snapshots = Vec::new();
     for profile in 0..3 {
         let initialized = initialize(handle, client, &browsers[0], profile).await;
@@ -421,46 +449,17 @@ fn native_capacity_input_and_observer_validity() {
         .build()
         .unwrap()
         .block_on(async {
-            let (handle, owner) =
-                runtime(&endpoint, &installation, format!("{attempt}-capacity")).await;
-            let mut running = tokio::spawn(owner.run());
-            let admin = Arc::new(tokio::sync::Mutex::new(Admin::connect(&endpoint).await));
-            let setup = crate::listener::tests::capacity::start(handle.clone()).await;
-            let mut server = None;
-            let outcome = match setup {
-                Ok((client, retained)) => {
-                    let jobs = handle.clone();
-                    let retained_admin = admin.clone();
-                    server = Some(retained);
-                    tokio::spawn(async move {
-                        cases(&jobs, &client, &*retained_admin.lock().await).await
-                    }).await.map_err(|error| format!("{error:?}"))
-                }
-                Err(error) => Err(format!("transport setup: {error}")),
-            };
-            let connections = match server {
-                Some(server) => server.finish().await,
-                None => Err(crate::io_error("capacity transport setup failed")),
-            };
-            handle.stop();
-            let root = tokio::time::timeout(Duration::from_secs(10), &mut running).await;
-            if root.is_err() {
-                running.abort();
-                let _ = tokio::time::timeout(Duration::from_secs(5), &mut running)
-                    .await
-                    .expect("capacity root cleanup unobserved");
-            }
-            let admin = Arc::try_unwrap(admin)
-                .unwrap_or_else(|_| panic!("unjoined capacity admin"))
-                .into_inner();
-            evidence::runtime_released(&admin).await;
-            admin.close().await;
-            assert!(
-                outcome.is_ok() && matches!(root, Ok(Ok(Ok(())))) && connections.is_ok(),
-                "capacity validity failed: primary={outcome:?}, root={root:?}, connections={connections:?}"
-            );
-            let connections = connections.unwrap();
-            eprintln!("capacity input validity: four-inflight read submission rejections={}", outcome.unwrap());
+            let (busy, connections) =
+                owned::run(
+                    &endpoint,
+                    &installation,
+                    format!("{attempt}-capacity"),
+                    |jobs, client, admin| async move {
+                        cases(&jobs, &client, &*admin.lock().await).await
+                    },
+                )
+                .await;
+            eprintln!("capacity input validity: four-inflight read submission rejections={busy}");
             assert_eq!(connections.accepted, 30);
             assert_eq!(connections.completed, 29);
             assert_eq!(connections.protocol_rejected, 1);
