@@ -148,6 +148,24 @@ separately from the victim's state; a final SQL observer checks durable history
 and authority release. These controls test provisional containment, not a
 supported contention capacity or latency guarantee.
 
+`--native-item item-capacity` selects an untimed input and observer validity
+control. It uses four separately authenticated sessions, the unchanged default
+project seed, and explicitly synthetic configurations with four or 128 text
+fields per item type. Today's project-creation UI/API seeds two text fields per
+type; the larger configurations are test-only capacity inputs, initialized
+through the existing fenced storage writer. They add no product configuration
+feature. The case checks full-field edits and exact reads, bounded request-stage
+observations, verified TLS, independent durable-state SQL and owned shutdown.
+
+Its four-request read burst retains submission rejections without retrying them.
+Successful responses must match their requested snapshots; HTTP 429 counts must
+agree with observed submission-queue rejection counts. The current nonblocking
+submission channel has one queued-message slot, separate from the sixteen-job
+admission limit. A separate untimed read checks recovery after the burst. Passing
+this control establishes input/observer validity, not a supported four-request
+capacity, latency result or completed capacity study. Timed workload results and
+their acceptance must be assessed separately.
+
 Focused execution supplies neither the other native journeys nor shared full
 verification. `--native-authority` and the default full runner retain their
 complete native sequence. Mocked controls cover selector orchestration; later

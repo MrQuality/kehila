@@ -9,12 +9,20 @@ impl Engine {
     ) -> Result<Output, Error> {
         self.check(deadline)?;
         let entry = self.candidate(&credential)?;
+        #[cfg(test)]
+        let wait = capacity::span(capacity::Stage::ReadMutex);
         let mut database = tokio::time::timeout_at(
             tokio::time::Instant::from_std(deadline),
             self.database.lock(),
         )
         .await
         .map_err(|_| Error::Unavailable)?;
+        #[cfg(test)]
+        if let Some(wait) = wait {
+            wait.complete();
+        }
+        #[cfg(test)]
+        let service = capacity::span(capacity::Stage::ReadService);
         let binding = &entry.binding;
         let mut transaction = database
             .read_snapshot(
@@ -38,6 +46,10 @@ impl Engine {
             .rollback()
             .await
             .map_err(|_| Error::Unavailable)?;
+        #[cfg(test)]
+        if let Some(service) = service {
+            service.complete();
+        }
         drop(database);
         let value = outcome.map_err(|error| super::project::native_error(&self.live, error))?;
         Ok(Output::Item(self.native_delivery(

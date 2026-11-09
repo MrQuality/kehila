@@ -6,6 +6,54 @@ mod project;
 mod revoke_others;
 mod unknown_commit;
 
+#[test]
+fn capacity_rejection_records_its_origin_and_metrics_do_not_hold_serving_permits() {
+    use crate::lifecycle::probe::capacity::Stage;
+    let live = RuntimeLiveness::new();
+    live.probe.capacity.start(CAPACITY + 2, 8);
+    let (sender, _messages) = mpsc::channel(CAPACITY);
+    let handle = Handle {
+        sender,
+        capacity: Arc::new(Semaphore::new(CAPACITY)),
+        live: live.clone(),
+        engine: std::sync::Weak::new(),
+        preparations: preparation::Tracker::new(),
+    };
+    let held = (0..CAPACITY)
+        .map(|_| handle.reserve(deadline()).unwrap())
+        .collect::<Vec<_>>();
+    let original = Arc::downgrade(&held[0].permit);
+    assert!(matches!(handle.reserve(deadline()), Err(Error::Busy)));
+    assert!(live.probe.capacity.finish().is_err());
+    drop(held);
+    assert!(original.upgrade().is_none());
+    assert_eq!(handle.capacity.available_permits(), CAPACITY);
+    drop(handle.reserve(deadline()).unwrap());
+    let rows = live.probe.capacity.finish().unwrap();
+    assert_eq!(rows.len(), CAPACITY + 2);
+    assert_eq!(
+        rows[CAPACITY]
+            .events
+            .iter()
+            .map(|event| event.stage)
+            .collect::<Vec<_>>(),
+        [Stage::Admission, Stage::AdmissionBusy]
+    );
+    for row in rows
+        .iter()
+        .take(CAPACITY)
+        .chain(rows.iter().skip(CAPACITY + 1))
+    {
+        assert_eq!(
+            row.events
+                .iter()
+                .map(|event| event.stage)
+                .collect::<Vec<_>>(),
+            [Stage::Admission, Stage::AdmissionAccepted]
+        );
+    }
+}
+
 fn password(value: &str) -> NormalizedPassword {
     NormalizedPassword::new(Zeroizing::new(value.to_owned())).unwrap()
 }
@@ -399,6 +447,7 @@ fn item_uncertainty_remains_nonidentifying_after_runtime_stop_and_deadline() {
             deadline: Instant::now(),
             live,
             _permit: Arc::new(capacity.clone().try_acquire_owned().unwrap()),
+            _capacity: None,
         };
         assert!(matches!(
             response.result(),

@@ -39,6 +39,7 @@ ITEM_FIXTURES = {
     'item-pending': ('native_item_pending', 'native_item_pending_state.sql'),
     'item-mutation': ('native_item_mutation', 'native_item_mutation_state.sql'),
     'item-retry': ('native_item_retry', 'native_item_retry_state.sql'),
+    'item-capacity': ('native_item_capacity', 'native_item_capacity_state.sql'),
 }
 ITEM_DATABASES = {mode: database for mode, (database, _) in ITEM_FIXTURES.items()}
 ITEM_OBSERVERS = {mode: observer for mode, (_, observer) in ITEM_FIXTURES.items()}
@@ -105,6 +106,7 @@ SPECS = {
     'item-pending': ('coordinator::jobs::tests::project::item_pending::native_pending_creation_lifecycle', 'item-pending-passed'),
     'item-mutation': ('coordinator::jobs::tests::project::item_mutations::native_item_mutation_execution_and_replay', 'item-mutation-passed'),
     'item-retry': ('coordinator::jobs::tests::project::item_retry::native_item_retry_exhaustion_and_recovery', 'item-retry-passed'),
+    'item-capacity': ('coordinator::jobs::tests::project::capacity::native_capacity_input_and_observer_validity', 'item-capacity-passed'),
     'journey': (TEST, 'passed'),
     'clock': (CLOCK_TEST, 'clock-passed'),
     'restored': (RESTORE_TEST, 'restore-passed'),

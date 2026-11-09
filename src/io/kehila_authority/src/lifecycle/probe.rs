@@ -3,6 +3,7 @@ use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     Mutex,
 };
+pub(crate) mod capacity;
 mod item_attempt;
 pub(crate) use item_attempt::{AttemptEntry, ItemAttempt};
 
@@ -24,6 +25,7 @@ pub(crate) struct Snapshot {
 }
 #[derive(Default)]
 pub(crate) struct Probe {
+    pub(crate) capacity: capacity::Collector,
     counters: [AtomicUsize; 5],
     fault: Mutex<Option<(i64, bool)>>,
     settling: AtomicBool,

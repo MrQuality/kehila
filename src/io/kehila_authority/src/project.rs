@@ -109,6 +109,40 @@ impl Prepared {
     pub(crate) fn new(form: Form, project_id: String, token: String) -> Result<Self, Error> {
         Generated::new(form, project_id, token)?.admit()
     }
+
+    /// Noncanonical synthetic capacity input, never a product initialization option.
+    /// Callers must label it separately from the unchanged M1V1 default control.
+    #[cfg(test)]
+    pub(crate) fn synthetic_capacity_fixture(
+        form: Form,
+        project_id: String,
+        token: String,
+        fields: usize,
+    ) -> Result<Self, Error> {
+        use task_contract::field::{FieldDefinition, FieldId};
+        if !matches!(fields, 4 | 128) {
+            return Err(Error::Invalid);
+        }
+        let mut generated = Generated::new(form, project_id, token)?;
+        let configuration = &mut generated.result.configuration;
+        configuration.types.truncate(1);
+        let owner_type = configuration.types[0].id.clone();
+        configuration.fields = (0..fields)
+            .map(|index| FieldDefinition {
+                id: FieldId(format!("capacity-text-{index}")),
+                owner_type: owner_type.clone(),
+                name: format!("Capacity text {index}"),
+                kind: FieldKind::Text,
+                origin: FieldOrigin::Application,
+                usage: FieldUsage::Optional,
+                archived: false,
+                options: Vec::new(),
+            })
+            .collect();
+        configuration.types[0].title_field_id = Some(configuration.fields[0].id.clone());
+        configuration.validate().map_err(|_| Error::Unavailable)?;
+        generated.admit()
+    }
     #[cfg(test)]
     fn seed_overflow_for_test(
         form: Form,
@@ -270,6 +304,149 @@ mod tests {
             name: "Owner project".into(),
             prefix: "OP".into(),
             estimate_unit: EstimateUnit::Points,
+        }
+    }
+
+    #[test]
+    fn capacity_fixture_keeps_product_seed_canonical_and_synthetic_inputs_explicit() {
+        let normal = Prepared::new(form(), "1".repeat(32), "a".repeat(32)).unwrap();
+        let ProjectCreateDecision::Apply(expected) =
+            decide_project_create(false, None, true, normal.command())
+        else {
+            panic!("canonical seed");
+        };
+        assert_eq!(normal.result(), &expected);
+        assert_eq!(normal.result().configuration.types.len(), 2);
+        assert_eq!(normal.result().configuration.fields.len(), 4);
+        for fields in [4, 128] {
+            let synthetic = Prepared::synthetic_capacity_fixture(
+                form(),
+                "1".repeat(32),
+                "a".repeat(32),
+                fields,
+            )
+            .unwrap();
+            assert_ne!(
+                synthetic.result().configuration,
+                normal.result().configuration
+            );
+            assert_eq!(synthetic.result().configuration.types.len(), 1);
+            assert_eq!(synthetic.result().configuration.fields.len(), fields);
+            assert_eq!(
+                decode_result(1, synthetic.result_bytes()).unwrap(),
+                *synthetic.result()
+            );
+            assert_eq!(
+                verify_revision_snapshots(
+                    &synthetic.command().project_id,
+                    1,
+                    1,
+                    synthetic.snapshots().project(),
+                    synthetic.snapshots().configuration()
+                )
+                .unwrap(),
+                (
+                    synthetic.result().project.clone(),
+                    synthetic.result().configuration.clone()
+                )
+            );
+        }
+        assert!(
+            Prepared::synthetic_capacity_fixture(form(), "1".repeat(32), "a".repeat(32), 129)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn capacity_profiles_admit_all_fields_through_real_domain_and_native_codecs() {
+        use task_contract::field::{FieldEdit, FieldEntry, FieldValue};
+        use task_contract::item_mutation::{
+            decide_create, decide_edit, CreateCommand, CreateDecision, EditCommand, EditDecision,
+            EstimateEdit, FieldUpdate,
+        };
+        use task_contract::work_item::WorkItemId;
+        for (fields, bytes) in [(4, 64), (128, 1024)] {
+            let prepared = Prepared::synthetic_capacity_fixture(
+                form(),
+                "1".repeat(32),
+                "a".repeat(32),
+                fields,
+            )
+            .unwrap();
+            let result = prepared.result();
+            let configuration = &result.configuration;
+            let command = CreateCommand {
+                operation_id: "b".repeat(32),
+                expected_configuration_revision: 1,
+                item_id: WorkItemId("2".repeat(32)),
+                type_id: configuration.types[0].id.clone(),
+                workflow_id: None,
+                estimate: None,
+                values: configuration
+                    .fields
+                    .iter()
+                    .map(|field| FieldEntry {
+                        id: field.id.clone(),
+                        value: FieldValue::Text("a".repeat(bytes)),
+                    })
+                    .collect(),
+            };
+            let CreateDecision::Apply(created) =
+                decide_create(&result.project, configuration, None, true, &command)
+            else {
+                panic!("synthetic create rejected");
+            };
+            assert_eq!(created.data.values.len(), fields);
+            let request = work_item_codec::Request::Create {
+                project_id: result.project.id.clone(),
+                command,
+            };
+            let encoded = work_item_codec::admit_request(&request).unwrap();
+            assert_eq!(
+                work_item_codec::decode_request(1, encoded.as_bytes()).unwrap(),
+                request
+            );
+            let command = EditCommand {
+                operation_id: "c".repeat(32),
+                expected_item_version: created.item.version,
+                expected_configuration_revision: 1,
+                estimate: EstimateEdit::Keep,
+                fields: configuration
+                    .fields
+                    .iter()
+                    .map(|field| FieldUpdate {
+                        id: field.id.clone(),
+                        edit: FieldEdit::Set(FieldValue::Text("b".repeat(bytes))),
+                    })
+                    .collect(),
+            };
+            let EditDecision::Apply(edited) = decide_edit(
+                &created.project,
+                configuration,
+                &created.item,
+                &created.data,
+                None,
+                true,
+                &command,
+            ) else {
+                panic!("synthetic edit rejected");
+            };
+            assert_eq!(edited.data.values.len(), fields);
+            assert!(edited
+                .data
+                .values
+                .iter()
+                .all(|entry| entry.value == FieldValue::Text("b".repeat(bytes))));
+            let request = work_item_codec::Request::Edit {
+                project_id: result.project.id.clone(),
+                item_id: created.item.id,
+                command,
+            };
+            let encoded = work_item_codec::admit_request(&request).unwrap();
+            assert_eq!(
+                work_item_codec::decode_request(1, encoded.as_bytes()).unwrap(),
+                request
+            );
         }
     }
 

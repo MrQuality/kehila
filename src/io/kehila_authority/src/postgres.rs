@@ -520,6 +520,7 @@ pub(crate) mod tests {
                         | "native_item_pending"
                         | "native_item_mutation"
                         | "native_item_retry"
+                        | "native_item_capacity"
                 ) =>
             {
                 value
