@@ -149,6 +149,109 @@ class CleanupTests(unittest.TestCase):
         temporary.start()
         self.addCleanup(temporary.stop)
 
+    def test_storage_selection_requires_exclusive_selector_and_external_evidence(self):
+        for options in ({'storage_sample': 0}, {'storage_sample': True},
+                        {'storage_sample': 24}, {'storage_sample': 0, 'item_cases': ['item-read']},
+                        {'storage_sample': 0, 'capacity_cell': 0},
+                        {'storage_sample': 19, 'storage_profile': 'extended'},
+                        {'storage_profile': 'extended'}):
+            executor = Executor()
+            if options != {'storage_sample': 0}:
+                options['evidence_directory'] = self.root / 'export'
+            with self.subTest(options=options), self.assertRaises(ValueError):
+                native.check(executor, **options)
+            self.assertEqual(executor.events, [])
+
+    def test_extended_storage_creation_admission_and_child_selection_share_one_limit(self):
+        class ExtendedExecutor(Executor):
+            def engine(self, *args, **kwargs):
+                result = super().engine(*args, **kwargs)
+                if args[0] == 'inspect':
+                    values = json.loads(result.stdout)
+                    values[0]['HostConfig']['Memory'] = 512*1024**2
+                    values[0]['HostConfig']['Tmpfs']['/var/lib/postgresql/data'] = 'rw,size=512m'
+                    result.stdout = json.dumps(values)
+                return result
+        executor = ExtendedExecutor()
+        with patch.object(native, 'validate_sample_observations', side_effect=ValueError('witness stop')):
+            with self.assertRaisesRegex(ValueError, 'witness stop'):
+                native.check(executor, storage_sample=20, storage_profile='extended',
+                             evidence_directory=self.root / 'export')
+        creation = next(args for args in executor.events if args[0] == 'create')
+        self.assertIn('--memory=512m', creation)
+        self.assertIn('/var/lib/postgresql/data:rw,size=512m', creation)
+        invocation = next(args for args in executor.events if 'storage-sample' in args)
+        self.assertEqual(invocation[-4:], ('--storage-sample-index', '20', '--storage-profile', 'extended'))
+        cgroup = next(index for index, args in enumerate(executor.events)
+                      if any('/sys/fs/cgroup/memory.max' in part and '536870912' in part for part in args))
+        self.assertLess(cgroup, executor.events.index(invocation))
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+
+    def test_storage_pair_creates_both_roles_and_checks_independent_state_before_export(self):
+        executor = Executor()
+        with patch.object(native, 'validate_sample_observations', side_effect=ValueError('wrong history')) as compare:
+            with self.assertRaisesRegex(ValueError, 'wrong history'):
+                native.check(executor, storage_sample=0, evidence_directory=self.root / 'export', reset_assets=True)
+        self.assertEqual([args[-1] for args in executor.events if 'createdb' in args],
+                         ['native_storage_growth', 'native_storage_historical'])
+        invocation = next(args for args in executor.events if 'storage-sample' in args)
+        self.assertEqual(invocation[-4:], ('--storage-sample-index', '0', '--storage-profile', 'default'))
+        observations = [args for args in executor.events if '/tmp/storage_growth_state.sql' in args]
+        self.assertEqual([args[args.index('-d')+1] for args in observations],
+                         ['native_storage_growth', 'native_storage_historical'])
+        compare.assert_called_once()
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+        self.assertFalse(any('reset' in args for args in executor.events))
+        self.assertFalse((self.root / 'export').exists())
+
+    def test_storage_observer_failure_cleans_up_and_retains_actual_failing_stage(self):
+        executor = Executor(fail_observer='/tmp/storage_growth_state.sql')
+        with self.assertRaisesRegex(RuntimeError, 'storage-sample-independent-observer'):
+            native.check(executor, storage_sample=0, evidence_directory=self.root / 'export')
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+        folders = list(self.root.glob('kehila-native-diagnostics-*'))
+        self.assertEqual((folders[0] / 'failure-stage.txt').read_text(), 'storage-sample-independent-observer')
+        self.assertFalse((self.root / 'export').exists())
+
+    def test_storage_failure_counts_committed_native_work_before_owned_database_removal(self):
+        class PartialStorage(Executor):
+            def engine(self, *args, **kwargs):
+                if args[0] == 'exec' and 'storage-sample' in args:
+                    self.events.append(args)
+                    raise subprocess.CalledProcessError(1, args)
+                if args[0] == 'exec' and any('SELECT count(*) FROM kehila.item_revisions' in part for part in args):
+                    self.events.append(args)
+                    database = args[args.index('-d')+1]
+                    return SimpleNamespace(stdout='21\n' if database == 'native_storage_growth' else '0\n')
+                return super().engine(*args, **kwargs)
+        executor = PartialStorage()
+        with self.assertRaises(subprocess.CalledProcessError):
+            native.check(executor, storage_sample=0, evidence_directory=self.root / 'export')
+        folder = next(self.root.glob('kehila-native-diagnostics-*'))
+        counts = json.loads((folder / 'storage-failure-counts.json').read_text())['counts']
+        self.assertEqual(counts, {'native': {'accepted_revisions': 21, 'observed': True, 'within_bound': True},
+                                  'historical': {'accepted_revisions': 0, 'observed': True, 'within_bound': True}})
+        removal = next(i for i, args in enumerate(executor.events) if args[0] == 'rm')
+        observations = [i for i, args in enumerate(executor.events)
+                        if any('SELECT count(*) FROM kehila.item_revisions' in part for part in args)]
+        self.assertTrue(all(index < removal for index in observations))
+
+    def test_storage_failure_retains_an_observed_bound_breach_instead_of_unknown(self):
+        executor = Executor(fail_observer='/tmp/storage_growth_state.sql')
+        original = executor.engine
+        def engine(*args, **kwargs):
+            if args[0] == 'exec' and any('SELECT count(*) FROM kehila.item_revisions' in part for part in args):
+                executor.events.append(args)
+                return SimpleNamespace(stdout='22\n')
+            return original(*args, **kwargs)
+        with patch.object(executor, 'engine', side_effect=engine), self.assertRaises(RuntimeError):
+            native.check(executor, storage_sample=0, evidence_directory=self.root / 'export')
+        folder = next(self.root.glob('kehila-native-diagnostics-*'))
+        counts = json.loads((folder / 'storage-failure-counts.json').read_text())['counts']
+        self.assertTrue(all(row == {'accepted_revisions': 22, 'observed': True, 'within_bound': False}
+                            for row in counts.values()))
+        self.assertIn(('rm', '--force', '--volumes', DATABASE), executor.events)
+
     def test_successful_export_precedes_reset_after_owned_database_cleanup(self):
         class ExportExecutor(Executor):
             def engine(self, *args, **kwargs):
