@@ -107,7 +107,10 @@ impl Drop for PendingOperation {
 impl Endpoint {
     #[cfg(test)]
     pub(crate) fn copied_fixture_database(&self, name: &str) -> Self {
-        assert_eq!(name, "kehila_native_restored");
+        assert!(matches!(
+            name,
+            "kehila_native_restored" | "native_storage_historical"
+        ));
         Self::new(
             self.address,
             name.to_owned(),
@@ -522,6 +525,7 @@ pub(crate) mod tests {
                         | "native_item_retry"
                         | "native_item_capacity"
                         | "native_capacity_cell"
+                        | "native_storage_growth"
                 ) =>
             {
                 value

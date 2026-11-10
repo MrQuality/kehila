@@ -18,6 +18,8 @@ import sys
 from verification_budget import command_timeout
 import native_fixture_assets as assets
 from capacity_plan import cell as planned_capacity_cell
+from storage_growth_plan import select as storage_samples
+from native_database_limits import storage_limits
 
 ROOT = Path(__file__).resolve().parents[1]
 WORK = assets.WORK
@@ -48,6 +50,10 @@ ITEM_OBSERVERS = {mode: observer for mode, (_, observer) in ITEM_FIXTURES.items(
 CAPACITY_MODE = 'capacity-cell'
 CAPACITY_DATABASE = 'native_capacity_cell'
 CAPACITY_OBSERVER = 'native_capacity_cell_state.sql'
+STORAGE_MODE = 'storage-sample'
+STORAGE_DATABASE = 'native_storage_growth'
+STORAGE_HISTORICAL_DATABASE = 'native_storage_historical'
+STORAGE_OBSERVER = 'storage_growth_state.sql'
 
 
 def prepare(seconds, asset_owner=None):
@@ -108,6 +114,7 @@ def prepare(seconds, asset_owner=None):
 
 
 SPECS = {
+    STORAGE_MODE: ('coordinator::jobs::tests::project::capacity::storage_growth::native_storage_growth_sample', 'storage-growth-passed'),
     CAPACITY_MODE: ('coordinator::jobs::tests::project::capacity::matrix::native_capacity_cell', 'capacity-cell-passed'),
     'item-write': ('coordinator::jobs::tests::project::item_writes::native_item_write_identity_and_rollback', 'item-write-passed'),
     'item-read': ('coordinator::jobs::tests::project::item_reads::native_authorized_item_reads', 'item-read-passed'),
@@ -159,14 +166,26 @@ def failure_metadata(mode, returncode, summary, marker_required, marker_present)
             'public_panic_location': panic}
 
 
-def journey(seconds, mode='journey', capacity_cell=None, capacity_observer='sampled', capacity_calibration=False):
+def journey(seconds, mode='journey', capacity_cell=None, capacity_observer='sampled', capacity_calibration=False,
+            storage_sample=None, storage_profile='default'):
+    if mode != STORAGE_MODE and storage_profile != 'default':
+        raise ValueError('Storage resource profile requires the storage-sample mode')
+    limits = storage_limits(storage_sample, storage_profile) if mode == STORAGE_MODE else None
     test, marker = SPECS[mode]
     controls = WORK / 'controls'
-    databases = {**AUTH_DATABASES, **ITEM_DATABASES, CAPACITY_MODE: CAPACITY_DATABASE}
+    databases = {**AUTH_DATABASES, **ITEM_DATABASES, CAPACITY_MODE: CAPACITY_DATABASE,
+                 STORAGE_MODE: STORAGE_DATABASE}
     if mode in databases:
         controls /= mode
         controls.mkdir(mode=0o700)
     environment = dict(os.environ, AUTH001_DB_CONTROLS=str(controls))
+    if mode == STORAGE_MODE:
+        environment['KEHILA_STORAGE_SAMPLE_INDEX'] = str(storage_samples([storage_sample])[0].index)
+        environment['KEHILA_STORAGE_DATA_MIB'] = str(limits.mib)
+    elif storage_sample is not None or 'KEHILA_STORAGE_SAMPLE_INDEX' in environment:
+        raise ValueError('Unexpected storage sample override')
+    elif 'KEHILA_STORAGE_DATA_MIB' in environment:
+        raise ValueError('Unexpected storage resource override')
     if mode == CAPACITY_MODE:
         selected = planned_capacity_cell(capacity_cell)
         if capacity_observer not in {'off', 'stages', 'sampled'}:
@@ -227,6 +246,8 @@ def main():
     parser.add_argument('--capacity-cell-index', type=int)
     parser.add_argument('--capacity-observer', choices=['off', 'stages', 'sampled'], default='sampled')
     parser.add_argument('--capacity-calibration', action='store_true')
+    parser.add_argument('--storage-sample-index', type=int)
+    parser.add_argument('--storage-profile', choices=('default', 'extended'), default='default')
     args = parser.parse_args()
     if not math.isfinite(args.seconds) or args.seconds <= 0:
         parser.error('Positive command allowance required')
@@ -234,6 +255,10 @@ def main():
         parser.error('Capacity arguments require the dedicated capacity-cell mode')
     if args.mode == CAPACITY_MODE and args.capacity_cell_index is None:
         parser.error('Select one explicit finite capacity cell')
+    if (args.mode == STORAGE_MODE) != (args.storage_sample_index is not None):
+        parser.error('Storage arguments require one explicit storage-sample mode/index')
+    if args.mode != STORAGE_MODE and args.storage_profile != 'default':
+        parser.error('Storage resource profile requires the storage-sample mode')
     if args.mode == 'prepare':
         prepare(args.seconds, args.asset_owner)
     elif args.mode == 'manifest':
@@ -243,7 +268,8 @@ def main():
         assets.reset(args.asset_owner, args.export_digest)
         print('FIXTURE ASSETS: generated workspace removed')
     else:
-        journey(args.seconds, args.mode, args.capacity_cell_index, args.capacity_observer, args.capacity_calibration)
+        journey(args.seconds, args.mode, args.capacity_cell_index, args.capacity_observer,
+                args.capacity_calibration, args.storage_sample_index, args.storage_profile)
 
 
 if __name__ == '__main__':

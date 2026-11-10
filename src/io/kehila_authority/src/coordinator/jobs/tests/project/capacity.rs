@@ -1,6 +1,7 @@
 //! Native validity controls for capacity inputs; these are not timed capacity cells.
 mod matrix;
 mod owned;
+mod storage_growth;
 use super::*;
 use crate::lifecycle::probe::capacity::Stage;
 use crate::listener::tests::capacity::Client;

@@ -1,0 +1,974 @@
+{
+  "cohorts": {
+    "baseline": {
+      "analysis_sha256": {
+        "alternative_model": "bb92a964e4596bde63d377b8daa3f013584ff746cad8bb38ef72456f381408b4",
+        "reporter": "265f6365da3a81dbc5bd5b47ecbed175e24fae24558bb7a5c52b980be553c9fa"
+      },
+      "binding": {
+        "execution_profile": {
+          "database_cpu_period": 100000,
+          "database_cpu_quota": 100000,
+          "database_image": "docker.io/library/postgres@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4",
+          "database_memory_bytes": 268435456,
+          "database_nano_cpus": 1000000000,
+          "database_pids": 128,
+          "database_tmpfs": {
+            "/var/lib/postgresql/data": "rw,size=256m,rprivate,nosuid,nodev,tmpcopyup"
+          },
+          "runner_cpu_period": 100000,
+          "runner_cpu_quota": 100000,
+          "runner_image": "90e14395caf97daaa81bbf2531b358c762bcde1dd49ff520595942047532f81d",
+          "runner_memory_bytes": 2147483648,
+          "runner_nano_cpus": 1000000000,
+          "runner_pids": 512,
+          "schema": 1
+        },
+        "source_inventory_sha256": "560c8017fe2c3570cdc599ad3200d47bc6b30e9208a16fe6ef9f0fcc9c3d3f25"
+      }
+    },
+    "near_sha": {
+      "analysis_sha256": {
+        "alternative_model": "bb92a964e4596bde63d377b8daa3f013584ff746cad8bb38ef72456f381408b4",
+        "reporter": "265f6365da3a81dbc5bd5b47ecbed175e24fae24558bb7a5c52b980be553c9fa"
+      },
+      "binding": {
+        "execution_profile": {
+          "database_cpu_period": 100000,
+          "database_cpu_quota": 100000,
+          "database_image": "docker.io/library/postgres@sha256:0ea6700a3b4f0ae6ce746519073558aed4d88a79d8d07622a9a644946c7319c4",
+          "database_memory_bytes": 536870912,
+          "database_nano_cpus": 1000000000,
+          "database_pids": 128,
+          "database_tmpfs": {
+            "/var/lib/postgresql/data": "rw,size=512m,rprivate,nosuid,nodev,tmpcopyup"
+          },
+          "runner_cpu_period": 100000,
+          "runner_cpu_quota": 100000,
+          "runner_image": "90e14395caf97daaa81bbf2531b358c762bcde1dd49ff520595942047532f81d",
+          "runner_memory_bytes": 2147483648,
+          "runner_nano_cpus": 1000000000,
+          "runner_pids": 512,
+          "schema": 1
+        },
+        "source_inventory_sha256": "d63f70c29d1c306892d480e57cfc416489ab19eca5e9b3e6ac8264d407b076de"
+      }
+    }
+  },
+  "common_contract": {
+    "column_storage": [
+      {
+        "column": "actor_id",
+        "compression": "",
+        "relation": "kehila.actors",
+        "storage": "x"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.configuration_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "revision",
+        "compression": "",
+        "relation": "kehila.configuration_revisions",
+        "storage": "m"
+      },
+      {
+        "column": "configuration_snapshot",
+        "compression": "",
+        "relation": "kehila.configuration_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "project_snapshot",
+        "compression": "",
+        "relation": "kehila.configuration_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "actor_id",
+        "compression": "",
+        "relation": "kehila.configuration_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "command_family",
+        "compression": "",
+        "relation": "kehila.configuration_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "target_kind",
+        "compression": "",
+        "relation": "kehila.configuration_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.fields",
+        "storage": "x"
+      },
+      {
+        "column": "field_id",
+        "compression": "",
+        "relation": "kehila.fields",
+        "storage": "x"
+      },
+      {
+        "column": "owner_type_id",
+        "compression": "",
+        "relation": "kehila.fields",
+        "storage": "x"
+      },
+      {
+        "column": "name",
+        "compression": "",
+        "relation": "kehila.fields",
+        "storage": "x"
+      },
+      {
+        "column": "value_kind",
+        "compression": "",
+        "relation": "kehila.fields",
+        "storage": "x"
+      },
+      {
+        "column": "origin",
+        "compression": "",
+        "relation": "kehila.fields",
+        "storage": "x"
+      },
+      {
+        "column": "usage",
+        "compression": "",
+        "relation": "kehila.fields",
+        "storage": "x"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.item_field_uses",
+        "storage": "x"
+      },
+      {
+        "column": "owner_type_id",
+        "compression": "",
+        "relation": "kehila.item_field_uses",
+        "storage": "x"
+      },
+      {
+        "column": "field_id",
+        "compression": "",
+        "relation": "kehila.item_field_uses",
+        "storage": "x"
+      },
+      {
+        "column": "first_item_id",
+        "compression": "",
+        "relation": "kehila.item_field_uses",
+        "storage": "x"
+      },
+      {
+        "column": "first_item_version",
+        "compression": "",
+        "relation": "kehila.item_field_uses",
+        "storage": "m"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "item_id",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "item_version",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "m"
+      },
+      {
+        "column": "previous_item_version",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "m"
+      },
+      {
+        "column": "configuration_revision",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "m"
+      },
+      {
+        "column": "actor_id",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "command_family",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "target_kind",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "token",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "type_id",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "workflow_id",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "status_id",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "phase",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "estimate_unit",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "history",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "x"
+      },
+      {
+        "column": "project_state_version",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "m"
+      },
+      {
+        "column": "resulting_next_sequence",
+        "compression": "",
+        "relation": "kehila.item_revisions",
+        "storage": "m"
+      },
+      {
+        "column": "item_id",
+        "compression": "",
+        "relation": "kehila.items",
+        "storage": "x"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.items",
+        "storage": "x"
+      },
+      {
+        "column": "issued_prefix",
+        "compression": "",
+        "relation": "kehila.items",
+        "storage": "x"
+      },
+      {
+        "column": "issued_sequence",
+        "compression": "",
+        "relation": "kehila.items",
+        "storage": "m"
+      },
+      {
+        "column": "current_version",
+        "compression": "",
+        "relation": "kehila.items",
+        "storage": "m"
+      },
+      {
+        "column": "request_bytes",
+        "compression": "",
+        "relation": "kehila.operation_payloads",
+        "storage": "x"
+      },
+      {
+        "column": "result",
+        "compression": "",
+        "relation": "kehila.operation_payloads",
+        "storage": "x"
+      },
+      {
+        "column": "actor_id",
+        "compression": "",
+        "relation": "kehila.operations",
+        "storage": "x"
+      },
+      {
+        "column": "command_family",
+        "compression": "",
+        "relation": "kehila.operations",
+        "storage": "x"
+      },
+      {
+        "column": "target_kind",
+        "compression": "",
+        "relation": "kehila.operations",
+        "storage": "x"
+      },
+      {
+        "column": "target_project_id",
+        "compression": "",
+        "relation": "kehila.operations",
+        "storage": "x"
+      },
+      {
+        "column": "target_item_id",
+        "compression": "",
+        "relation": "kehila.operations",
+        "storage": "x"
+      },
+      {
+        "column": "target_user_id",
+        "compression": "",
+        "relation": "kehila.operations",
+        "storage": "x"
+      },
+      {
+        "column": "target_relationship_id",
+        "compression": "",
+        "relation": "kehila.operations",
+        "storage": "x"
+      },
+      {
+        "column": "token",
+        "compression": "",
+        "relation": "kehila.operations",
+        "storage": "x"
+      },
+      {
+        "column": "request_sha256",
+        "compression": "",
+        "relation": "kehila.operations",
+        "storage": "x"
+      },
+      {
+        "column": "required_grant",
+        "compression": "",
+        "relation": "kehila.operations",
+        "storage": "x"
+      },
+      {
+        "column": "replay_origin_ms",
+        "compression": "",
+        "relation": "kehila.operations",
+        "storage": "m"
+      },
+      {
+        "column": "replay_deadline_ms",
+        "compression": "",
+        "relation": "kehila.operations",
+        "storage": "m"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.project_grant_events",
+        "storage": "x"
+      },
+      {
+        "column": "actor_id",
+        "compression": "",
+        "relation": "kehila.project_grant_events",
+        "storage": "x"
+      },
+      {
+        "column": "version",
+        "compression": "",
+        "relation": "kehila.project_grant_events",
+        "storage": "m"
+      },
+      {
+        "column": "access_profile",
+        "compression": "",
+        "relation": "kehila.project_grant_events",
+        "storage": "x"
+      },
+      {
+        "column": "granted_by",
+        "compression": "",
+        "relation": "kehila.project_grant_events",
+        "storage": "x"
+      },
+      {
+        "column": "command_family",
+        "compression": "",
+        "relation": "kehila.project_grant_events",
+        "storage": "x"
+      },
+      {
+        "column": "target_kind",
+        "compression": "",
+        "relation": "kehila.project_grant_events",
+        "storage": "x"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.project_grants",
+        "storage": "x"
+      },
+      {
+        "column": "actor_id",
+        "compression": "",
+        "relation": "kehila.project_grants",
+        "storage": "x"
+      },
+      {
+        "column": "access_profile",
+        "compression": "",
+        "relation": "kehila.project_grants",
+        "storage": "x"
+      },
+      {
+        "column": "version",
+        "compression": "",
+        "relation": "kehila.project_grants",
+        "storage": "m"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.project_operational_heads",
+        "storage": "x"
+      },
+      {
+        "column": "state_version",
+        "compression": "",
+        "relation": "kehila.project_operational_heads",
+        "storage": "m"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.projects",
+        "storage": "x"
+      },
+      {
+        "column": "name",
+        "compression": "",
+        "relation": "kehila.projects",
+        "storage": "x"
+      },
+      {
+        "column": "current_prefix",
+        "compression": "",
+        "relation": "kehila.projects",
+        "storage": "x"
+      },
+      {
+        "column": "estimate_unit",
+        "compression": "",
+        "relation": "kehila.projects",
+        "storage": "x"
+      },
+      {
+        "column": "configuration_revision",
+        "compression": "",
+        "relation": "kehila.projects",
+        "storage": "m"
+      },
+      {
+        "column": "next_sequence",
+        "compression": "",
+        "relation": "kehila.projects",
+        "storage": "m"
+      },
+      {
+        "column": "created_by",
+        "compression": "",
+        "relation": "kehila.projects",
+        "storage": "x"
+      },
+      {
+        "column": "creation_command_family",
+        "compression": "",
+        "relation": "kehila.projects",
+        "storage": "x"
+      },
+      {
+        "column": "creation_target_kind",
+        "compression": "",
+        "relation": "kehila.projects",
+        "storage": "x"
+      },
+      {
+        "column": "seed_profile",
+        "compression": "",
+        "relation": "kehila.projects",
+        "storage": "x"
+      },
+      {
+        "column": "description",
+        "compression": "",
+        "relation": "kehila.schema_migrations",
+        "storage": "x"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.statuses",
+        "storage": "x"
+      },
+      {
+        "column": "status_id",
+        "compression": "",
+        "relation": "kehila.statuses",
+        "storage": "x"
+      },
+      {
+        "column": "name",
+        "compression": "",
+        "relation": "kehila.statuses",
+        "storage": "x"
+      },
+      {
+        "column": "phase",
+        "compression": "",
+        "relation": "kehila.statuses",
+        "storage": "x"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.type_workflows",
+        "storage": "x"
+      },
+      {
+        "column": "type_id",
+        "compression": "",
+        "relation": "kehila.type_workflows",
+        "storage": "x"
+      },
+      {
+        "column": "workflow_id",
+        "compression": "",
+        "relation": "kehila.type_workflows",
+        "storage": "x"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.work_item_types",
+        "storage": "x"
+      },
+      {
+        "column": "type_id",
+        "compression": "",
+        "relation": "kehila.work_item_types",
+        "storage": "x"
+      },
+      {
+        "column": "default_workflow_id",
+        "compression": "",
+        "relation": "kehila.work_item_types",
+        "storage": "x"
+      },
+      {
+        "column": "title_field_id",
+        "compression": "",
+        "relation": "kehila.work_item_types",
+        "storage": "x"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.workflow_phase_changes",
+        "storage": "x"
+      },
+      {
+        "column": "workflow_id",
+        "compression": "",
+        "relation": "kehila.workflow_phase_changes",
+        "storage": "x"
+      },
+      {
+        "column": "from_phase",
+        "compression": "",
+        "relation": "kehila.workflow_phase_changes",
+        "storage": "x"
+      },
+      {
+        "column": "to_phase",
+        "compression": "",
+        "relation": "kehila.workflow_phase_changes",
+        "storage": "x"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.workflow_statuses",
+        "storage": "x"
+      },
+      {
+        "column": "workflow_id",
+        "compression": "",
+        "relation": "kehila.workflow_statuses",
+        "storage": "x"
+      },
+      {
+        "column": "status_id",
+        "compression": "",
+        "relation": "kehila.workflow_statuses",
+        "storage": "x"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila.workflows",
+        "storage": "x"
+      },
+      {
+        "column": "workflow_id",
+        "compression": "",
+        "relation": "kehila.workflows",
+        "storage": "x"
+      },
+      {
+        "column": "initial_status_id",
+        "compression": "",
+        "relation": "kehila.workflows",
+        "storage": "x"
+      },
+      {
+        "column": "initial_phase",
+        "compression": "",
+        "relation": "kehila.workflows",
+        "storage": "x"
+      },
+      {
+        "column": "actor_id",
+        "compression": "",
+        "relation": "kehila_auth.creation_intents",
+        "storage": "x"
+      },
+      {
+        "column": "command_family",
+        "compression": "",
+        "relation": "kehila_auth.creation_intents",
+        "storage": "x"
+      },
+      {
+        "column": "intent_handle",
+        "compression": "",
+        "relation": "kehila_auth.creation_intents",
+        "storage": "x"
+      },
+      {
+        "column": "target_kind",
+        "compression": "",
+        "relation": "kehila_auth.creation_intents",
+        "storage": "x"
+      },
+      {
+        "column": "target_project_id",
+        "compression": "",
+        "relation": "kehila_auth.creation_intents",
+        "storage": "x"
+      },
+      {
+        "column": "installation_id",
+        "compression": "",
+        "relation": "kehila_auth.installation",
+        "storage": "x"
+      },
+      {
+        "column": "owner_actor_id",
+        "compression": "",
+        "relation": "kehila_auth.installation",
+        "storage": "x"
+      },
+      {
+        "column": "enrollment_attempt_id",
+        "compression": "",
+        "relation": "kehila_auth.installation",
+        "storage": "x"
+      },
+      {
+        "column": "runtime_generation",
+        "compression": "",
+        "relation": "kehila_auth.installation",
+        "storage": "m"
+      },
+      {
+        "column": "runtime_generation",
+        "compression": "",
+        "relation": "kehila_auth.management_events",
+        "storage": "m"
+      },
+      {
+        "column": "public_id",
+        "compression": "",
+        "relation": "kehila_auth.management_events",
+        "storage": "x"
+      },
+      {
+        "column": "event_kind",
+        "compression": "",
+        "relation": "kehila_auth.management_events",
+        "storage": "x"
+      },
+      {
+        "column": "installation_id",
+        "compression": "",
+        "relation": "kehila_auth.management_events",
+        "storage": "x"
+      },
+      {
+        "column": "owner_actor_id",
+        "compression": "",
+        "relation": "kehila_auth.management_events",
+        "storage": "x"
+      },
+      {
+        "column": "auth_generation",
+        "compression": "",
+        "relation": "kehila_auth.management_events",
+        "storage": "m"
+      },
+      {
+        "column": "verifier_revision",
+        "compression": "",
+        "relation": "kehila_auth.management_events",
+        "storage": "m"
+      },
+      {
+        "column": "credential_kind",
+        "compression": "",
+        "relation": "kehila_auth.management_events",
+        "storage": "x"
+      },
+      {
+        "column": "initiator_kind",
+        "compression": "",
+        "relation": "kehila_auth.management_events",
+        "storage": "x"
+      },
+      {
+        "column": "initiating_session_id",
+        "compression": "",
+        "relation": "kehila_auth.management_events",
+        "storage": "x"
+      },
+      {
+        "column": "owner_actor_id",
+        "compression": "",
+        "relation": "kehila_auth.owner_credentials",
+        "storage": "x"
+      },
+      {
+        "column": "verifier",
+        "compression": "",
+        "relation": "kehila_auth.owner_credentials",
+        "storage": "x"
+      },
+      {
+        "column": "auth_generation",
+        "compression": "",
+        "relation": "kehila_auth.owner_credentials",
+        "storage": "m"
+      },
+      {
+        "column": "verifier_revision",
+        "compression": "",
+        "relation": "kehila_auth.owner_credentials",
+        "storage": "m"
+      },
+      {
+        "column": "installation_id",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "x"
+      },
+      {
+        "column": "actor_id",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "x"
+      },
+      {
+        "column": "project_id",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "x"
+      },
+      {
+        "column": "command_family",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "x"
+      },
+      {
+        "column": "target_kind",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "x"
+      },
+      {
+        "column": "intent_handle",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "x"
+      },
+      {
+        "column": "token",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "x"
+      },
+      {
+        "column": "target_item_id",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "x"
+      },
+      {
+        "column": "request_sha256",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "x"
+      },
+      {
+        "column": "request_bytes",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "x"
+      },
+      {
+        "column": "registered_ms",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "m"
+      },
+      {
+        "column": "expires_ms",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "m"
+      },
+      {
+        "column": "state",
+        "compression": "",
+        "relation": "kehila_auth.pending_items",
+        "storage": "x"
+      },
+      {
+        "column": "installation_id",
+        "compression": "",
+        "relation": "kehila_auth.pending_projects",
+        "storage": "x"
+      },
+      {
+        "column": "actor_id",
+        "compression": "",
+        "relation": "kehila_auth.pending_projects",
+        "storage": "x"
+      },
+      {
+        "column": "command_family",
+        "compression": "",
+        "relation": "kehila_auth.pending_projects",
+        "storage": "x"
+      },
+      {
+        "column": "intent_handle",
+        "compression": "",
+        "relation": "kehila_auth.pending_projects",
+        "storage": "x"
+      },
+      {
+        "column": "token",
+        "compression": "",
+        "relation": "kehila_auth.pending_projects",
+        "storage": "x"
+      },
+      {
+        "column": "name",
+        "compression": "",
+        "relation": "kehila_auth.pending_projects",
+        "storage": "x"
+      },
+      {
+        "column": "prefix",
+        "compression": "",
+        "relation": "kehila_auth.pending_projects",
+        "storage": "x"
+      },
+      {
+        "column": "estimate_unit",
+        "compression": "",
+        "relation": "kehila_auth.pending_projects",
+        "storage": "x"
+      },
+      {
+        "column": "registered_ms",
+        "compression": "",
+        "relation": "kehila_auth.pending_projects",
+        "storage": "m"
+      },
+      {
+        "column": "expires_ms",
+        "compression": "",
+        "relation": "kehila_auth.pending_projects",
+        "storage": "m"
+      },
+      {
+        "column": "state",
+        "compression": "",
+        "relation": "kehila_auth.pending_projects",
+        "storage": "x"
+      },
+      {
+        "column": "target_project_id",
+        "compression": "",
+        "relation": "kehila_auth.pending_projects",
+        "storage": "x"
+      }
+    ],
+    "postgres": {
+      "autovacuum": "on",
+      "block_size": "8192",
+      "checkpoint_timeout": "5min",
+      "default_toast_compression": "pglz",
+      "full_page_writes": "on",
+      "max_wal_size": "1GB",
+      "version": "16.15 (Debian 16.15-1.pgdg12+2)",
+      "wal_compression": "off"
+    },
+    "storage_contract_sha256": "fc47a8e429040a38307adced27a9dfafd6c4422ed7c47a1d4d41fd6ac33ec6fa"
+  },
+  "schema": 1
+}

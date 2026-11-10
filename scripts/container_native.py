@@ -18,10 +18,14 @@ from cleanup_errors import retain_cleanup_failure
 from container_executor import LABEL, one_object
 from verification_budget import cleanup_time, command_timeout
 from native_authority_fixture import (AUTH_DATABASES, ITEM_DATABASES, ITEM_OBSERVERS,
-    CAPACITY_MODE, CAPACITY_DATABASE, CAPACITY_OBSERVER)
+    CAPACITY_MODE, CAPACITY_DATABASE, CAPACITY_OBSERVER, STORAGE_MODE, STORAGE_DATABASE,
+    STORAGE_HISTORICAL_DATABASE, STORAGE_OBSERVER)
 from native_fixture_assets import write_owner, write_manifest, verify_export, MANIFEST_FILE
 from capacity_plan import cell as planned_capacity_cell
 from capacity_results import canonical
+from storage_growth_plan import select as storage_samples
+from storage_growth_results import validate_sample_observations
+from native_database_limits import DEFAULT_LIMITS, storage_limits
 
 
 @dataclass(frozen=True)
@@ -73,7 +77,7 @@ def admit_owned_database(info, identity, owner, name):
             'Native database ownership mismatch')
 
 
-def admit_database(info, identity, runner, owner, name):
+def admit_database(info, identity, runner, owner, name, *, limits=DEFAULT_LIMITS):
     admit_owned_database(info, identity, owner, name)
     host, config = info['HostConfig'], info['Config']
     require(config['Image'] == IMAGE, 'Native database image mismatch')
@@ -83,11 +87,11 @@ def admit_database(info, identity, runner, owner, name):
             and not host.get('Devices') and not host.get('PortBindings')
             and host['NetworkMode'] == 'container:' + runner,
             'Native database isolation mismatch')
-    require(host['Memory'] == 256 * 1024**2 and host['PidsLimit'] == 128 and cpu,
+    require(host['Memory'] == limits.memory_bytes and host['PidsLimit'] == 128 and cpu,
             'Native database limits mismatch')
     tmpfs = host.get('Tmpfs', {})
     require(set(tmpfs) == {'/var/lib/postgresql/data'}
-            and 'size=256m' in tmpfs['/var/lib/postgresql/data'].split(','),
+            and f'size={limits.mib}m' in tmpfs['/var/lib/postgresql/data'].split(','),
             'Native database must use bounded ephemeral storage')
 
 
@@ -104,7 +108,7 @@ def selected_item_cases(cases):
 
 def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=False,
           capacity_cell=None, capacity_observer='sampled', capacity_oracle_control=False,
-          capacity_calibration=False):
+          capacity_calibration=False, storage_sample=None, storage_profile='default'):
     require(type(capacity_oracle_control) is bool, 'Capacity oracle control must be boolean')
     require(type(capacity_calibration) is bool, 'Capacity calibration selector must be boolean')
     selected_cell = None
@@ -119,7 +123,15 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
         require(capacity_observer == 'sampled' and not capacity_oracle_control and not capacity_calibration,
                 'Capacity controls require the dedicated cell selector')
     item_cases = selected_item_cases(item_cases)
-    full = item_cases is None and selected_cell is None
+    selected_storage = None
+    require(type(storage_profile) is str and (storage_profile == 'default' or storage_sample is not None),
+            'Storage resource profile requires an explicit storage sample')
+    if storage_sample is not None:
+        require(item_cases is None and selected_cell is None and evidence_directory is not None,
+                'Select one explicit storage sample with complete external evidence retention')
+        selected_storage = storage_samples([storage_sample])[0]
+    limits = DEFAULT_LIMITS if selected_storage is None else storage_limits(storage_sample, storage_profile)
+    full = item_cases is None and selected_cell is None and selected_storage is None
     require(type(reset_assets) is bool, 'Fixture reset selection must be boolean')
     require(not reset_assets or evidence_directory is not None,
             'Generated fixture reset requires complete external evidence retention')
@@ -134,9 +146,11 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
                 'Native evidence destination must be fresh and outside the source snapshot')
         require(not any((parent / '.git').exists() for parent in (destination, *destination.parents)),
                 'Native evidence destination must be outside Git checkouts')
-    items = ({CAPACITY_MODE: CAPACITY_DATABASE} if selected_cell is not None else
+    items = ({STORAGE_MODE: STORAGE_DATABASE} if selected_storage is not None else
+             {CAPACITY_MODE: CAPACITY_DATABASE} if selected_cell is not None else
              ITEM_DATABASES if full else {case: ITEM_DATABASES[case] for case in item_cases})
-    observers = {CAPACITY_MODE: CAPACITY_OBSERVER} if selected_cell is not None else ITEM_OBSERVERS
+    observers = ({STORAGE_MODE: STORAGE_OBSERVER} if selected_storage is not None else
+                 {CAPACITY_MODE: CAPACITY_OBSERVER} if selected_cell is not None else ITEM_OBSERVERS)
     require(executor.build_network_detached, 'Disconnect build networking before native verification')
     runner_info = executor.inspect_container(executor.container)
     admit_runner(runner_info, executor.container, executor.owner)
@@ -148,10 +162,13 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
     folder = Path(tempfile.mkdtemp(prefix='kehila-native-diagnostics-', dir=root)).resolve()
     write_owner(folder, executor.owner)
     receipt = None
-    selection = {'scope': 'capacity-cell' if selected_cell is not None else 'full-native' if full else 'focused-items',
+    selection = {'scope': 'storage-sample' if selected_storage is not None else
+                 'capacity-cell' if selected_cell is not None else 'full-native' if full else 'focused-items',
                  'selected_items': list(items), 'observed_items': []}
     if selected_cell is not None:
         selection.update(plan=selected_cell.document(), observer=capacity_observer, calibration=capacity_calibration)
+    if selected_storage is not None:
+        selection.update(plan=selected_storage.document(), storage_profile=storage_profile)
     (folder / 'selection.json').write_text(json.dumps(selection), encoding='utf-8')
     print('NATIVE SCOPE:', selection['scope'], ', '.join(items), flush=True)
     name = executor.name + '-native-db'
@@ -197,8 +214,8 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
         control('cp', executor.container + ':/work/native-authority/postgres', str(folder / 'postgres'))
         stage, attempted = 'database-create', True
         identity = control('create', '--pull=never', '--name', name, '--label', LABEL + '=' + executor.owner,
-            '--network', 'container:' + executor.container, '--memory=256m', '--cpus=1', '--pids-limit=128',
-            '--tmpfs', '/var/lib/postgresql/data:rw,size=256m',
+            '--network', 'container:' + executor.container, f'--memory={limits.mib}m', '--cpus=1', '--pids-limit=128',
+            '--tmpfs', f'/var/lib/postgresql/data:rw,size={limits.mib}m',
             '--env', 'POSTGRES_PASSWORD_FILE=/tmp/kehila-native/admin-password',
             '--env', 'POSTGRES_HOST_AUTH_METHOD=scram-sha-256', '--entrypoint', '/bin/sh', IMAGE,
             '-c', 'set -eu; chmod 700 /tmp/kehila-native; chmod 600 /tmp/kehila-native/*; '
@@ -208,7 +225,7 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
             '-c ssl_cert_file=/tmp/kehila-native/server.pem '
             '-c ssl_key_file=/tmp/kehila-native/server-key.pem -c listen_addresses=127.0.0.1').strip()
         info = one_object(control('inspect', '--type', 'container', identity))
-        admit_database(info, identity, executor.container, executor.owner, name)
+        admit_database(info, identity, executor.container, executor.owner, name, limits=limits)
         host = info['HostConfig']
         (folder / 'execution-profile.json').write_text(json.dumps({
             'schema': 1, 'owner': executor.owner, 'runner_identity': executor.container,
@@ -245,7 +262,7 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
             time.sleep(0.1)
         stage = 'database-install'
         control('exec', identity, 'sh', '-c',
-            'set -eu; test "$(cat /sys/fs/cgroup/memory.max)" = 268435456; '
+            f'set -eu; test "$(cat /sys/fs/cgroup/memory.max)" = {limits.memory_bytes}; '
             'test "$(cat /sys/fs/cgroup/pids.max)" = 128; '
             'set -- $(cat /sys/fs/cgroup/cpu.max); test "$1" != max; test "$1" = "$2"')
         psql('/tmp/kehila-schema/install_product.sql')
@@ -253,7 +270,9 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
         stage = 'pristine-isolated-fixtures'
         baseline = "DO $$ BEGIN IF EXISTS (SELECT FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid()) OR EXISTS (SELECT FROM kehila.projects) OR (SELECT runtime_generation FROM kehila_auth.installation)<>0 OR (SELECT auth_generation<>1 OR verifier_revision<>1 FROM kehila_auth.owner_credentials) THEN RAISE EXCEPTION 'pristine quiescent fixture required'; END IF; END $$;"
         control('exec', identity, 'psql', '-X', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', baseline)
-        databases = (*AUTH_DATABASES.values(), *items.values()) if full else items.values()
+        databases = ((*AUTH_DATABASES.values(), *items.values()) if full else
+                     (*items.values(), STORAGE_HISTORICAL_DATABASE) if selected_storage is not None
+                     else items.values())
         for database in databases:
             control('exec', identity, 'createdb', '-U', 'postgres', '--owner=kehila_owner',
                     '--template=postgres', database)
@@ -269,6 +288,8 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
             if selected_cell is not None:
                 command += ['--capacity-cell-index', str(selected_cell.index), '--capacity-observer', capacity_observer]
                 if capacity_calibration: command.append('--capacity-calibration')
+            if selected_storage is not None:
+                command += ['--storage-sample-index', str(selected_storage.index), '--storage-profile', storage_profile]
             work(command)
             if selected_cell is not None:
                 stage = 'capacity-client-lineage'
@@ -309,6 +330,17 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
             stage = mode + '-independent-observer'
             (folder / (mode + '-observation.txt')).write_text(
                 psql('/tmp/' + observers[mode], database), encoding='utf-8')
+            if selected_storage is not None:
+                stage = 'storage-independent-historical-observer'
+                historical_observation = folder / 'storage-historical-observation.txt'
+                historical_observation.write_text(psql('/tmp/' + STORAGE_OBSERVER,
+                    STORAGE_HISTORICAL_DATABASE), encoding='utf-8')
+                stage = 'storage-expectations-and-census-export'
+                control('cp', executor.container + ':/work/native-authority/controls/' + STORAGE_MODE,
+                        str(folder / 'storage'))
+                stage = 'storage-independent-state-comparison'
+                validate_sample_observations(folder / 'storage',
+                    folder / (mode + '-observation.txt'), historical_observation, selected_storage)
             selection['observed_items'].append(mode)
             (folder / 'selection.json').write_text(json.dumps(selection), encoding='utf-8')
         if full:
@@ -385,6 +417,31 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
                     psql('/tmp/native_auth_fixture_state.sql', database), encoding='utf-8')
     except BaseException as error:
         failure = error
+        if selected_storage is not None and attempted:
+            # Preserve the actual committed population before destroying this
+            # disposable fixture. A failed pair can contain accepted native
+            # revisions even when its historical setup rolled back.
+            counts = {}
+            for role, database in (('native', STORAGE_DATABASE),
+                                   ('historical', STORAGE_HISTORICAL_DATABASE)):
+                try:
+                    with cleanup_time():
+                        result = executor.engine('exec', name, 'psql', '-X', '-q', '-A', '-t',
+                            '-U', 'postgres', '-d', database, '-v', 'ON_ERROR_STOP=1', '-c',
+                            "SET statement_timeout='3s'; SELECT count(*) FROM kehila.item_revisions",
+                            capture=True, timeout=15)
+                    count = int(result.stdout.strip())
+                    require(count >= 0, 'Storage failure population is negative')
+                    counts[role] = {'accepted_revisions': count, 'observed': True,
+                                    'within_bound': count <= 21}
+                except BaseException as diagnostic:
+                    counts[role] = {'accepted_revisions': None, 'observed': False,
+                                    'failure_class': type(diagnostic).__name__}
+            try:
+                (folder / 'storage-failure-counts.json').write_text(
+                    json.dumps({'schema': 1, 'counts': counts}), encoding='utf-8')
+            except BaseException as diagnostic:
+                retain_cleanup_failure(error, diagnostic, 'storage failure population retention')
         # Copy failure evidence without printing its contents or installing any
         # trust. The caller may retain this external directory privately.
         retain_failure(error, stage, 'runner-evidence')
@@ -436,6 +493,9 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
                             receipt.update(cell_index=selected_cell.index, observer=capacity_observer,
                                            calibration=capacity_calibration,
                                            independent_state_verified=True, oracle_negative_control=capacity_oracle_control)
+                        if selected_storage is not None:
+                            receipt.update(storage_sample_index=selected_storage.index,
+                                           independent_state_verified=True, storage_profile=storage_profile)
                     if reset_assets:
                         stage = 'generated-assets-reset'
                         work(['python', 'scripts/native_authority_fixture.py', 'reset', '--seconds',
@@ -452,6 +512,8 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
         print('PASS: native durable cardinalities, identity coherence and owned cleanup')
     elif selected_cell is not None:
         print('PASS: finite capacity cell, independent observer and owned cleanup')
+    elif selected_storage is not None:
+        print('PASS: paired storage sample, independent observers and owned cleanup')
     else:
         print('PASS: focused native items, independent observers and owned cleanup:', ', '.join(items))
     return receipt
