@@ -270,6 +270,10 @@ and repetitions 1/2. Each sample pairs two isolated database roles, each contain
 one created item and twenty serial edits. That is 42 item revisions per pair and
 1,008 across the entire matrix. Count accepted revisions and measurement time
 across attempts; restarting a batch does not create an additional execution budget.
+The Python planner and Rust fixture consume the same fixed
+[`storage_growth_samples.json`](../scripts/storage_growth_samples.json) matrix.
+Its row positions are retained sample identities. Complete-matrix tests freeze
+the recorded mapping; changes require reviewing workload and resource admission.
 
 Compact items have four 64-byte text fields and large items have 128 1,024-byte
 text fields. The near-boundary candidate uses 128 7,600-byte fields. It must pass
@@ -309,6 +313,8 @@ revision histories, tombstones, creation identities, heads and field-use witness
 after the native runtime has released ownership. The Python consumer independently
 applies the declared field changes, checks untouched values, and compares these
 observations. Runtime roles receive no additional observation privileges.
+Both database roles consume the same Rust-generated expected records; the
+independent Python checks do not establish absence of every shared generator bug.
 
 The default database profile retains 256 MiB memory and data tmpfs limits.
 After explicit resource admission, `--storage-profile extended` selects 512 MiB
@@ -322,6 +328,11 @@ exported evidence against a 2 GiB batch limit. These limits are containment, not
 capacity guarantee. Raw synthetic requests, histories, credentials and logs stay
 in external evidence. Finite measurements and a proposed projection do not accept
 a history representation or establish real-data capacity/restore guarantees.
+The evidence checks and 7,200-second measurement checks occur around samples;
+they are not an in-flight filesystem quota or a continuously enforced measurement
+deadline. Separate command/overall work deadlines and cleanup allowances still
+apply. The pre-write allocation guard does not measure total process memory or
+guarantee host memory availability.
 
 `scripts/storage_growth_report.py` revalidates exported receipts, exact state,
 checkpoints and source/profile bindings before reporting. Supply each completed

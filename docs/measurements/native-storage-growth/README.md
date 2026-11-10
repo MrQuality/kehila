@@ -44,6 +44,10 @@ Read-only censuses run at baseline, creation, and edits 1, 5, 10 and 20, then
 after historical replay retirement and pending-payload pruning. Independent
 observers verify exact histories, request hashes, saved results, operation
 identity/attribution, tombstones, item and project heads, and field-use witnesses.
+The native journey and historical SQL insertion share the Rust-generated expected
+records. The Python validator separately regenerates text and applies declared
+field edits, including unchanged-field checks. This is independent checking of
+those expectations, not a guarantee against every shared generator mistake.
 The final exports validate all 24 pairs: 1,008 successful item revisions and
 1,008 exact model reconstructions across 48 history chains of 21 revisions each.
 
@@ -58,6 +62,13 @@ the fixture's changes are limited to resource admission and headroom checks.
 These are separate source/resource cohorts. Their union covers the matrix,
 but cannot establish a homogeneous-profile or resource-independent causal
 comparison. The large repeated/SHA256 comparisons share the 256 MiB profile.
+
+The memory and data-tmpfs limits are hard container limits. The pre-write
+database-plus-WAL allocation check leaves a declared 64 MiB margin; it does not
+measure peak process memory or guarantee host memory availability. Evidence and
+measurement-time checks run around samples, rather than continuously enforcing
+a filesystem quota or an in-flight measurement deadline. Command and overall
+work deadlines are separate controls, and cleanup has its own allowance.
 
 The campaign's accepted cap was 1,058 revisions, including 50 revisions from
 two failed attempts. Failed evidence is retained separately: one historical
@@ -137,6 +148,10 @@ allocation by the planned item count, then sum. Minima/maxima range over entropy
 edit breadth and repetitions; they are scenario envelopes, not confidence
 intervals. One-year timing does not add an annual multiplier: 20 edits is the
 total per item in that year. More years/edits require a new estimate.
+The observed maximum is neither a lower bound nor an operational capacity
+ceiling. Shared page utilization can reduce repeated per-fixture overhead,
+while maintenance, other workloads and long-lived allocation can increase it;
+the direction and magnitude at deployment scale were not measured.
 
 | Quantity | Native, replay present GiB | Historical, after pruning GiB |
 | --- | ---: | ---: |
@@ -161,6 +176,13 @@ replication, filesystem overhead outside PostgreSQL's database-size observation
 and temporary/build space are outside this database projection. The 4 GiB
 expectation is therefore a planning target to monitor, not an enforced limit or
 capacity guarantee. No automatic replay-retirement schedule is assumed.
+Before extending these capacity claims, [#49](https://github.com/MrQuality/kehila/issues/49)
+retains the shared-database and longer-history evidence needs. A production
+maintenance implementation also needs its own scheduling, bounded-batch,
+concurrency and interruption/recovery qualification. WAL retention, replication
+and backup sizing require separate workload and retention assumptions under
+[#60](https://github.com/MrQuality/kehila/issues/60); generated WAL alone is not
+a retained-backup size forecast.
 
 ## Full history versus checkpoint/delta comparison
 
@@ -213,6 +235,13 @@ the two execution profiles. Full inventories are bound separately; the shared
 contract fingerprint is a review aid, not automated semantic-equivalence proof.
 Raw histories, operation identities and execution diagnostics are intentionally
 excluded from these published tables.
+
+The Python planner and Rust fixture now consume the same fixed
+[sample matrix](../../../scripts/storage_growth_samples.json). All 24 recorded
+sample identities remain unchanged, including the four extended-profile samples
+20–23. New source inventories include this matrix in the storage-contract
+fingerprint. Retained measurements keep their original source inventories and
+fingerprints; checking the refactor does not turn them into new-head executions.
 
 The measurement fixtures, model and focused orchestration checks have executed.
 The selected representation preserves existing product history and replay

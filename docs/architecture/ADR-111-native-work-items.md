@@ -355,6 +355,15 @@ actual request/result/revision and PostgreSQL JSONB expansion bounds; the logica
   lock does not establish parallel project throughput in this profile.
   Preparation can repeat on contention within the original deadline. No throughput
   or measured capacity guarantee follows; measure relevant limits before claims.
+  The maintainer's [bounded history-storage disposition](../measurements/native-storage-growth/README.md)
+  retains complete revision snapshots and accepts a conditional 0.370–1.763 GiB
+  database-growth estimate for 1,000 items with 20 edits each over one year,
+  against a 4 GiB planning target. The 90% compact / 9% large / 1% near-boundary
+  mix and stated exclusions bound that estimate. It is neither a deployment
+  capacity guarantee nor an upper/lower bound at scale. More items, edits, years
+  or materially different workload/storage assumptions require a revised estimate.
+  This cross-reference records the existing disposition without changing this
+  ADR's acceptance scope, permanent-history or replay-retention contracts.
 - Operations: pending discovery distinguishes unknown from rejected. Cancellation
   joins owned work; uncertain COMMIT is reconciled with original identity. Preserve
   abnormal shutdown reporting and independent final resource observations.
