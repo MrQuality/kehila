@@ -12,7 +12,8 @@ const CENSUS: &str =
     include_str!("../../../../../../../../../tests/integration/storage_growth_observer.sql");
 const HISTORICAL: &str =
     include_str!("../../../../../../../../../tests/integration/storage_growth_historical.sql");
-const SAMPLES: &str = include_str!("../../../../../../../../../scripts/storage_growth_samples.json");
+const SAMPLES: &str =
+    include_str!("../../../../../../../../../scripts/storage_growth_samples.json");
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -49,7 +50,8 @@ struct Sample {
 
 impl Sample {
     fn new(index: usize, data_limit_mib: usize) -> Self {
-        let dimensions: [(Size, Entropy, EditBreadth, u8); 24] = serde_json::from_str(SAMPLES).unwrap();
+        let dimensions: [(Size, Entropy, EditBreadth, u8); 24] =
+            serde_json::from_str(SAMPLES).unwrap();
         let (size, entropy, edit, repetition) = *dimensions
             .get(index)
             .expect("storage sample outside finite plan");
@@ -658,7 +660,8 @@ fn native_storage_growth_sample() {
         .expect("explicit finite storage sample required");
     let parsed = index.parse::<usize>().unwrap();
     assert_eq!(parsed.to_string(), index);
-    let input = std::env::var("KEHILA_STORAGE_DATA_MIB").expect("explicit storage data bound required");
+    let input =
+        std::env::var("KEHILA_STORAGE_DATA_MIB").expect("explicit storage data bound required");
     let data_limit_mib = input.parse::<usize>().unwrap();
     assert_eq!(data_limit_mib.to_string(), input);
     let sample = Sample::new(parsed, data_limit_mib);
