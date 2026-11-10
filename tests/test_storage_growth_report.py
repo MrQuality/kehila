@@ -5,13 +5,25 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from storage_growth_report import growth_rows, complete_matrix, complete_selection, coverage, model_comparison
+from storage_growth_report import growth_rows, complete_matrix, complete_selection, coverage, model_comparison, storage_contract
 from storage_growth_plan import samples
 from test_storage_growth_results import observation
 from test_storage_history_model import histories
 
 
 class StorageGrowthReportTests(unittest.TestCase):
+    def test_shared_matrix_is_fingerprinted_when_present_and_legacy_inventories_stay_readable(self):
+        names = ('Cargo.toml', 'Cargo.lock', 'src/io/kehila_authority/Cargo.toml',
+                 'scripts/storage_growth_plan.py', 'scripts/storage_growth_results.py',
+                 'tests/integration/storage_growth_historical.sql',
+                 'tests/integration/storage_growth_observer.sql', 'tests/integration/storage_growth_state.sql')
+        legacy = dict.fromkeys(names, 'a'*64)
+        legacy_digest = storage_contract(legacy)
+        current = dict(legacy, **{'scripts/storage_growth_samples.json': 'b'*64})
+        self.assertNotEqual(storage_contract(current), legacy_digest)
+        changed = dict(current, **{'scripts/storage_growth_samples.json': 'c'*64})
+        self.assertNotEqual(storage_contract(current), storage_contract(changed))
+
     def test_explicit_cohorts_require_exact_disjoint_coverage_and_common_storage_contracts(self):
         def report(name, indices, memory, source):
             binding = {'source_inventory_sha256': source, 'storage_contract_sha256': 'a'*64,

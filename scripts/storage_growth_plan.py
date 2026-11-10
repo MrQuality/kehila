@@ -8,10 +8,17 @@ no fixed field-byte count is assumed to be a valid near-boundary record.
 """
 from dataclasses import dataclass
 from itertools import product
+import json
+from pathlib import Path
 
-_DIMENSIONS = tuple(product(('compact', 'large', 'near_boundary'),
-                            ('repeated', 'sha256_hex'),
-                            ('one_field', 'all_fields'), (1, 2)))
+# Also compiled into the Rust fixture. Row positions are retained evidence IDs;
+# changing this matrix requires reviewing workload and resource admission again.
+_DIMENSIONS = tuple(tuple(row) for row in json.loads(
+    Path(__file__).with_name('storage_growth_samples.json').read_text(encoding='utf-8')))
+if len(_DIMENSIONS) != 24 or set(_DIMENSIONS) != set(product(
+        ('compact', 'large', 'near_boundary'), ('repeated', 'sha256_hex'),
+        ('one_field', 'all_fields'), (1, 2))):
+    raise ValueError('Storage matrix differs from the finite workload dimensions')
 
 
 @dataclass(frozen=True)

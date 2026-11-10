@@ -27,6 +27,7 @@ DEFAULT_LIMITS = DatabaseLimits()
 
 def storage_limits(index, profile='default'):
     sample = select([index])[0]
-    if profile not in ('default', 'extended') or (profile == 'extended' and sample.index < 20):
+    if profile not in ('default', 'extended') or (profile == 'extended' and (
+            sample.profile != 'near_boundary' or sample.entropy != 'sha256_hex')):
         raise ValueError('Extended storage resource profile requires a near-boundary SHA256 sample')
     return DatabaseLimits(512 if profile == 'extended' else 256)

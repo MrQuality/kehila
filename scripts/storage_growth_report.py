@@ -27,7 +27,10 @@ def storage_contract(source):
                 'tests/integration/storage_growth_historical.sql',
                 'tests/integration/storage_growth_observer.sql', 'tests/integration/storage_growth_state.sql'}
     require(required <= set(source), 'Storage contract inventory incomplete')
-    selected = {name: digest for name, digest in source.items() if name in required or (
+    # Historical inventories predate the shared matrix. Preserve their original
+    # fingerprints; include the matrix whenever it belongs to the observed source.
+    selected = {name: digest for name, digest in source.items() if name in required
+                or name == 'scripts/storage_growth_samples.json' or (
         name.endswith(('.rs', '.sql', '.toml')) and (
             name.startswith(('storage/postgresql/', 'src/pure/')) or
             (name.startswith('src/io/kehila_authority/src/') and '/tests/' not in name

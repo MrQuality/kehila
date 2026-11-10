@@ -1,6 +1,6 @@
 //! Finite storage observations. Historical retirement is a separate owner fixture.
 use super::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use task_contract::field::{FieldEdit, FieldEntry, FieldId};
 use task_contract::item_mutation::{
     decide_create, decide_edit, CreateCommand, CreateDecision, EditCommand, EditDecision,
@@ -12,10 +12,34 @@ const CENSUS: &str =
     include_str!("../../../../../../../../../tests/integration/storage_growth_observer.sql");
 const HISTORICAL: &str =
     include_str!("../../../../../../../../../tests/integration/storage_growth_historical.sql");
+const SAMPLES: &str = include_str!("../../../../../../../../../scripts/storage_growth_samples.json");
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+enum Size {
+    Compact,
+    Large,
+    NearBoundary,
+}
+
+#[derive(Clone, Copy, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+enum Entropy {
+    Repeated,
+    Sha256Hex,
+}
+
+#[derive(Clone, Copy, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+enum EditBreadth {
+    OneField,
+    AllFields,
+}
 
 #[derive(Clone, Copy)]
 struct Sample {
     index: usize,
+    size: Size,
     fields: usize,
     bytes: usize,
     repeated: bool,
@@ -24,24 +48,32 @@ struct Sample {
 }
 
 impl Sample {
-    fn new(index: usize) -> Self {
-        assert!(index < 24, "storage sample outside finite plan");
-        let input =
-            std::env::var("KEHILA_STORAGE_DATA_MIB").expect("explicit storage data bound required");
-        let data_limit_mib = input.parse::<usize>().unwrap();
-        assert_eq!(data_limit_mib.to_string(), input);
+    fn new(index: usize, data_limit_mib: usize) -> Self {
+        let dimensions: [(Size, Entropy, EditBreadth, u8); 24] = serde_json::from_str(SAMPLES).unwrap();
+        let (size, entropy, edit, repetition) = *dimensions
+            .get(index)
+            .expect("storage sample outside finite plan");
+        assert!((1..=2).contains(&repetition));
         assert!(
-            data_limit_mib == 256 || (data_limit_mib == 512 && index >= 20),
+            data_limit_mib == 256
+                || (data_limit_mib == 512
+                    && size == Size::NearBoundary
+                    && entropy == Entropy::Sha256Hex),
             "unknown storage resource profile"
         );
         Self {
             index,
-            fields: if index < 8 { 4 } else { 128 },
+            size,
+            fields: if size == Size::Compact { 4 } else { 128 },
             // Pure candidate, checked against ingress/native codecs before use
             // and the actual rendered PostgreSQL history after every insertion.
-            bytes: [64, 1024, 7600][index / 8],
-            repeated: (index / 4).is_multiple_of(2),
-            all_fields: index / 2 % 2 == 1,
+            bytes: match size {
+                Size::Compact => 64,
+                Size::Large => 1024,
+                Size::NearBoundary => 7600,
+            },
+            repeated: entropy == Entropy::Repeated,
+            all_fields: edit == EditBreadth::AllFields,
             data_limit_mib,
         }
     }
@@ -63,6 +95,32 @@ impl Sample {
         text.truncate(self.bytes);
         text
     }
+}
+
+#[test]
+fn storage_sample_plan_and_resource_admission() {
+    // Freeze the recorded IDs independently of the shared input, including all
+    // dimensions that affect payloads, near-boundary checks and resource admission.
+    for index in 0..24 {
+        let sample = Sample::new(index, 256);
+        assert_eq!(sample.index, index);
+        assert_eq!(
+            sample.size,
+            [Size::Compact, Size::Large, Size::NearBoundary][index / 8]
+        );
+        assert_eq!(sample.fields, if index < 8 { 4 } else { 128 });
+        assert_eq!(sample.bytes, [64, 1024, 7600][index / 8]);
+        assert_eq!(sample.repeated, (index / 4).is_multiple_of(2));
+        assert_eq!(sample.all_fields, index / 2 % 2 == 1);
+        let extended = std::panic::catch_unwind(|| Sample::new(index, 512));
+        if (20..24).contains(&index) {
+            assert_eq!(extended.unwrap().data_limit_mib, 512);
+        } else {
+            assert!(extended.is_err());
+        }
+    }
+    assert!(std::panic::catch_unwind(|| Sample::new(24, 256)).is_err());
+    assert!(std::panic::catch_unwind(|| Sample::new(20, 1024)).is_err());
 }
 
 #[derive(Serialize)]
@@ -231,7 +289,7 @@ async fn checkpoint(
             expected_history
         );
         let bytes: i32 = row.get(1);
-        assert!(bytes <= 1_048_576 && (sample.index < 16 || bytes >= 943_719));
+        assert!(bytes <= 1_048_576 && (sample.size != Size::NearBoundary || bytes >= 943_719));
         predecessor = row.get(2);
         assert_eq!(row.get::<_, bool>(3), retired);
         let raw = unhex(&record.request_hex);
@@ -600,7 +658,10 @@ fn native_storage_growth_sample() {
         .expect("explicit finite storage sample required");
     let parsed = index.parse::<usize>().unwrap();
     assert_eq!(parsed.to_string(), index);
-    let sample = Sample::new(parsed);
+    let input = std::env::var("KEHILA_STORAGE_DATA_MIB").expect("explicit storage data bound required");
+    let data_limit_mib = input.parse::<usize>().unwrap();
+    assert_eq!(data_limit_mib.to_string(), input);
+    let sample = Sample::new(parsed, data_limit_mib);
     let (endpoint, installation, attempt, controls) = fixture();
     let historical_endpoint = endpoint.copied_fixture_database("native_storage_historical");
     tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {

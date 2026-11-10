@@ -2,12 +2,19 @@
 from pathlib import Path
 import sys
 import unittest
+from itertools import product
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import storage_growth_plan as plan
 
 
 class StorageGrowthPlanTests(unittest.TestCase):
+    def test_all_sample_identities_match_the_recorded_campaign(self):
+        expected = list(product(('compact', 'large', 'near_boundary'),
+                                ('repeated', 'sha256_hex'), ('one_field', 'all_fields'), (1, 2)))
+        self.assertEqual([(sample.profile, sample.entropy, sample.edit, sample.repetition)
+                          for sample in plan.samples()], expected)
+
     def test_campaign_covers_size_compression_and_edit_locality_with_repetitions(self):
         samples = plan.samples()
         self.assertEqual(len(samples), 24)

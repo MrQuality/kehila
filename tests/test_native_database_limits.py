@@ -3,14 +3,35 @@ from dataclasses import FrozenInstanceError
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from native_database_limits import DatabaseLimits, storage_limits
+import storage_growth_plan as plan
 from test_container_native import database, DATABASE, RUNNER, OWNER, NAME
 from container_native import admit_database
 
 
 class DatabaseLimitTests(unittest.TestCase):
+    def test_extended_admission_tracks_dimensions_instead_of_matrix_position(self):
+        dimensions = list(plan._DIMENSIONS)
+        dimensions[0], dimensions[20] = dimensions[20], dimensions[0]
+        with patch.object(plan, '_DIMENSIONS', tuple(dimensions)):
+            with self.assertRaises(ValueError):
+                storage_limits(20, 'extended')
+            self.assertEqual(storage_limits(0, 'extended').mib, 512)
+
+    def test_every_fixed_sample_keeps_its_original_resource_admission(self):
+        for sample in plan.samples():
+            with self.subTest(index=sample.index):
+                self.assertEqual(storage_limits(sample.index).mib, 256)
+                if sample.index in (20, 21, 22, 23):
+                    self.assertEqual((sample.profile, sample.entropy), ('near_boundary', 'sha256_hex'))
+                    self.assertEqual(storage_limits(sample.index, 'extended').mib, 512)
+                else:
+                    with self.assertRaises(ValueError):
+                        storage_limits(sample.index, 'extended')
+
     def test_default_stays_256_and_extended_is_explicit_and_only_for_last_four_samples(self):
         ordinary = storage_limits(20)
         self.assertEqual((ordinary.mib, ordinary.memory_bytes, ordinary.stop_bytes),
