@@ -2,8 +2,17 @@
 
 This finite synthetic campaign measures the existing permanent full-history
 representation. It provides a conditional planning estimate, not qualification
-of a 1,000-item installation. The capacity/history disposition is **pending
-maintainer acceptance**. No history representation or retention policy changed.
+of a 1,000-item installation. The maintainer accepted **retaining complete
+historical snapshots** and the documented planning estimate for the stated
+scenario against the 4 GiB database expectation. No history representation or
+retention policy changed.
+
+Preserving product history was already required: the [product contract](../../product/B-003-contract.md)
+keeps it separate from replay compaction, and the database's history guards
+reject revision updates, deletion and truncation. The representation comparison
+considers two ways to preserve every historical version. It does not propose
+discarding old product history. The accepted [90-day replay policy](../../product/decisions.md#d-034)
+remains unchanged, including permanent operation identities and tombstones.
 
 ## Workload and method
 
@@ -188,9 +197,12 @@ Retaining the current representation preserves direct per-version reads and
 the existing storage/decode/restore contracts. A checkpoint/delta representation
 offers substantial logical savings for sparse edits to large items, at the cost
 of dependent reconstruction and additional compatibility/error-containment
-work; it can be larger for broad edits. Selection requires an explicit
-maintainer decision. If a new representation is selected, this report and
-comparison model do not implement or qualify that capability.
+work; it can be larger for broad edits. The maintainer selected the current
+complete-snapshot representation for this scenario, accepting the conditional
+0.370–1.763 GiB allocation projection and its stated limits against the 4 GiB
+planning target. The alternative remains a comparison model. Any future choice
+to adopt it requires implementation and qualification of the affected
+preservation, compatibility, decode and restore contracts.
 
 ## Reproduction and evidence scope
 
@@ -202,7 +214,9 @@ contract fingerprint is a review aid, not automated semantic-equivalence proof.
 Raw histories, operation identities and execution diagnostics are intentionally
 excluded from these published tables.
 
-The measurement fixtures, model and focused orchestration checks have executed;
-final required qualification, hosted CI, exact-head review and maintainer
-capacity/history acceptance remain separate delivery gates. This document does
-not claim their completion.
+The measurement fixtures, model and focused orchestration checks have executed.
+The selected representation preserves existing product history and replay
+semantics. Required qualification, hosted CI and exact-head review evidence are
+tracked in [PR #101](https://github.com/MrQuality/kehila/pull/101); finite storage
+measurements alone do not establish those broader results or a production
+capacity/restore guarantee.
