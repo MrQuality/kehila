@@ -128,6 +128,15 @@ handling. Browser qualification requires the caller's outcome oracles. Default
 admission still rejects attached networks and published ports; a Windows-facing route requires
 its own reviewed configuration and execution admission.
 
+Long-lived controllers can provide `release_dependents` to enforce worker release
+before database cleanup, including after a partial acquisition or work deadline.
+The callback must use bounded control operations, allow for no worker having
+started, and raise if release is unproved. A release failure preserves the primary
+error and withholds database removal, evidence export and asset reset. The outer
+runner owner must independently refuse removal while the database remains or its
+absence cannot be established. This failure path leaves unresolved resources
+visible; it supplies no qualification.
+
 The fixture requires an explicitly selected fresh synthetic mutation database,
 external DER certificate/key files, and an owned controller. Its public origin is
 `https://127.0.0.1:16291`; its listen address is supplied separately. The

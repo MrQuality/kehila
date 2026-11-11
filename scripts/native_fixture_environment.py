@@ -65,12 +65,14 @@ class NativeEnvironment:
     """Resource/evidence ownership without selecting or qualifying a workload.
 
     A long-lived caller must finish its child, final state observations and joins
-    before leaving the body. The context removes its database before the caller
-    can remove the namespace-owning runner.
+    before leaving the body. A release_dependents callback can enforce this
+    boundary during cleanup. Its failure withholds database removal and export;
+    the outer runner owner must also refuse removal while the database remains.
+    The context removes its database before the caller can remove the runner.
     """
     def __init__(self, executor, *, databases, observers, selection,
                  evidence_directory=None, reset_assets=False, limits=DEFAULT_LIMITS,
-                 failure_observer=None):
+                 failure_observer=None, release_dependents=None):
         require(type(databases) is tuple and databases and len(set(databases)) == len(databases),
                 'Select distinct closed native databases')
         known_databases = {*AUTH_DATABASES.values(), *ITEM_DATABASES.values(),
@@ -86,12 +88,15 @@ class NativeEnvironment:
                 and type(selection.get('observed_items')) is list,
                 'Explicit fixture selection record required')
         require(failure_observer is None or callable(failure_observer), 'Invalid failure observer')
+        require(release_dependents is None or callable(release_dependents), 'Invalid dependent-release gate')
         require(type(reset_assets) is bool, 'Fixture reset selection must be boolean')
         require(not reset_assets or evidence_directory is not None,
                 'Generated fixture reset requires complete external evidence retention')
         self.executor, self.databases, self.observers = executor, databases, observers
         self.selection, self.limits = selection, limits
         self.reset_assets, self.failure_observer = reset_assets, failure_observer
+        self.release_dependents = release_dependents
+        self.cleanup_withheld = False
         self.destination = None
         if evidence_directory is not None:
             destination = Path(evidence_directory)
@@ -155,6 +160,35 @@ class NativeEnvironment:
                 self.control('cp', self.executor.container + ':/work/native-authority', str(self.folder / evidence_name))
         except BaseException as evidence_error:
             retain_cleanup_failure(error, evidence_error, 'native diagnostic collection')
+
+    def _release_dependents(self):
+        if self.release_dependents is None:
+            return
+        release_error = None
+        try:
+            # Required release must remain possible after the work deadline.
+            # The callback owns finite control deadlines and raises on doubt.
+            with cleanup_time():
+                self.release_dependents(self, self.failure)
+        except BaseException as error:
+            release_error = error
+        if release_error is None:
+            return
+        self.cleanup_withheld = True
+        if self.failure is None:
+            self.failure = release_error
+            self.retain_failure(release_error, 'dependent-release', 'runner-evidence')
+        else:
+            retain_cleanup_failure(self.failure, release_error, 'native dependent release')
+            # Preserve the original failure stage and evidence. This second
+            # observation may still work after a forced stop of the runner.
+            try:
+                with cleanup_time():
+                    self.control('cp', self.executor.container + ':/work/native-authority',
+                                 str(self.folder / 'runner-evidence-after-release-failure'))
+            except BaseException as diagnostic:
+                retain_cleanup_failure(self.failure, diagnostic, 'native release diagnostic collection')
+        raise self.failure
 
     def _prepare(self):
         self.work(['python', '-c', "from pathlib import Path; assert {line.split(':')[0].strip() "
@@ -246,6 +280,9 @@ class NativeEnvironment:
             self.retain_failure(error, self.stage, 'runner-evidence')
             raise
         finally:
+            # A failed release gate deliberately bypasses every destructive
+            # cleanup/export/reset below. It never converts a failure to PASS.
+            self._release_dependents()
             try:
                 if self.attempted:
                     with cleanup_time():
