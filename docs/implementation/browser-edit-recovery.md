@@ -117,6 +117,17 @@ PostgreSQL path. It bypasses protected startup and provider publication; those
 contracts retain their separate tests. Running ordinary library tests compiles
 this fixture without starting it.
 
+`native_fixture_environment.py` owns the shared PostgreSQL preparation and
+evidence lifetime. The ordinary native verifier retains its existing selectors,
+finite journeys and SQL qualification oracles. A separately controlled backend
+can use that same resource owner, then stop and join its child and finish its
+independent state observations before leaving the context. The environment
+removes PostgreSQL before the namespace-owning runner and verifies retained
+evidence before optional asset reset. Its receipt records resource/evidence
+handling. Browser qualification requires the caller's outcome oracles. Default
+admission still rejects attached networks and published ports; a Windows-facing route requires
+its own reviewed configuration and execution admission.
+
 The fixture requires an explicitly selected fresh synthetic mutation database,
 external DER certificate/key files, and an owned controller. Its public origin is
 `https://127.0.0.1:16291`; its listen address is supplied separately. The
