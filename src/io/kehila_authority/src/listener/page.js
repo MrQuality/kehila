@@ -1,12 +1,13 @@
 "use strict";
 (() => {
-  let csrf = null;
+  let csrf = null, recoveryClearNotice = "";
   let busy = false;
+  let resumeRequested = false;
   let signedIn = false, binding = null, selected = null, before = null;
   let uncertain = false, registrationUnknown = false, pendingOutcome = null;
   let rowButtons = [];
   const element = id => document.getElementById(id);
-  const status = text => { element("status").textContent = text; };
+  const status = text => { element("status").textContent = text + (recoveryClearNotice ? " " + recoveryClearNotice : ""); };
   const projectStatus = text => { element("project-status").textContent = text; };
   const show = (id, value) => { element(id).hidden = !value; };
   const mode = name => {
@@ -43,10 +44,26 @@
     const state = await request("/auth/browser/state");
     if (state.status === 200 && state.data.active) {
       mode("session"); status("Signed in.");
+      if (await workItems.restoreRecovery() === false) status("Signed in. Edit recovery remains blocked; reload and check the same saved identity before another edit.");
       try { await discover(); } catch (error) { projectStatus(error.message); }
     }
     else if (state.status === 200) { mode("retiring"); status("Signed out; the retained credential permits only sign-out audit retry."); }
     else { csrf = null; mode("login"); status("Session unavailable. Sign in again."); }
+  }
+  async function revalidateRecovery() {
+    // Resume authority without discarding unrelated unsaved forms/selections.
+    const proof = await request("/auth/browser/csrf");
+    if (proof.status !== 200) { csrf = null; mode("login"); status("Sign in before restoring edit recovery."); return; }
+    csrf = proof.data.csrf;
+    const state = await request("/auth/browser/state");
+    if (state.status !== 200 || !state.data.active) {
+      mode(state.status === 200 ? "retiring" : "login"); status("Session unavailable for edit recovery. Sign in again."); return;
+    }
+    try { await checkBinding(); }
+    catch (error) { status(error.message); return; }
+    mode("session");
+    const restored = await workItems.restoreRecovery();
+    status(restored === false ? "Edit recovery remains blocked; reload and check the same saved identity before another edit." : "Signed in; browser recovery authority checked.");
   }
   async function action(work, failure = () => status("The result could not be confirmed. Do not repeat a password change automatically. Reload to check the session, or sign in using the chosen new password after a change.")) {
     if (busy) return;
@@ -57,6 +74,10 @@
     finally {
       for (const input of document.querySelectorAll("input[type=password]")) input.value = "";
       busy = false; controls();
+      if (resumeRequested && document.visibilityState !== "hidden") {
+        resumeRequested = false;
+        void action(revalidateRecovery);
+      }
     }
   }
   element("login").addEventListener("submit", event => {
@@ -68,7 +89,7 @@
         csrf = pre.data.csrf;
       }
       const reply = await request("/auth/browser/login", {password: element("login-password").value});
-      if (reply.status === 200) { csrf = reply.data.csrf; await refresh(); }
+      if (reply.status === 200) { csrf = reply.data.csrf; workItems.startSession(); await refresh(); }
       else {
         if (reply.status === 401) csrf = null;
         status(reply.status === 401 ? "Password was not accepted, or sign-in preparation expired. Try again to prepare a fresh attempt." : "Sign-in unavailable. Wait before trying again.");
@@ -76,20 +97,25 @@
     });
   });
   async function logout() {
+    await forgetRecovery(binding);
+    clearProjects(); mode("");
     const reply = await request("/auth/browser/logout", {});
-    clearProjects();
     if (reply.status === 200) { csrf = null; mode("login"); status("Signed out; audit confirmed."); }
     else if (reply.status === 503 && reply.data.signed_out) { mode("retiring"); status("Signed out; audit not confirmed."); }
     else { await refresh(); status("Sign-out audit was not confirmed. Session state has been checked."); }
   }
   element("logout").addEventListener("click", () => action(logout));
   element("retry").addEventListener("click", () => action(logout));
+  async function forgetRecovery(owner) {
+    try { await workItems.signOut(owner); recoveryClearNotice = ""; }
+    catch (_) { recoveryClearNotice = "Local edit recovery deletion could not be confirmed. Signout does not cancel a save or prove local data was erased."; }
+  }
   element("change").addEventListener("submit", event => {
     event.preventDefault();
     action(async () => {
       const reply = await request("/auth/browser/password", {current: element("current").value, replacement: element("replacement").value});
-      if (reply.status === 200) { clearProjects(); csrf = null; mode("login"); status("Password changed. Sign in again with the new password."); }
-      else if (reply.status === 503) { clearProjects(); mode(""); csrf = null; status("Change outcome is uncertain. Reload when the server is available to check the session. After sign-out, try the chosen new password; do not repeat the change automatically."); }
+      if (reply.status === 200) { await forgetRecovery(binding); clearProjects(); csrf = null; mode("login"); status("Password changed. Sign in again with the new password."); }
+      else if (reply.status === 503) { await forgetRecovery(binding); clearProjects(); mode(""); csrf = null; status("Change outcome is uncertain. Reload when the server is available to check the session. After sign-out, try the chosen new password; do not repeat the change automatically."); }
       else { status(reply.status === 401 ? "Current password was not accepted, or this session ended." : "Password change was not accepted. Use at least 15 characters and avoid common passwords; wait if the server is busy."); }
     });
   });
@@ -156,6 +182,7 @@
       throw new Error("Owner binding unavailable. Reload and sign in before using project controls.");
     }
     if (binding && !sameBinding(binding, reply.data)) {
+      await forgetRecovery(binding);
       clearProjects(); signedIn = false;
       throw new Error("The installation or owner changed. Old selections were discarded. Reload and sign in again.");
     }
@@ -277,5 +304,13 @@
     projectStatus("Current project and configuration read under fresh server authority.");
   }));
   const workItems = KehilaWorkItems({document, request, requestWire, run: projectAction, checkBinding});
+  function lifecycleChange() {
+    workItems.suspendRecovery();
+    show("session", false);
+    resumeRequested = document.visibilityState !== "hidden";
+    if (resumeRequested && !busy) { resumeRequested = false; void action(revalidateRecovery); }
+  }
+  document.addEventListener("visibilitychange", lifecycleChange);
+  globalThis.addEventListener("pageshow", lifecycleChange);
   action(refresh);
 })();

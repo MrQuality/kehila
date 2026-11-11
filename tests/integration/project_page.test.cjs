@@ -4,6 +4,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
+const {webcrypto} = require('node:crypto');
+const memoryStore = require('./journal_store.cjs');
 const root = path.resolve(__dirname, '../..');
 const page = root + '/src/io/kehila_authority/src/listener/';
 const entry = (state = 'prepared') => ({request_id: '9007199254740993', token: 'a'.repeat(32),
@@ -16,8 +18,8 @@ class Element {
   replaceChildren(...children) { this.children = children; }
   fire(type = 'click') { if (!this.disabled) this.events[type]?.({preventDefault() {}}); }
 }
-async function fixture(handler = () => undefined) {
-  const elements = new Map(), buttons = [];
+async function fixture(handler = () => undefined, store = memoryStore()) {
+  const elements = new Map(), buttons = [], lifecycle = {}, documentEvents = {};
   const html = fs.readFileSync(page + 'page.html', 'utf8');
   for (const match of html.matchAll(/<(\w+)\b[^>]*\bid="([^"]+)"[^>]*>/g)) {
     const el = new Element(match[1]); elements.set(match[2], el);
@@ -44,23 +46,97 @@ async function fixture(handler = () => undefined) {
     })}};
   };
   const context = {
-    document: {getElementById: id => { assert.ok(elements.has(id), id); return elements.get(id); },
+    document: {visibilityState:'visible', addEventListener:(type,fn) => { documentEvents[type]=fn; },
+      getElementById: id => { assert.ok(elements.has(id), id); return elements.get(id); },
       createElement: tag => { const el = new Element(tag); if (tag === 'button') buttons.push(el); return el; },
       querySelectorAll: selector => selector === 'button' ? buttons : []},
-    fetch, AbortController, TextDecoder, TextEncoder, Uint8Array, setTimeout, clearTimeout
+    fetch, AbortController, TextDecoder, TextEncoder, Uint8Array, setTimeout, clearTimeout, crypto:webcrypto,
+    addEventListener:(type,fn) => { lifecycle[type]=fn; }
   };
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync(page + 'edit_recovery.js', 'utf8'), context);
+  const recoveryFactory = context.KehilaEditRecovery;
+  let journal;
+  context.KehilaEditRecovery = options => { journal = recoveryFactory({...options, store}); return journal; };
   vm.runInContext(fs.readFileSync(page + 'work_items.js', 'utf8'), context);
   vm.runInContext(fs.readFileSync(page + 'page.js', 'utf8'), context);
   const idle = async () => {
-    for (let i = 0; i < 100; i++) { await new Promise(setImmediate); if (!elements.get('logout').disabled) return; }
+    for (let i = 0; i < 500; i++) { await new Promise(resolve => setTimeout(resolve,1)); if (!elements.get('logout').disabled) return; }
     throw new Error('Page did not settle');
   };
   await idle();
   const fire = async (id, event = 'click') => { elements.get(id).fire(event); await idle(); };
   const select = async () => { elements.get('requests').children[0].children[0].fire(); await idle(); };
-  return {elements, calls, owner, fire, select, readers};
+  const visibility = async state => {
+    context.document.visibilityState=state;
+    assert.equal(typeof documentEvents.visibilitychange,'function');documentEvents.visibilitychange();
+    if(state==='visible')await idle();
+  };
+  return {elements, calls, owner, fire, select, readers, store, journal, visibility};
 }
+
+test('failed recovery deletion cannot prevent the server logout attempt', async () => {
+  const f = await fixture(url => url === '/auth/browser/logout' ? [200, {}] : undefined);
+  f.store.hook(() => { throw new Error('storage abort'); });
+  await f.fire('logout');
+  assert.equal(f.calls.filter(call => call.url === '/auth/browser/logout').length, 1);
+  assert.equal(f.elements.get('login').hidden, false);
+  assert.match(f.elements.get('status').textContent, /deletion could not be confirmed/i);
+});
+
+test('transient binding failure alone preserves the durable journal', async () => {
+  let failed = false;
+  const f = await fixture(url => url === '/projects/binding' && failed ? [503, {error:'unavailable'}] : undefined);
+  const before = await f.store.read(); failed = true;
+  await f.fire('discover');
+  assert.equal(await f.store.read(), before);
+  assert.equal(f.calls.some(call => call.url === '/auth/browser/logout'), false);
+});
+
+test('automatic session refresh after failed deletion and uncertain logout cannot restore abandoned tracking', async () => {
+  const f = await fixture(url => url === '/auth/browser/logout' ? [503, {signed_out:false}] : undefined);
+  const request = {binding:{...f.owner},project:'p',item:'item',family:'item_edit',version:'1',configuration:'1',
+    lifecycle:{type:'task',workflow:'flow',status:'new',archived:false,phase:'new'},estimate:null,
+    wire:JSON.stringify({project_id:'p',item_id:'item',operation_id:'1'.repeat(32),expected_item_version:'1',
+      expected_configuration_revision:'1',estimate:{action:'keep'},fields:[]})};
+  await (await f.journal.open(f.owner)).retain(request);
+  f.store.hook(() => { throw new Error('deletion abort'); });
+  await f.fire('logout');
+  assert.equal(f.elements.get('item-edit-check').disabled,true);
+  assert.equal(f.elements.get('item-edit-retry').disabled,true);
+  assert.equal(f.calls.some(call => call.url === '/items/edit' || call.url === '/items/reconcile'),false);
+});
+
+test('a resumed page hides recovery until a newly observed owner binding is available', async () => {
+  let hold=false,release;
+  const f=await fixture(url=>{
+    if(url==='/projects/binding'&&hold){hold=false;return new Promise(resolve=>{release=resolve;});}
+  });
+  const request={binding:{...f.owner},project:'p',item:'item',family:'item_edit',version:'1',configuration:'1',
+    lifecycle:{type:'task',workflow:'flow',status:'new',archived:false,phase:'new'},estimate:null,
+    wire:JSON.stringify({project_id:'p',item_id:'item',operation_id:'1'.repeat(32),expected_item_version:'1',
+      expected_configuration_revision:'1',estimate:{action:'keep'},fields:[]})};
+  await (await f.journal.open(f.owner)).retain(request);
+  await f.visibility('hidden');hold=true;const resuming=f.visibility('visible');
+  for(let i=0;i<500&&!release;i++)await new Promise(resolve=>setTimeout(resolve,1));
+  assert.equal(typeof release,'function');
+  assert.equal(f.elements.get('item-recovery').hidden,true);
+  assert.equal(f.elements.get('item-edit-retry').disabled,true);
+  release([200,{...f.owner}]);await resuming;
+  assert.equal(f.elements.get('item-recovery').hidden,false);
+  assert.equal(f.calls.some(call=>call.url==='/items/edit'||call.url==='/items/reconcile'),false);
+});
+
+test('unchanged-owner resumption preserves an unsaved project form and selected request', async () => {
+  const f=await fixture();await f.select();
+  const selected=f.elements.get('request-detail').textContent;
+  await f.visibility('hidden');await f.visibility('visible');
+  assert.equal(f.elements.get('request-detail').textContent,selected);
+  await f.fire('new-request');f.elements.get('project-name').value='  unsaved project  ';
+  await f.visibility('hidden');await f.visibility('visible');
+  assert.equal(f.elements.get('project-form').hidden,false);
+  assert.equal(f.elements.get('project-name').value,'  unsaved project  ');
+});
 test('startup discovers without executing; execution echoes immutable entry and string ID', async () => {
   const f = await fixture(url => url.endsWith('/execute') ? [201, {outcome: 'created', entry: entry('completed'), result: {version: 1}}] : undefined);
   assert.equal(f.calls.some(c => /register|execute|cancel/.test(c.url)), false);

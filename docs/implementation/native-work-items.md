@@ -6,7 +6,14 @@ This remains partial M1; supported installation and real-data use are excluded.
 Baseline: `d6f8d3f563dbc8f9a242ec5abf779ab8e7142500`, 2026-11-04.
 Owners: M1-02/#27, operations #8, interface #10, authority #40 and storage #49.
 
-## Current implementation checkpoint (2026-11-06)
+## Browser recovery implementation (2026-11-11)
+
+The selected same-profile Chrome journal extends the original volatile edit
+recovery boundary. Its [contract and delivery evidence](browser-edit-recovery.md)
+separate development checks from pending real storage/browser qualification.
+The historical qualified slice below does not qualify this stronger capability.
+
+## Historical implementation checkpoint (2026-11-06)
 
 The later source preparation adds serving routes for explicit creation execution,
 creation reconciliation, direct edits and edit reconciliation. The replay path

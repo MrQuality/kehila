@@ -85,14 +85,33 @@ commit. Abandoning a client request does not cancel a database write.
 
 Completed edit retries authorize original mutation grants and replay historical
 success before mutable version/domain checks. Logical expiry/tombstones never
-turn a known operation into an unseen save. Recovery after losing the retained
-client token/request, browser loss or switching browsers is outside this edit
-slice; the interface must not claim that loss proves rejection or rollback.
-Server-owned pending-edit recovery would require a later explicit scope decision.
-Retained unresolved edit records have an explicit count/byte bound; the initial
-interface can retain one unresolved save per view and refuse another until that
-save is resolved or explicitly abandoned with its uncertainty disclosed. Retention
-can be volatile; no browser-persistent store or browser-loss guarantee is selected.
+turn a known operation into an unseen save. The original direct-edit slice used
+volatile retention and excluded browser loss. The subsequently selected
+[browser recovery contract](../implementation/browser-edit-recovery.md) retains
+one exact edit across normal Chrome reload, close/reopen and process crash/restart
+on Windows, in the same profile and HTTPS origin. Cross-browser/device discovery
+and loss of the profile remain excluded. Losing tracking never proves rejection
+or rollback. Server-owned pending-edit recovery remains a separate design.
+
+The browser journal retains at most one tracked edit across tabs and projects,
+with at most 1 MiB of exact request wire and 2 KiB of identity/control metadata.
+Recovery eligibility lasts seven days from preparation under an honest local
+clock; retries do not extend it. Strict IndexedDB transaction completion precedes
+first transmission. Unsupported storage/durability fails closed. Restoration
+never executes a save. An authenticated check or explicit exact retry validates
+current journal ownership and eligibility transactionally; already admitted work
+may still complete after a later abandon or signout.
+
+Edit content is retained without application-level encryption under normal
+browser/OS profile isolation; credentials are excluded. Signout intent,
+qualifying password-change signout, owner/installation change and explicit
+abandon attempt logical deletion and invalidate recovery actions. Failed deletion
+is visible and cannot establish global invalidation. Expired content is removed
+on the next authenticated application run, subject to storage errors; no forensic
+erasure deadline is promised. Bounded generation/clock/checksum control metadata
+can remain after edit content is removed. Actual browser/IndexedDB crash durability
+requires the qualification described in the linked delivery record; simulated
+page tests alone do not establish it.
 Failure to retain/encode before first transmission is visible and prevents send.
 Failure after transmission never claims rollback or silently creates a new token.
 
@@ -326,13 +345,15 @@ actual request/result/revision and PostgreSQL JSONB expansion bounds; the logica
 ## Alternatives
 
 - Server-owned pending edits would retain exact edit content across browser loss
-  or switching browsers, with additional registration/storage/execution work. The
-  maintainer selected direct edits with retained client retry identity instead;
-  no equivalent browser-loss guarantee is claimed for the chosen edit path.
+  or switching browsers, with additional registration/storage/execution work.
+  The original direct-edit selection used volatile client retry identity. The
+  later same-profile journal covers its selected reload/process-loss boundary;
+  recovery after losing the profile or switching browsers/devices remains a
+  separate server-owned alternative, without an equivalent guarantee here.
 - Browser-held operation/creation identities with success-only server mappings
   reduce pending storage but do not recover a command after browser state loss.
   They also differ from the existing server-recovery product direction. No
-  broader browser-persistence acceptance is inferred.
+  broader recovery beyond the explicitly selected journal contract is inferred.
 - Echoing complete project/configuration/item preparation state from the client
   can retain ADR-104's strict generated-before-any-database rule, but requires a
   second untrusted state protocol, potentially large payloads and stale-state
