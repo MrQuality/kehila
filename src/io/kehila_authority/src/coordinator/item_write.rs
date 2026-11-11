@@ -309,6 +309,8 @@ impl Engine {
             Intent::Edit(_) => false,
         };
         let mut next = Next::Initial(intent);
+        #[cfg(test)]
+        let mut selected_commit = None;
         loop {
             self.check(deadline).map_err(AttemptFailure::Owner)?;
             entries.preparation()?;
@@ -410,6 +412,10 @@ impl Engine {
                 }
                 AttemptFailure::Admission(error)
             })?;
+            #[cfg(test)]
+            if selected_commit.is_none() {
+                selected_commit = self.live.probe.select_item_commit(packet.request_bytes());
+            }
             // The owned CPU preparation has returned and joined before this fixture
             // point. It retains only the admitted packet/reply and original reservation.
             #[cfg(test)]
@@ -488,6 +494,10 @@ impl Engine {
                     .map_err(|error| self.item_write_failure(error))?
                 {
                     ItemSaveOutcome::Ready(write) => {
+                        #[cfg(test)]
+                        if let Some(selected) = selected_commit.take() {
+                            selected.before_commit(deadline).await;
+                        }
                         #[cfg(test)]
                         self.live
                             .probe

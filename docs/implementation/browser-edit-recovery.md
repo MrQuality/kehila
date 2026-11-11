@@ -107,3 +107,53 @@ they are not a browser implementation or durable-storage proof. Required local
 and hosted checks, reviewed harnesses, final exact-head review and accurate PR
 readiness remain part of delivery. A failed attempt remains failed even if a
 later repaired check passes.
+
+### Native backend for browser qualification
+
+The ignored `native_browser_recovery_fixture` test supplies a finite backend for
+a separately controlled browser campaign. It uses the shipped HTML/scripts and
+the actual listener connection, HTTP admission, authentication, coordinator and
+PostgreSQL path. It bypasses protected startup and provider publication; those
+contracts retain their separate tests. Running ordinary library tests compiles
+this fixture without starting it.
+
+The fixture requires an explicitly selected fresh synthetic mutation database,
+external DER certificate/key files, and an owned controller. Its public origin is
+`https://127.0.0.1:16291`; its listen address is supplied separately. The
+certificate must be accepted through ordinary browser verification. The fixture
+does not install trust, bypass certificate errors, open a host forwarding route,
+launch Chrome or provision a database.
+
+After seeding one project and item, it publishes a ready record with their
+identifiers and an independent SQL baseline. The external control directory uses
+atomically published, consecutively numbered `command-NNNN.json` inputs and
+`reply-NNNN.json` outputs. Command objects reject unknown fields. The finite
+protocol supports:
+
+- `arm` with the original edit wire: canonicalize through the real edit decoder
+  and select that complete command, including its original operation token,
+  target, expected versions and changes. The acknowledgement records separate
+  original-wire and canonical-command SHA-256 digests.
+- `release`: permitted after the matching `arrived-NNNN.json` observation. Arrival
+  means the selected new write reached its pre-COMMIT barrier; it does not prove
+  commit. Internal repreparation retains the selected barrier. Replay, rejection
+  and unrelated commands cannot manufacture matching arrival.
+- `snapshot`: wait for all serving admission permits and hold them while an
+  independent administrative connection observes permanent operation, item,
+  revision and replay state. This prevents a concurrent mutation from creating a
+  mixed snapshot.
+- `stop`: end admission and join the listener and coordinator, then independently
+  observe backend release and final durable state.
+
+At most one barrier is outstanding, with 64 commands and a 15-minute controller
+lifetime. The application's five-second request/work deadlines are unchanged.
+The controller must perform any crash/join/release sequence automatically within
+that deadline. Dropping a gate can release work, so controller failure, stop and
+release retain an unknown mutation outcome until SQL observation. Cleanup records
+forced connection cancellation, task failures and unavailable witnesses as
+failures, separately from normal shutdown. Failed evidence is never overwritten.
+
+This backend is preparation for qualification. The browser controller, real
+IndexedDB observations, owned full-process crash/relaunch, TLS route/trust and
+end-to-end native witnesses still need execution and review before a browser
+durability claim is justified.

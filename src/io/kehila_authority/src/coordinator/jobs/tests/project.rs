@@ -5,6 +5,7 @@ use serde_json::{json, Value};
 mod admission;
 mod authorization;
 mod body;
+mod browser_recovery;
 mod capacity;
 mod clock;
 mod competing;

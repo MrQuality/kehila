@@ -5,6 +5,7 @@ use std::sync::{
 };
 pub(crate) mod capacity;
 mod item_attempt;
+mod item_commit;
 pub(crate) use item_attempt::{AttemptEntry, ItemAttempt};
 
 #[derive(Clone, Copy)]
@@ -36,6 +37,7 @@ pub(crate) struct Probe {
     item_replay: Mutex<Option<ItemReplayObservation>>,
     item_repreparations: AtomicUsize,
     item_attempt: Mutex<Option<ItemAttempt>>,
+    item_commit: Mutex<Option<item_commit::Armed>>,
 }
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub(crate) enum Point {
