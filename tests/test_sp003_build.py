@@ -1,5 +1,6 @@
 """Owned build-directory lifetimes; compiler invocations are test doubles."""
 import importlib.util
+from contextlib import contextmanager
 import json
 from pathlib import Path
 import subprocess
@@ -22,6 +23,18 @@ class BuildLifecycleTests(IsolatedEnvironmentTests):
         self.addCleanup(temporary.cleanup)
         self.dependencies = Path(temporary.name) / "deps"
         self.dependencies.mkdir()
+        self.outputs = Path(temporary.name) / 'outputs'
+        self.outputs.mkdir()
+        allocate = BUILD.owned_directory
+
+        @contextmanager
+        def owned_output(*args, **kwargs):
+            with allocate(*args, parent=self.outputs, **kwargs) as root:
+                yield root
+
+        output_patch = patch.object(BUILD, 'owned_directory', side_effect=owned_output)
+        output_patch.start()
+        self.addCleanup(output_patch.stop)
         producer = 'path+file:///source/codec#project_create_codec@0.1.0'
         dependencies = []
         packages = [{'id': producer, 'name': 'project_create_codec',
@@ -37,7 +50,8 @@ class BuildLifecycleTests(IsolatedEnvironmentTests):
                                          "target": {"name": name, "kind": ["lib"]},
                                          "filenames": [str(library)]}))
         self.metadata = json.dumps({'packages': packages, 'resolve': {'nodes': [
-            {'id': producer, 'deps': dependencies}]}}).encode()
+            {'id': producer, 'deps': dependencies},
+            *({'id': edge['pkg'], 'deps': []} for edge in dependencies)]}}).encode()
         self.artifacts = "\n".join(artifacts).encode()
         self.failure = None
         self.host = b'host: x86_64-unknown-linux-gnu\n'
@@ -65,16 +79,31 @@ class BuildLifecycleTests(IsolatedEnvironmentTests):
         return b"8 tests passed\n"
 
     def assert_no_builds(self):
-        directory = self.dependencies / "sp003"
-        self.assertFalse(directory.exists() and any(directory.iterdir()))
+        self.assertEqual(list(self.outputs.iterdir()), [])
         self.assertTrue((self.dependencies / "task_contract.rlib").exists())
 
     def test_binary_lives_until_consumer_finishes(self):
         with BUILD.build() as (binary, output):
             self.assertTrue(binary.is_file())
+            self.assertNotIn(self.dependencies, binary.parents)
             self.assertIn("8 tests passed", output)
         self.assertFalse(binary.parent.exists())
         self.assert_no_builds()
+
+    def test_split_library_parents_reach_both_compiler_invocations(self):
+        records = [json.loads(line) for line in self.artifacts.splitlines()]
+        for index, record in enumerate(records):
+            record['filenames'] = [str(self.dependencies / str(index) / 'library.rlib')]
+        self.artifacts = '\n'.join(json.dumps(record) for record in records).encode()
+        with BUILD.build() as (binary, _):
+            self.assertNotIn(self.dependencies, binary.parents)
+        compilers = [args for args in self.commands if args[0] == 'rustc' and '-o' in args]
+        self.assertEqual(len(compilers), 2)
+        for args in compilers:
+            self.assertEqual([args[index + 1] for index, value in enumerate(args) if value == '-L'],
+                             ['dependency=' + str(self.dependencies / str(index)) for index in range(3)])
+            self.assertEqual([args[index + 1] for index, value in enumerate(args) if value == '--extern'],
+                             [record['target']['name'] + '=' + record['filenames'][0] for record in records])
 
     def test_consumer_failure_cleans_up_and_preserves_error(self):
         failure = RuntimeError("consumer failed")

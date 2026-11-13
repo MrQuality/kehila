@@ -149,9 +149,13 @@ This replaces the earlier worker/MongoDB transitive build coupling
 without changing frozen codec fixtures or historical results. Pure verification
 performs no service I/O.
 
-The build selects exact Cargo-reported artifacts, rejects ambiguous libraries
-and creates uniquely owned temporary compiler outputs under Cargo's artifact
-directory. Callers hold a build context through all oracle use; outputs are removed
+The build selects exact Cargo-reported artifacts and rejects ambiguous direct
+libraries. Transitive search paths come from library artifacts in that producer's
+resolved dependency closure, without assuming Cargo keeps them in one directory.
+Cargo's intermediate directory layout, including the change in Cargo 1.100,
+is not an input contract for this helper.
+Compiler outputs use a uniquely owned temporary directory, separate from the
+dependency artifacts. Callers hold a build context through all oracle use; outputs are removed
 on success, compilation/test failure or caller failure. The shared directory
 owner preserves the compiler/consumer failure as primary and attaches a labelled
 cleanup failure if teardown also fails. Windows lock errors 5, 32 and 33 receive
