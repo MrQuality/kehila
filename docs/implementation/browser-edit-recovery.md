@@ -1,8 +1,9 @@
 # Exact edit recovery in a browser profile
 
-Status: implementation and development verification in progress. Real IndexedDB,
-Chrome loss/restart and affected native integration qualification remain pending.
-This record does not establish supported crash durability from simulated tests.
+Status: implementation and the selected real Chrome recovery campaign passed.
+The observations below cover actual IndexedDB, three browser-loss boundaries and
+the native PostgreSQL/HTTP/TLS path. Final repository qualification and delivery
+review remain separate gates. This is not a general browser or storage guarantee.
 
 ## Selected behavior
 
@@ -94,19 +95,57 @@ failure reported while the page was hidden.
 
 ## Verification boundaries
 
-| Contract | Development evidence | Remaining qualification |
+| Contract | Evidence | Coverage boundary |
 | --- | --- | --- |
-| Closed codec, identity, bounds, expiry, high-water clock | Valid/rejection and asynchronous digest/transaction race controls | Composition with actual browser storage |
-| Commit before send | Controlled completion/abort adapter events and page transmission barrier | Native IndexedDB completion and strict durability |
-| One slot, logout/abandon generations and late replies | Transactional-port and simulated page controls | Actual cross-tab storage ordering and auth integration |
-| Exact historical check/retry and current-state separation | Page and existing native contract source/tests | Affected PostgreSQL/HTTP/TLS execution and independent state/history witnesses |
-| Reload, close/reopen and process loss | Prepared contract only | Owned real Chrome profile/process campaign, original bytes/token and no duplicate native writes |
+| Closed codec, identity, bounds, expiry, high-water clock | Valid/rejection and asynchronous digest/transaction race controls; real storage in the selected campaign | No seven-day elapsed wait or maximum-size browser stress campaign |
+| Commit before send | Controlled completion/abort events and actual strict IndexedDB transaction completion before each selected fetch | Selected Windows Chrome environment; no OS, disk or power-loss claim |
+| One slot, logout/abandon generations and late replies | Transactional-port and simulated page controls; matching generation and explicit settlement in Chrome | No actual cross-tab contention campaign |
+| Exact historical check/retry and current-state separation | Real native PostgreSQL/HTTP/TLS execution, rendered history/current state and independent final SQL | Synthetic fixture bypasses protected startup and provider publication |
+| Reload, close/reopen and process loss | Three real Chrome loss/restoration cases in one owned persistent profile, preserving original bytes/token and write identity | Selected installed Chrome on Windows, not other browsers, devices or storage-failure classes |
 
 Development policy/page tests use a transactional port or controlled API events;
 they are not a browser implementation or durable-storage proof. Required local
 and hosted checks, reviewed harnesses, final exact-head review and accurate PR
 readiness remain part of delivery. A failed attempt remains failed even if a
 later repaired check passes.
+
+### Observed Chrome recovery campaign, 2026-11-13
+
+Installed, headed Chrome 157.0.8103.78 on Windows completed three fresh edit
+intents in one owned synthetic persistent profile. Each edit reached the native
+pre-COMMIT barrier after its exact wire and identity had completed a strict
+IndexedDB transaction. Reload, clean close/reopen and whole-browser process
+crash/restart each restored the same retained record. Fresh and idle restoration
+observations contained no edit resend. Explicit outcome checks settled the reload
+and crash cases; explicit exact-request retry settled the clean-close case.
+The selected fault sequences took 4.203, 3.875 and 3.656 seconds respectively,
+within the unchanged five-second window. Reload evidence proves loss of the
+receiving document before release; it does not establish TCP cancellation.
+
+A fourth distinct native edit committed version 5 while the third browser edit
+remained retained. Its later historical response and rendered receipt stayed at
+version 4; a separate current read and rendered field showed the exact version-5
+value. Independent final SQL checked all 22 tables against the expected state,
+including permanent operation/replay and revision history. It also observed zero
+runtime sessions, runtime transactions and prepared transactions after normal
+native shutdown, together with advisory-lock and row-fence release witnesses.
+
+All owned Chrome Jobs joined with zero active processes, including the intentional
+whole-browser crash. Native listener/coordinator, relay and helper cleanup
+completed, ownership remained held through provider shutdown, and the provider
+finished stopped. Transfer accounting retains 85 completed and 23 failed
+transfers, including 22 unselected resets; their admitted physical release does
+not make them successful transfers. Earlier failed attempts remain failed and
+are not replaced by this passing campaign.
+
+The campaign took 220.828 seconds through cleanup. Sampled aggregate working sets
+peaked at 5.0823 GiB, with minimum available memory of 1.5360 GiB. One 2 GiB reserve
+warning occurred; neither the 6 GiB aggregate stop nor Windows low-memory stop
+triggered. The maximum sample gap was 3.4402 seconds, and one bounded retry followed
+a changing Job-membership observation. These are sampled observations, not a hard
+peak-memory bound or continuous measurement. This campaign does not qualify
+cross-tab contention, seven days of elapsed retention, maximum-size browser
+stress, machine failure or supported real-data recovery.
 
 ### Native backend for browser qualification
 
@@ -173,7 +212,8 @@ release retain an unknown mutation outcome until SQL observation. Cleanup record
 forced connection cancellation, task failures and unavailable witnesses as
 failures, separately from normal shutdown. Failed evidence is never overwritten.
 
-This backend is preparation for qualification. The browser controller, real
-IndexedDB observations, owned full-process crash/relaunch, TLS route/trust and
-end-to-end native witnesses still need execution and review before a browser
-durability claim is justified.
+The selected campaign above exercised this backend with ordinary verified TLS,
+real IndexedDB observations, owned full-process crash/relaunch and independent
+native witnesses. The fixture alone, or a successful default unit run, does not
+establish those browser outcomes. Its startup/publication exclusions and the
+campaign's stated environment and coverage limits remain in force.
