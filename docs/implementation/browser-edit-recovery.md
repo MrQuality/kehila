@@ -177,6 +177,11 @@ the actual listener connection, HTTP admission, authentication, coordinator and
 PostgreSQL path. It bypasses protected startup and provider publication; those
 contracts retain their separate tests. Running ordinary library tests compiles
 this fixture without starting it.
+Seeding, listener readiness and controller commands share one absolute 900-second
+work deadline. Setup cannot start a fresh controller allowance. Listener readiness
+fails explicitly when that deadline is exhausted; the listener has a separate
+30-second serving margin for owned shutdown, with an absolute monotonic cutoff.
+These fixture limits do not extend the application's request or commit deadlines.
 
 `native_fixture_environment.py` owns the shared PostgreSQL preparation and
 evidence lifetime. The ordinary native verifier retains its existing selectors,
@@ -197,6 +202,9 @@ error and withholds database removal, evidence export and asset reset. The outer
 runner owner must independently refuse removal while the database remains or its
 absence cannot be established. This failure path leaves unresolved resources
 visible; it supplies no qualification.
+Secondary release diagnostics are collected only after diagnostic storage exists
+and database acquisition has been attempted; early failures retain the original
+error without fabricating a diagnostic path or touching an unadmitted runner.
 
 The fixture requires an explicitly selected fresh synthetic mutation database,
 external DER certificate/key files, and an owned controller. Its public origin is

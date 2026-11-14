@@ -182,12 +182,13 @@ class NativeEnvironment:
             retain_cleanup_failure(self.failure, release_error, 'native dependent release')
             # Preserve the original failure stage and evidence. This second
             # observation may still work after a forced stop of the runner.
-            try:
-                with cleanup_time():
-                    self.control('cp', self.executor.container + ':/work/native-authority',
-                                 str(self.folder / 'runner-evidence-after-release-failure'))
-            except BaseException as diagnostic:
-                retain_cleanup_failure(self.failure, diagnostic, 'native release diagnostic collection')
+            if self.folder is not None and self.attempted:
+                try:
+                    with cleanup_time():
+                        self.control('cp', self.executor.container + ':/work/native-authority',
+                                     str(self.folder / 'runner-evidence-after-release-failure'))
+                except BaseException as diagnostic:
+                    retain_cleanup_failure(self.failure, diagnostic, 'native release diagnostic collection')
         raise self.failure
 
     def _prepare(self):

@@ -17,6 +17,7 @@ pub(crate) fn browser_listener(
     address: std::net::SocketAddrV4,
     certificate: Vec<u8>,
     key: Vec<u8>,
+    serving_deadline: Instant,
 ) -> BrowserListener {
     let (ready, observed) = oneshot::channel();
     let (stop, mut stopped) = oneshot::channel();
@@ -34,12 +35,17 @@ pub(crate) fn browser_listener(
         let profile = Arc::new(Profile::new(public.into())
             .map_err(|_| crate::io_error("browser fixture origin rejected"))?);
         let authority: Arc<str> = public.to_string().into();
+        let now = Instant::now();
+        let remaining = serving_deadline.checked_duration_since(now)
+            .ok_or_else(|| crate::io_error("browser fixture lifetime ended"))?;
         let utc = startup::utc()
             .map_err(|_| crate::io_error("browser fixture clock unavailable"))?;
         let end = rustls::pki_types::UnixTime::since_unix_epoch(Duration::from_secs(
-            utc.as_secs() + 900,
+            // UTC has second resolution. The absolute monotonic cutoff below
+            // remains authoritative and never renews this serving allowance.
+            utc.as_secs() + remaining.as_secs() + 1,
         ));
-        let window = Window::new(utc, end, Some(utc), Instant::now())
+        let window = Window::new(utc, end, Some(utc), now)
             .ok_or_else(|| crate::io_error("browser fixture clock unavailable"))?;
         let listener = TcpListener::bind(address).await?;
         let acceptor = TlsAcceptor::from(tls);
@@ -50,6 +56,10 @@ pub(crate) fn browser_listener(
                 tokio::select! {
                     biased;
                     _ = &mut stopped => return Ok(()),
+                    _ = tokio::time::sleep_until(tokio::time::Instant::from_std(serving_deadline)) => {
+                        jobs.stop();
+                        return Err(crate::io_error("browser fixture lifetime ended"));
+                    }
                     result = tasks.join_next(), if !tasks.is_empty() => {
                         // A disconnected browser connection is an expected case.
                         // A panicked connection owner is a fixture failure.

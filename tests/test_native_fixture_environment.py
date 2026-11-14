@@ -226,8 +226,28 @@ class EnvironmentTests(unittest.TestCase):
                 self.assertEqual(environment.cleanup_withheld, release_fails)
                 self.assertFalse(any(args[0] in {'create', 'rm'} for args in executor.events))
                 if release_fails:
-                    self.assertTrue(any(str(error) == 'partial dependent release failed'
-                                        for _, error in caught.exception._cleanup_failures))
+                    self.assertEqual(tuple((resource, type(error), str(error))
+                                           for resource, error in caught.exception._cleanup_failures),
+                                     (('native dependent release', RuntimeError,
+                                       'partial dependent release failed'),))
+                self.assertFalse(any(args[0] == 'cp' for args in executor.events))
+
+    def test_release_diagnostics_do_not_copy_before_database_acquisition_was_attempted(self):
+        executor = Executor()
+        def release(environment, primary):
+            self.assertIsNotNone(environment.folder)
+            self.assertFalse(environment.attempted)
+            raise RuntimeError('dependent release failed')
+        environment = self.environment(executor, release_dependents=release)
+        with patch.object(environment, '_prepare', side_effect=RuntimeError('prepare failed')):
+            with self.assertRaisesRegex(RuntimeError, '^prepare failed$') as caught:
+                with environment.owned():
+                    self.fail('Failed setup yielded')
+        self.assertEqual(tuple((resource, str(error))
+                               for resource, error in caught.exception._cleanup_failures),
+                         (('native dependent release', 'dependent release failed'),))
+        self.assertFalse(any('runner-evidence-after-release-failure' in str(args)
+                             for args in executor.events))
 
 
 if __name__ == '__main__':

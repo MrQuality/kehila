@@ -102,8 +102,62 @@ struct Barrier {
     wire_sha256: String,
 }
 
-async fn controls(directory: &Path, handle: &Handle, admin: &Admin) -> io::Result<()> {
-    let deadline = Instant::now() + Duration::from_secs(900);
+async fn ready_before(
+    ready: tokio::sync::oneshot::Receiver<()>,
+    deadline: Instant,
+) -> io::Result<()> {
+    let expired = || {
+        io::Error::new(
+            io::ErrorKind::TimedOut,
+            "browser listener readiness expired",
+        )
+    };
+    if Instant::now() >= deadline {
+        return Err(expired());
+    }
+    tokio::time::timeout_at(tokio::time::Instant::from_std(deadline), ready)
+        .await
+        .map_err(|_| expired())?
+        .map_err(|_| crate::io_error("browser listener not ready"))?;
+    if Instant::now() >= deadline {
+        return Err(expired());
+    }
+    Ok(())
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn readiness_requires_a_live_deadline_even_when_already_ready() {
+    let (sender, ready) = tokio::sync::oneshot::channel();
+    sender.send(()).unwrap();
+    ready_before(ready, Instant::now() + Duration::from_secs(1))
+        .await
+        .unwrap();
+    let (sender, ready) = tokio::sync::oneshot::channel();
+    sender.send(()).unwrap();
+    let error = ready_before(ready, Instant::now()).await.unwrap_err();
+    assert_eq!(error.kind(), io::ErrorKind::TimedOut);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn never_ready_listener_times_out_without_sender_disconnection() {
+    let (sender, ready) = tokio::sync::oneshot::channel();
+    let deadline = Instant::now() + Duration::from_millis(10);
+    let error = tokio::time::timeout(Duration::from_secs(1), ready_before(ready, deadline))
+        .await
+        .expect("readiness wait escaped its bound")
+        .unwrap_err();
+    assert_eq!(error.kind(), io::ErrorKind::TimedOut);
+    assert!(Instant::now() >= deadline);
+    assert!(sender.is_closed());
+    drop(sender);
+}
+
+async fn controls(
+    directory: &Path,
+    handle: &Handle,
+    admin: &Admin,
+    deadline: Instant,
+) -> io::Result<()> {
     let mut sequence = 1;
     let mut barrier: Option<Barrier> = None;
     let mut tick = tokio::time::interval(Duration::from_millis(50));
@@ -290,11 +344,16 @@ fn native_browser_recovery_fixture() {
             let (handle, owner) =
                 runtime(&endpoint, &installation, format!("{attempt}-browser")).await;
             let running = tokio::spawn(owner.run());
+            // Setup, readiness and commands share one work allowance. The
+            // listener's later cutoff exists only to permit owned shutdown.
+            let work_deadline = Instant::now() + Duration::from_secs(900);
+            let serving_deadline = work_deadline + Duration::from_secs(30);
             let listener = crate::listener::tests::browser::browser_listener(
                 handle.clone(),
                 std::net::SocketAddrV4::new(configuration.listen, PORT),
                 certificate,
                 key,
+                serving_deadline,
             );
             let work_handle = handle.clone();
             let work_endpoint = endpoint.clone();
@@ -311,10 +370,7 @@ fn native_browser_recovery_fixture() {
                     return Err(crate::io_error("browser fixture database is not fresh"));
                 }
                     let seeded = seed(&work_handle).await;
-                    listener
-                        .ready
-                        .await
-                        .map_err(|_| crate::io_error("browser listener not ready"))?;
+                    ready_before(listener.ready, work_deadline).await?;
                     publish(
                         &work_directory,
                         "ready",
@@ -322,14 +378,14 @@ fn native_browser_recovery_fixture() {
                     "origin":"https://127.0.0.1:16291", "seed":seeded,
                     "tables":evidence::snapshot(&admin).await, "protected_startup":false}),
                     )?;
-                    controls(&work_directory, &work_handle, &admin).await
+                    controls(&work_directory, &work_handle, &admin, work_deadline).await
                 }
                 .await;
                 admin.close().await;
                 result
             });
             let controller_ok =
-                match tokio::time::timeout(Duration::from_secs(930), &mut work).await {
+                match tokio::time::timeout_at(tokio::time::Instant::from_std(work_deadline), &mut work).await {
                     Ok(Ok(Ok(()))) => "completed",
                     Ok(Ok(Err(_))) => "protocol_failed",
                     Ok(Err(_)) => "task_failed",
