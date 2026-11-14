@@ -87,6 +87,8 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
       message(text); if (retainedSave || abandonedSave) el("item-recovery-status").textContent = text;
     }
   });
+  const unconfirmedSave = error => new Error("Save remains unconfirmed and may have committed. Check its recorded outcome or explicitly retry this exact request. "
+    + (typeof error.message === "string" ? error.message.slice(0,120) : "Transport unavailable."));
   async function checkedContext(context) {
     if (!context || context !== project) return false;
     try { await checkBinding(); }
@@ -505,11 +507,19 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
     if (epoch !== recoveryEpoch || retained !== retainedSave) return;
     let reply;
     try { reply = await requestWire(kind === "check" ? "/items/reconcile" : "/items/edit",admitted.wire); }
-    catch (error) { if (epoch !== recoveryEpoch || retained !== retainedSave) return; throw error; }
+    catch (error) { if (epoch !== recoveryEpoch || retained !== retainedSave) return; throw unconfirmedSave(error); }
     if (epoch !== recoveryEpoch || retained !== retainedSave) return;
     const afterBinding = await saveBinding(retained);
-    if (!afterBinding || epoch !== recoveryEpoch || retained !== retainedSave || !await session.current(retained.journal,afterBinding)) return;
+    if (!afterBinding || epoch !== recoveryEpoch || retained !== retainedSave) return;
+    const current = await session.current(retained.journal,afterBinding);
     if (epoch !== recoveryEpoch || retained !== retainedSave) return;
+    if (!current) {
+      recoveryBlocked = true;
+      const notice = "Edit recovery changed in another tab. Restore it before preparing or retrying work. Losing tracking does not cancel an unconfirmed save.";
+      el("item-recovery-error").textContent = notice;
+      el("item-recovery-status").textContent = notice;
+      controls(); return;
+    }
     if (reply.status !== 200) {
       if (reply.status === 410 && reply.data?.error === "replay_expired") {
         retryClosed = true; await journalCleanup(() => session.closeRetry(retained.journal,afterBinding));
@@ -562,14 +572,17 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
   async function operateCreation(kind,retained = retainedSave) {
     if (!retained || retained.family !== "item_create" || retained !== retainedSave || kind === "retry" && retryClosed) return;
     if (kind === "retry" && cancellationUnknown) throw new Error("Check the unconfirmed cancellation before executing a saved creation.");
-    if (!await saveBinding(retained)) return;
+    const epoch = recoveryEpoch;
+    if (!await saveBinding(retained) || epoch !== recoveryEpoch) return;
     if (kind === "retry" && cancellationUnknown) throw new Error("Check the unconfirmed cancellation before executing a saved creation.");
     if (kind === "retry" && !retained.attempted) {
       retained = Object.freeze({...retained,attempted:true}); retainedSave = retained;
     }
     hideConfirmation(); controls();
-    const reply = await requestWire(kind === "check" ? "/items/pending/reconcile" : "/items/pending/execute",retained.wire);
-    if (retained !== retainedSave || !await saveBinding(retained)) return;
+    let reply;
+    try { reply = await requestWire(kind === "check" ? "/items/pending/reconcile" : "/items/pending/execute",retained.wire); }
+    catch (error) { if (epoch !== recoveryEpoch || retained !== retainedSave) return; throw unconfirmedSave(error); }
+    if (epoch !== recoveryEpoch || retained !== retainedSave || !await saveBinding(retained) || epoch !== recoveryEpoch) return;
     if (![200,201].includes(reply.status)) {
       const error = reply.data?.error;
       if (reply.status === 410 || reply.status === 404 && error === "pending_not_found") retryClosed = true;

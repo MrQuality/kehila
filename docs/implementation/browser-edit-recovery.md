@@ -80,6 +80,11 @@ An error never enables check/retry against an unvalidated journal. Passive sessi
 checks do not erase password inputs; credential submissions clear their own inputs,
 and explicit authentication/privacy transitions clear old in-memory forms. A fresh
 explicit sign-in obtains a new binding without reusing the previous login's cache.
+If another tab changes the journal during a dispatched request, this page blocks
+its stale recovery actions and requests explicit restoration; it cannot adopt
+that response or delete the replacement. A fetch timeout, connection loss or
+unreadable response preserves explicit unconfirmed-save guidance for edits and
+creations. A cancelled browser wait does not establish cancellation of server work.
 
 ## Privacy and lifecycle
 

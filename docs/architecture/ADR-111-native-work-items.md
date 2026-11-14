@@ -96,7 +96,10 @@ or rollback. Server-owned pending-edit recovery remains a separate design.
 The browser journal retains at most one tracked edit across tabs and projects,
 with at most 1 MiB of exact request wire and 2 KiB of identity/control metadata.
 Recovery eligibility lasts seven days from preparation under an honest local
-clock; retries do not extend it. Strict IndexedDB transaction completion precedes
+clock; retries do not extend it. Local expiry governs new dispatch eligibility;
+a matching response from a previously admitted request can still be validated
+and settled after expiry without making another check or retry eligible.
+Strict IndexedDB transaction completion precedes
 first transmission. Unsupported storage/durability fails closed. Restoration
 never executes a save. An authenticated check or explicit exact retry validates
 current journal ownership and eligibility transactionally; already admitted work

@@ -361,6 +361,77 @@ test('failed durable retry closure blocks both recovery actions',async()=>{
  assert.equal(f.elements.get('item-edit-check').disabled,true);assert.equal(f.elements.get('item-edit-retry').disabled,true);
 });
 
+test('post-dispatch expiry still adopts matching success and replay-expiry responses',async()=>{
+ for(const status of [200,410]){
+  let f;f=fixture((url,body)=>{
+   if(url==='/items/read')return {status:200,data:editableRead()};
+   if(url==='/items/edit'){
+    f.clock.now+=7*86400000+1;
+    return status===200?editSuccess(body,'edited'):{status:410,data:{error:'replay_expired'}};
+   }
+  });
+  await editForm(f);await f.fire('item-edit-form','submit');
+  assert.equal(f.calls.filter(call=>call.wire).length,1);
+  if(status===200){
+   assert.match(f.text('item-mutation-receipt'),/Recorded edit/);
+   assert.equal(JSON.parse(await f.store.read()).entry,null);
+  }else{
+   assert.match(f.text('item-recovery-status'),/expired/);
+   assert.equal(f.elements.get('item-edit-retry').disabled,true);
+   assert.equal(f.elements.get('item-edit-restore').disabled,false);
+   await f.fire('item-edit-check');assert.equal(f.calls.filter(call=>call.wire).length,1);
+  }
+  assert.doesNotMatch(f.text('item-recovery-status'),/cleanup could not be confirmed/);
+ }
+});
+
+test('cross-tab replacement during a dispatched edit visibly blocks stale actions and preserves replacement',async()=>{
+ let f,replacement;
+ f=fixture(async(url,body)=>{
+  if(url==='/items/read')return {status:200,data:editableRead()};
+  if(url==='/items/edit'){
+   const original=JSON.parse(await f.store.read()).entry.retained;
+   const other=await f.ports.recovery.open(f.binding.value);await other.discard();
+   const wire=JSON.parse(original.wire);wire.operation_id='2'.repeat(32);
+   await other.retain({...original,wire:JSON.stringify(wire)});replacement=await f.store.read();
+   return editSuccess(body,'edited');
+  }
+ });
+ await editForm(f);await f.fire('item-edit-form','submit');
+ assert.equal(f.elements.get('item-edit-retry').disabled,true);
+ assert.equal(f.elements.get('item-edit-check').disabled,true);
+ assert.equal(f.elements.get('item-edit-restore').disabled,false);
+ assert.match(f.text('item-recovery-status'),/changed in another tab.*[Rr]estore/);
+ assert.match(f.text('item-recovery-status'),/does not cancel|unconfirmed/);
+ assert.equal(f.text('item-mutation-receipt'),'');
+ assert.equal(await f.store.read(),replacement);
+});
+
+test('transport and response-body errors retain explicit uncertainty guidance for edits and creations',async()=>{
+ for(const family of ['edit','creation'])for(const reason of ['Failed to fetch','The user aborted a request.','Invalid response body']){
+  const f=fixture(url=>{
+   if(url==='/items/read')return {status:200,data:editableRead()};
+   if(url==='/items/edit'||url==='/items/pending/execute')throw new Error(reason);
+  });
+  if(family==='edit'){await editForm(f);await f.fire('item-edit-form','submit');}
+  else{await selectedCreation(f);await f.fire('pending-execute');}
+  assert.match(f.text('item-recovery-status'),/unconfirmed.*may have committed/i);
+  assert.match(f.text('item-recovery-status'),/check|retry/i);
+  assert.ok(f.text('item-recovery-status').includes(reason));
+  assert.equal(f.calls.filter(call=>call.wire).length,1);
+ }
+});
+
+test('a creation transport failure arriving after suspension cannot overwrite the resumed status',async()=>{
+ let reject;
+ const f=fixture(url=>url==='/items/pending/execute'?new Promise((resolve,failed)=>{reject=failed;}):undefined);
+ await selectedCreation(f);const saving=f.fire('pending-execute');
+ await observed(()=>reject);f.view.suspendRecovery();await f.view.restoreRecovery();
+ const before=f.text('item-recovery-status');reject(new Error('late transport failure'));await saving;
+ assert.equal(f.text('item-recovery-status'),before);
+ assert.equal(f.calls.filter(call=>call.wire).length,1);
+});
+
 test('unavailable edit storage does not disable server-owned creation recovery',async()=>{
  const store=memoryStore();store.read=async()=>{throw new Error('IndexedDB unavailable');};
  const f=fixture((url,body)=>url==='/items/pending/execute'?Promise.reject(new Error('unknown')):
