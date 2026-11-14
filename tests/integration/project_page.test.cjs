@@ -117,6 +117,25 @@ test('automatic session refresh after failed deletion and uncertain logout canno
   assert.equal(f.calls.some(call => call.url === '/items/edit' || call.url === '/items/reconcile'),false);
 });
 
+test('suspension after failed cleanup keeps visible reload guidance and the same unresolved identity', async () => {
+  const f = await fixture(url => url === '/auth/browser/logout' ? [503,{signed_out:false}] : undefined);
+  const request = {binding:{...f.owner},project:'p',item:'item',family:'item_edit',version:'1',configuration:'1',
+    lifecycle:{type:'task',workflow:'flow',status:'new',archived:false,phase:'new'},estimate:null,
+    wire:JSON.stringify({project_id:'p',item_id:'item',operation_id:'1'.repeat(32),expected_item_version:'1',
+      expected_configuration_revision:'1',estimate:{action:'keep'},fields:[]})};
+  await (await f.journal.open(f.owner)).retain(request);
+  const before = await f.store.read();
+  f.store.hook(() => { throw new Error('cleanup aborted'); });
+  await f.fire('logout'); await f.visibility('hidden'); await f.visibility('visible');
+  assert.equal(f.visible('session-resume'),true);
+  assert.equal(f.visible('session'),false);
+  assert.match(f.elements.get('status').textContent,/reload.*same saved identity/i);
+  assert.match(f.elements.get('status').textContent,/does not cancel|may have committed/i);
+  await f.fire('session-resume'); await f.fire('item-edit-retry');
+  assert.equal(await f.store.read(),before);
+  assert.equal(f.calls.some(call => /\/items\/(edit|reconcile)$/.test(call.url)),false);
+});
+
 test('a resumed page hides recovery until a newly observed owner binding is available', async () => {
   let hold=false,release;
   const f=await fixture(url=>{
@@ -257,6 +276,33 @@ test('definitive auth loss permits explicit login with a fresh owner binding', a
   assert.equal(f.elements.get('discover').disabled, false);
   assert.equal(f.elements.get('login-password').value, '');
   assert.doesNotMatch(f.elements.get('status').textContent, /installation or owner changed/i);
+});
+
+test('automatic resumption after auth loss retains owner comparison before revealing old project content', async () => {
+  for (const changed of [false,true]) for (const draft of [false,true]) {
+    let lost = false;
+    const f = await fixture(url => url === '/projects/binding' && lost ? [401,{}] : undefined);
+    if (draft) {
+      await f.fire('new-request'); f.elements.get('project-name').value = 'old owner draft';
+    } else await f.select();
+    const oldDetail = f.elements.get('request-detail').textContent;
+    lost = true; await f.fire('discover');
+    assert.equal(f.visible('login'),true);
+    lost = false;
+    if (changed) f.owner.installation_id = 'replacement-installation';
+    await f.visibility('hidden'); await f.visibility('visible');
+    if (changed) {
+      assert.equal(f.visible('login'),true);
+      assert.equal(f.visible('session'),false);
+      assert.equal(f.elements.get('project-name').value,'');
+      assert.equal(f.elements.get('request-detail').textContent,'');
+    } else {
+      assert.equal(f.visible('session'),true);
+      assert.equal(f.elements.get('project-name').value,draft?'old owner draft':'');
+      assert.equal(f.elements.get('request-detail').textContent,oldDetail);
+    }
+    assert.equal(f.calls.some(call => /\/items\/(edit|reconcile)$/.test(call.url)),false);
+  }
 });
 test('startup discovers without executing; execution echoes immutable entry and string ID', async () => {
   const f = await fixture(url => url.endsWith('/execute') ? [201, {outcome: 'created', entry: entry('completed'), result: {version: 1}}] : undefined);

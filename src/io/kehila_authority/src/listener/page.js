@@ -10,10 +10,13 @@
   const element = id => document.getElementById(id);
   const status = text => { element("status").textContent = text + (recoveryClearNotice ? " " + recoveryClearNotice : ""); };
   const projectStatus = text => { element("project-status").textContent = text; };
+  const resumeNotice = "Your session could not be checked. Retry, or reload and inspect the same saved identity if recovery remains blocked. Retrying does not confirm cleanup; a save may have committed.";
   const show = (id, value) => { element(id).hidden = !value; };
   const mode = name => {
     signedIn = name === "session";
-    if (name === "login") { binding = null; authorityEpoch++; }
+    // Keep the old owner only as a comparison fact until explicit login clears
+    // old forms, or fresh revalidation confirms the same owner.
+    if (name === "login") authorityEpoch++;
     for (const id of ["login", "session", "retiring", "resume"]) element(id).hidden = id !== name;
   };
   async function exchange(path, body) {
@@ -75,7 +78,7 @@
     if (!currentPage(epoch)) return;
     if (!signedIn) {
       if (element("login").hidden) mode("resume");
-      status("Session authority could not be checked. Retry the session check or sign in; no saved edit was resent.");
+      status(resumeNotice);
       return;
     }
     mode("session");
@@ -83,7 +86,7 @@
   }
   function resumeFailure() {
     if (element("login").hidden) mode("resume");
-    status("Session authority could not be checked. Retry the session check or sign in; no saved edit was resent.");
+    status(resumeNotice);
   }
   const resume = () => {
     const epoch = authorityEpoch;
