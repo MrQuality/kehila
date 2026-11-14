@@ -73,6 +73,13 @@ refresh handles resumption while another page action is still completing;
 resumption never automatically transmits a mutation. Unchanged-owner revalidation
 preserves current selections and unrelated unsaved forms. A confirmed changed
 owner clears those old selections/forms instead of exposing them to the new owner.
+When authority cannot be checked, a separate session retry remains visible without
+revealing the hidden session. Once matching authority is confirmed, journal errors
+and the explicit restore control remain outside the hidden retained-payload section.
+An error never enables check/retry against an unvalidated journal. Passive session
+checks do not erase password inputs; credential submissions clear their own inputs,
+and explicit authentication/privacy transitions clear old in-memory forms. A fresh
+explicit sign-in obtains a new binding without reusing the previous login's cache.
 
 ## Privacy and lifecycle
 

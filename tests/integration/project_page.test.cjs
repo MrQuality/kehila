@@ -25,6 +25,15 @@ async function fixture(handler = () => undefined, store = memoryStore()) {
     const el = new Element(match[1]); elements.set(match[2], el);
     if (match[1] === 'button') buttons.push(el);
   }
+  const parents = new Map(), sections = [];
+  for (const match of html.matchAll(/<\/section\s*>|<(\w+)\b[^>]*\bid="([^"]+)"[^>]*>/g)) {
+    if (match[0].startsWith('</')) sections.pop();
+    else {
+      parents.set(match[2], sections.at(-1));
+      if (match[1] === 'section') sections.push(match[2]);
+    }
+  }
+  const visible = id => !elements.get(id).hidden && (!parents.get(id) || visible(parents.get(id)));
   elements.get('project-unit').value = 'hours';
   const calls = [], owner = {installation_id: 'installation', actor_id: 'owner'}, readers = {cancelled: 0, released: 0};
   const fetch = async (url, options) => {
@@ -32,7 +41,7 @@ async function fixture(handler = () => undefined, store = memoryStore()) {
     calls.push({url, body, options});
     let reply = await handler(url, body, owner);
     if (!reply) {
-      if (url.endsWith('/csrf')) reply = [200, {csrf: 'csrf'}];
+      if (url.endsWith('/csrf') || url.endsWith('/pre-session')) reply = [200, {csrf: 'csrf'}];
       else if (url.endsWith('/state')) reply = [200, {active: true}];
       else if (url.endsWith('/binding')) reply = [200, {...owner}];
       else if (url.endsWith('/list')) reply = [200, {entries: [entry()], before: null}];
@@ -49,7 +58,8 @@ async function fixture(handler = () => undefined, store = memoryStore()) {
     document: {visibilityState:'visible', addEventListener:(type,fn) => { documentEvents[type]=fn; },
       getElementById: id => { assert.ok(elements.has(id), id); return elements.get(id); },
       createElement: tag => { const el = new Element(tag); if (tag === 'button') buttons.push(el); return el; },
-      querySelectorAll: selector => selector === 'button' ? buttons : []},
+      querySelectorAll: selector => selector === 'button' ? buttons : selector === 'input[type=password]'
+        ? ['login-password','current','replacement','revoke-password'].map(id => elements.get(id)) : []},
     fetch, AbortController, TextDecoder, TextEncoder, Uint8Array, setTimeout, clearTimeout, crypto:webcrypto,
     addEventListener:(type,fn) => { lifecycle[type]=fn; }
   };
@@ -72,7 +82,7 @@ async function fixture(handler = () => undefined, store = memoryStore()) {
     assert.equal(typeof documentEvents.visibilitychange,'function');documentEvents.visibilitychange();
     if(state==='visible')await idle();
   };
-  return {elements, calls, owner, fire, select, readers, store, journal, visibility};
+  return {elements, calls, owner, fire, select, readers, store, journal, visibility, visible};
 }
 
 test('failed recovery deletion cannot prevent the server logout attempt', async () => {
@@ -136,6 +146,117 @@ test('unchanged-owner resumption preserves an unsaved project form and selected 
   await f.visibility('hidden');await f.visibility('visible');
   assert.equal(f.elements.get('project-form').hidden,false);
   assert.equal(f.elements.get('project-name').value,'  unsaved project  ');
+});
+
+test('resume failures expose a reachable retry without exposing the old session', async () => {
+  for (const endpoint of ['/auth/browser/csrf','/auth/browser/state','/projects/binding']) for (const transport of [true,false]) {
+    let fail = false;
+    const f = await fixture(url => {
+      if (fail && url === endpoint) {
+        if (transport) throw new Error('temporary outage');
+        return [503,{}];
+      }
+    });
+    await f.fire('new-request'); f.elements.get('project-name').value = 'preserved draft';
+    fail = true; await f.visibility('hidden'); await f.visibility('visible');
+    assert.equal(f.elements.get('session').hidden, true, endpoint);
+    assert.equal(f.elements.get('resume').hidden, false, endpoint);
+    assert.equal(f.elements.get('session-resume').disabled, false);
+    assert.equal(f.visible('session-resume'), true);
+    assert.doesNotMatch(f.elements.get('status').textContent, /password change/i);
+    fail = false; await f.fire('session-resume');
+    assert.equal(f.elements.get('session').hidden, false);
+    assert.equal(f.elements.get('resume').hidden, true);
+    assert.equal(f.elements.get('project-name').value, 'preserved draft');
+    assert.equal(f.calls.some(call => /\/items\/(edit|reconcile)$/.test(call.url)), false);
+  }
+});
+
+test('a hidden page rejects old binding and journal restoration completions', async () => {
+  for (const stage of ['binding','journal']) {
+    let hold = false, release;
+    const f = await fixture(url => {
+      if (stage === 'binding' && hold && url === '/projects/binding') {
+        hold = false; return new Promise(resolve => { release = () => resolve([200,{...f.owner}]); });
+      }
+    });
+    if (stage === 'journal') {
+      const read = f.store.read; let reads = 0;
+      f.store.read = async () => {
+        if (hold && ++reads === 2) {
+          hold = false; await new Promise(resolve => { release = resolve; });
+        }
+        return read();
+      };
+    }
+    await f.visibility('hidden'); hold = true;
+    const resuming = f.visibility('visible');
+    for (let i=0;i<500&&!release;i++) await new Promise(resolve => setTimeout(resolve,1));
+    assert.equal(typeof release,'function',stage);
+    await f.visibility('hidden'); release(); await resuming;
+    assert.equal(f.visible('session'),false,stage);
+    assert.equal(f.visible('item-recovery'),false,stage);
+    await f.visibility('visible');
+    assert.equal(f.visible('session'),true,stage);
+    assert.equal(f.calls.some(call => /\/items\/(edit|reconcile)$/.test(call.url)),false);
+  }
+});
+
+test('storage failure after fresh resume binding exposes safe recovery controls outside the hidden payload', async () => {
+  const f = await fixture();
+  const read = f.store.read; let reads = 0;
+  f.store.read = async () => {
+    if (++reads === 2) throw new Error('journal read unavailable');
+    return read();
+  };
+  await f.visibility('hidden'); await f.visibility('visible');
+  assert.equal(f.visible('item-recovery'), false);
+  assert.equal(f.visible('item-recovery-error'), true);
+  assert.equal(f.visible('item-edit-restore'), true);
+  assert.equal(f.elements.get('item-edit-restore').disabled, false);
+  f.store.read = read; await f.fire('item-edit-restore');
+  assert.equal(f.visible('item-recovery-error'), false);
+  assert.equal(f.calls.some(call => /\/items\/(edit|reconcile)$/.test(call.url)), false);
+});
+
+test('successful discovery binding repairs a transient startup binding failure', async () => {
+  let bindings = 0;
+  const f = await fixture(url => url === '/projects/binding' && ++bindings === 1 ? [503,{}] : undefined);
+  assert.equal(f.elements.get('session').hidden, false);
+  assert.equal(f.elements.get('discover').disabled, false);
+  await f.fire('item-edit-restore');
+  assert.equal(f.elements.get('item-edit-restore').disabled, false);
+});
+
+test('passive revalidation and project actions preserve passwords; credential submission clears its inputs', async () => {
+  const f = await fixture(url => url === '/auth/browser/revoke-others' ? [200,{}] : undefined);
+  f.elements.get('current').value = 'current secret';
+  f.elements.get('replacement').value = 'replacement secret';
+  f.elements.get('revoke-password').value = 'revoke secret';
+  await f.visibility('hidden'); await f.visibility('visible'); await f.fire('discover');
+  assert.equal(f.elements.get('current').value, 'current secret');
+  assert.equal(f.elements.get('replacement').value, 'replacement secret');
+  assert.equal(f.elements.get('revoke-password').value, 'revoke secret');
+  await f.fire('revoke','submit');
+  assert.equal(f.elements.get('revoke-password').value, '');
+  assert.equal(f.elements.get('replacement').value, 'replacement secret');
+});
+
+test('definitive auth loss permits explicit login with a fresh owner binding', async () => {
+  let lost = false;
+  const f = await fixture(url => {
+    if (url === '/projects/binding' && lost) return [401,{}];
+    if (url === '/auth/browser/login') { lost = false; return [200,{csrf:'fresh'}]; }
+  });
+  lost = true; await f.fire('discover');
+  assert.equal(f.elements.get('login').hidden, false);
+  f.owner.actor_id = 'new-owner';
+  f.elements.get('login-password').value = 'new owner password';
+  await f.fire('login','submit');
+  assert.equal(f.elements.get('session').hidden, false);
+  assert.equal(f.elements.get('discover').disabled, false);
+  assert.equal(f.elements.get('login-password').value, '');
+  assert.doesNotMatch(f.elements.get('status').textContent, /installation or owner changed/i);
 });
 test('startup discovers without executing; execution echoes immutable entry and string ID', async () => {
   const f = await fixture(url => url.endsWith('/execute') ? [201, {outcome: 'created', entry: entry('completed'), result: {version: 1}}] : undefined);

@@ -293,7 +293,8 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
     el("item-edit-estimate-action").disabled = unavailable || !editor;
     el("item-edit-estimate").disabled = unavailable || !editor || el("item-edit-estimate-action").value !== "set";
     for (const field of editFields) { field.action.disabled = unavailable || !editor; field.input.disabled = unavailable || !editor || field.action.value !== "set"; }
-    el("item-edit-restore").disabled = unavailable || restoringRecovery || recoveryCleanupFailed || locallySignedOut || recoverySuspended;
+    el("item-edit-restore").disabled = unavailable || restoringRecovery || recoveryCleanupFailed || locallySignedOut;
+    el("item-recovery-error").hidden = !el("item-recovery-error").textContent;
     const editBlocked = retainedSave?.family === "item_edit" && (restoringRecovery || recoveryBlocked || recoverySuspended);
     el("item-edit-check").disabled = unavailable || editBlocked || !retainedSave;
     el("item-edit-retry").disabled = unavailable || editBlocked || !retainedSave || retryClosed;
@@ -327,6 +328,7 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
   async function restoreRecovery() {
     if (recoveryCleanupFailed || locallySignedOut) { recoveryBlocked = true; controls(); return false; }
     const epoch = recoveryEpoch;
+    el("item-recovery-error").textContent = "";
     restoringRecovery = true; controls();
     try {
       const ticket = await recovery.prepare(); if (epoch !== recoveryEpoch) return;
@@ -348,6 +350,7 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
     } catch (error) {
       if (epoch !== recoveryEpoch) return;
       recoveryBlocked = true;
+      el("item-recovery-error").textContent = error.message;
       el("item-recovery-status").textContent = error.message;
       return false;
     } finally {

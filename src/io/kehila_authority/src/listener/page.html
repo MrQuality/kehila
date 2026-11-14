@@ -13,6 +13,10 @@
   <label>Owner password <input id="login-password" type="password" autocomplete="current-password" required></label>
   <button>Sign in</button>
 </form>
+<section id="resume" hidden>
+  <p>Session authority could not be checked. Your saved edit was not resent.</p>
+  <button id="session-resume" type="button">Retry session check</button>
+</section>
 <section id="session" hidden>
   <h2>Project creation</h2>
   <p id="project-status" role="status" aria-live="polite"></p>
@@ -42,12 +46,13 @@
     </div>
     <pre id="project-result"></pre>
   </section>
+  <p id="item-recovery-error" role="status" aria-live="polite" hidden></p>
+  <button id="item-edit-restore" type="button">Restore this browser's saved edit</button>
   <section id="item-recovery" hidden>
     <h2>Item save outcomes</h2>
     <p id="item-save-scope"></p>
     <p id="item-recovery-status" role="status" aria-live="polite"></p>
     <p>One exact edit can be recovered for seven days in this normal browser profile after a reload or browser restart. Recovery never resends it automatically. Clearing browser data, losing the profile or using another browser can lose tracking; this does not cancel a save. Saved creation requests remain discoverable on the server.</p>
-    <button id="item-edit-restore" type="button">Restore this browser's saved edit</button>
     <button id="item-edit-check" type="button" disabled>Check this save's recorded outcome</button>
     <button id="item-edit-retry" type="button" disabled>Retry this exact save</button>
     <button id="item-edit-read-current" type="button" disabled>Read current item separately</button>

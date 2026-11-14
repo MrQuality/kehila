@@ -293,6 +293,21 @@ test('suspending a page hides retained content and requires fresh binding before
  assert.equal(f.calls.length,count);
 });
 
+test('a failed suspended restore leaves payload hidden with an accessible error and restore action',async()=>{
+ const f=fixture(url=>url==='/items/read'?{status:200,data:editableRead()}:undefined);
+ await editForm(f);await f.fire('item-edit-form','submit');f.view.suspendRecovery();
+ const read=f.store.read;f.store.read=async()=>{throw new Error('storage unavailable');};
+ await f.view.restoreRecovery();
+ assert.equal(f.elements.get('item-recovery').hidden,true);
+ assert.equal(f.elements.get('item-edit-restore').disabled,false);
+ assert.equal(f.elements.get('item-recovery-error').hidden,false);
+ assert.match(f.text('item-recovery-error'),/storage unavailable/);
+ f.store.read=read;await f.fire('item-edit-restore');
+ assert.equal(f.elements.get('item-recovery').hidden,false);
+ assert.equal(f.elements.get('item-recovery-error').hidden,true);
+ assert.equal(f.calls.filter(call=>call.wire).length,1);
+});
+
 test('unchanged-owner recovery revalidation preserves unsaved edit and creation input',async()=>{
  const f=fixture(url=>url==='/items/read'?{status:200,data:editableRead()}:undefined);
  await editForm(f);const input=editField(f,'task-title','set','  unsaved edit  ');
