@@ -20,6 +20,9 @@ The journal has one tracked edit slot across tabs and projects. It accepts at mo
 do not bound JavaScript heap, serialized storage overhead or physical disk use.
 Eligibility is seven days from original preparation under an honest local clock;
 reading, retries and sign-in do not renew it. Known clock rollback is reported.
+An operation admitted before local expiry may still have its matching response
+validated and settled afterward. This never permits another expired check or
+retry, changes its original deadline, or bypasses owner/generation checks.
 The server's independent replay-retention and permanent-identity rules remain in
 force; local expiry does not undo an accepted write or make its identity new.
 
@@ -57,6 +60,13 @@ invalidated by another tab's signout. Settlement, abandon and clearing rotate th
 generation. Reply adoption and settlement check the matching journal identity;
 late success cannot delete a replacement. A separate page epoch invalidates local
 callbacks across signout, binding changes and disposal.
+Restoring an empty slot does not write it. Its durable clock high-water mark
+records the last durable activity; each live journal session additionally remembers
+its own read observations. A new page cannot detect rollback based only on another
+page's unpersisted empty-slot observations. Retention and request admission still
+check the live clock at actual transaction admission. Invalid-format clearing uses
+the exact stored value in a durable comparison; operational storage or checksum
+computation failures remain failures, rather than evidence of invalid data.
 Visibility changes and page restoration hide recovery content and disable its
 actions until fresh binding and journal validation finish. A single queued
 refresh handles resumption while another page action is still completing;

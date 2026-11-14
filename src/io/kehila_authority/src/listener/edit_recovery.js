@@ -67,7 +67,8 @@ globalThis.KehilaEditRecovery = ({store = globalThis.KehilaEditRecoveryStore(), 
   crypto = globalThis.crypto} = {}) => {
   const encoder = new TextEncoder(), lifetime = 7 * 86400000, wireLimit = 1048576, metadataLimit = 2048;
   const failure = message => { throw new Error(message); };
-  const invalid = () => failure("Invalid or unsupported edit recovery record.");
+  class InvalidRecord extends Error {}
+  const invalid = () => { throw new InvalidRecord("Invalid or unsupported edit recovery record."); };
   const object = value => value !== null && typeof value === "object" && !Array.isArray(value);
   const keys = (value, names) => object(value) && Object.keys(value).length === names.length && names.every(name => Object.hasOwn(value, name));
   const bytes = value => encoder.encode(value).length;
@@ -152,7 +153,10 @@ globalThis.KehilaEditRecovery = ({store = globalThis.KehilaEditRecoveryStore(), 
   const empty = (observed = time()) => ({schema:1, generation:generation(), observed_ms:observed, entry:null, checksum:"0".repeat(64)});
   async function replace(raw, root, admit) {
     const encoded = await encode(root);
-    if (!await store.compare(raw, encoded, admit)) failure("Edit recovery changed in another tab. Restore it before preparing or retrying work.");
+    if (!await store.compare(raw, encoded, () => {
+      if (time() < root.observed_ms) failure("The local clock moved backwards before edit recovery admission.");
+      admit?.();
+    })) failure("Edit recovery changed in another tab. Restore it before preparing or retrying work.");
     return root;
   }
   async function open(owner, ticket) {
@@ -170,7 +174,8 @@ globalThis.KehilaEditRecovery = ({store = globalThis.KehilaEditRecoveryStore(), 
     if (raw === null) root = await replace(null, empty());
     else {
       try { root = await decode(raw); }
-      catch (_) {
+      catch (error) {
+        if (!(error instanceof InvalidRecord)) throw error;
         notice = "An invalid or unsupported recovery record was discarded. Losing tracking does not cancel work that may have completed.";
         root = await replace(raw, empty());
       }
@@ -179,14 +184,10 @@ globalThis.KehilaEditRecovery = ({store = globalThis.KehilaEditRecoveryStore(), 
         notice = sameOwner(root.entry.retained.binding, owner)
           ? "The seven-day edit recovery record expired. Losing tracking does not cancel a save or prove rollback."
           : "The installation or owner changed. The foreign recovery record was discarded without resending it.";
-        // Refresh the comparison value only when our own invalid-root cleanup committed.
-        raw = await store.read();
-        const current = await decode(raw);
-        if (current.generation !== root.generation) failure("Edit recovery changed in another tab. Restore it again.");
-        root = await replace(raw, empty(Math.max(time(), current.observed_ms)));
+        root = await replace(raw, empty(Math.max(time(), root.observed_ms)));
       }
     }
-    let currentGeneration = root.generation;
+    let currentGeneration = root.generation, observed = root.observed_ms;
     function handle(current) { return current.entry === null ? null : freeze({generation:current.generation,
       retained:clone(current.entry.retained), retryClosed:current.entry.retry_closed}); }
     async function read(expected, freshOwner = owner, allowExpired = false) {
@@ -194,7 +195,10 @@ globalThis.KehilaEditRecovery = ({store = globalThis.KehilaEditRecoveryStore(), 
       if (!sameOwner(owner, freshOwner)) failure("The installation or owner changed. No old save was resent.");
       const value = await store.read();
       if (value === null) failure("Edit recovery changed or was cleared. Restore before continuing.");
-      const current = await decode(value); checkClock(current);
+      const current = await decode(value);
+      const checkedAt = time();
+      if (checkedAt < Math.max(observed, current.observed_ms)) failure("The local clock moved backwards. Edit recovery is unavailable until its time can be checked.");
+      observed = checkedAt;
       if (current.generation !== currentGeneration || expected && expected.generation !== current.generation)
         failure("Edit recovery changed in another tab. The old action is stale.");
       if (current.entry && !sameOwner(current.entry.retained.binding, owner)) failure("The installation or owner changed.");
@@ -203,21 +207,24 @@ globalThis.KehilaEditRecovery = ({store = globalThis.KehilaEditRecoveryStore(), 
       if (!allowExpired && current.entry && time() >= current.entry.expires_ms) failure("The seven-day edit recovery record expired.");
       return {raw:value, root:current};
     }
-    async function write(snapshot, changed) {
+    async function write(snapshot, changed, allowExpired = false) {
       await replace(snapshot.raw, changed, () => {
         // Runs synchronously at the actual readwrite admission point, after
         // hashing and transaction queuing. Completion is still required to send.
         const admittedAt = time();
-        if (changed.observed_ms < snapshot.root.observed_ms || admittedAt < snapshot.root.observed_ms || admittedAt < changed.observed_ms)
+        if (changed.observed_ms < snapshot.root.observed_ms || admittedAt < observed || admittedAt < changed.observed_ms)
           failure("The local clock moved backwards before edit recovery admission.");
-        if (changed.entry && admittedAt >= changed.entry.expires_ms) failure("The seven-day edit recovery record expired before admission.");
+        if (!allowExpired && changed.entry && admittedAt >= changed.entry.expires_ms) failure("The seven-day edit recovery record expired before admission.");
       });
-      currentGeneration = changed.generation; return handle(changed);
+      currentGeneration = changed.generation; observed = Math.max(observed, changed.observed_ms); return handle(changed);
     }
     return {
       get notice() { return notice; },
       async restore() {
         const snapshot = await read(null, owner, true);
+        // Empty observations need no durable mutation. This session still
+        // remembers their clock high-water mark; another page sees durable time.
+        if (snapshot.root.entry === null) return null;
         if (snapshot.root.entry && time() >= snapshot.root.entry.expires_ms) {
           notice = "The seven-day edit recovery record expired. Losing tracking does not cancel work.";
           return write(snapshot, empty());
@@ -241,14 +248,14 @@ globalThis.KehilaEditRecovery = ({store = globalThis.KehilaEditRecoveryStore(), 
         return admitted.retained;
       },
       async current(expected, freshOwner) {
-        try { await read(expected, freshOwner); return true; }
+        try { await read(expected, freshOwner, true); return true; }
         catch (error) { if (/changed|cleared|stale|expired/.test(error.message)) return false; throw error; }
       },
       async closeRetry(expected, freshOwner) {
-        const snapshot = await read(expected, freshOwner);
-        await write(snapshot, {...snapshot.root, observed_ms:time(), entry:{...snapshot.root.entry, retry_closed:true}});
+        const snapshot = await read(expected, freshOwner, true);
+        await write(snapshot, {...snapshot.root, observed_ms:time(), entry:{...snapshot.root.entry, retry_closed:true}}, true);
       },
-      async settle(expected, freshOwner) { const snapshot = await read(expected, freshOwner); await write(snapshot, empty()); },
+      async settle(expected, freshOwner) { const snapshot = await read(expected, freshOwner, true); await write(snapshot, empty()); },
       async discard() { const snapshot = await read(null, owner, true); await write(snapshot, empty()); }
     };
   }
@@ -256,7 +263,12 @@ globalThis.KehilaEditRecovery = ({store = globalThis.KehilaEditRecoveryStore(), 
     binding(owner);
     const raw = await store.read();
     if (raw === null) { await replace(null, empty()); return; }
-    const root = await decode(raw);
+    let root;
+    try { root = await decode(raw); }
+    catch (error) {
+      if (!(error instanceof InvalidRecord)) throw error;
+      await replace(raw, empty()); return;
+    }
     // A delayed old-owner signout must not erase a new owner's record.
     if (root.entry && !sameOwner(root.entry.retained.binding, owner)) return;
     await replace(raw, empty(Math.max(time(), root.observed_ms)));

@@ -51,6 +51,94 @@ test('a new page restores the original wire and response-validation facts', asyn
   assert.equal((await reopened.admit(restored, owner, 'check')).wire, original.wire);
 });
 
+test('admitted outcomes can settle or close retry after local expiry without renewing admission', async () => {
+  for (const outcome of ['settle', 'closeRetry']) {
+    const f = fixture(), session = await f.journal.open(owner), handle = await session.retain(edit());
+    f.clock.now += 7 * 86400000 - 1;
+    await session.admit(handle, owner, 'retry');
+    f.clock.now += 2;
+    assert.equal(await session.current(handle, owner), true);
+    await session[outcome](handle, owner);
+    if (outcome === 'settle') assert.equal(await session.restore(), null);
+    else {
+      assert.equal(JSON.parse(await f.store.read()).entry.retry_closed, true);
+      await assert.rejects(session.admit(handle, owner, 'check'), /expired/i);
+      await assert.rejects(session.admit(handle, owner, 'retry'), /expired|closed/i);
+    }
+  }
+});
+
+test('signout invalidates corrupt records but failed replacement remains a failure', async () => {
+  for (const corrupt of [() => '{broken', raw => raw.replace('exact', 'wrong'),
+    raw => JSON.stringify({...JSON.parse(raw), schema:900})]) {
+    const f = fixture(), session = await f.journal.open(owner);
+    const handle = await session.retain(edit());
+    await f.store.corrupt(corrupt);
+    const before = await f.store.read();
+    f.store.hook(() => { throw new Error('clear aborted'); });
+    await assert.rejects(f.journal.clear(owner), /clear aborted/);
+    assert.equal(await f.store.read(), before);
+    await f.journal.clear(owner);
+    const cleared = JSON.parse(await f.store.read());
+    assert.equal(cleared.entry, null);
+    assert.notEqual(cleared.generation, handle.generation);
+  }
+});
+
+test('operational checksum failures do not discard a valid journal during open or clear', async () => {
+  for (const operation of ['open', 'clear']) {
+    const f = fixture(); await (await f.journal.open(owner)).retain(edit());
+    const before = await f.store.read(); let first = true;
+    const journal = context.KehilaEditRecovery({store:f.store, now:() => f.clock.now,
+      crypto:{getRandomValues:value => webcrypto.getRandomValues(value), subtle:{digest:async (...args) => {
+        if (first) { first = false; throw new Error('digest unavailable'); }
+        return webcrypto.subtle.digest(...args);
+      }}}});
+    await assert.rejects(journal[operation](owner), /digest unavailable/);
+    assert.equal(await f.store.read(), before);
+  }
+});
+
+test('corrupt clearing cannot erase a concurrently installed valid foreign owner record', async () => {
+  const foreign = fixture(), other = {...owner, actor_id:'other'};
+  const request = edit(); request.binding = other;
+  await (await foreign.journal.open(other)).retain(request);
+  const replacement = await foreign.store.read(), store = memoryStore();
+  await store.corrupt(() => '{broken');
+  const journal = context.KehilaEditRecovery({store:{read:store.read, compare:async (...args) => {
+    await store.corrupt(() => replacement); return store.compare(...args);
+  }}});
+  await assert.rejects(journal.clear(owner), /changed/i);
+  assert.equal(await store.read(), replacement);
+});
+
+test('readonly empty observation does not hide a concurrent retain or allow a later clock rollback', async () => {
+  const f = fixture(), a = await f.journal.open(owner), b = await f.journal.open(owner);
+  f.clock.now += 100; assert.equal(await a.restore(), null);
+  const kept = await b.retain(edit());
+  assert.equal((await a.restore()).generation, kept.generation);
+  f.clock.now--;
+  await assert.rejects(a.retain(edit()), /clock/i);
+  f.clock.now++;
+  assert.equal(await b.current(kept, owner), true);
+});
+
+test('initialization checks clock again at actual transaction admission', async () => {
+  const f = fixture(); f.store.hook(() => { f.clock.now--; });
+  await assert.rejects(f.journal.open(owner), /clock/i);
+  assert.equal(await f.store.read(), null);
+});
+
+test('empty restores do not write or contend and still detect a clock rollback in this session', async () => {
+  const f = fixture(), a = await f.journal.open(owner), b = await f.journal.open(owner);
+  const before = await f.store.read();
+  f.clock.now += 50;
+  assert.deepEqual(await Promise.all([a.restore(), b.restore()]), [null, null]);
+  assert.equal(await f.store.read(), before);
+  f.clock.now--;
+  await assert.rejects(a.restore(), /clock/i);
+});
+
 test('concurrent pages cannot overwrite the one retained edit', async () => {
   const f = fixture(), a = await f.journal.open(owner), b = await f.journal.open(owner);
   const results = await Promise.allSettled([a.retain(edit('a'.repeat(32))), b.retain(edit('b'.repeat(32)))]);
