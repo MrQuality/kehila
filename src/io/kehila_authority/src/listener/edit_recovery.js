@@ -256,7 +256,12 @@ globalThis.KehilaEditRecovery = ({store = globalThis.KehilaEditRecoveryStore(), 
         await write(snapshot, {...snapshot.root, observed_ms:time(), entry:{...snapshot.root.entry, retry_closed:true}}, true);
       },
       async settle(expected, freshOwner) { const snapshot = await read(expected, freshOwner, true); await write(snapshot, empty()); },
-      async discard() { const snapshot = await read(null, owner, true); await write(snapshot, empty()); }
+      async discard(expected, freshOwner) {
+        if (!expected) failure("Select the saved edit before stopping tracking it.");
+        binding(freshOwner);
+        const snapshot = await read(expected, freshOwner, true);
+        await write(snapshot, empty());
+      }
     };
   }
   async function clear(owner) {

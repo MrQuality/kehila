@@ -164,12 +164,44 @@ test('a binding reply begun before cross-tab logout cannot open a new session af
 test('cross-tab abandon invalidates old admissions and old success cannot erase a replacement', async () => {
   const f = fixture(), a = await f.journal.open(owner), old = await a.retain(edit());
   const b = await f.journal.open(owner);
-  await b.discard();
+  await b.discard(await b.restore(), owner);
   const replacement = await b.retain(edit('2'.repeat(32)));
   await assert.rejects(a.admit(old, owner, 'retry'), /changed|stale/i);
   assert.equal(await a.current(old, owner), false);
   await assert.rejects(a.settle(old, owner), /changed|stale/i);
+  await assert.rejects(a.discard(old, owner), /changed|stale/i);
   assert.equal((await b.restore()).retained.wire, replacement.retained.wire);
+});
+
+test('explicit discard requires the selected edit and a fresh matching owner', async () => {
+  for (const invalid of ['missing edit','missing owner','wrong owner','different edit']) {
+    const f = fixture(), session = await f.journal.open(owner), handle = await session.retain(edit());
+    const before = await f.store.read();
+    const selected = invalid === 'missing edit' ? undefined : invalid === 'different edit'
+      ? {...handle, retained:edit('2'.repeat(32))} : handle;
+    const fresh = invalid === 'missing owner' ? undefined : invalid === 'wrong owner'
+      ? {...owner, actor_id:'other'} : owner;
+    await assert.rejects(session.discard(selected, fresh), /select|invalid|owner|changed|stale/i);
+    assert.equal(await f.store.read(), before, invalid);
+  }
+  const f = fixture(), session = await f.journal.open(owner), handle = await session.retain(edit());
+  await session.discard(handle, owner);
+  const root = JSON.parse(await f.store.read());
+  assert.equal(root.entry, null);
+  assert.notEqual(root.generation, handle.generation);
+});
+
+test('a replacement racing explicit discard survives the exact comparison', async () => {
+  const base = memoryStore(); let replacement = null;
+  const store = {...base, async compare(...args) {
+    if (replacement) { const raw = replacement; replacement = null; await base.corrupt(() => raw); }
+    return base.compare(...args);
+  }};
+  const f = fixture(store), session = await f.journal.open(owner), handle = await session.retain(edit());
+  const other = fixture(); await (await other.journal.open(owner)).retain(edit('2'.repeat(32)));
+  const retained = await other.store.read(); replacement = retained;
+  await assert.rejects(session.discard(handle, owner), /changed|stale/i);
+  assert.equal(await f.store.read(), retained);
 });
 
 test('seven-day eligibility is not renewed by checks, retry closure or reauthentication', async () => {

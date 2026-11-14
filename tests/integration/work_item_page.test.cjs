@@ -391,7 +391,7 @@ test('cross-tab replacement during a dispatched edit visibly blocks stale action
   if(url==='/items/read')return {status:200,data:editableRead()};
   if(url==='/items/edit'){
    const original=JSON.parse(await f.store.read()).entry.retained;
-   const other=await f.ports.recovery.open(f.binding.value);await other.discard();
+   const other=await f.ports.recovery.open(f.binding.value);await other.discard(await other.restore(),f.binding.value);
    const wire=JSON.parse(original.wire);wire.operation_id='2'.repeat(32);
    await other.retain({...original,wire:JSON.stringify(wire)});replacement=await f.store.read();
    return editSuccess(body,'edited');
@@ -401,10 +401,33 @@ test('cross-tab replacement during a dispatched edit visibly blocks stale action
  assert.equal(f.elements.get('item-edit-retry').disabled,true);
  assert.equal(f.elements.get('item-edit-check').disabled,true);
  assert.equal(f.elements.get('item-edit-restore').disabled,false);
+ assert.equal(f.elements.get('item-edit-forget').disabled,true);
  assert.match(f.text('item-recovery-status'),/changed in another tab.*[Rr]estore/);
  assert.match(f.text('item-recovery-status'),/does not cancel|unconfirmed/);
  assert.equal(f.text('item-mutation-receipt'),'');
  assert.equal(await f.store.read(),replacement);
+ const checks=f.binding.checks;
+ f.elements.get('item-edit-forget').events.click();await f.fire('item-edit-forget');
+ assert.equal(f.binding.checks,checks);
+ assert.equal(await f.store.read(),replacement);
+ assert.equal(f.elements.get('item-edit-restore').disabled,false);
+ await f.fire('item-edit-restore');
+ assert.equal(f.elements.get('item-edit-retry').disabled,false);
+ assert.equal(f.calls.filter(call=>call.wire).length,1);
+});
+
+test('suspension during discard binding invalidates that action without latching cleanup failure',async()=>{
+ const f=fixture(url=>url==='/items/read'?{status:200,data:editableRead()}:undefined);
+ await editForm(f);await f.fire('item-edit-form','submit');
+ const before=await f.store.read(),checks=f.binding.checks;let release;
+ f.binding.wait=new Promise(resolve=>{release=resolve;});
+ const forgetting=f.fire('item-edit-forget');await observed(()=>f.binding.checks>checks);
+ f.view.suspendRecovery();release();await forgetting;f.binding.wait=null;
+ assert.equal(await f.store.read(),before);
+ await f.view.restoreRecovery();
+ assert.equal(f.elements.get('item-edit-restore').disabled,false);
+ assert.equal(f.elements.get('item-edit-retry').disabled,false);
+ assert.equal(f.calls.filter(call=>call.wire).length,1);
 });
 
 test('transport and response-body errors retain explicit uncertainty guidance for edits and creations',async()=>{

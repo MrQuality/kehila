@@ -87,7 +87,13 @@ resumption. It grants no authority: a newly observed owner must clear the old
 project content before that content can become visible again.
 If another tab changes the journal during a dispatched request, this page blocks
 its stale recovery actions and requests explicit restoration; it cannot adopt
-that response or delete the replacement. A fetch timeout, connection loss or
+that response or delete the replacement. Stop tracking is also unavailable for a
+known-blocked edit, and its handler checks that state again after fresh binding.
+Explicit abandonment compares the selected edit and matching owner before its
+durable write. A replacement racing an otherwise valid abandonment remains
+protected by generation checks and CAS; failed invalidation still requires fresh
+inspection and does not silently clear the cleanup-failure latch.
+A fetch timeout, connection loss or
 unreadable response preserves explicit unconfirmed-save guidance for edits and
 creations. A cancelled browser wait does not establish cancellation of server work.
 

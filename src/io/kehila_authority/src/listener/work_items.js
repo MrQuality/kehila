@@ -288,6 +288,7 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
     const [whole,fraction = ""] = text.split(".");
     return (whole + fraction.padEnd(3,"0")).replace(/^0+(?=[0-9])/,"");
   }
+  const editRecoveryBlocked = () => restoringRecovery || recoveryBlocked || recoverySuspended;
   function mutationControls() {
     const unavailable = busy || !active;
     el("item-edit-start").disabled = unavailable || restoringRecovery || recoveryBlocked || !project || !currentRead || retainedSave !== null || project.archived || currentRead.result.item.archived;
@@ -297,10 +298,10 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
     for (const field of editFields) { field.action.disabled = unavailable || !editor; field.input.disabled = unavailable || !editor || field.action.value !== "set"; }
     el("item-edit-restore").disabled = unavailable || restoringRecovery || recoveryCleanupFailed || locallySignedOut;
     el("item-recovery-error").hidden = !el("item-recovery-error").textContent;
-    const editBlocked = retainedSave?.family === "item_edit" && (restoringRecovery || recoveryBlocked || recoverySuspended);
+    const editBlocked = retainedSave?.family === "item_edit" && editRecoveryBlocked();
     el("item-edit-check").disabled = unavailable || editBlocked || !retainedSave;
     el("item-edit-retry").disabled = unavailable || editBlocked || !retainedSave || retryClosed;
-    el("item-edit-forget").disabled = unavailable || !retainedSave;
+    el("item-edit-forget").disabled = unavailable || editBlocked || !retainedSave;
     const target = retainedSave || receiptTarget;
     el("item-edit-read-current").disabled = unavailable || !target || !project || project.id !== target.project;
     const scope = retainedSave || receiptTarget;
@@ -695,11 +696,17 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
   el("item-edit-retry").addEventListener("click",() => action(() => operateRetained("retry")));
   el("item-edit-read-current").addEventListener("click",() => action(() => { const target = retainedSave || receiptTarget; return target && project?.id === target.project && read(project,target.item); }));
   el("item-edit-forget").addEventListener("click",() => action(async () => {
-    const retained = retainedSave; if (!retained || !await saveBinding(retained)) return;
-    if (retained.family === "item_edit") {
-      const epoch = recoveryEpoch;
-      await journalCleanup(() => recoverySession.discard());
+    const retained = retainedSave, epoch = recoveryEpoch, session = recoverySession;
+    if (!retained) return;
+    const edit = retained.family === "item_edit";
+    if (edit && (editRecoveryBlocked() || !session || !retained.journal)) return;
+    const binding = await saveBinding(retained);
+    if (!binding || epoch !== recoveryEpoch || retained !== retainedSave) return;
+    if (edit) {
+      if (editRecoveryBlocked() || session !== recoverySession) return;
+      await journalCleanup(() => session.discard(retained.journal, binding));
       if (epoch !== recoveryEpoch || retained !== retainedSave) return;
+      el("item-recovery-error").textContent = "";
     }
     retainedSave = null; retryClosed = false; abandonedSave = true;
     el("item-recovery-status").textContent = "Stopped tracking this save. It may already have completed or may still commit; this does not cancel it or prove rollback."; controls();
