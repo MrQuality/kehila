@@ -278,6 +278,46 @@ test('definitive auth loss permits explicit login with a fresh owner binding', a
   assert.doesNotMatch(f.elements.get('status').textContent, /installation or owner changed/i);
 });
 
+test('binding rejection updates the visible login banner for project and recovery actions', async () => {
+  for (const code of [401,403]) for (const action of ['discover','item-edit-restore']) {
+    let rejected = false;
+    const f = await fixture(url => url === '/projects/binding' && rejected ? [code,{}] : undefined);
+    assert.match(f.elements.get('status').textContent,/^Signed in/);
+    rejected = true; await f.fire(action);
+    assert.equal(f.visible('login'),true);
+    assert.equal(f.visible('session'),false);
+    assert.match(f.elements.get('status').textContent,/session unavailable.*sign in again/i);
+    assert.equal(f.calls.some(call => /\/items\/(edit|reconcile)$/.test(call.url)),false);
+  }
+});
+
+test('binding rejection during startup and resume cannot leave a signed-in banner', async () => {
+  for (const stage of ['startup','resume']) {
+    let rejected = stage === 'startup';
+    const f = await fixture(url => url === '/projects/binding' && rejected ? [401,{}] : undefined);
+    if (stage === 'resume') {
+      await f.visibility('hidden'); rejected = true; await f.visibility('visible');
+    }
+    assert.equal(f.visible('login'),true);
+    assert.equal(f.visible('session'),false);
+    assert.match(f.elements.get('status').textContent,/session unavailable.*sign in again/i);
+  }
+});
+
+test('owner-change banner remains visible and retains any unconfirmed-cleanup warning', async () => {
+  for (const cleanupFails of [false,true]) {
+    const f = await fixture();
+    f.owner.actor_id = 'replacement-owner';
+    if (cleanupFails) f.store.hook(() => { throw new Error('cleanup aborted'); });
+    await f.fire('discover');
+    assert.equal(f.visible('login'),true);
+    assert.equal(f.visible('session'),false);
+    assert.match(f.elements.get('status').textContent,/installation or owner changed.*old selections were discarded/i);
+    if (cleanupFails) assert.match(f.elements.get('status').textContent,/deletion could not be confirmed/i);
+    assert.equal(f.calls.some(call => /\/items\/(edit|reconcile)$/.test(call.url)),false);
+  }
+});
+
 test('automatic resumption after auth loss retains owner comparison before revealing old project content', async () => {
   for (const changed of [false,true]) for (const draft of [false,true]) {
     let lost = false;

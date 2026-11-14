@@ -213,13 +213,16 @@
     if (!currentPage(epoch)) throw new Error("Session check was superseded. Restore authority before continuing.");
     if (reply.status !== 200 || !reply.data || typeof reply.data.installation_id !== "string" || typeof reply.data.actor_id !== "string") {
       signedIn = false;
-      if (reply.status === 401 || reply.status === 403) { csrf = null; mode("login"); }
+      if (reply.status === 401 || reply.status === 403) {
+        csrf = null; mode("login"); status("Session unavailable. Sign in again.");
+      }
       throw new Error("Owner binding unavailable. Reload and sign in before using project controls.");
     }
     if (binding && !sameBinding(binding, reply.data)) {
       await forgetRecovery(binding);
       clearProjects(); csrf = null; mode("login");
-      throw new Error("The installation or owner changed. Old selections were discarded. Reload and sign in again.");
+      const notice = "The installation or owner changed. Old selections were discarded. Reload and sign in again.";
+      status(notice); throw new Error(notice);
     }
     binding = reply.data;
     signedIn = true;

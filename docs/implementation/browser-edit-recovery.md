@@ -85,6 +85,9 @@ explicit sign-in obtains a new binding without reusing the previous login's cach
 Authentication loss keeps the previous owner only for comparison during automatic
 resumption. It grants no authority: a newly observed owner must clear the old
 project content before that content can become visible again.
+When binding rejection or an owner change switches to login, the visible page
+banner explains that transition, including any unconfirmed-cleanup warning;
+messages inside the hidden session are not its only explanation.
 If another tab changes the journal during a dispatched request, this page blocks
 its stale recovery actions and requests explicit restoration; it cannot adopt
 that response or delete the replacement. Stop tracking is also unavailable for a
