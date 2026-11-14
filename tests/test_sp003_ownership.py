@@ -43,14 +43,14 @@ class ArtifactOwnershipTests(unittest.TestCase):
             *({'id': package, 'name': name} for name, package in self.packages.items()),
         ], 'resolve': {'nodes': [{'id': self.producer, 'deps': [
             {'name': name, 'pkg': package} for name, package in self.packages.items()
-        ]}]}}
+        ]}, *({'id': package, 'deps': []} for package in self.packages.values())]}}
         self.messages = [{'reason': 'compiler-artifact', 'package_id': package,
                           'target': {'name': name, 'kind': ['lib']},
                           'filenames': ['/target/deps/lib' + name + '.rlib']}
                          for name, package in self.packages.items()]
 
     def artifacts(self):
-        return BUILD.oracle_libraries(self.metadata, self.messages)
+        return BUILD.oracle_inputs(self.metadata, self.messages)[0]
 
     def test_direct_producer_owns_all_three_exact_libraries(self):
         self.assertEqual(self.artifacts(), {
@@ -71,9 +71,35 @@ class ArtifactOwnershipTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'one library'):
             self.artifacts()
 
-    def test_libraries_from_different_dependency_directories_are_rejected(self):
-        self.messages[0]['filenames'] = ['/other/deps/libtask_contract.rlib']
-        with self.assertRaisesRegex(RuntimeError, 'dependency directory'):
+    def test_split_artifact_directories_keep_exact_libraries_and_search_paths(self):
+        self.messages[0]['filenames'] = ['/target/build/task/out/libtask_contract.rlib']
+        libraries, directories = BUILD.oracle_inputs(self.metadata, self.messages)
+        self.assertEqual(libraries['task_contract'],
+                         Path('/target/build/task/out/libtask_contract.rlib'))
+        self.assertEqual(directories, (Path('/target/build/task/out'), Path('/target/deps')))
+
+    def test_search_paths_follow_transitive_closure_and_exclude_unrelated_records(self):
+        transitive = 'registry+test#transitive@1.0.0'
+        unrelated = 'registry+test#unrelated@1.0.0'
+        self.metadata['packages'] += [{'id': transitive, 'name': 'transitive'},
+                                      {'id': unrelated, 'name': 'unrelated'}]
+        self.metadata['resolve']['nodes'][1]['deps'] = [{'name': 'transitive', 'pkg': transitive}]
+        self.metadata['resolve']['nodes'] += [{'id': transitive, 'deps': []},
+                                              {'id': unrelated, 'deps': []}]
+        artifact = {'reason': 'compiler-artifact', 'package_id': transitive,
+                    'target': {'name': 'transitive', 'kind': ['lib']},
+                    'filenames': ['/target/transitive/out/libtransitive.rlib']}
+        self.messages += [artifact, artifact,
+                          {**artifact, 'package_id': unrelated,
+                           'filenames': ['/unrelated/libunrelated.rlib']},
+                          {**artifact, 'target': {'kind': ['bin']},
+                           'filenames': ['/wrong-kind/libtransitive.rlib']}]
+        _, directories = BUILD.oracle_inputs(self.metadata, list(reversed(self.messages)))
+        self.assertEqual(directories, (Path('/target/deps'), Path('/target/transitive/out')))
+
+    def test_missing_resolved_dependency_node_is_not_guessed(self):
+        self.metadata['resolve']['nodes'].pop()
+        with self.assertRaisesRegex(RuntimeError, 'dependency graph'):
             self.artifacts()
 
     def test_transitive_dependency_cannot_substitute_for_direct_ownership(self):
@@ -96,16 +122,15 @@ class OracleOwnershipTests(unittest.TestCase):
             libraries = {name: parent / (name + '.rlib')
                          for name in ('task_contract', 'serde_json', 'sha2')}
             with patch.object(BUILD, 'command', side_effect=[b'', b'host: native\n', b'{}', b'', primary]), \
-                    patch.object(BUILD, 'oracle_libraries', return_value=libraries), \
-                    patch.object(temp_work.shutil, 'rmtree', side_effect=cleanup), \
+                    patch.object(BUILD, 'oracle_inputs', return_value=(libraries, (parent,))), \
+                    patch.object(temp_work.shutil, 'rmtree', side_effect=cleanup) as remove, \
                     self.assertRaises(RuntimeError) as caught:
                 with BUILD.build():
                     self.fail('compiler failure admitted')
             self.assertIs(caught.exception, primary)
             self.assertEqual(primary._cleanup_failures, (('temporary directory', cleanup),))
             # The failed teardown deliberately retained its directory; the fixture owns it.
-            for work in (parent / 'sp003').iterdir():
-                shutil.rmtree(work)
+            shutil.rmtree(remove.call_args.args[0])
 
     def test_build_uses_shared_ownership_with_its_existing_five_second_bound(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -113,11 +138,11 @@ class OracleOwnershipTests(unittest.TestCase):
             libraries = {name: parent / (name + '.rlib')
                          for name in ('task_contract', 'serde_json', 'sha2')}
             with patch.object(BUILD, 'command', side_effect=[b'', b'host: native\n', b'{}', b'', b'', b'passed', b'']) as command, \
-                    patch.object(BUILD, 'oracle_libraries', return_value=libraries), \
+                    patch.object(BUILD, 'oracle_inputs', return_value=(libraries, (parent,))), \
                     patch.object(BUILD, 'owned_directory', return_value=nullcontext(parent)) as owned:
                 with BUILD.build() as (_, output):
                     self.assertEqual(output, 'passed')
-            owned.assert_called_once_with('run-', parent=parent / 'sp003', retry_seconds=5)
+            owned.assert_called_once_with('kehila-sp003-', retry_seconds=5)
             self.assertEqual(command.call_args_list[2].args[0],
                              ['cargo', 'metadata', '--locked', '--offline', '--format-version=1',
                               '--filter-platform', 'native'])

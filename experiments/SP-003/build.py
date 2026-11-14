@@ -19,8 +19,8 @@ def command(args, *, input=None, timeout=120):
     return result.stdout
 
 
-def oracle_libraries(metadata, messages):
-    """Resolve the producer's direct edges before accepting compiler artifacts."""
+def oracle_inputs(metadata, messages):
+    """Bind exact direct libraries and search paths to this Cargo build graph."""
     manifest = (REPO / 'src/pure/project_create_codec/Cargo.toml').resolve()
     producers = [package for package in metadata['packages']
                  if package['name'] == 'project_create_codec'
@@ -48,9 +48,26 @@ def oracle_libraries(metadata, messages):
         if len(paths) != 1:
             raise RuntimeError('Cargo must report one library for each exact dependency')
         libraries[name] = paths.pop()
-    if len({path.parent for path in libraries.values()}) != 1:
-        raise RuntimeError('Oracle libraries must share the Cargo dependency directory')
-    return libraries
+    # Cargo's intermediate layout is internal and changed in 1.100. Exact
+    # --extern inputs retain direct-edge identity; transitive lookup follows
+    # only library artifacts reported for this producer's resolved closure.
+    graph = {node['id']: node for node in metadata['resolve']['nodes']}
+    closure, pending = set(), [producers[0]['id']]
+    while pending:
+        identity = pending.pop()
+        if identity in closure:
+            continue
+        if identity not in graph or identity not in packages:
+            raise RuntimeError('Cargo must resolve the complete oracle dependency graph')
+        closure.add(identity)
+        pending.extend(edge['pkg'] for edge in graph[identity]['deps'])
+    directories = tuple(sorted({Path(filename).parent for record in messages
+                                if record.get('reason') == 'compiler-artifact'
+                                and record.get('package_id') in closure
+                                and record.get('target', {}).get('kind') == ['lib']
+                                for filename in record['filenames']
+                                if filename.endswith('.rlib')}, key=str))
+    return libraries, directories
 
 
 @contextmanager
@@ -68,15 +85,14 @@ def build():
                                    '--format-version=1', '--filter-platform', host]))
     messages = command(["cargo", "build", "--locked", "--offline", "-p", "project_create_codec",
                         "--lib", "--target", host, "--message-format=json"], timeout=450)
-    libraries = oracle_libraries(metadata, [json.loads(line) for line in messages.splitlines()])
-    parent = libraries["task_contract"].parent / "sp003"
-    parent.mkdir(exist_ok=True)
-    with owned_directory('run-', parent=parent, retry_seconds=5) as root:
+    libraries, directories = oracle_inputs(metadata, [json.loads(line) for line in messages.splitlines()])
+    with owned_directory('kehila-sp003-', retry_seconds=5) as root:
         suffix = ".exe" if sys.platform == "win32" else ""
         args = ["rustc", "--edition=2021", "-D", "warnings", str(SOURCE / "main.rs")]
         for name, library in libraries.items():
             args += ["--extern", name + "=" + str(library)]
-        args += ["-L", "dependency=" + str(libraries["task_contract"].parent)]
+        for directory in directories:
+            args += ["-L", "dependency=" + str(directory)]
         tests = root / ("codec_tests" + suffix)
         command([*args, "--test", "-o", str(tests)])
         output = command([str(tests)])

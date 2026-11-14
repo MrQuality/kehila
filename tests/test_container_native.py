@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import container_native as native
+import native_fixture_environment as environment
 from container_executor import LABEL
 import native_fixture_assets as assets
 from verification_budget import DeadlineExceeded, command_timeout, work_budget
@@ -19,7 +20,7 @@ NAME = 'kehila-verify-' + OWNER + '-native-db'
 
 
 def database():
-    return {'Id': DATABASE, 'Name': NAME, 'Config': {'Labels': {LABEL: OWNER}, 'Image': native.IMAGE},
+    return {'Id': DATABASE, 'Name': NAME, 'Config': {'Labels': {LABEL: OWNER}, 'Image': environment.IMAGE},
             'State': {'Running': True}, 'Mounts': [], 'HostConfig': {'Privileged': False,
             'Binds': [], 'Devices': [], 'PortBindings': {}, 'NetworkMode': 'container:' + RUNNER,
             'Memory': 256 * 1024**2, 'PidsLimit': 128, 'NanoCpus': 10**9,
@@ -59,15 +60,15 @@ class AdmissionTests(unittest.TestCase):
             native.snapshot_document('{"value":NaN}')
 
     def test_exact_owned_namespace_profile_is_admitted(self):
-        native.admit_runner(runner(), RUNNER, OWNER)
-        native.admit_database(database(), DATABASE, RUNNER, OWNER, NAME)
+        environment.admit_runner(runner(), RUNNER, OWNER)
+        environment.admit_database(database(), DATABASE, RUNNER, OWNER, NAME)
 
     def test_foreign_owner_target_and_network_are_denied(self):
         for identity, parent, owner, name in [('d' * 64, RUNNER, OWNER, NAME),
                 (DATABASE, 'e' * 64, OWNER, NAME), (DATABASE, RUNNER, 'f' * 32, NAME),
                 (DATABASE, RUNNER, OWNER, NAME + '-different')]:
             with self.assertRaises(ValueError):
-                native.admit_database(database(), identity, parent, owner, name)
+                environment.admit_database(database(), identity, parent, owner, name)
 
     def test_mounts_ports_privilege_and_excess_limits_are_denied(self):
         for key, value in [('Memory', 512 * 1024**2), ('PidsLimit', 256), ('NanoCpus', 2 * 10**9),
@@ -77,11 +78,11 @@ class AdmissionTests(unittest.TestCase):
             info = database()
             info['HostConfig'][key] = value
             with self.subTest(key=key), self.assertRaises(ValueError):
-                native.admit_database(info, DATABASE, RUNNER, OWNER, NAME)
+                environment.admit_database(info, DATABASE, RUNNER, OWNER, NAME)
         info = database()
         info['Mounts'] = [{'Type': 'volume'}]
         with self.assertRaises(ValueError):
-            native.admit_database(info, DATABASE, RUNNER, OWNER, NAME)
+            environment.admit_database(info, DATABASE, RUNNER, OWNER, NAME)
 
     def test_attached_and_host_networks_are_denied_before_child_creation(self):
         for mode, attached in [('host', {}), ('bridge', {'build': {}})]:
@@ -89,7 +90,7 @@ class AdmissionTests(unittest.TestCase):
             info['HostConfig']['NetworkMode'] = mode
             info['NetworkSettings']['Networks'] = attached
             with self.assertRaises(ValueError):
-                native.admit_runner(info, RUNNER, OWNER)
+                environment.admit_runner(info, RUNNER, OWNER)
 
 
 class Executor:
@@ -145,7 +146,7 @@ class CleanupTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        temporary = patch.object(native.tempfile, 'gettempdir', return_value=directory.name)
+        temporary = patch.object(environment.tempfile, 'gettempdir', return_value=directory.name)
         temporary.start()
         self.addCleanup(temporary.stop)
 

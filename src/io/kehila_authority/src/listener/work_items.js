@@ -1,6 +1,7 @@
 "use strict";
 // Current reads and explicit item saves; historical replay retains original identity.
 globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding,
+  recovery = globalThis.KehilaEditRecovery(),
   randomBytes = count => globalThis.crypto.getRandomValues(new Uint8Array(count)), encode = JSON.stringify}) => {
   const el = id => document.getElementById(id);
   const invalid = () => { throw new Error("Invalid or mismatched WorkItem response."); };
@@ -24,6 +25,11 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
   let currentRead = null, editor = null, editFields = [], retainedSave = null, retryClosed = false;
   let abandonedSave = false, receiptTarget = null, lookupNotice = false;
   let openedFacts = null, openedInspected = false;
+  let recoverySession = null, recoveryEpoch = 0, recoveryBlocked = false, restoringRecovery = false;
+  let recoveryCleanupFailed = false, locallySignedOut = false;
+  let recoverySuspended = false;
+  let recoveryOwner = null;
+  let previewedSave = null;
   // Retained UTF-8 records: <=1MiB exact wire plus <=2KiB identity/lifecycle
   // metadata. Typed view/form/response temporaries and JS heap are separate.
   const EDIT_WIRE_BYTES = 1048576, EDIT_METADATA_BYTES = 2048;
@@ -39,8 +45,12 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
   }
   function clear(forget = false) {
     if (forget) {
+      recoveryEpoch++;
+      recoverySession = null; restoringRecovery = false;
       registrationUnknown = false; cancellationUnknown = null; abandonedCancellation = false;
-      if (retainedSave) el("item-recovery-status").textContent = "The save recovery record was discarded. This does not cancel a save or undo work that may already have completed.";
+      if (retainedSave) el("item-recovery-status").textContent = retainedSave.journal
+        ? "The local view was cleared. Its exact edit may still be recoverable in this browser profile; clearing a view does not cancel work."
+        : "The save recovery record was discarded. This does not cancel a save or undo work that may already have completed.";
       abandonedSave = abandonedSave || retainedSave !== null; retainedSave = null; retryClosed = false;
       receiptTarget = null; el("item-mutation-receipt").replaceChildren();
     }
@@ -77,6 +87,8 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
       message(text); if (retainedSave || abandonedSave) el("item-recovery-status").textContent = text;
     }
   });
+  const unconfirmedSave = error => new Error("Save remains unconfirmed and may have committed. Check its recorded outcome or explicitly retry this exact request. "
+    + (typeof error.message === "string" ? error.message.slice(0,120) : "Transport unavailable."));
   async function checkedContext(context) {
     if (!context || context !== project) return false;
     try { await checkBinding(); }
@@ -276,21 +288,106 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
     const [whole,fraction = ""] = text.split(".");
     return (whole + fraction.padEnd(3,"0")).replace(/^0+(?=[0-9])/,"");
   }
+  const editRecoveryBlocked = () => restoringRecovery || recoveryBlocked || recoverySuspended;
   function mutationControls() {
     const unavailable = busy || !active;
-    el("item-edit-start").disabled = unavailable || !project || !currentRead || retainedSave !== null || project.archived || currentRead.result.item.archived;
-    el("item-edit-save").disabled = unavailable || !editor || retainedSave !== null;
+    el("item-edit-start").disabled = unavailable || restoringRecovery || recoveryBlocked || !project || !currentRead || retainedSave !== null || project.archived || currentRead.result.item.archived;
+    el("item-edit-save").disabled = unavailable || restoringRecovery || recoveryBlocked || !editor || retainedSave !== null;
     el("item-edit-estimate-action").disabled = unavailable || !editor;
     el("item-edit-estimate").disabled = unavailable || !editor || el("item-edit-estimate-action").value !== "set";
     for (const field of editFields) { field.action.disabled = unavailable || !editor; field.input.disabled = unavailable || !editor || field.action.value !== "set"; }
-    el("item-edit-check").disabled = unavailable || !retainedSave;
-    el("item-edit-retry").disabled = unavailable || !retainedSave || retryClosed;
-    el("item-edit-forget").disabled = unavailable || !retainedSave;
+    el("item-edit-restore").disabled = unavailable || restoringRecovery || recoveryCleanupFailed || locallySignedOut;
+    el("item-recovery-error").hidden = !el("item-recovery-error").textContent;
+    const editBlocked = retainedSave?.family === "item_edit" && editRecoveryBlocked();
+    el("item-edit-check").disabled = unavailable || editBlocked || !retainedSave;
+    el("item-edit-retry").disabled = unavailable || editBlocked || !retainedSave || retryClosed;
+    el("item-edit-forget").disabled = unavailable || editBlocked || !retainedSave;
     const target = retainedSave || receiptTarget;
     el("item-edit-read-current").disabled = unavailable || !target || !project || project.id !== target.project;
     const scope = retainedSave || receiptTarget;
     el("item-save-scope").textContent = scope ? (scope.family === "item_create" ? "Creation" : "Edit") + " in project " + scope.project + "; item " + scope.item + "." : "";
-    el("item-recovery").hidden = !retainedSave && !abandonedSave && !receiptTarget && !lookupNotice;
+    el("item-recovery").hidden = recoverySuspended || !retainedSave && !abandonedSave && !receiptTarget && !lookupNotice && !recoveryBlocked;
+    el("item-edit-preview").hidden = retainedSave?.family !== "item_edit";
+    if (retainedSave !== previewedSave && retainedSave?.family === "item_edit") {
+      const original = JSON.parse(retainedSave.wire);
+      details("item-retained-edit", [["Original item version",retainedSave.version],
+        ["Estimate",original.estimate.action === "set" ? estimate(original.estimate.value,"project estimate units") : original.estimate.action],
+        ...original.fields.map(field => ["Text field " + field.id,field.action === "set" ? field.value : field.action,true])]);
+    } else if (retainedSave !== previewedSave) el("item-retained-edit").replaceChildren();
+    previewedSave = retainedSave;
+  }
+  const journalSave = handle => Object.freeze({...handle.retained,journal:handle});
+  async function journalCleanup(work) {
+    const epoch = recoveryEpoch;
+    try { return await work(); }
+    catch (error) {
+      // Visibility invalidates stale adoption, not knowledge that this page's
+      // cleanup failed. Keep that safety latch across suspension and sign-in.
+      recoveryCleanupFailed = true; recoveryBlocked = true; controls();
+      if (epoch !== recoveryEpoch) return;
+      throw new Error("Local recovery cleanup could not be confirmed. Reload and check the same saved identity before another edit; this does not cancel work.");
+    }
+  }
+  async function restoreRecovery() {
+    if (recoveryCleanupFailed || locallySignedOut) { recoveryBlocked = true; controls(); return false; }
+    const epoch = recoveryEpoch;
+    el("item-recovery-error").textContent = "";
+    restoringRecovery = true; controls();
+    try {
+      const ticket = await recovery.prepare(); if (epoch !== recoveryEpoch) return;
+      const binding = await checkBinding(); if (epoch !== recoveryEpoch) return;
+      if (recoveryOwner && !sameOwner(recoveryOwner,binding)) { await signOut(recoveryOwner); return false; }
+      const session = await recovery.open(binding,ticket); if (epoch !== recoveryEpoch) return;
+      const handle = await session.restore(); if (epoch !== recoveryEpoch) return;
+      if (handle && retainedSave?.family === "item_create") throw new Error("Resolve the tracked creation before restoring a separate edit.");
+      recoverySession = session; recoveryOwner = binding; recoveryBlocked = false; recoverySuspended = false;
+      if (handle) {
+        retainedSave = journalSave(handle); retryClosed = handle.retryClosed;
+        receiptTarget = null; el("item-mutation-receipt").replaceChildren();
+        el("item-recovery-status").textContent = "The exact edit was recovered from this browser profile. Inspect it, check its recorded outcome, or explicitly retry it. No save was resent.";
+      } else {
+        if (retainedSave?.family === "item_edit") { retainedSave = null; retryClosed = false; abandonedSave = true; }
+        if (session.notice) { abandonedSave = true; el("item-recovery-status").textContent = session.notice; }
+      }
+      return true;
+    } catch (error) {
+      if (epoch !== recoveryEpoch) return;
+      recoveryBlocked = true;
+      el("item-recovery-error").textContent = error.message;
+      el("item-recovery-status").textContent = error.message;
+      return false;
+    } finally {
+      if (epoch === recoveryEpoch) { restoringRecovery = false; controls(); }
+    }
+  }
+  async function signOut(binding) {
+    // Invalidate callbacks before any storage or network wait. This is not a
+    // cancellation of an already admitted save or proof of server signout.
+    recoveryEpoch++; locallySignedOut = true; restoringRecovery = false; recoveryBlocked = true;
+    recoverySession = null; clear(true);
+    const epoch = recoveryEpoch;
+    try {
+      if (!binding) throw new Error("Owner binding is unavailable; recovery deletion could not be confirmed.");
+      await journalCleanup(() => recovery.clear(binding));
+      if (epoch !== recoveryEpoch) return;
+      el("item-recovery-status").textContent = "Local edit tracking was cleared. This does not cancel a save or prove server signout.";
+    } catch (error) {
+      recoveryCleanupFailed = true; recoveryBlocked = true;
+      if (epoch !== recoveryEpoch) { controls(); return; }
+      abandonedSave = true;
+      el("item-recovery-status").textContent = "Local recovery deletion could not be confirmed. This does not cancel any save. Reload before preparing another edit.";
+      throw error;
+    } finally { if (epoch === recoveryEpoch) controls(); }
+  }
+  function startSession() {
+    // Only an explicit successful sign-in resets local signout. A cleanup
+    // failure stays latched in this page; automatic refresh cannot restore it.
+    recoveryEpoch++; locallySignedOut = false; restoringRecovery = false;
+    recoverySession = null; recoveryOwner = null; recoveryBlocked = recoveryCleanupFailed; controls();
+  }
+  function suspendRecovery() {
+    recoveryEpoch++; restoringRecovery = false; recoverySession = null;
+    recoverySuspended = true; recoveryBlocked = true; controls();
   }
   function textValue(value, required = false) {
     if (typeof value !== "string" || value.includes("\0")) throw new Error("Text must be valid UTF-8 without NUL.");
@@ -305,7 +402,8 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
     if (retained && retainedSave !== retained) return null;
     require(keys(binding,["installation_id","actor_id"]) && id(binding.installation_id) && id(binding.actor_id));
     if (retained && !sameOwner(binding,retained.binding)) {
-      clear(true); el("item-recovery-status").textContent = "The installation or owner changed. The old save record was discarded; this does not undo a save that may have completed.";
+      await signOut(retained.binding);
+      el("item-recovery-status").textContent = "The installation or owner changed. The old save record was discarded; this does not undo a save that may have completed.";
       throw new Error("The installation or owner changed. No old save was resent.");
     }
     return Object.freeze({...binding});
@@ -318,7 +416,10 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
   async function beginEdit() {
     const selected = currentRead, context = project;
     if (!selected || selected.context !== context || retainedSave || context.archived || selected.result.item.archived) throw new Error("Read the current item before preparing a separate edit.");
-    await saveBinding(); if (selected !== currentRead || context !== project) return;
+    const epoch = recoveryEpoch;
+    await restoreRecovery();
+    if (epoch !== recoveryEpoch || retainedSave || recoveryBlocked) return;
+    await saveBinding(); if (epoch !== recoveryEpoch || selected !== currentRead || context !== project) return;
     const result = selected.result, item = result.item;
     require(result.project.configuration_revision === context.configuration.revision && uint(context.configuration.revision)); nextVersion(item.version);
     const kind = context.configuration.types.find(value => value.id === item.type_id); require(kind);
@@ -398,15 +499,39 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
   }
   async function operateEdit(kind,retained = retainedSave) {
     if (!retained || retained.family !== "item_edit" || retained !== retainedSave || kind === "retry" && retryClosed) return;
-    if (!await saveBinding(retained)) return;
-    const reply = await requestWire(kind === "check" ? "/items/reconcile" : "/items/edit",retained.wire);
-    if (retained !== retainedSave || !await saveBinding(retained)) return;
+    const epoch = recoveryEpoch, session = recoverySession;
+    const binding = await saveBinding(retained);
+    if (!binding || epoch !== recoveryEpoch || !session || !retained.journal) return;
+    let admitted;
+    try { admitted = await session.admit(retained.journal,binding,kind); }
+    catch (error) { if (epoch !== recoveryEpoch) return; recoveryBlocked = true; controls(); throw error; }
+    if (epoch !== recoveryEpoch || retained !== retainedSave) return;
+    let reply;
+    try { reply = await requestWire(kind === "check" ? "/items/reconcile" : "/items/edit",admitted.wire); }
+    catch (error) { if (epoch !== recoveryEpoch || retained !== retainedSave) return; throw unconfirmedSave(error); }
+    if (epoch !== recoveryEpoch || retained !== retainedSave) return;
+    const afterBinding = await saveBinding(retained);
+    if (!afterBinding || epoch !== recoveryEpoch || retained !== retainedSave) return;
+    const current = await session.current(retained.journal,afterBinding);
+    if (epoch !== recoveryEpoch || retained !== retainedSave) return;
+    if (!current) {
+      recoveryBlocked = true;
+      const notice = "Edit recovery changed in another tab. Restore it before preparing or retrying work. Losing tracking does not cancel an unconfirmed save.";
+      el("item-recovery-error").textContent = notice;
+      el("item-recovery-status").textContent = notice;
+      controls(); return;
+    }
     if (reply.status !== 200) {
-      if (reply.status === 410 && reply.data?.error === "replay_expired") retryClosed = true;
+      if (reply.status === 410 && reply.data?.error === "replay_expired") {
+        retryClosed = true; await journalCleanup(() => session.closeRetry(retained.journal,afterBinding));
+        if (epoch !== recoveryEpoch || retained !== retainedSave) return;
+      }
       el("item-recovery-status").textContent = retryClosed ? "The saved result expired. Read the current item separately; this identity will never become a new save." : "Save remains unconfirmed. A lookup or rejected attempt does not prove an earlier in-flight save cannot commit. Check or retry this exact request.";
       controls(); return;
     }
     const result = editResult(reply.data,retained);
+    await journalCleanup(() => session.settle(retained.journal,afterBinding));
+    if (epoch !== recoveryEpoch || retained !== retainedSave) return;
     details("item-mutation-receipt",[["Result",reply.data.outcome === "replayed" ? "Historical recorded edit" : "Recorded edit"],["Project",retained.project],["Item",retained.item],["Version",result.item.version],["Estimate",estimate(result.data.estimate,result.project.estimate_unit)],...fields(result.data.values)]);
     receiptTarget = {project:retained.project,item:retained.item,family:retained.family}; retainedSave = null; retryClosed = false; lookupNotice = false;
     if (currentRead?.context.id === retained.project && currentRead.result.item.id === retained.item) {
@@ -415,12 +540,17 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
     el("item-recovery-status").textContent = "Recorded save confirmed. This result is separate from current item data; read current state before another edit."; controls();
   }
   async function saveEdit() {
-    const selected = editor; const binding = await saveBinding(); if (selected !== editor) return;
+    const selected = editor, epoch = recoveryEpoch, session = recoverySession;
+    const binding = await saveBinding(); if (epoch !== recoveryEpoch || selected !== editor || !session) return;
     const retained = retainedEdit(selected,binding);
-    retainedSave = retained; retryClosed = false; editor = null; editFields = []; el("item-edit-form").hidden = true;
+    let handle;
+    try { handle = await session.retain(retained); }
+    catch (error) { if (epoch !== recoveryEpoch) return; recoveryBlocked = true; controls(); throw error; }
+    if (epoch !== recoveryEpoch) return;
+    retainedSave = journalSave(handle); retryClosed = false; editor = null; editFields = []; el("item-edit-form").hidden = true;
     el("item-mutation-receipt").replaceChildren(); receiptTarget = null;
-    el("item-recovery-status").textContent = "Save acknowledgement pending. The exact request is retained; no automatic repeat will be sent."; controls();
-    await operateEdit("retry",retained);
+    el("item-recovery-status").textContent = "Save acknowledgement pending. The exact request was committed to this browser's recovery journal; no automatic repeat will be sent."; controls();
+    await operateEdit("retry",retainedSave);
   }
   function creationRecord(entry,binding) {
     pendingSummary(entry,{id:entry.project_id});
@@ -443,14 +573,17 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
   async function operateCreation(kind,retained = retainedSave) {
     if (!retained || retained.family !== "item_create" || retained !== retainedSave || kind === "retry" && retryClosed) return;
     if (kind === "retry" && cancellationUnknown) throw new Error("Check the unconfirmed cancellation before executing a saved creation.");
-    if (!await saveBinding(retained)) return;
+    const epoch = recoveryEpoch;
+    if (!await saveBinding(retained) || epoch !== recoveryEpoch) return;
     if (kind === "retry" && cancellationUnknown) throw new Error("Check the unconfirmed cancellation before executing a saved creation.");
     if (kind === "retry" && !retained.attempted) {
       retained = Object.freeze({...retained,attempted:true}); retainedSave = retained;
     }
     hideConfirmation(); controls();
-    const reply = await requestWire(kind === "check" ? "/items/pending/reconcile" : "/items/pending/execute",retained.wire);
-    if (retained !== retainedSave || !await saveBinding(retained)) return;
+    let reply;
+    try { reply = await requestWire(kind === "check" ? "/items/pending/reconcile" : "/items/pending/execute",retained.wire); }
+    catch (error) { if (epoch !== recoveryEpoch || retained !== retainedSave) return; throw unconfirmedSave(error); }
+    if (epoch !== recoveryEpoch || retained !== retainedSave || !await saveBinding(retained) || epoch !== recoveryEpoch) return;
     if (![200,201].includes(reply.status)) {
       const error = reply.data?.error;
       if (reply.status === 410 || reply.status === 404 && error === "pending_not_found") retryClosed = true;
@@ -559,10 +692,22 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
   el("item-edit-form").addEventListener("submit",event => { event.preventDefault(); action(saveEdit); });
   el("item-edit-estimate-action").addEventListener("change",() => controls());
   el("item-edit-check").addEventListener("click",() => action(() => operateRetained("check")));
+  el("item-edit-restore").addEventListener("click",() => action(restoreRecovery));
   el("item-edit-retry").addEventListener("click",() => action(() => operateRetained("retry")));
   el("item-edit-read-current").addEventListener("click",() => action(() => { const target = retainedSave || receiptTarget; return target && project?.id === target.project && read(project,target.item); }));
   el("item-edit-forget").addEventListener("click",() => action(async () => {
-    const retained = retainedSave; if (!retained || !await saveBinding(retained)) return;
+    const retained = retainedSave, epoch = recoveryEpoch, session = recoverySession;
+    if (!retained) return;
+    const edit = retained.family === "item_edit";
+    if (edit && (editRecoveryBlocked() || !session || !retained.journal)) return;
+    const binding = await saveBinding(retained);
+    if (!binding || epoch !== recoveryEpoch || retained !== retainedSave) return;
+    if (edit) {
+      if (editRecoveryBlocked() || session !== recoverySession) return;
+      await journalCleanup(() => session.discard(retained.journal, binding));
+      if (epoch !== recoveryEpoch || retained !== retainedSave) return;
+      el("item-recovery-error").textContent = "";
+    }
     retainedSave = null; retryClosed = false; abandonedSave = true;
     el("item-recovery-status").textContent = "Stopped tracking this save. It may already have completed or may still commit; this does not cancel it or prove rollback."; controls();
   }));
@@ -591,5 +736,5 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
   el("pending-older").addEventListener("click",() => action(() => list("pending",pendingBefore)));
   el("pending-read-item").addEventListener("click",() => action(() => opened?.state === "completed" && read(project,opened.target_item_id)));
   clear(true);
-  return {useProject,clear,controls};
+  return {useProject,clear,controls,restoreRecovery,signOut,startSession,suspendRecovery};
 };

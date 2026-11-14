@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from native_database_limits import DatabaseLimits, storage_limits
 import storage_growth_plan as plan
 from test_container_native import database, DATABASE, RUNNER, OWNER, NAME
-from container_native import admit_database
+from native_fixture_environment import admit_database
 
 
 class DatabaseLimitTests(unittest.TestCase):

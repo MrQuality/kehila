@@ -4,6 +4,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const {webcrypto} = require('node:crypto');
+const memoryStore = require('./journal_store.cjs');
 const source = path.resolve(__dirname, '../../src/io/kehila_authority/src/listener/work_items.js');
 const wrap = (kind,value) => ({codec_version:1,kind,value});
 const current = (id='p') => ({outcome:'read',project:wrap('project_snapshot',{id,name:'Project '+id,estimate_unit:'hours',configuration_revision:'1'}),configuration:wrap('configuration_snapshot',{project_id:id,revision:'1',fields:[],types:[],statuses:[]})});
@@ -19,16 +21,20 @@ class Element {
  append(...children){this.children.push(...children);}
  replaceChildren(...children){this.children=children;}
 }
-function fixture(handler=()=>undefined){
+function fixture(handler=()=>undefined, store=memoryStore()){
+ const clock={now:1000000};
  const elements=new Map(); const calls=[]; const jobs=[]; const binding={failure:false,checks:0,value:{installation_id:'installation',actor_id:'owner'},randomFailure:false,encodeFailure:false,randomSeed:17};
  const document={getElementById(id){if(!elements.has(id))elements.set(id,new Element());return elements.get(id);},createElement(tag){return new Element(tag);}};
- const ports={document,async checkBinding(){binding.checks++;if(binding.failure)throw new Error('Owner binding unavailable');return {...binding.value};},randomBytes(){if(binding.randomFailure)throw new Error('Randomness unavailable');return new Uint8Array(16).fill(binding.randomSeed);},encode(value){if(binding.encodeFailure)throw new Error('Encoding unavailable');return JSON.stringify(value);},async requestWire(url,wire){const body=JSON.parse(wire);calls.push({url,body,wire});return await handler(url,body)||{status:503,data:{error:'unavailable'}};},run(work){const job=work();jobs.push(job);return job;},async request(url,body){calls.push({url,body});return await handler(url,body) || {status:200,data:url==='/items/list'?{outcome:'listed',entries:[summary()],before:null}:url==='/items/read'?itemRead():url==='/items/pending/list'?{entries:[pending()],before:null}:opened()};}};
- const context={TextEncoder};vm.createContext(context);vm.runInContext(fs.readFileSync(source,'utf8'),context);
+ const ports={document,async checkBinding(){binding.checks++;if(binding.wait)await binding.wait;if(binding.failure)throw new Error('Owner binding unavailable');return {...binding.value};},randomBytes(){if(binding.randomFailure)throw new Error('Randomness unavailable');return new Uint8Array(16).fill(binding.randomSeed);},encode(value){if(binding.encodeFailure)throw new Error('Encoding unavailable');return JSON.stringify(value);},async requestWire(url,wire){const body=JSON.parse(wire);calls.push({url,body,wire});return await handler(url,body)||{status:503,data:{error:'unavailable'}};},run(work){const job=work();jobs.push(job);return job;},async request(url,body){calls.push({url,body});return await handler(url,body) || {status:200,data:url==='/items/list'?{outcome:'listed',entries:[summary()],before:null}:url==='/items/read'?itemRead():url==='/items/pending/list'?{entries:[pending()],before:null}:opened()};}};
+ const context={TextEncoder,crypto:webcrypto,setTimeout,clearTimeout};vm.createContext(context);
+ vm.runInContext(fs.readFileSync(path.join(path.dirname(source),'edit_recovery.js'),'utf8'),context);
+ ports.recovery=context.KehilaEditRecovery({store,now:()=>clock.now});
+ vm.runInContext(fs.readFileSync(source,'utf8'),context);
  const view=context.KehilaWorkItems(ports);
  const fire=async(id,type='click')=>{const el=document.getElementById(id);if(!el.disabled){assert.equal(typeof el.events[type],'function','enabled handler '+id);el.events[type]({preventDefault(){}});}await Promise.all(jobs.splice(0));};
  const row=async(id,index=0)=>{document.getElementById(id).children[index].children[0].events.click();await Promise.all(jobs.splice(0));};
  const text=id=>{const collect=el=>[el.textContent,...el.children.map(collect)].join('\n');return collect(document.getElementById(id));};
- return {view,ports,calls,elements,fire,row,text,binding};
+ return {view,ports,calls,elements,fire,row,text,binding,store,clock};
 }
 test('current authorized project context enables bounded browsing without a mutation',async()=>{
  const f=fixture();assert.equal(f.calls.length,0);f.view.useProject(current(),'p');await f.fire('items-refresh');await f.row('item-rows');
@@ -205,6 +211,258 @@ function editableRead() {
 async function editForm(f) {
  f.view.useProject(formCurrent(),'p');await f.fire('items-refresh');await f.row('item-rows');await f.fire('item-edit-start');
 }
+async function observed(predicate) {
+ for(let i=0;i<500&&!predicate();i++)await new Promise(resolve=>setTimeout(resolve,1));
+ assert.ok(predicate(),'expected asynchronous boundary was reached');
+}
+
+test('an edit is not transmitted before its durable journal commit',async()=>{
+ const f=fixture(url=>url==='/items/read'?{status:200,data:editableRead()}:undefined);
+ await editForm(f);let release;
+ f.store.hook(()=>new Promise(resolve=>{release=resolve;}));
+ const save=f.fire('item-edit-form','submit');
+ for(let i=0;i<100&&!release&&!f.calls.some(call=>call.wire);i++)await new Promise(resolve=>setTimeout(resolve,1));
+ assert.equal(f.calls.some(call=>call.wire),false);assert.equal(typeof release,'function');
+ release();await save;assert.equal(f.calls.filter(call=>call.url==='/items/edit').length,1);
+});
+
+test('a second page restores exact edit identity without automatically transmitting it',async()=>{
+ const store=memoryStore();
+ const first=fixture(url=>url==='/items/read'?{status:200,data:editableRead()}:url==='/items/edit'?Promise.reject(new Error('reply lost')):undefined,store);
+ await editForm(first);await first.fire('item-edit-form','submit');
+ const original=first.calls.find(call=>call.wire);
+ const next=fixture((url,body)=>url==='/items/reconcile'?editSuccess(body):undefined,store);
+ await next.view.restoreRecovery();assert.equal(next.calls.length,0);
+ assert.equal(next.elements.get('item-edit-retry').disabled,false);
+ await next.fire('item-edit-check');assert.equal(next.calls.at(-1).wire,original.wire);
+ assert.match(next.text('item-mutation-receipt'),/historical|recorded/i);
+});
+
+test('two pages preparing edits cannot overwrite the single durable slot or both transmit',async()=>{
+ const store=memoryStore(), handler=url=>url==='/items/read'?{status:200,data:editableRead()}:undefined;
+ const a=fixture(handler,store),b=fixture(handler,store);
+ await editForm(a);await editForm(b);b.binding.randomSeed=34;
+ await Promise.all([a.fire('item-edit-form','submit'),b.fire('item-edit-form','submit')]);
+ assert.equal([...a.calls,...b.calls].filter(call=>call.url==='/items/edit').length,1);
+});
+
+test('a delayed binding cannot restore recovery actions after local signout',async()=>{
+ const f=fixture();let release;
+ f.binding.wait=new Promise(resolve=>{release=resolve;});
+ const restoring=f.view.restoreRecovery();
+ for(let i=0;i<100&&f.binding.checks===0;i++)await new Promise(resolve=>setTimeout(resolve,1));
+ assert.ok(f.binding.checks>0);
+ await f.view.signOut(f.binding.value);
+ release();await restoring;
+ assert.equal(f.elements.get('item-edit-retry').disabled,true);
+});
+
+test('failed local abandon blocks recovery sends and automatic restoration in the detecting page',async()=>{
+ const f=fixture(url=>url==='/items/read'?{status:200,data:editableRead()}:url==='/items/edit'?Promise.reject(new Error('unknown')):undefined);
+ await editForm(f);await f.fire('item-edit-form','submit');
+ f.store.hook(()=>{throw new Error('delete aborted');});
+ await f.fire('item-edit-forget');
+ assert.equal(f.elements.get('item-edit-check').disabled,true);assert.equal(f.elements.get('item-edit-retry').disabled,true);
+ const count=f.calls.length;await f.fire('item-edit-retry');assert.equal(f.calls.length,count);
+ await f.view.restoreRecovery();assert.equal(f.elements.get('item-edit-retry').disabled,true);
+});
+
+test('missing-binding signout failure remains blocked after an explicit sign-in callback',async()=>{
+ const f=fixture();await f.view.restoreRecovery();
+ await assert.rejects(f.view.signOut(null),/binding/i);
+ f.view.startSession();const before=f.binding.checks;
+ await f.view.restoreRecovery();
+ assert.equal(f.binding.checks,before);
+ assert.equal(f.elements.get('item-edit-restore').disabled,true);
+ assert.match(f.text('item-recovery-status'),/reload/i);
+ const control=fixture();await control.view.restoreRecovery();
+ await control.view.signOut(control.binding.value);control.view.startSession();
+ await control.view.restoreRecovery();assert.equal(control.elements.get('item-edit-restore').disabled,false);
+});
+
+test('suspending a page hides retained content and requires fresh binding before recovery actions resume',async()=>{
+ const f=fixture(url=>url==='/items/read'?{status:200,data:editableRead()}:url==='/items/edit'?Promise.reject(new Error('unknown')):undefined);
+ await editForm(f);await f.fire('item-edit-form','submit');
+ const count=f.calls.length;
+ f.view.suspendRecovery();
+ assert.equal(f.elements.get('item-recovery').hidden,true);
+ assert.equal(f.elements.get('item-edit-retry').disabled,true);
+ await f.fire('item-edit-retry');assert.equal(f.calls.length,count);
+ const checks=f.binding.checks;await f.view.restoreRecovery();
+ assert.ok(f.binding.checks>checks);assert.equal(f.elements.get('item-recovery').hidden,false);
+ assert.equal(f.calls.length,count);
+});
+
+test('a failed suspended restore leaves payload hidden with an accessible error and restore action',async()=>{
+ const f=fixture(url=>url==='/items/read'?{status:200,data:editableRead()}:undefined);
+ await editForm(f);await f.fire('item-edit-form','submit');f.view.suspendRecovery();
+ const read=f.store.read;f.store.read=async()=>{throw new Error('storage unavailable');};
+ await f.view.restoreRecovery();
+ assert.equal(f.elements.get('item-recovery').hidden,true);
+ assert.equal(f.elements.get('item-edit-restore').disabled,false);
+ assert.equal(f.elements.get('item-recovery-error').hidden,false);
+ assert.match(f.text('item-recovery-error'),/storage unavailable/);
+ f.store.read=read;await f.fire('item-edit-restore');
+ assert.equal(f.elements.get('item-recovery').hidden,false);
+ assert.equal(f.elements.get('item-recovery-error').hidden,true);
+ assert.equal(f.calls.filter(call=>call.wire).length,1);
+});
+
+test('unchanged-owner recovery revalidation preserves unsaved edit and creation input',async()=>{
+ const f=fixture(url=>url==='/items/read'?{status:200,data:editableRead()}:undefined);
+ await editForm(f);const input=editField(f,'task-title','set','  unsaved edit  ');
+ f.view.suspendRecovery();await f.view.restoreRecovery();
+ assert.equal(f.elements.get('item-edit-form').hidden,false);assert.equal(input.value,'  unsaved edit  ');
+ const creation=fixture();creation.view.useProject(formCurrent(),'p');await creation.fire('item-new-request');
+ creation.elements.get('item-estimate').value='1.250';
+ creation.view.suspendRecovery();await creation.view.restoreRecovery();
+ assert.equal(creation.elements.get('item-create-form').hidden,false);
+ assert.equal(creation.elements.get('item-estimate').value,'1.250');
+});
+
+test('suspension cannot erase knowledge of a pending cleanup failure in this page',async()=>{
+ const f=fixture();await f.view.restoreRecovery();let reject;
+ f.store.hook(()=>new Promise((resolve,failed)=>{reject=failed;}));
+ const signingOut=f.view.signOut(f.binding.value);
+ await observed(()=>reject);f.view.suspendRecovery();reject(new Error('delete failed while hidden'));
+ await signingOut;f.view.startSession();const count=f.binding.checks;
+ await f.view.restoreRecovery();
+ assert.equal(f.binding.checks,count);assert.equal(f.elements.get('item-edit-restore').disabled,true);
+});
+
+test('a changed owner discovered during resumption clears old unsaved edit content',async()=>{
+ const f=fixture(url=>url==='/items/read'?{status:200,data:editableRead()}:undefined);
+ await editForm(f);editField(f,'task-title','set','private old-owner draft');
+ f.view.suspendRecovery();f.binding.value={installation_id:'installation',actor_id:'different'};
+ await f.view.restoreRecovery();
+ assert.equal(f.elements.get('item-edit-form').hidden,true);
+ assert.equal(f.elements.get('item-edit-fields').children.length,0);
+ assert.equal(f.calls.some(call=>call.wire),false);
+});
+
+test('failed receipt cleanup blocks further sends and retains the same identity',async()=>{
+ let f;
+ f=fixture((url,body)=>{
+  if(url==='/items/read')return {status:200,data:editableRead()};
+  if(url==='/items/edit'){f.store.hook(()=>{throw new Error('receipt cleanup aborted');});return editSuccess(body,'edited');}
+ });
+ await editForm(f);await f.fire('item-edit-form','submit');
+ assert.equal(f.elements.get('item-edit-check').disabled,true);assert.equal(f.elements.get('item-edit-retry').disabled,true);
+ assert.equal(f.calls.filter(call=>call.wire).length,1);
+});
+
+test('failed durable retry closure blocks both recovery actions',async()=>{
+ let f;
+ f=fixture(url=>{
+  if(url==='/items/read')return {status:200,data:editableRead()};
+  if(url==='/items/edit'){f.store.hook(()=>{throw new Error('closure aborted');});return {status:410,data:{error:'replay_expired'}};}
+ });
+ await editForm(f);await f.fire('item-edit-form','submit');
+ assert.equal(f.elements.get('item-edit-check').disabled,true);assert.equal(f.elements.get('item-edit-retry').disabled,true);
+});
+
+test('post-dispatch expiry still adopts matching success and replay-expiry responses',async()=>{
+ for(const status of [200,410]){
+  let f;f=fixture((url,body)=>{
+   if(url==='/items/read')return {status:200,data:editableRead()};
+   if(url==='/items/edit'){
+    f.clock.now+=7*86400000+1;
+    return status===200?editSuccess(body,'edited'):{status:410,data:{error:'replay_expired'}};
+   }
+  });
+  await editForm(f);await f.fire('item-edit-form','submit');
+  assert.equal(f.calls.filter(call=>call.wire).length,1);
+  if(status===200){
+   assert.match(f.text('item-mutation-receipt'),/Recorded edit/);
+   assert.equal(JSON.parse(await f.store.read()).entry,null);
+  }else{
+   assert.match(f.text('item-recovery-status'),/expired/);
+   assert.equal(f.elements.get('item-edit-retry').disabled,true);
+   assert.equal(f.elements.get('item-edit-restore').disabled,false);
+   await f.fire('item-edit-check');assert.equal(f.calls.filter(call=>call.wire).length,1);
+  }
+  assert.doesNotMatch(f.text('item-recovery-status'),/cleanup could not be confirmed/);
+ }
+});
+
+test('cross-tab replacement during a dispatched edit visibly blocks stale actions and preserves replacement',async()=>{
+ let f,replacement;
+ f=fixture(async(url,body)=>{
+  if(url==='/items/read')return {status:200,data:editableRead()};
+  if(url==='/items/edit'){
+   const original=JSON.parse(await f.store.read()).entry.retained;
+   const other=await f.ports.recovery.open(f.binding.value);await other.discard(await other.restore(),f.binding.value);
+   const wire=JSON.parse(original.wire);wire.operation_id='2'.repeat(32);
+   await other.retain({...original,wire:JSON.stringify(wire)});replacement=await f.store.read();
+   return editSuccess(body,'edited');
+  }
+ });
+ await editForm(f);await f.fire('item-edit-form','submit');
+ assert.equal(f.elements.get('item-edit-retry').disabled,true);
+ assert.equal(f.elements.get('item-edit-check').disabled,true);
+ assert.equal(f.elements.get('item-edit-restore').disabled,false);
+ assert.equal(f.elements.get('item-edit-forget').disabled,true);
+ assert.match(f.text('item-recovery-status'),/changed in another tab.*[Rr]estore/);
+ assert.match(f.text('item-recovery-status'),/does not cancel|unconfirmed/);
+ assert.equal(f.text('item-mutation-receipt'),'');
+ assert.equal(await f.store.read(),replacement);
+ const checks=f.binding.checks;
+ f.elements.get('item-edit-forget').events.click();await f.fire('item-edit-forget');
+ assert.equal(f.binding.checks,checks);
+ assert.equal(await f.store.read(),replacement);
+ assert.equal(f.elements.get('item-edit-restore').disabled,false);
+ await f.fire('item-edit-restore');
+ assert.equal(f.elements.get('item-edit-retry').disabled,false);
+ assert.equal(f.calls.filter(call=>call.wire).length,1);
+});
+
+test('suspension during discard binding invalidates that action without latching cleanup failure',async()=>{
+ const f=fixture(url=>url==='/items/read'?{status:200,data:editableRead()}:undefined);
+ await editForm(f);await f.fire('item-edit-form','submit');
+ const before=await f.store.read(),checks=f.binding.checks;let release;
+ f.binding.wait=new Promise(resolve=>{release=resolve;});
+ const forgetting=f.fire('item-edit-forget');await observed(()=>f.binding.checks>checks);
+ f.view.suspendRecovery();release();await forgetting;f.binding.wait=null;
+ assert.equal(await f.store.read(),before);
+ await f.view.restoreRecovery();
+ assert.equal(f.elements.get('item-edit-restore').disabled,false);
+ assert.equal(f.elements.get('item-edit-retry').disabled,false);
+ assert.equal(f.calls.filter(call=>call.wire).length,1);
+});
+
+test('transport and response-body errors retain explicit uncertainty guidance for edits and creations',async()=>{
+ for(const family of ['edit','creation'])for(const reason of ['Failed to fetch','The user aborted a request.','Invalid response body']){
+  const f=fixture(url=>{
+   if(url==='/items/read')return {status:200,data:editableRead()};
+   if(url==='/items/edit'||url==='/items/pending/execute')throw new Error(reason);
+  });
+  if(family==='edit'){await editForm(f);await f.fire('item-edit-form','submit');}
+  else{await selectedCreation(f);await f.fire('pending-execute');}
+  assert.match(f.text('item-recovery-status'),/unconfirmed.*may have committed/i);
+  assert.match(f.text('item-recovery-status'),/check|retry/i);
+  assert.ok(f.text('item-recovery-status').includes(reason));
+  assert.equal(f.calls.filter(call=>call.wire).length,1);
+ }
+});
+
+test('a creation transport failure arriving after suspension cannot overwrite the resumed status',async()=>{
+ let reject;
+ const f=fixture(url=>url==='/items/pending/execute'?new Promise((resolve,failed)=>{reject=failed;}):undefined);
+ await selectedCreation(f);const saving=f.fire('pending-execute');
+ await observed(()=>reject);f.view.suspendRecovery();await f.view.restoreRecovery();
+ const before=f.text('item-recovery-status');reject(new Error('late transport failure'));await saving;
+ assert.equal(f.text('item-recovery-status'),before);
+ assert.equal(f.calls.filter(call=>call.wire).length,1);
+});
+
+test('unavailable edit storage does not disable server-owned creation recovery',async()=>{
+ const store=memoryStore();store.read=async()=>{throw new Error('IndexedDB unavailable');};
+ const f=fixture((url,body)=>url==='/items/pending/execute'?Promise.reject(new Error('unknown')):
+  url==='/items/pending/reconcile'?creationSuccess(pending(),'replayed'):undefined,store);
+ await f.view.restoreRecovery();await selectedCreation(f);await f.fire('pending-execute');
+ assert.equal(f.elements.get('item-edit-check').disabled,false);assert.equal(f.elements.get('item-edit-retry').disabled,false);
+ await f.fire('item-edit-check');assert.match(f.text('item-mutation-receipt'),/recorded|historical/i);
+});
 function editField(f,id,action,text) {
  const nodes=descendants(f.elements.get('item-edit-fields'));
  const select=nodes.find(node=>node.tag==='select'&&node.name===id+'_action');assert.ok(select);select.value=action;select.events.change?.();
@@ -264,15 +522,15 @@ test('a deferred old success cannot resolve a separately retained replacement ed
   if(url==='/items/edit')return ++edits===1?new Promise(resolve=>{release=resolve;}):Promise.reject(new Error('second save unknown'));
   if(url==='/items/reconcile')return editSuccess(body);
  });
- await editForm(f);const old=f.fire('item-edit-form','submit');await new Promise(setImmediate);const first=f.calls.find(call=>call.wire);
- f.view.clear(true);replacement=true;f.binding.randomSeed=34;await editForm(f);await f.fire('item-edit-form','submit');
+ await editForm(f);const old=f.fire('item-edit-form','submit');await observed(()=>release);const first=f.calls.find(call=>call.wire);
+ await f.view.signOut(f.binding.value);f.view.startSession();replacement=true;f.binding.randomSeed=34;await editForm(f);await f.fire('item-edit-form','submit');
  const second=f.calls.filter(call=>call.url==='/items/edit')[1];assert.notEqual(first.body.operation_id,second.body.operation_id);assert.equal(second.body.item_id,'replacement-item');
  release(editSuccess(first.body));await old;assert.equal(f.text('item-mutation-receipt'),'');assert.equal(f.elements.get('item-edit-retry').disabled,false);
  await f.fire('item-edit-check');assert.equal(f.calls.at(-1).wire,second.wire);assert.match(f.text('item-mutation-receipt'),/replacement-item/);
 });
 test('a binding change during the request prevents adopting its later success',async()=>{
  let release;const f=fixture((url,body)=>url==='/items/read'?{status:200,data:editableRead()}:url==='/items/edit'?new Promise(resolve=>{release=()=>resolve(editSuccess(body));}):undefined);
- await editForm(f);const work=f.fire('item-edit-form','submit');await new Promise(setImmediate);f.binding.value={installation_id:'replacement',actor_id:'owner'};release();await work;
+ await editForm(f);const work=f.fire('item-edit-form','submit');await observed(()=>release);f.binding.value={installation_id:'replacement',actor_id:'owner'};release();await work;
  assert.equal(f.text('item-mutation-receipt'),'');assert.equal(f.elements.get('item-edit-retry').disabled,true);assert.match(f.text('item-recovery-status'),/installation|owner|discard/i);
 });
 test('optional text and estimate Clear are distinct from Keep and required text cannot be cleared',async()=>{

@@ -1,17 +1,23 @@
 "use strict";
 (() => {
-  let csrf = null;
+  let csrf = null, recoveryClearNotice = "";
   let busy = false;
+  let resumeRequested = false;
+  let authorityEpoch = 0;
   let signedIn = false, binding = null, selected = null, before = null;
   let uncertain = false, registrationUnknown = false, pendingOutcome = null;
   let rowButtons = [];
   const element = id => document.getElementById(id);
-  const status = text => { element("status").textContent = text; };
+  const status = text => { element("status").textContent = text + (recoveryClearNotice ? " " + recoveryClearNotice : ""); };
   const projectStatus = text => { element("project-status").textContent = text; };
+  const resumeNotice = "Your session could not be checked. Retry, or reload and inspect the same saved identity if recovery remains blocked. Retrying does not confirm cleanup; a save may have committed.";
   const show = (id, value) => { element(id).hidden = !value; };
   const mode = name => {
     signedIn = name === "session";
-    for (const id of ["login", "session", "retiring"]) element(id).hidden = id !== name;
+    // Keep the old owner only as a comparison fact until explicit login clears
+    // old forms, or fresh revalidation confirms the same owner.
+    if (name === "login") authorityEpoch++;
+    for (const id of ["login", "session", "retiring", "resume"]) element(id).hidden = id !== name;
   };
   async function exchange(path, body) {
     const controller = new AbortController();
@@ -36,18 +42,63 @@
     return exchange(path, wire);
   };
   async function refresh() {
+    const epoch = authorityEpoch;
     csrf = null; clearProjects(false);
     const proof = await request("/auth/browser/csrf");
+    if (!currentPage(epoch)) return;
     if (proof.status !== 200) { mode("login"); status("Sign in with the owner password."); return; }
     csrf = proof.data.csrf;
     const state = await request("/auth/browser/state");
+    if (!currentPage(epoch)) return;
     if (state.status === 200 && state.data.active) {
       mode("session"); status("Signed in.");
+      const restored = await workItems.restoreRecovery();
+      if (!currentPage(epoch)) return;
+      if (restored === false) status("Signed in. Edit recovery remains blocked; reload and check the same saved identity before another edit.");
       try { await discover(); } catch (error) { projectStatus(error.message); }
     }
     else if (state.status === 200) { mode("retiring"); status("Signed out; the retained credential permits only sign-out audit retry."); }
     else { csrf = null; mode("login"); status("Session unavailable. Sign in again."); }
   }
+  const currentPage = epoch => epoch === authorityEpoch && document.visibilityState !== "hidden";
+  async function revalidateRecovery(epoch) {
+    // Resume authority without discarding unrelated unsaved forms/selections.
+    const proof = await request("/auth/browser/csrf");
+    if (!currentPage(epoch)) return;
+    if ([401,403].includes(proof.status)) { csrf = null; mode("login"); status("Sign in before restoring edit recovery."); return; }
+    if (proof.status !== 200) throw new Error("Session check unavailable.");
+    csrf = proof.data.csrf;
+    const state = await request("/auth/browser/state");
+    if (!currentPage(epoch)) return;
+    if ([401,403].includes(state.status)) { csrf = null; mode("login"); status("Sign in before restoring edit recovery."); return; }
+    if (state.status !== 200) throw new Error("Session check unavailable.");
+    if (!state.data.active) { mode("retiring"); status("Session unavailable for edit recovery. Sign in again."); return; }
+    signedIn = false;
+    const restored = await workItems.restoreRecovery();
+    if (!currentPage(epoch)) return;
+    if (!signedIn) {
+      if (element("login").hidden) mode("resume");
+      status(resumeNotice);
+      return;
+    }
+    mode("session");
+    status(restored === false ? "Edit recovery remains blocked; reload and check the same saved identity before another edit." : "Signed in; browser recovery authority checked.");
+  }
+  function resumeFailure() {
+    if (element("login").hidden) mode("resume");
+    status(resumeNotice);
+  }
+  const resume = () => {
+    const epoch = authorityEpoch;
+    return action(() => revalidateRecovery(epoch), () => { if (currentPage(epoch)) resumeFailure(); });
+  };
+  element("session-resume").addEventListener("click", resume);
+  function clearPasswords(ids = ["login-password","current","replacement","revoke-password"]) {
+    for (const id of ids) element(id).value = "";
+  }
+  const credentialAction = (ids, work) => action(async () => {
+    try { await work(); } finally { clearPasswords(ids); }
+  });
   async function action(work, failure = () => status("The result could not be confirmed. Do not repeat a password change automatically. Reload to check the session, or sign in using the chosen new password after a change.")) {
     if (busy) return;
     busy = true;
@@ -55,20 +106,23 @@
     try { await work(); }
     catch (error) { failure(error); }
     finally {
-      for (const input of document.querySelectorAll("input[type=password]")) input.value = "";
       busy = false; controls();
+      if (resumeRequested && document.visibilityState !== "hidden") {
+        resumeRequested = false;
+        void resume();
+      }
     }
   }
   element("login").addEventListener("submit", event => {
     event.preventDefault();
-    action(async () => {
+    credentialAction(["login-password"], async () => {
       if (!csrf) {
         const pre = await request("/auth/browser/pre-session");
         if (pre.status !== 200) { status("Sign-in preparation is unavailable. Wait before trying again."); return; }
         csrf = pre.data.csrf;
       }
       const reply = await request("/auth/browser/login", {password: element("login-password").value});
-      if (reply.status === 200) { csrf = reply.data.csrf; await refresh(); }
+      if (reply.status === 200) { csrf = reply.data.csrf; clearProjects(); workItems.startSession(); await refresh(); }
       else {
         if (reply.status === 401) csrf = null;
         status(reply.status === 401 ? "Password was not accepted, or sign-in preparation expired. Try again to prepare a fresh attempt." : "Sign-in unavailable. Wait before trying again.");
@@ -76,26 +130,31 @@
     });
   });
   async function logout() {
+    await forgetRecovery(binding);
+    clearProjects(); mode("");
     const reply = await request("/auth/browser/logout", {});
-    clearProjects();
     if (reply.status === 200) { csrf = null; mode("login"); status("Signed out; audit confirmed."); }
     else if (reply.status === 503 && reply.data.signed_out) { mode("retiring"); status("Signed out; audit not confirmed."); }
     else { await refresh(); status("Sign-out audit was not confirmed. Session state has been checked."); }
   }
   element("logout").addEventListener("click", () => action(logout));
   element("retry").addEventListener("click", () => action(logout));
+  async function forgetRecovery(owner) {
+    try { await workItems.signOut(owner); recoveryClearNotice = ""; }
+    catch (_) { recoveryClearNotice = "Local edit recovery deletion could not be confirmed. Signout does not cancel a save or prove local data was erased."; }
+  }
   element("change").addEventListener("submit", event => {
     event.preventDefault();
-    action(async () => {
+    credentialAction(["current","replacement"], async () => {
       const reply = await request("/auth/browser/password", {current: element("current").value, replacement: element("replacement").value});
-      if (reply.status === 200) { clearProjects(); csrf = null; mode("login"); status("Password changed. Sign in again with the new password."); }
-      else if (reply.status === 503) { clearProjects(); mode(""); csrf = null; status("Change outcome is uncertain. Reload when the server is available to check the session. After sign-out, try the chosen new password; do not repeat the change automatically."); }
+      if (reply.status === 200) { await forgetRecovery(binding); clearProjects(); csrf = null; mode("login"); status("Password changed. Sign in again with the new password."); }
+      else if (reply.status === 503) { await forgetRecovery(binding); clearProjects(); mode(""); csrf = null; status("Change outcome is uncertain. Reload when the server is available to check the session. After sign-out, try the chosen new password; do not repeat the change automatically."); }
       else { status(reply.status === 401 ? "Current password was not accepted, or this session ended." : "Password change was not accepted. Use at least 15 characters and avoid common passwords; wait if the server is busy."); }
     });
   });
   element("revoke").addEventListener("submit", event => {
     event.preventDefault();
-    action(async () => {
+    credentialAction(["revoke-password"], async () => {
       const reply = await request("/auth/browser/revoke-others", {password: element("revoke-password").value});
       if (reply.status === 200) status("Other sessions signed out; audit confirmed. This session remains signed in.");
       else if (reply.status === 503 && reply.data.other_sessions_revoked) status("Selected sessions signed out; audit unconfirmed. Repeating this control retries that original set while this session remains eligible.");
@@ -119,7 +178,7 @@
   }
   function clearProjects(forget = true) {
     workItems.clear(forget);
-    if (forget) { binding = null; registrationUnknown = false; pendingOutcome = null; }
+    if (forget) { authorityEpoch++; binding = null; registrationUnknown = false; pendingOutcome = null; clearPasswords(); }
     selected = null; before = null; uncertain = false; rowButtons = [];
     element("requests").replaceChildren();
     element("project-result").textContent = ""; element("request-detail").textContent = "";
@@ -147,19 +206,26 @@
   }
   const sameBinding = (a, b) => a && b && a.installation_id === b.installation_id && a.actor_id === b.actor_id;
   async function checkBinding() {
+    const epoch = authorityEpoch;
     let reply;
     try { reply = await request("/projects/binding", {}); }
-    catch (_) { signedIn = false; throw new Error("Owner binding unavailable. Reload and sign in before using project controls."); }
+    catch (_) { if (epoch === authorityEpoch) signedIn = false; throw new Error("Owner binding unavailable. Reload and sign in before using project controls."); }
+    if (!currentPage(epoch)) throw new Error("Session check was superseded. Restore authority before continuing.");
     if (reply.status !== 200 || !reply.data || typeof reply.data.installation_id !== "string" || typeof reply.data.actor_id !== "string") {
       signedIn = false;
-      if (reply.status === 401 || reply.status === 403) { csrf = null; mode("login"); }
+      if (reply.status === 401 || reply.status === 403) {
+        csrf = null; mode("login"); status("Session unavailable. Sign in again.");
+      }
       throw new Error("Owner binding unavailable. Reload and sign in before using project controls.");
     }
     if (binding && !sameBinding(binding, reply.data)) {
-      clearProjects(); signedIn = false;
-      throw new Error("The installation or owner changed. Old selections were discarded. Reload and sign in again.");
+      await forgetRecovery(binding);
+      clearProjects(); csrf = null; mode("login");
+      const notice = "The installation or owner changed. Old selections were discarded. Reload and sign in again.";
+      status(notice); throw new Error(notice);
     }
     binding = reply.data;
+    signedIn = true;
     return Object.freeze({installation_id:binding.installation_id,actor_id:binding.actor_id});
   }
   function choose(entry, observed = false) {
@@ -277,5 +343,15 @@
     projectStatus("Current project and configuration read under fresh server authority.");
   }));
   const workItems = KehilaWorkItems({document, request, requestWire, run: projectAction, checkBinding});
+  function lifecycleChange() {
+    authorityEpoch++;
+    workItems.suspendRecovery();
+    signedIn = false;
+    show("session", false);
+    resumeRequested = document.visibilityState !== "hidden";
+    if (resumeRequested && !busy) { resumeRequested = false; void resume(); }
+  }
+  document.addEventListener("visibilitychange", lifecycleChange);
+  globalThis.addEventListener("pageshow", lifecycleChange);
   action(refresh);
 })();
