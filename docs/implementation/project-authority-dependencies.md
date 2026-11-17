@@ -68,6 +68,11 @@ Additional packaged alternative texts are retained without changing selections.
 
 ## Advisory and maintenance disposition
 
+The [November 17 review](dependency-advisory-review-2026-11-17.md) records the
+current locks, inherited advisory dispositions and a fresh bounded package query
+after prototype retirement. The November 2 query and legacy-graph observations
+below retain their original date and scope.
+
 A fresh [OSV package/version query](https://google.github.io/osv.dev/post-v1-querybatch/)
 covered the 259 registry entries returned by the workspace metadata resolution.
 The selected authority's **157 registry entries returned no findings**. This is
