@@ -52,6 +52,10 @@ probe toolchain and review any package-specific minimum explicitly.
 
 ### Advisory follow-up
 
+Current disposition: the [November 17 review](dependency-advisory-review-2026-11-17.md)
+records the current locked roots and the inherited November 18 obligation after
+prototype retirement. The dated observations below remain historical evidence.
+
 The [RustSec rustls register](https://rustsec.org/packages/rustls.html) contains
 recent advisories, including [RUSTSEC-2026-0346](https://rustsec.org/advisories/RUSTSEC-2026-0346):
 its affected range includes the existing 0.21.12; 0.23.46 is listed as patched.
