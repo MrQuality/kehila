@@ -107,6 +107,14 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
     if selected_storage is not None:
         selection.update(plan=selected_storage.document(), storage_profile=storage_profile)
     def observe_failure(error, environment):
+        if full:
+            previous = environment.stage
+            environment.stage = 'failure-storage-observation'
+            try:
+                with cleanup_time():
+                    environment.capture_storage('failure')
+            finally:
+                environment.stage = previous
         if selected_storage is not None and environment.attempted:
             # Preserve the actual committed population before destroying this
             # disposable fixture. A failed pair can contain accepted native
@@ -138,7 +146,7 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
     environment = NativeEnvironment(executor, databases=databases,
         observers=tuple(observers.values()), selection=selection,
         evidence_directory=evidence_directory, reset_assets=reset_assets, limits=limits,
-        failure_observer=observe_failure if selected_storage is not None else None)
+        failure_observer=observe_failure if full or selected_storage is not None else None)
     with environment.owned():
         work, control, psql = environment.work, environment.control, environment.psql
         folder, name, identity = environment.folder, environment.name, environment.identity
@@ -191,8 +199,11 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
                         == summary['expectations_sha256'], 'Capacity expectation transfer differs')
                 control('cp', str(folder / 'capacity-expectations.jsonl'), identity + ':/tmp/native-capacity-expectations.jsonl')
             environment.stage = mode + '-independent-observer'
-            (folder / (mode + '-observation.txt')).write_text(
-                psql('/tmp/' + observers[mode], database), encoding='utf-8')
+            if full:
+                environment.observe_database(database, observers[mode], mode + '-observation.txt')
+            else:
+                (folder / (mode + '-observation.txt')).write_text(
+                    psql('/tmp/' + observers[mode], database), encoding='utf-8')
             if selected_storage is not None:
                 environment.stage = 'storage-independent-historical-observer'
                 historical_observation = folder / 'storage-historical-observation.txt'
@@ -233,9 +244,20 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
                     and all(key in decoded for key in ('schemas','relations','types','indexes','columns','functions','constraints','triggers','raw_checks')),
                     'Synthetic copy observation is incomplete')
             (folder / 'copy-source-state.txt').write_text(source_state, encoding='utf-8')
+            environment.stage = 'completed-fixture-storage-before'
+            environment.capture_storage('before-retirement')
+            # All pristine copies precede every runtime. Completed item/selection
+            # copies have durable independent witnesses and no later consumer.
+            # Preserve the source and still-pending authentication copies.
+            for database in items.values():
+                environment.retire_database(database)
+            environment.stage = 'completed-fixture-storage-after'
+            environment.capture_storage('after-retirement')
+            environment.stage = 'quiescent-copy'
             repeated_state = psql('/tmp/native_copy_snapshot.sql', tuples=True)
             (folder / 'copy-source-repeat-state.txt').write_text(repeated_state, encoding='utf-8')
-            require(source_state == repeated_state, 'CHECK normalization changed production snapshot or was unstable')
+            require(source_state == repeated_state,
+                    'Quiescent source changed or CHECK normalization was unstable across fixture release')
             control('exec', identity, 'sh', '-c',
                     'set -eu; umask 077; mkdir -m 700 /tmp/native-copy; '
                     'pg_dump -U postgres -d postgres --format=custom --schema=kehila '

@@ -328,6 +328,18 @@ exported evidence against a 2 GiB batch limit. These limits are containment, not
 capacity guarantee. Raw synthetic requests, histories, credentials and logs stay
 in external evidence. Finite measurements and a proposed projection do not accept
 a history representation or establish real-data capacity/restore guarantees.
+
+Full native verification makes its isolated pristine copies before any runtime
+starts. Successful item/selection observers publish bounded, durable witnesses
+bound to their declared SQL and original database identity. Before the restored
+copy, the runner releases only those completed disposable case databases after
+checking ownership, the unchanged witness and zero live connections. It retains
+the source and pending authentication copies, and compares the source snapshot
+across release. Ordinary `dropdb` uses no force or missing-target suppression;
+the isolated container has one fixture creator. Occupancy and failure records
+remain separate from successful checks. This fixture cleanup neither deletes
+product data nor changes the fixed resource profile.
+
 The evidence checks and 7,200-second measurement checks occur around samples;
 they are not an in-flight filesystem quota or a continuously enforced measurement
 deadline. Separate command/overall work deadlines and cleanup allowances still

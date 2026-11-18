@@ -2,9 +2,11 @@
 from contextlib import contextmanager
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import tempfile
 import time
@@ -20,6 +22,11 @@ from native_authority_fixture import (AUTH_DATABASES, ITEM_DATABASES, ITEM_OBSER
     STORAGE_OBSERVER)
 from native_fixture_assets import write_owner, write_manifest, verify_export, MANIFEST_FILE
 from native_database_limits import DatabaseLimits, DEFAULT_LIMITS
+
+CASE_OBSERVERS = {database: ITEM_OBSERVERS[mode] for mode, database in ITEM_DATABASES.items()}
+CASE_OBSERVERS.update({SELECTION_DATABASE: SELECTION_OBSERVER,
+                       SELECTION_CLOCK_DATABASE: SELECTION_CLOCK_OBSERVER})
+MAX_WITNESS_BYTES = 8 * 1024**2
 
 
 def require(condition, message):
@@ -114,6 +121,10 @@ class NativeEnvironment:
         self.stage, self.attempted, self.failure = 'prepare', False, None
         self.folder = self.root = self.identity = self.receipt = self.runner_info = None
         self._used = False
+        self._created_databases = {}
+        self._observed_databases = {}
+        self._retired_databases = set()
+        self._retirement_failed = False
 
     def _start(self):
         require(self.executor.build_network_detached, 'Disconnect build networking before native verification')
@@ -129,9 +140,10 @@ class NativeEnvironment:
         (self.folder / 'selection.json').write_text(json.dumps(self.selection), encoding='utf-8')
         print('NATIVE SCOPE:', self.selection['scope'], ', '.join(self.selection['selected_items']), flush=True)
 
-    def control(self, *args, both_streams=False):
+    def control(self, *args, both_streams=False, timeout=None):
         try:
-            result = self.executor.engine(*args, capture=True)
+            options = {} if timeout is None else {'timeout': command_timeout(timeout)}
+            result = self.executor.engine(*args, capture=True, **options)
             return result.stdout + ((getattr(result, 'stderr', '') or '') if both_streams else '')
         except subprocess.CalledProcessError as error:
             (self.folder / (self.stage + '-failure.txt')).write_text(
@@ -149,6 +161,200 @@ class NativeEnvironment:
     def psql(self, file, database='postgres', *, tuples=False):
         return self.control('exec', self.name, 'psql', '-X', '-U', 'postgres', '-d', database,
                        *(['-q', '-A', '-t'] if tuples else []), '-v', 'ON_ERROR_STOP=1', '-f', file)
+
+    def _database_record(self, database):
+        require(database in self.databases, 'Database was not declared by this fixture')
+        # Declared names come from the closed constructor registry, never caller SQL.
+        query = ("SELECT oid::text,datname,pg_get_userbyid(datdba),datallowconn::int,"
+                 "datistemplate::int,(SELECT count(*) FROM pg_stat_activity WHERE datid=pg_database.oid) "
+                 f"FROM pg_database WHERE datname='{database}'")
+        raw = self.control('exec', self.identity, 'psql', '-X', '-q', '-A', '-t', '-F', '\t',
+                           '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', query,
+                           timeout=2)
+        require(len(raw.encode('utf-8')) <= 4096, 'Database identity observation exceeds bound')
+        if not raw.strip():
+            return None
+        lines = raw.splitlines()
+        require(len(lines) == 1, 'Ambiguous database identity')
+        fields = lines[0].split('\t')
+        require(len(fields) == 6 and fields[1] == database and fields[2] == 'kehila_owner'
+                and fields[3:5] == ['1', '0'] and re.fullmatch(r'[1-9][0-9]{0,9}', fields[0])
+                and int(fields[0]) <= 4294967295 and re.fullmatch(r'[0-9]+', fields[5])
+                and str(int(fields[5])) == fields[5], 'Database identity/profile differs')
+        return {'oid': int(fields[0]), 'name': database, 'owner': fields[2],
+                'connections': int(fields[5])}
+
+    def _database_profile(self):
+        info = one_object(self.control('inspect', '--type', 'container', self.identity, timeout=3))
+        admit_database(info, self.identity, self.executor.container, self.executor.owner,
+                       self.name, limits=self.limits)
+        require(info['State']['Running'], 'Owned database container is not running')
+
+    @staticmethod
+    def _regular_bytes(path, maximum):
+        require(path.resolve() == path and path.is_file() and not path.is_symlink(),
+                'Unaliased regular evidence file required')
+        with path.open('rb') as incoming:
+            before = os.fstat(incoming.fileno())
+            require(stat.S_ISREG(before.st_mode) and before.st_nlink == 1
+                    and before.st_size <= maximum, 'Evidence file links/size differs')
+            raw = incoming.read(maximum + 1)
+            after = os.fstat(incoming.fileno())
+        identity = lambda value: (value.st_dev, value.st_ino, value.st_size,
+                                  value.st_mtime_ns, value.st_ctime_ns)
+        require(len(raw) <= maximum and identity(before) == identity(after),
+                'Evidence changed during bounded read')
+        return raw, identity(after)
+
+    def _artifact(self, name, value):
+        require(re.fullmatch(r'(?:retirement-[a-z_]+-(?:intent|command|confirmed)|storage-[a-z-]+)\.json', name)
+                is not None, 'Unknown lifecycle artifact')
+        raw = json.dumps(value, sort_keys=True, allow_nan=False).encode('utf-8')
+        require(len(raw) <= 1024**2, 'Lifecycle evidence exceeds bound')
+        with (self.folder / name).open('xb') as output:
+            require(output.write(raw) == len(raw), 'Incomplete lifecycle evidence write')
+            output.flush()
+            os.fsync(output.fileno())
+
+    def observe_database(self, database, observer, artifact):
+        """Mint release eligibility only after a declared observer and durable witness."""
+        require(database in self._created_databases and CASE_OBSERVERS.get(database) == observer
+                and observer in self.observers, 'Observer/database association differs')
+        require(re.fullmatch(r'[a-z][a-z-]{0,63}-observation\.txt', artifact) is not None,
+                'Unexpected observation artifact')
+        require(database not in self._observed_databases, 'Database observation already recorded')
+        self._database_profile()
+        current = self._database_record(database)
+        require(current is not None and current['oid'] == self._created_databases[database],
+                'Created database identity changed before observation')
+        source = self.executor.source / 'tests/integration' / observer
+        source_bytes, _ = self._regular_bytes(source, 1024**2)
+        digest = hashlib.sha256(source_bytes).hexdigest()
+        transferred = self.control('exec', self.identity, 'sha256sum', '/tmp/' + observer, timeout=3)
+        require(transferred.strip() == digest + '  /tmp/' + observer,
+                'Transferred observer differs from pinned source')
+        result = self.psql('/tmp/' + observer, database)
+        raw = result.encode('utf-8')
+        require(0 < len(raw) <= MAX_WITNESS_BYTES, 'Observer witness is empty or over limit')
+        require(self._regular_bytes(source, 1024**2)[0] == source_bytes,
+                'Observer source changed during execution')
+        witness = self.folder / artifact
+        with witness.open('xb') as output:
+            require(output.write(raw) == len(raw), 'Incomplete observer witness')
+            output.flush()
+            os.fsync(output.fileno())
+        written, identity = self._regular_bytes(witness, MAX_WITNESS_BYTES)
+        require(written == raw, 'Observer witness publication differs')
+        self._observed_databases[database] = {'oid': current['oid'], 'observer': source,
+            'observer_sha256': digest, 'witness': witness, 'witness_identity': identity,
+            'witness_sha256': hashlib.sha256(raw).hexdigest()}
+        return result
+
+    def _verify_observation(self, observed):
+        source, _ = self._regular_bytes(observed['observer'], 1024**2)
+        require(hashlib.sha256(source).hexdigest() == observed['observer_sha256'],
+                'Declared observer source changed after observation')
+        raw, identity = self._regular_bytes(observed['witness'], MAX_WITNESS_BYTES)
+        require(identity == observed['witness_identity']
+                and hashlib.sha256(raw).hexdigest() == observed['witness_sha256'],
+                'Completed observer witness changed')
+
+    def retire_database(self, database):
+        """Release an observed case in this isolated sole-creator fixture.
+
+        dropdb addresses a name, not an atomic OID predicate. Exact container
+        ownership and no concurrent fixture creators are required premises.
+        Source/templates, restored and pending authentication copies are excluded.
+        """
+        require(database in CASE_OBSERVERS and database in self._created_databases
+                and database in self._observed_databases and database not in self._retired_databases,
+                'Database has no completed retirement eligibility')
+        require(not self._retirement_failed and self.release_dependents is None,
+                'Earlier retirement uncertainty or external dependent prevents release')
+        observed = self._observed_databases[database]
+        self._verify_observation(observed)
+        end = time.monotonic() + command_timeout(2)
+        while True:
+            current = self._database_record(database)
+            require(current is not None and current['oid'] == observed['oid']
+                    == self._created_databases[database], 'Original database identity changed')
+            if current['connections'] == 0:
+                break
+            remaining = end - time.monotonic()
+            require(remaining > 0, 'Live database connections prevent fixture retirement')
+            time.sleep(min(0.05, remaining))
+        self._database_profile()
+        self._verify_observation(observed)
+        self.stage = 'completed-fixture-retirement'
+        record = {'schema': 1, 'database': database, 'oid': observed['oid'],
+                  'owner': self.executor.owner, 'observer_sha256': observed['observer_sha256'],
+                  'witness_sha256': observed['witness_sha256']}
+        self._artifact('retirement-' + database + '-intent.json', {**record, 'state': 'intent'})
+        # Any command/confirmation failure closes further retirement admission.
+        # A timeout is not evidence that the drop did not occur.
+        self._retirement_failed = True
+        self.control('exec', self.identity, 'dropdb', '-U', 'postgres', '--maintenance-db=postgres',
+                     database, timeout=10)
+        self._artifact('retirement-' + database + '-command.json',
+                       {**record, 'state': 'drop_returned_success'})
+        require(self._database_record(database) is None, 'Retired database absence unconfirmed')
+        self._artifact('retirement-' + database + '-confirmed.json',
+                       {**record, 'state': 'absence_confirmed'})
+        self._retired_databases.add(database)
+        self._retirement_failed = False
+
+    def capture_storage(self, label):
+        """Retain bounded occupancy observations, without classifying a failure's cause."""
+        require(re.fullmatch(r'[a-z][a-z-]{0,63}', label) is not None, 'Unknown storage observation')
+        value = {'schema': 1, 'label': label, 'complete': False,
+                 'started_monotonic': time.monotonic()}
+        primary = None
+        try:
+            self._database_profile()
+            for key, arguments in (
+                    ('filesystem', ('stat', '-f', '-c', '%S %b %f %a %T', '/var/lib/postgresql/data')),
+                    ('allocation', ('du', '-B1', '-s', '/var/lib/postgresql/data/base',
+                                    '/var/lib/postgresql/data/pg_wal')),
+                    ('cgroup', ('cat', '/sys/fs/cgroup/memory.current', '/sys/fs/cgroup/memory.max',
+                                '/sys/fs/cgroup/memory.swap.current')),
+                    ('databases', ('psql', '-X', '-q', '-A', '-t', '-U', 'postgres', '-d', 'postgres',
+                         '-v', 'ON_ERROR_STOP=1', '-c', "SELECT current_setting('data_directory'); "
+                         "SELECT datname,oid,pg_database_size(oid) FROM pg_database ORDER BY datname"))):
+                raw = self.control('exec', self.identity, *arguments, timeout=3)
+                require(0 < len(raw.encode('utf-8')) <= 65536,
+                        'Storage observation is empty or over limit')
+                value[key] = raw
+            fields = value['filesystem'].split()
+            require(len(fields) == 5 and all(field.isdigit() for field in fields[:4])
+                    and fields[4] == 'tmpfs', 'Unexpected data filesystem observation')
+            block, total, free, available = map(int, fields[:4])
+            require(block > 0 and block * total == self.limits.memory_bytes
+                    and 0 <= available <= free <= total, 'Data filesystem capacity differs')
+            require(value['databases'].splitlines()[0] == '/var/lib/postgresql/data',
+                    'Observed PostgreSQL data directory differs')
+            value['capacity_bytes'] = block * total
+            value['available_bytes'] = block * available
+            value['complete'] = True
+        except BaseException as error:
+            primary = error
+            value['failure'] = type(error).__name__
+        finally:
+            value['finished_monotonic'] = time.monotonic()
+            try:
+                self._artifact('storage-' + label + '.json', value)
+            except BaseException as error:
+                if primary is None:
+                    primary = error
+                else:
+                    retain_cleanup_failure(primary, error, 'storage observation publication')
+        if primary is not None:
+            raise primary
+        # The standard successful run removes its raw diagnostics. Retain only
+        # this sanitized aggregate in the gate log, without paths or identities.
+        print('NATIVE STORAGE:', json.dumps({'label': label, 'capacity_bytes': value['capacity_bytes'],
+            'available_bytes': value['available_bytes'], 'retired_databases': len(self._retired_databases)}),
+            flush=True)
+        return value
 
     def retain_failure(self, error, location, evidence_name):
         if self.folder is None:
@@ -264,6 +470,9 @@ class NativeEnvironment:
             admission = "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_database WHERE datname=current_database() AND datdba='kehila_owner'::regrole AND datallowconn AND NOT datistemplate AND pg_encoding_to_char(encoding)='UTF8') OR NOT has_database_privilege('kehila_auth_runtime_login',current_database(),'CONNECT') OR EXISTS (SELECT FROM pg_db_role_setting WHERE setdatabase=(SELECT oid FROM pg_database WHERE datname=current_database())) THEN RAISE EXCEPTION 'authentication database profile mismatch'; END IF; END $$;"
             self.control('exec', identity, 'psql', '-X', '-U', 'postgres', '-d', database,
                     '-v', 'ON_ERROR_STOP=1', '-c', admission + baseline)
+            created = self._database_record(database)
+            require(created is not None, 'Created database identity unavailable')
+            self._created_databases[database] = created['oid']
 
     @contextmanager
     def owned(self):

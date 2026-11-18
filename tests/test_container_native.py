@@ -2,6 +2,8 @@
 from pathlib import Path
 from types import SimpleNamespace
 import json
+import hashlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -99,17 +101,26 @@ class Executor:
         self.build_network_detached = True
         self.container, self.owner, self.name = RUNNER, OWNER, NAME.removesuffix('-native-db')
         self.settings = {'command_seconds': 300, 'runner_stop_seconds': 120}
-        self.source = Path('/public-source')
+        self.source = Path(__file__).resolve().parents[1]
         self.events, self.fail_journey, self.foreign = [], fail_journey, foreign
         self.profile_mismatch = profile_mismatch
         self.copy_mismatch = copy_mismatch
         self.fail_observer = fail_observer
+        self.databases = {}
+        self.sql_hashes = {}
+        self.fail_drop = False
+        self.keep_after_drop = False
 
     def inspect_container(self, identity):
         return runner()
 
     def engine(self, *args, **kwargs):
         self.events.append(args)
+        if args[0] == 'cp' and args[2].startswith(DATABASE + ':/tmp/') \
+                and args[1].startswith(str(self.source)):
+            source = Path(args[1])
+            if source.is_file():
+                self.sql_hashes[args[2].split(':', 1)[1]] = hashlib.sha256(source.read_bytes()).hexdigest()
         if args[0] == 'create':
             output = DATABASE
         elif args[0] == 'cp' and args[1].endswith('/controls/write-trace.json'):
@@ -130,12 +141,44 @@ class Executor:
             raise subprocess.CalledProcessError(1, args)
         elif args[0] == 'exec' and self.fail_observer and self.fail_observer in args:
             raise subprocess.CalledProcessError(1, args)
+        elif args[0] == 'exec' and len(args) > 2 and args[2] == 'createdb':
+            name = args[-1]
+            self.databases[name] = dict(oid=1000 + len(self.databases), name=name,
+                owner='kehila_owner', allow=1, template=0, connections=0)
+            output = ''
+        elif args[0] == 'exec' and 'psql' in args and '-c' in args \
+                and args[-1].startswith('SELECT oid::text,datname,'):
+            name = re.search(r"WHERE datname='([a-z_]+)'", args[-1])[1]
+            row = self.databases.get(name)
+            output = '' if row is None else '\t'.join(str(row[key]) for key in
+                ('oid', 'name', 'owner', 'allow', 'template', 'connections')) + '\n'
+        elif args[0] == 'exec' and 'psql' in args and '-c' in args \
+                and args[-1].startswith("SELECT current_setting('data_directory');"):
+            output = '/var/lib/postgresql/data\n' + '\n'.join(
+                name + '|' + str(row['oid']) + '|8388608'
+                for name, row in sorted(self.databases.items())) + '\n'
+        elif args[0] == 'exec' and len(args) > 2 and args[2] == 'sha256sum':
+            output = self.sql_hashes[args[3]] + '  ' + args[3] + '\n'
+        elif args[0] == 'exec' and len(args) > 2 and args[2] == 'dropdb':
+            if self.fail_drop:
+                raise subprocess.CalledProcessError(1, args, output='', stderr='controlled drop refused')
+            if not self.keep_after_drop:
+                del self.databases[args[-1]]
+            output = ''
+        elif args[0] == 'exec' and len(args) > 2 and args[2] == 'stat':
+            output = '4096 65536 32768 32768 tmpfs\n'
+        elif args[0] == 'exec' and len(args) > 2 and args[2] == 'du':
+            output = '0 /var/lib/postgresql/data/base\n0 /var/lib/postgresql/data/pg_wal\n'
+        elif args[0] == 'exec' and len(args) > 2 and args[2] == 'cat':
+            output = '0\n268435456\n0\n'
         elif args[0] == 'exec' and 'sh' in args:
             output = 'READY'
         elif args[0] == 'exec' and '/tmp/native_copy_snapshot.sql' in args:
             output = json.dumps(dict(tables={'fixture': []}, sequences={'fixture': {}},
                 schemas=[], relations=[], types=[], indexes=[], columns=[], functions=[], constraints=[],
                 triggers=[], raw_checks=[], mismatch=self.copy_mismatch and 'kehila_native_restored' in args))
+        elif args[0] == 'exec' and 'psql' in args and '-f' in args:
+            output = 'DO\n'
         else:
             output = ''
         return SimpleNamespace(stdout=output, stderr='diagnostic stderr' if args[0] == 'logs' else '')
@@ -149,6 +192,34 @@ class CleanupTests(unittest.TestCase):
         temporary = patch.object(environment.tempfile, 'gettempdir', return_value=directory.name)
         temporary.start()
         self.addCleanup(temporary.stop)
+
+    def test_completed_case_retirement_preserves_copy_and_all_later_native_phases(self):
+        executor = Executor()
+        native.check(executor)
+        events = executor.events
+        items = {**native.ITEM_DATABASES, native.SELECTION_MODE: native.SELECTION_DATABASE,
+                 native.SELECTION_CLOCK_MODE: native.SELECTION_CLOCK_DATABASE}
+        observations = {**native.ITEM_OBSERVERS, native.SELECTION_MODE: native.SELECTION_OBSERVER,
+                        native.SELECTION_CLOCK_MODE: native.SELECTION_CLOCK_OBSERVER}
+        snapshots = [index for index, args in enumerate(events) if args[0] == 'exec'
+                     and '/tmp/native_copy_snapshot.sql' in args and 'kehila_native_restored' not in args]
+        self.assertEqual(len(snapshots), 2)
+        drops = [(index, args[-1]) for index, args in enumerate(events)
+                 if args[0] == 'exec' and 'dropdb' in args]
+        self.assertEqual([name for _, name in drops], list(items.values()))
+        for mode, name in items.items():
+            observed = next(index for index, args in enumerate(events) if args[0] == 'exec'
+                and '-f' in args and '/tmp/' + observations[mode] in args and name in args)
+            dropped = next(index for index, value in drops if value == name)
+            self.assertLess(observed, dropped)
+            self.assertLess(snapshots[0], dropped)
+            self.assertLess(dropped, snapshots[1])
+        last_drop = drops[-1][0]
+        for mode in ('restored', 'auth-expiry', 'auth-delivery', 'auth-unknown', *native.AUTH_DATABASES):
+            reached = next(index for index, args in enumerate(events)
+                           if args[0] == 'exec' and 'scripts/native_authority_fixture.py' in args and mode in args)
+            self.assertGreater(reached, last_drop)
+        self.assertTrue(all(name in executor.databases for name in native.AUTH_DATABASES.values()))
 
     def test_storage_selection_requires_exclusive_selector_and_external_evidence(self):
         for options in ({'storage_sample': 0}, {'storage_sample': True},
