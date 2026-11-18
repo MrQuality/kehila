@@ -12,6 +12,8 @@ import subprocess
 from cleanup_errors import retain_cleanup_failure
 from verification_budget import cleanup_time
 from native_authority_fixture import (AUTH_DATABASES, ITEM_DATABASES, ITEM_OBSERVERS,
+    SELECTION_MODE, SELECTION_DATABASE, SELECTION_OBSERVER,
+    SELECTION_CLOCK_MODE, SELECTION_CLOCK_DATABASE, SELECTION_CLOCK_OBSERVER,
     CAPACITY_MODE, CAPACITY_DATABASE, CAPACITY_OBSERVER, STORAGE_MODE, STORAGE_DATABASE,
     STORAGE_HISTORICAL_DATABASE, STORAGE_OBSERVER)
 from capacity_plan import cell as planned_capacity_cell
@@ -92,9 +94,11 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
     full = item_cases is None and selected_cell is None and selected_storage is None
     items = ({STORAGE_MODE: STORAGE_DATABASE} if selected_storage is not None else
              {CAPACITY_MODE: CAPACITY_DATABASE} if selected_cell is not None else
-             ITEM_DATABASES if full else {case: ITEM_DATABASES[case] for case in item_cases})
+             {**ITEM_DATABASES, SELECTION_MODE: SELECTION_DATABASE, SELECTION_CLOCK_MODE: SELECTION_CLOCK_DATABASE} if full else
+             {case: ITEM_DATABASES[case] for case in item_cases})
     observers = ({STORAGE_MODE: STORAGE_OBSERVER} if selected_storage is not None else
-                 {CAPACITY_MODE: CAPACITY_OBSERVER} if selected_cell is not None else ITEM_OBSERVERS)
+                 {CAPACITY_MODE: CAPACITY_OBSERVER} if selected_cell is not None else
+                 {**ITEM_OBSERVERS, SELECTION_MODE: SELECTION_OBSERVER, SELECTION_CLOCK_MODE: SELECTION_CLOCK_OBSERVER})
     selection = {'scope': 'storage-sample' if selected_storage is not None else
                  'capacity-cell' if selected_cell is not None else 'full-native' if full else 'focused-items',
                  'selected_items': list(items), 'observed_items': []}

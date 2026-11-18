@@ -14,6 +14,8 @@ from cleanup_errors import retain_cleanup_failure
 from container_executor import LABEL, one_object
 from verification_budget import cleanup_time, command_timeout
 from native_authority_fixture import (AUTH_DATABASES, ITEM_DATABASES, ITEM_OBSERVERS,
+    SELECTION_DATABASE, SELECTION_OBSERVER,
+    SELECTION_CLOCK_DATABASE, SELECTION_CLOCK_OBSERVER,
     CAPACITY_DATABASE, CAPACITY_OBSERVER, STORAGE_DATABASE, STORAGE_HISTORICAL_DATABASE,
     STORAGE_OBSERVER)
 from native_fixture_assets import write_owner, write_manifest, verify_export, MANIFEST_FILE
@@ -75,11 +77,11 @@ class NativeEnvironment:
                  failure_observer=None, release_dependents=None):
         require(type(databases) is tuple and databases and len(set(databases)) == len(databases),
                 'Select distinct closed native databases')
-        known_databases = {*AUTH_DATABASES.values(), *ITEM_DATABASES.values(),
+        known_databases = {*AUTH_DATABASES.values(), *ITEM_DATABASES.values(), SELECTION_DATABASE, SELECTION_CLOCK_DATABASE,
                           CAPACITY_DATABASE, STORAGE_DATABASE, STORAGE_HISTORICAL_DATABASE}
         require(all(type(value) is str and value in known_databases for value in databases),
                 'Unknown native database')
-        known_observers = {*ITEM_OBSERVERS.values(), CAPACITY_OBSERVER, STORAGE_OBSERVER}
+        known_observers = {*ITEM_OBSERVERS.values(), SELECTION_OBSERVER, SELECTION_CLOCK_OBSERVER, CAPACITY_OBSERVER, STORAGE_OBSERVER}
         require(type(observers) is tuple and all(type(value) is str and value in known_observers
                 for value in observers), 'Unknown native observer')
         require(isinstance(limits, DatabaseLimits), 'Closed database resource profile required')

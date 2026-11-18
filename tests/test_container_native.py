@@ -449,7 +449,7 @@ class CleanupTests(unittest.TestCase):
         self.assertEqual(removals, [('rm', '--force', '--volumes', DATABASE)])
         modes = [args[args.index('scripts/native_authority_fixture.py') + 1]
                  for args in executor.events if 'scripts/native_authority_fixture.py' in args]
-        self.assertEqual(modes, ['prepare', 'item-write', 'item-read', 'item-pending', 'item-mutation', 'item-retry', 'item-capacity', 'journey', 'clock', 'restored',
+        self.assertEqual(modes, ['prepare', 'item-write', 'item-read', 'item-pending', 'item-mutation', 'item-retry', 'item-capacity', 'selection', 'selection-clock', 'journey', 'clock', 'restored',
             'auth-expiry', 'auth-delivery', 'auth-unknown', 'auth-owned', 'auth-revoke', 'auth-fenced',
             'auth-read', 'auth-lifetime'])
 
@@ -495,6 +495,27 @@ class CleanupTests(unittest.TestCase):
             self.assertEqual(len(observations), 1)
             self.assertLess(creations[0], first_runtime)
             self.assertLess(invocations[0], observations[0])
+
+    def test_selection_has_a_fresh_database_and_separate_committed_observer(self):
+        executor = Executor()
+        native.check(executor)
+        first_runtime = next(i for i, args in enumerate(executor.events)
+                             if args[0] == 'exec' and 'journey' in args)
+        for mode, database, observer in (
+                (native.SELECTION_MODE, native.SELECTION_DATABASE, native.SELECTION_OBSERVER),
+                (native.SELECTION_CLOCK_MODE, native.SELECTION_CLOCK_DATABASE, native.SELECTION_CLOCK_OBSERVER)):
+            with self.subTest(mode=mode):
+                creations = [i for i, args in enumerate(executor.events)
+                             if args[0] == 'exec' and 'createdb' in args and args[-1] == database]
+                invocations = [i for i, args in enumerate(executor.events)
+                               if args[0] == 'exec' and mode in args]
+                observations = [i for i, args in enumerate(executor.events)
+                                if args[0] == 'exec' and '/tmp/' + observer in args and database in args]
+                self.assertEqual(len(creations), 1)
+                self.assertEqual(len(invocations), 1)
+                self.assertEqual(len(observations), 1)
+                self.assertLess(creations[0], first_runtime)
+                self.assertLess(invocations[0], observations[0])
 
     def test_failed_pending_observer_stops_before_later_journeys_and_retains_stage(self):
         executor = Executor(fail_observer='/tmp/native_item_pending_state.sql')

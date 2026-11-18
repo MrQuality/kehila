@@ -18,6 +18,7 @@ mod item_retry;
 mod item_writes;
 mod network;
 mod restored;
+mod selection;
 mod write_faults;
 
 #[derive(Clone)]

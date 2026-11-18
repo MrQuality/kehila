@@ -13,6 +13,7 @@ mod item_read;
 pub(super) mod item_write;
 mod read;
 mod replay;
+pub(super) mod selection;
 mod write;
 pub(crate) use item_read::Item;
 pub(crate) use read::Current;

@@ -1,6 +1,4 @@
-use selection_codec::{
-    decode_request, encode_request, fingerprint, verify_request, Error, NativeRequest,
-};
+use selection_codec::{decode_request, encode_request, fingerprint, verify_request, Error};
 use task_contract::{
     current_work::{SelectionCommand, UserId},
     relationship::EndpointIdentity,
@@ -111,15 +109,14 @@ fn truncation_unknown_discriminants_invalid_utf8_and_trailing_bytes_reject() {
 }
 
 #[test]
-fn native_admission_preserves_exact_ids_and_enforces_the_fixed_token_shape() {
+fn encoding_preserves_exact_ids_and_enforces_the_fixed_token_shape() {
     for value in [" ".to_owned(), "e\u{301}".into(), "\u{e9}".repeat(64)] {
         let mut request = command();
         request.user_id.0 = value.clone();
         request.requested.as_mut().unwrap().project_id.0 = value.clone();
         request.requested.as_mut().unwrap().item_id.0 = value;
-        let admitted = NativeRequest::new(request.clone()).unwrap();
-        assert_eq!(admitted.command(), &request);
-        assert_eq!(decode_request(1, admitted.as_bytes()), Ok(request));
+        let bytes = encode_request(&request, 1).unwrap();
+        assert_eq!(decode_request(1, &bytes), Ok(request));
     }
     for field in ["", "a\0b", &"x".repeat(129), &"\u{e9}".repeat(65)] {
         for which in 0..3 {
@@ -129,7 +126,7 @@ fn native_admission_preserves_exact_ids_and_enforces_the_fixed_token_shape() {
                 1 => request.requested.as_mut().unwrap().project_id.0 = field.into(),
                 _ => request.requested.as_mut().unwrap().item_id.0 = field.into(),
             }
-            assert!(NativeRequest::new(request).is_err());
+            assert!(encode_request(&request, 1).is_err());
         }
     }
     for token in [
@@ -140,7 +137,7 @@ fn native_admission_preserves_exact_ids_and_enforces_the_fixed_token_shape() {
     ] {
         let mut request = command();
         request.operation_id = token.into();
-        assert!(NativeRequest::new(request).is_err());
+        assert!(encode_request(&request, 1).is_err());
     }
 }
 

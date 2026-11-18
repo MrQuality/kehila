@@ -7,6 +7,7 @@ pub(crate) mod capacity;
 mod item_attempt;
 mod item_commit;
 pub(crate) use item_attempt::{AttemptEntry, ItemAttempt};
+pub(crate) use item_commit::Selected as SelectedCommit;
 
 #[derive(Clone, Copy)]
 pub(crate) enum Stage {
@@ -38,6 +39,7 @@ pub(crate) struct Probe {
     item_repreparations: AtomicUsize,
     item_attempt: Mutex<Option<ItemAttempt>>,
     item_commit: Mutex<Option<item_commit::Armed>>,
+    selection_commit: Mutex<Option<item_commit::Armed>>,
 }
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub(crate) enum Point {
@@ -49,6 +51,12 @@ pub(crate) enum Point {
     RegistrationRollback,
     PendingCommit,
     ItemBeforeCommit,
+    // Selection packet and reply admitted, RR rollback/mutex release complete,
+    // and no fresh write transaction entered yet.
+    SelectionPrepared,
+    SelectionBeforeCommit,
+    SelectionHistoryPrepared,
+    SelectionPreparationCleanup,
     ItemMutationPrepared,
     ItemAttemptPrepared,
     ItemHistoryLoaded,

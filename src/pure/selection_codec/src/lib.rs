@@ -7,7 +7,7 @@ use task_contract::current_work::{CurrentWork, SelectionResult};
 
 mod request;
 mod state;
-pub use request::{decode_request, encode_request, verify_request, NativeRequest};
+pub use request::{decode_request, encode_request, verify_request};
 pub use request::{identifier as valid_identifier, token as valid_operation_token};
 
 pub const MAX_WIRE_BYTES: usize = 4096;

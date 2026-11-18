@@ -47,6 +47,12 @@ ITEM_FIXTURES = {
 }
 ITEM_DATABASES = {mode: database for mode, (database, _) in ITEM_FIXTURES.items()}
 ITEM_OBSERVERS = {mode: observer for mode, (_, observer) in ITEM_FIXTURES.items()}
+SELECTION_MODE = 'selection'
+SELECTION_DATABASE = 'native_selection'
+SELECTION_OBSERVER = 'native_selection_state.sql'
+SELECTION_CLOCK_MODE = 'selection-clock'
+SELECTION_CLOCK_DATABASE = 'native_selection_clock'
+SELECTION_CLOCK_OBSERVER = 'native_selection_clock_state.sql'
 CAPACITY_MODE = 'capacity-cell'
 CAPACITY_DATABASE = 'native_capacity_cell'
 CAPACITY_OBSERVER = 'native_capacity_cell_state.sql'
@@ -114,6 +120,8 @@ def prepare(seconds, asset_owner=None):
 
 
 SPECS = {
+    SELECTION_CLOCK_MODE: ('coordinator::jobs::tests::project::selection::clock::native_selection_replay_release_clock', 'selection-clock-passed'),
+    SELECTION_MODE: ('coordinator::jobs::tests::project::selection::native_current_work_selection_and_recovery', 'selection-passed'),
     STORAGE_MODE: ('coordinator::jobs::tests::project::capacity::storage_growth::native_storage_growth_sample', 'storage-growth-passed'),
     CAPACITY_MODE: ('coordinator::jobs::tests::project::capacity::matrix::native_capacity_cell', 'capacity-cell-passed'),
     'item-write': ('coordinator::jobs::tests::project::item_writes::native_item_write_identity_and_rollback', 'item-write-passed'),
@@ -140,7 +148,7 @@ def failure_metadata(mode, returncode, summary, marker_required, marker_present)
     # Only closed labels, numeric observations and known public source locations.
     modes = set(SPECS)
     labels = {'pre_session', 'pre_csrf', 'login', 'state', 'logout',
-              'password_change', 'revoke_others', 'project', 'item', 'item_pending', 'item_mutation'}
+              'password_change', 'revoke_others', 'project', 'item', 'item_pending', 'item_mutation', 'selection'}
     jobs = []
     for label, elapsed in re.findall(r'^owned_job ([a-z_]+) elapsed_us=([0-9]{1,12})$',
                                      summary, re.MULTILINE):
@@ -173,7 +181,8 @@ def journey(seconds, mode='journey', capacity_cell=None, capacity_observer='samp
     limits = storage_limits(storage_sample, storage_profile) if mode == STORAGE_MODE else None
     test, marker = SPECS[mode]
     controls = WORK / 'controls'
-    databases = {**AUTH_DATABASES, **ITEM_DATABASES, CAPACITY_MODE: CAPACITY_DATABASE,
+    databases = {**AUTH_DATABASES, **ITEM_DATABASES, SELECTION_MODE: SELECTION_DATABASE,
+                 SELECTION_CLOCK_MODE: SELECTION_CLOCK_DATABASE, CAPACITY_MODE: CAPACITY_DATABASE,
                  STORAGE_MODE: STORAGE_DATABASE}
     if mode in databases:
         controls /= mode

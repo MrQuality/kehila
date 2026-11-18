@@ -119,23 +119,3 @@ pub fn verify_request(
     }
     Ok(command)
 }
-
-/// Representational admission only. Constructing this value grants no authority
-/// or permission to write and does not establish a successful selection.
-#[derive(Debug, Eq, PartialEq)]
-pub struct NativeRequest {
-    command: SelectionCommand,
-    bytes: Vec<u8>,
-}
-impl NativeRequest {
-    pub fn new(command: SelectionCommand) -> Result<Self, Error> {
-        let bytes = encode_request(&command, 1)?;
-        Ok(Self { command, bytes })
-    }
-    pub fn command(&self) -> &SelectionCommand {
-        &self.command
-    }
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-}

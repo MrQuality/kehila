@@ -17,6 +17,8 @@ mod pre_session;
 mod project;
 mod protected_file;
 mod secret;
+mod selection;
+mod selection_ingress;
 mod session;
 mod startup;
 mod transport;
