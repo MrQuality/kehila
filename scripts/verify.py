@@ -102,7 +102,7 @@ def check_commands(args):
         commands.append([sys.executable, "scripts/go_static.py"])
         if args.pure:
             commands.append(['cargo', 'test', '--locked', '-p', 'kehila_query', '-p', 'task_contract',
-                             '-p', 'project_create_codec', '-p', 'work_item_codec'])
+                             '-p', 'project_create_codec', '-p', 'work_item_codec', '-p', 'selection_codec'])
         else:
             commands += [['node', '--test', '--test-reporter=tap', 'tests/integration/project_page.test.cjs',
                           'tests/integration/work_item_page.test.cjs', 'tests/integration/edit_recovery.test.cjs'],

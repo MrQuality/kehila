@@ -46,6 +46,14 @@ class PureMatrixTests(IsolatedEnvironmentTests):
             with self.assertRaises(subprocess.CalledProcessError):
                 VERIFY.main()
 
+    def test_selection_codec_failure_fails_the_pure_command(self):
+        def run(command, **kwargs):
+            if command[0] == 'cargo' and 'selection_codec' in command:
+                raise subprocess.CalledProcessError(1, command)
+        with patch.object(sys, 'argv', ['verify.py', '--pure']), patch.object(VERIFY.subprocess, 'run', run):
+            with self.assertRaises(subprocess.CalledProcessError):
+                VERIFY.main()
+
 
 class DevelopmentMatrixTests(IsolatedEnvironmentTests):
     def test_development_runs_workspace_and_page_checks_without_service_phases(self):

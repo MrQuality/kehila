@@ -71,6 +71,13 @@ envelopes must pass admission before any write transaction. Project creation and
 all other boundaries retain the requirements below. This does not permit malformed
 raw input into database/application admission or add an independent resource pool.
 
+Accepted scoped amendment, 2026-11-17:
+[ADR-112](ADR-112-current-work-selection.md) extends the same bounded read-only
+preparation discipline specifically to Selection. Raw edge admission precedes
+preparation; generated selection envelopes precede the fresh write transaction.
+Historical reconciliation remains independent of current-domain acceptance. No
+other command family or general database-admission exception is authorized.
+
 Every future transport/ingress adapter MUST enforce the codec admission ceilings
 at the edge: at most 1 MiB of encoded JSON record bytes, 64 KiB per decoded UTF8
 key/string, depth 16 with the root at zero, 1,024 entries per array/object and
