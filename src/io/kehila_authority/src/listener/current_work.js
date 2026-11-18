@@ -155,7 +155,7 @@ globalThis.KehilaCurrentWork = ({document, request, requestWire, run, checkBindi
       require(keys(data,["codec_version","outcome"]) && data.codec_version === 1);
       recoveryMessage("Absent at this lookup. An in-flight request may still commit; an explicit retry uses the same exact request."); return;
     }
-    if ([200,410].includes(reply.status) && data?.outcome === "replay_expired") {
+    if (reply.status === 410 && data?.outcome === "replay_expired") {
       require(keys(data,["codec_version","outcome"]) && data.codec_version === 1);
       await journalCleanup(() => opened.closeRetry(saved,binding));
       if (observed !== epoch) return;

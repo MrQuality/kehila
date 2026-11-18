@@ -403,6 +403,62 @@ test('untrusted missing-item envelopes retain an unconfirmed retry', async () =>
   }
 });
 
+test('contracted expiry replies durably close the exact retained retry', async () => {
+  for (const route of ['/selection/set','/selection/reconcile']) {
+    const store = memoryStore();
+    const f = fixture(url => {
+      if (url === route) return {status:410,data:{codec_version:1,outcome:'replay_expired'}};
+      if (url === '/selection/set') throw new Error('original reply lost');
+    },store);
+    await ready(f); offer(f); await f.fire('item-select-current');
+    const original = mutations(f.calls)[0];
+    if (route === '/selection/reconcile') await f.fire('selection-check');
+    assert.equal(mutations(f.calls).at(-1).url,route,'the contracted expiry must reach the controller');
+    assert.equal(mutations(f.calls).at(-1).wire,original.wire);
+    const inspected = await f.recovery.open(owner);
+    const saved = await inspected.restore();
+    assert.ok(saved,'expiry retains the original identity for explicit checks');
+    assert.equal(saved.retained.wire,original.wire);
+    assert.equal(saved.retryClosed,true,'contracted expiry durably closes retry');
+    await assert.rejects(inspected.admit(saved,owner,'retry'),/closed/i);
+    assert.match(f.text('selection-recovery-status'),/expired/i);
+    const reloaded = fixture(undefined,store); await ready(reloaded);
+    assert.equal(mutations(reloaded.calls).length,0,'restoration never resends');
+    assert.equal(reloaded.elements.get('selection-retry').disabled,true);
+    await reloaded.fire('selection-retry');
+    assert.equal(mutations(reloaded.calls).length,0,'durable expiry remains closed after reload');
+  }
+});
+
+test('malformed expiry replies keep exact recovery identity and retry open', async () => {
+  for (const route of ['/selection/set','/selection/reconcile']) {
+    const store = memoryStore();
+    const f = fixture(url => {
+      if (url === route) return {status:200,data:{codec_version:1,outcome:'replay_expired'}};
+      if (url === '/selection/set') throw new Error('original reply lost');
+    },store);
+    await ready(f); offer(f); await f.fire('item-select-current');
+    const original = mutations(f.calls)[0];
+    if (route === '/selection/reconcile') await f.fire('selection-check');
+    assert.equal(mutations(f.calls).at(-1).url,route,'the malformed expiry must reach the controller');
+    assert.equal(mutations(f.calls).at(-1).wire,original.wire);
+    const saved = await (await f.recovery.open(owner)).restore();
+    assert.ok(saved,'an untrusted status cannot settle the original identity');
+    assert.equal(saved.retained.wire,original.wire);
+    assert.equal(saved.retryClosed,false,'an unsupported expiry status cannot close retry');
+    assert.equal(f.elements.get('selection-retry').disabled,false);
+    assert.match(f.text('selection-recovery-status') + f.text('current-work-status'),/unconfirmed|invalid|mismatch/i);
+    const reloaded = fixture(url => {
+      if (url === '/selection/set') throw new Error('reply remains unknown');
+    },store);
+    await ready(reloaded);
+    assert.equal(mutations(reloaded.calls).length,0,'restoration never resends');
+    await reloaded.fire('selection-retry');
+    assert.equal(mutations(reloaded.calls).length,1,'explicit retry remains available after reload');
+    assert.equal(mutations(reloaded.calls)[0].wire,original.wire);
+  }
+});
+
 function uncertainCommitStore(kind) {
   const backing = memoryStore();
   let armed = false, fired = false;
