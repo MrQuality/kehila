@@ -56,6 +56,23 @@ class PureMatrixTests(IsolatedEnvironmentTests):
 
 
 class DevelopmentMatrixTests(IsolatedEnvironmentTests):
+    def test_selection_policy_and_controller_failures_fail_without_services(self):
+        for selected in ('tests/integration/selection_recovery.test.cjs',
+                         'tests/integration/current_work_page.test.cjs'):
+            with self.subTest(selected=selected):
+                seen = []
+                def run(command, **kwargs):
+                    seen.append(command)
+                    if command[0] == 'node' and selected in command:
+                        raise subprocess.CalledProcessError(1, command)
+                with patch.object(sys, 'argv', ['verify.py', '--development']), \
+                        patch.object(VERIFY.subprocess, 'run', side_effect=run), \
+                        patch.object(VERIFY, 'managed_runtime') as runtime:
+                    with self.assertRaises(subprocess.CalledProcessError):
+                        VERIFY.main()
+                self.assertTrue(any(selected in command for command in seen))
+                runtime.assert_not_called()
+
     def test_development_runs_workspace_and_page_checks_without_service_phases(self):
         with patch.object(sys, 'argv', ['verify.py', '--development']), \
                 patch.object(VERIFY.subprocess, 'run') as run, \

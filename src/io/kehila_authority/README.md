@@ -42,5 +42,8 @@ Windows browser behavior nor native database persistence.
 
 The interface saves server-owned creation requests before offering explicit
 execution. It discovers requests after sign-in and keeps interrupted creation or
-cancellation identity through discovery/reopening. It uses no browser persistent
-storage for recovery. See the [pending/API contract](../../../docs/implementation/project-pending-contract.md).
+cancellation identity through discovery/reopening. Creation recovery uses server
+discovery. Direct edit and current-work requests use separate same-profile
+IndexedDB journals for exact unresolved identities. See the
+[pending/API contract](../../../docs/implementation/project-pending-contract.md) and
+[current-work contract](../../../docs/implementation/current-work-selection.md).

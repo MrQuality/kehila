@@ -18,8 +18,10 @@ class Element {
   replaceChildren(...children) { this.children = children; }
   fire(type = 'click') { if (!this.disabled) this.events[type]?.({preventDefault() {}}); }
 }
-async function fixture(handler = () => undefined, store = memoryStore()) {
+async function fixture(handler = () => undefined, store = memoryStore(), {realSelection = false} = {}) {
   const elements = new Map(), buttons = [], lifecycle = {}, documentEvents = {};
+  const selection = {created:false, restored:0, started:0, suspended:0, cleared:0, signouts:[], failure:null};
+  const editSignouts = [];
   const html = fs.readFileSync(page + 'page.html', 'utf8');
   for (const match of html.matchAll(/<(\w+)\b[^>]*\bid="([^"]+)"[^>]*>/g)) {
     const el = new Element(match[1]); elements.set(match[2], el);
@@ -64,11 +66,48 @@ async function fixture(handler = () => undefined, store = memoryStore()) {
     addEventListener:(type,fn) => { lifecycle[type]=fn; }
   };
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync(page + 'recovery_journal.js', 'utf8'), context);
   vm.runInContext(fs.readFileSync(page + 'edit_recovery.js', 'utf8'), context);
   const recoveryFactory = context.KehilaEditRecovery;
   let journal;
   context.KehilaEditRecovery = options => { journal = recoveryFactory({...options, store}); return journal; };
   vm.runInContext(fs.readFileSync(page + 'work_items.js', 'utf8'), context);
+  const workItemsFactory = context.KehilaWorkItems;
+  context.KehilaWorkItems = options => {
+    const view = workItemsFactory(options), original = view.signOut.bind(view);
+    view.signOut = async owner => {
+      editSignouts.push(owner === null ? null : JSON.parse(JSON.stringify(owner)));
+      return original(owner);
+    };
+    return view;
+  };
+  const selectionStore = memoryStore();
+  let selectionFactory = null;
+  if (realSelection) {
+    vm.runInContext(fs.readFileSync(page + 'selection_recovery.js', 'utf8'), context);
+    vm.runInContext(fs.readFileSync(page + 'current_work.js', 'utf8'), context);
+    selectionFactory = context.KehilaCurrentWork;
+  }
+  // Most cases observe lifecycle composition through a double. Changed-owner
+  // races additionally use both real controllers and independent journal ports.
+  context.KehilaCurrentWork = options => {
+    selection.created = true;
+    selection.ports = options;
+    const view = selectionFactory?.({...options,recovery:context.KehilaSelectionRecovery({store:selectionStore})});
+    return {
+      controls(...args) { view?.controls(...args); },
+      offerItem(...args) { view?.offerItem(...args); },
+      clearView() { selection.cleared++; },
+      startSession() { selection.started++; view?.startSession(); },
+      suspendRecovery() { selection.suspended++; view?.suspendRecovery(); },
+      async restoreRecovery() { selection.restored++; return view ? view.restoreRecovery() : true; },
+      async signOut(owner) {
+        selection.signouts.push(owner === null ? null : JSON.parse(JSON.stringify(owner)));
+        if (selection.failure) throw selection.failure;
+        await view?.signOut(owner);
+      },
+    };
+  };
   vm.runInContext(fs.readFileSync(page + 'page.js', 'utf8'), context);
   const idle = async () => {
     for (let i = 0; i < 500; i++) { await new Promise(resolve => setTimeout(resolve,1)); if (!elements.get('logout').disabled) return; }
@@ -82,8 +121,134 @@ async function fixture(handler = () => undefined, store = memoryStore()) {
     assert.equal(typeof documentEvents.visibilitychange,'function');documentEvents.visibilitychange();
     if(state==='visible')await idle();
   };
-  return {elements, calls, owner, fire, select, readers, store, journal, visibility, visible};
+  return {elements, calls, owner, fire, select, readers, store, journal, visibility, visible, selection, selectionStore, editSignouts};
 }
+
+test('signout attempts both recovery cleanups even when edit deletion fails', async () => {
+  const f = await fixture(url => url === '/auth/browser/logout' ? [200, {}] : undefined);
+  f.store.hook(() => { throw new Error('edit cleanup failed'); });
+  await f.fire('logout');
+  assert.equal(f.selection.created, true);
+  assert.equal(f.editSignouts.length, 1);
+  assert.equal(f.selection.signouts.length, 1);
+  assert.match(f.elements.get('status').textContent, /edit.*(deletion|cleanup).*not.*confirmed/i);
+});
+
+test('selection deletion failure does not skip edit cleanup or claim both were erased', async () => {
+  const f = await fixture(url => url === '/auth/browser/logout' ? [200, {}] : undefined);
+  f.selection.failure = new Error('selection cleanup failed');
+  await f.fire('logout');
+  assert.equal(f.editSignouts.length, 1);
+  assert.equal(f.selection.signouts.length, 1);
+  assert.match(f.elements.get('status').textContent, /(current.work|selection).*(deletion|cleanup).*not.*confirmed/i);
+});
+
+test('two cleanup failures are both reported after signout', async () => {
+  const f = await fixture(url => url === '/auth/browser/logout' ? [200, {}] : undefined);
+  f.store.hook(() => { throw new Error('edit cleanup failed'); });
+  f.selection.failure = new Error('selection cleanup failed');
+  await f.fire('logout');
+  assert.equal(f.editSignouts.length, 1);
+  assert.equal(f.selection.signouts.length, 1);
+  assert.match(f.elements.get('status').textContent, /edit/i);
+  assert.match(f.elements.get('status').textContent, /current.work|selection/i);
+});
+
+test('qualifying password-change responses invalidate both journals independently', async () => {
+  for (const status of [200, 503]) {
+    const f = await fixture(url => url === '/auth/browser/password' ? [status, {}] : undefined);
+    f.elements.get('current').value = 'original owner password';
+    f.elements.get('replacement').value = 'chosen replacement password';
+    f.selection.failure = new Error('selection cleanup failed');
+    await f.fire('change', 'submit');
+    assert.equal(f.editSignouts.length, 1);
+    assert.equal(f.selection.signouts.length, 1);
+    assert.equal(f.elements.get('current').value, '');
+    assert.equal(f.elements.get('replacement').value, '');
+  }
+});
+
+test('project-view changes never dispose either owner recovery family', async () => {
+  const f = await fixture();
+  const cleared = f.selection.cleared;
+  await f.select(); await f.fire('new-request');
+  assert.equal(f.editSignouts.length, 0);
+  assert.equal(f.selection.signouts.length, 0);
+  assert.equal(f.selection.cleared, cleared, 'project navigation preserves the global current-work view');
+  assert.equal(f.calls.some(call => call.url === '/selection/set'), false);
+});
+
+test('owner-binding replacement attempts both cleanups for the earlier owner', async () => {
+  const f = await fixture();
+  const original = {...f.owner};
+  f.selection.failure = new Error('selection cleanup failed');
+  f.owner.actor_id = 'replacement-owner';
+  await f.fire('discover');
+  assert.deepEqual(f.editSignouts, [original]);
+  assert.deepEqual(f.selection.signouts, [original]);
+  assert.equal(f.calls.some(call => call.url === '/selection/set'), false);
+});
+
+test('visibility suspension and fresh revalidation reach both controllers', async () => {
+  const f = await fixture();
+  const restored = f.selection.restored;
+  await f.visibility('hidden');
+  assert.equal(f.selection.suspended, 1);
+  await f.visibility('visible');
+  assert.ok(f.selection.restored > restored);
+  assert.equal(f.calls.some(call => ['/selection/set','/selection/reconcile'].includes(call.url)), false);
+});
+
+test('selection transport admits four KiB and rejects the next byte before parsing', async () => {
+  let oversized = false;
+  const f = await fixture(url => {
+    if (url !== '/selection/read') return undefined;
+    const value = new Uint8Array(oversized ? 4097 : 4096).fill(32);
+    value.set(new TextEncoder().encode('{"codec_version":1,"outcome":"read","version":"0","target":{"state":"none"}}'));
+    return [200,value];
+  });
+  const reply = await f.selection.ports.request('/selection/read',{});
+  assert.equal(reply.data.outcome,'read','exactly four KiB remains a valid transport response');
+  const cancelled = f.readers.cancelled, released = f.readers.released;
+  oversized = true;
+  await assert.rejects(() => f.selection.ports.request('/selection/read',{}),/Response limit/,
+    'selection responses have their own four-KiB bound');
+  assert.equal(f.readers.cancelled,cancelled + 1);
+  assert.equal(f.readers.released,released + 1);
+});
+
+test('owner replacement during real journal revalidation clears each family once', async () => {
+  let holding = false;
+  const waiting = [];
+  const f = await fixture(url => url === '/projects/binding' && holding
+    ? new Promise(resolve => waiting.push(resolve)) : undefined,memoryStore(),{realSelection:true});
+  assert.equal(f.selection.created,true);
+  assert.ok(f.selection.restored > 0);
+  assert.equal(JSON.parse(await f.store.read()).entry,null,'the real edit journal is initialized');
+  assert.equal(JSON.parse(await f.selectionStore.read()).entry,null,'the independent real selection journal is initialized');
+  const original = {...f.owner};
+  f.owner.actor_id = 'replacement-owner';
+  await f.visibility('hidden'); holding = true;
+  const resuming = f.visibility('visible');
+  resuming.catch(() => {});
+  try {
+    for (let tries = 0; tries < 200 && waiting.length === 0; tries++) await new Promise(resolve => setTimeout(resolve,1));
+    assert.ok(waiting.length > 0,'fresh owner binding must reach the held transport boundary');
+    // Drain the pending promise continuations before releasing the bindings.
+    // Parallel restoration can now expose both requests to the same change;
+    // serialized restoration needs only one and must not wait for a second.
+    await new Promise(resolve => setImmediate(resolve));
+  } finally {
+    holding = false;
+    for (const resolve of waiting.splice(0)) resolve([200,{...f.owner}]);
+    await resuming;
+  }
+  assert.deepEqual(f.editSignouts,[original],'one owner change must clear the edit journal once');
+  assert.deepEqual(f.selection.signouts,[original],'one owner change must clear the selection journal once');
+  assert.doesNotMatch(f.elements.get('status').textContent,/deletion.*not.*confirmed/i,
+    'healthy stores must not receive competing cleanup transactions');
+  assert.equal(f.calls.some(call => ['/selection/set','/selection/reconcile','/items/edit'].includes(call.url)),false);
+});
 
 test('failed recovery deletion cannot prevent the server logout attempt', async () => {
   const f = await fixture(url => url === '/auth/browser/logout' ? [200, {}] : undefined);

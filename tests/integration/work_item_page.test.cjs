@@ -23,10 +23,12 @@ class Element {
 }
 function fixture(handler=()=>undefined, store=memoryStore()){
  const clock={now:1000000};
- const elements=new Map(); const calls=[]; const jobs=[]; const binding={failure:false,checks:0,value:{installation_id:'installation',actor_id:'owner'},randomFailure:false,encodeFailure:false,randomSeed:17};
+ const elements=new Map(); const calls=[]; const jobs=[]; const offered=[]; const binding={failure:false,checks:0,value:{installation_id:'installation',actor_id:'owner'},randomFailure:false,encodeFailure:false,randomSeed:17};
  const document={getElementById(id){if(!elements.has(id))elements.set(id,new Element());return elements.get(id);},createElement(tag){return new Element(tag);}};
  const ports={document,async checkBinding(){binding.checks++;if(binding.wait)await binding.wait;if(binding.failure)throw new Error('Owner binding unavailable');return {...binding.value};},randomBytes(){if(binding.randomFailure)throw new Error('Randomness unavailable');return new Uint8Array(16).fill(binding.randomSeed);},encode(value){if(binding.encodeFailure)throw new Error('Encoding unavailable');return JSON.stringify(value);},async requestWire(url,wire){const body=JSON.parse(wire);calls.push({url,body,wire});return await handler(url,body)||{status:503,data:{error:'unavailable'}};},run(work){const job=work();jobs.push(job);return job;},async request(url,body){calls.push({url,body});return await handler(url,body) || {status:200,data:url==='/items/list'?{outcome:'listed',entries:[summary()],before:null}:url==='/items/read'?itemRead():url==='/items/pending/list'?{entries:[pending()],before:null}:opened()};}};
  const context={TextEncoder,crypto:webcrypto,setTimeout,clearTimeout};vm.createContext(context);
+ ports.onCurrentItem = value => offered.push(value === null ? null : JSON.parse(JSON.stringify(value)));
+ vm.runInContext(fs.readFileSync(path.join(path.dirname(source),'recovery_journal.js'),'utf8'),context);
  vm.runInContext(fs.readFileSync(path.join(path.dirname(source),'edit_recovery.js'),'utf8'),context);
  ports.recovery=context.KehilaEditRecovery({store,now:()=>clock.now});
  vm.runInContext(fs.readFileSync(source,'utf8'),context);
@@ -34,8 +36,28 @@ function fixture(handler=()=>undefined, store=memoryStore()){
  const fire=async(id,type='click')=>{const el=document.getElementById(id);if(!el.disabled){assert.equal(typeof el.events[type],'function','enabled handler '+id);el.events[type]({preventDefault(){}});}await Promise.all(jobs.splice(0));};
  const row=async(id,index=0)=>{document.getElementById(id).children[index].children[0].events.click();await Promise.all(jobs.splice(0));};
  const text=id=>{const collect=el=>[el.textContent,...el.children.map(collect)].join('\n');return collect(document.getElementById(id));};
- return {view,ports,calls,elements,fire,row,text,binding,store,clock};
+ return {view,ports,calls,elements,fire,row,text,binding,store,clock,offered};
 }
+
+test('only a validated existing-item read offers a current-work candidate',async()=>{
+ const f=fixture();f.view.useProject(current(),'p');
+ await f.fire('pending-refresh');await f.row('pending-rows');
+ assert.equal(f.offered.some(value=>value!==null),false,'a future creation target is not an existing current-work item');
+ await f.fire('items-refresh');await f.row('item-rows');
+ assert.deepEqual(f.offered.at(-1),{project_id:'p',item_id:summary().item_id,archived:false},
+  'validated current item must be offered to current-work controls');
+ f.view.useProject(current('q'),'q');
+ assert.equal(f.offered.at(-1),null,'project navigation invalidates the earlier offered item');
+ assert.equal(f.calls.some(call=>call.url.startsWith('/selection/')),false,'browsing never mutates current work');
+});
+
+test('a failed current-item read revokes its earlier current-work candidate',async()=>{
+ let reads=0;const f=fixture(url=>url==='/items/read'&&++reads>1?{status:503,data:{error:'unavailable'}}:undefined);
+ f.view.useProject(current(),'p');await f.fire('items-refresh');await f.row('item-rows');
+ assert.equal(f.offered.at(-1)?.item_id,summary().item_id);
+ await f.row('item-rows');
+ assert.equal(f.offered.at(-1),null);
+});
 test('current authorized project context enables bounded browsing without a mutation',async()=>{
  const f=fixture();assert.equal(f.calls.length,0);f.view.useProject(current(),'p');await f.fire('items-refresh');await f.row('item-rows');
  assert.deepEqual(f.calls.map(c=>c.url),['/items/list','/items/read']);

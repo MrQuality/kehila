@@ -105,7 +105,8 @@ def check_commands(args):
                              '-p', 'project_create_codec', '-p', 'work_item_codec', '-p', 'selection_codec'])
         else:
             commands += [['node', '--test', '--test-reporter=tap', 'tests/integration/project_page.test.cjs',
-                          'tests/integration/work_item_page.test.cjs', 'tests/integration/edit_recovery.test.cjs'],
+                          'tests/integration/work_item_page.test.cjs', 'tests/integration/edit_recovery.test.cjs',
+                          'tests/integration/selection_recovery.test.cjs', 'tests/integration/current_work_page.test.cjs'],
                          ['cargo', 'test', '--locked', '--workspace', '--no-run'],
                          ['cargo', 'test', '--locked', '--workspace', '--exclude', 'event_dispatcher']]
         commands += [[sys.executable, "experiments/SP-002/check_seed_oracle.py"],

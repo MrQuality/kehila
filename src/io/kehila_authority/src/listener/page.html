@@ -3,8 +3,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kehila projects</title>
+<script src="/recovery-journal.js" defer></script>
 <script src="/edit-recovery.js" defer></script>
+<script src="/selection-recovery.js" defer></script>
 <script src="/work-items.js" defer></script>
+<script src="/current-work.js" defer></script>
 <script src="/owner.js" defer></script>
 <h1>Kehila projects</h1>
 <p>Development profile. Sign in again after a server restart. Saved creation requests belong to the signed-in owner and can be found from another browser.</p>
@@ -18,6 +21,22 @@
   <button id="session-resume" type="button">Retry session check</button>
 </section>
 <section id="session" hidden>
+  <section id="current-work">
+    <h2>Current work item</h2>
+    <p id="current-work-status" role="status" aria-live="polite"></p>
+    <p id="current-work-detail">Refresh to read your current work item.</p>
+    <button id="current-work-refresh" type="button">Refresh current work</button>
+    <button id="current-work-clear" type="button" disabled>Clear my current choice</button>
+    <section id="selection-recovery" hidden>
+      <h3>Unconfirmed current-work request</h3>
+      <p id="selection-recovery-status" role="status" aria-live="polite"></p>
+      <p>This browser profile can retain one exact choice request for seven days. Reloading never resends it automatically. Losing browser data loses tracking; a request may still have committed.</p>
+      <button id="selection-check" type="button" disabled>Check this request's outcome</button>
+      <button id="selection-retry" type="button" disabled>Retry this exact request</button>
+      <button id="selection-forget" type="button" disabled>Stop tracking this request</button>
+    </section>
+    <p id="selection-receipt"></p>
+  </section>
   <h2>Project creation</h2>
   <p id="project-status" role="status" aria-live="polite"></p>
   <p><button id="discover" type="button">Refresh saved requests</button>
@@ -80,6 +99,7 @@
       <button id="items-older" type="button" disabled>Older items</button></p>
     <ul id="item-rows"></ul>
     <dl id="item-detail"></dl>
+    <button id="item-select-current" type="button" disabled>Make this work item my current work</button>
     <button id="item-edit-start" type="button" disabled>Edit the current item</button>
     <form id="item-edit-form" hidden>
       <p>Keep leaves a value unchanged. Set saves the exact text shown; clear removes an optional value. A save keeps the item and configuration versions read here.</p>
