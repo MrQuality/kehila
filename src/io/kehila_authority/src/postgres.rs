@@ -409,15 +409,16 @@ impl Database {
 async fn validate_product_profile(client: &Client) -> Result<(), DbError> {
     let versions = client
         .query(
-            "SELECT version FROM kehila.schema_migrations ORDER BY version LIMIT 4",
+            "SELECT version FROM kehila.schema_migrations ORDER BY version LIMIT 5",
             &[],
         )
         .await
         .map_err(query_error)?;
-    if versions.len() != 3
+    if versions.len() != 4
         || versions[0].try_get::<_, i32>(0).map_err(query_error)? != 1
         || versions[1].try_get::<_, i32>(0).map_err(query_error)? != 2
         || versions[2].try_get::<_, i32>(0).map_err(query_error)? != 3
+        || versions[3].try_get::<_, i32>(0).map_err(query_error)? != 4
     {
         return Err(DbError::Invalid);
     }
@@ -524,6 +525,8 @@ pub(crate) mod tests {
                         | "native_item_mutation"
                         | "native_item_retry"
                         | "native_item_capacity"
+                        | "native_selection"
+                        | "native_selection_clock"
                         | "native_capacity_cell"
                         | "native_storage_growth"
                 ) =>

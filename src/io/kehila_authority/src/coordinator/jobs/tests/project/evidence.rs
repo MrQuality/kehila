@@ -5,6 +5,8 @@ pub(super) const ARTIFACTS: &[&str] = &[
     "kehila.actors",
     "kehila.operations",
     "kehila.operation_payloads",
+    "kehila.selection_events",
+    "kehila.current_work_selections",
     "kehila.projects",
     "kehila.configuration_revisions",
     "kehila.project_grants",

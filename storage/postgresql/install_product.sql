@@ -15,4 +15,7 @@ INSERT INTO kehila.schema_migrations(version, description)
 \ir work_items/install.sql
 INSERT INTO kehila.schema_migrations(version, description)
   VALUES (3, 'Native WorkItem history and authorized current reads');
+\ir selection/install.sql
+INSERT INTO kehila.schema_migrations(version, description)
+  VALUES (4, 'Persistent owner current-work selection');
 COMMIT;
