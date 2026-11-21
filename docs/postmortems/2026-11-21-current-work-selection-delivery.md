@@ -97,3 +97,13 @@ distinguishes these checks from the original visible-browser qualification. No n
 capacity campaign or measured performance improvement is claimed. The bounded
 [resource investigation](https://github.com/MrQuality/kehila/issues/105) remains
 future work with an unknown cause, rather than an invented target or deadline.
+
+The first hosted follow-up at `1ff103c` found an unused historical-event field
+after the refactor removed its production consumer. The normal unit gate passed
+with a compiler warning; strict production-library lint failed. The correction
+removes the private field, retains exact receipt/validation assertions and checks
+production/all-target lint as well as the ten affected history units. Review compiler warnings and include
+production targets when removing a production consumer. A separate native job
+failed during pristine database creation with its database container no longer
+running; the available log does not establish a cause. Neither the local targeted
+pass nor the lint correction retrospectively qualifies that failed setup.

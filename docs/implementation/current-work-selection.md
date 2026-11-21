@@ -225,3 +225,15 @@ resource saving is inferred from the refactoring.
 [Issue #105](https://github.com/MrQuality/kehila/issues/105) tracks the original
 combined-workload memory concern under B-025. Smaller follow-up checks are different
 workloads and do not demonstrate that the original pressure has been resolved.
+
+The first hosted follow-up at `1ff103c` failed strict production-library lint:
+`Historical.event` had lost its production consumer after the extraction. The
+correction removes that unused private field and its redundant private-field test
+assertion while retaining the exact receipt assertion and all validation checks.
+Formatting, strict authority all-target Clippy with warnings denied and the ten
+history tests passed on the correction. The same hosted run also failed while
+creating pristine native test databases, before application cases; its database
+container was no longer running and the available log does not establish why.
+That failure remains separate from the passing local selected native fixture.
+PR #104 tracks subsequent hosted results; no cause or full-suite pass follows
+from these targeted checks alone.

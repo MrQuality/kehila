@@ -181,7 +181,6 @@ fn historical_reconstruction_preserves_original_without_current_requalification(
     let historical = canonical
         .reconstruct(1, packet.event_bytes.as_bytes(), 1, &packet.result_bytes)
         .unwrap();
-    assert_eq!(historical.event.result, packet.event.result);
     assert_eq!(
         serde_json::from_slice::<serde_json::Value>(&historical.reply).unwrap(),
         serde_json::json!({"codec_version":1,"outcome":"replayed",

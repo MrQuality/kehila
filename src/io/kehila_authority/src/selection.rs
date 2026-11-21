@@ -124,7 +124,7 @@ impl Canonical {
         }
         self.verify_event(&event)?;
         let reply = response("replayed", &selection_codec::encode_result(&result, 1)?)?;
-        Ok(Historical { event, reply })
+        Ok(Historical { reply })
     }
 
     fn verify_event(&self, event: &selection_codec::Event) -> Result<()> {
@@ -171,7 +171,6 @@ pub(crate) struct Prepared {
     accepted_reply: Vec<u8>,
 }
 pub(crate) struct Historical {
-    event: selection_codec::Event,
     reply: Vec<u8>,
 }
 impl Prepared {
