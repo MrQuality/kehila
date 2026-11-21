@@ -30,6 +30,7 @@ pub(crate) mod jobs;
 mod management;
 mod native_delivery;
 mod project;
+mod selection;
 pub(crate) use native_delivery::NativeDelivery;
 use native_delivery::{reply, Reply};
 
@@ -93,6 +94,11 @@ pub(crate) enum Operation {
         credential: Credential,
         input: crate::item_ingress::Input,
     },
+    SelectionRead(Credential),
+    SelectionCommand {
+        credential: Credential,
+        input: crate::selection_ingress::Input,
+    },
 }
 
 pub(crate) enum Output {
@@ -112,6 +118,7 @@ pub(crate) enum Output {
     },
     Project(NativeDelivery),
     Item(NativeDelivery),
+    Selection(NativeDelivery),
 }
 
 // The adapter retains this through its observed exchange outcome. Channel
@@ -661,6 +668,12 @@ impl Engine {
                     .await
             }
             Operation::Item { credential, input } => self.item(credential, input, deadline).await,
+            Operation::SelectionRead(credential) => {
+                self.selection_read(credential, &execution).await
+            }
+            Operation::SelectionCommand { credential, input } => {
+                self.selection_command(credential, input, &execution).await
+            }
         }
     }
 }

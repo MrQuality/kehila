@@ -3,7 +3,7 @@
 
 The caller owns container/provider lifecycle and resource supervision. This never
 upgrades an existing database, compiles code, starts services or changes trust.
-It exercises installed version-three owner contracts; it does not qualify the
+It exercises installed version-four owner contracts; it does not qualify the
 authenticated production WorkItem runtime or interface.
 """
 import argparse
@@ -27,8 +27,8 @@ FRESH = """DO $$ BEGIN
 END; $$;"""
 INSTALLED = """DO $$ BEGIN
   IF (SELECT array_agg(version ORDER BY version) FROM kehila.schema_migrations)
-     IS DISTINCT FROM ARRAY[1,2,3] THEN
-    RAISE EXCEPTION 'exact version-three product fixture required';
+     IS DISTINCT FROM ARRAY[1,2,3,4] THEN
+    RAISE EXCEPTION 'exact version-four product fixture required';
   END IF;
 END; $$;"""
 

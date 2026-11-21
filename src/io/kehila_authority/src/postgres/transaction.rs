@@ -16,6 +16,11 @@ pub(crate) use native::item_write::{
     Resolved as ItemResolution, RetryIdentity as ItemRetryIdentity, SaveOutcome as ItemSaveOutcome,
     WriteConflict as ItemWriteConflict, WriteFailure as ItemWriteFailure,
 };
+pub(crate) use native::selection::{
+    CommandDraft as SelectionDraft, CommandPacket as SelectionPacket,
+    Identity as SelectionIdentity, PacketKind as SelectionPacketKind,
+    Resolution as SelectionResolution, SaveOutcome as SelectionSaveOutcome, SelectionFailure,
+};
 pub(crate) use native::{Current, Item, NativeError, Pending, Replay, State as PendingState};
 
 const FENCE: &str = "SELECT installation_id::text, owner_actor_id::text, runtime_generation::text, auth_generation::text, verifier_revision::text FROM kehila_auth.fence($1::text::kehila.ident, $2::text::kehila.u64, $3::text::kehila.u64, $4::text::kehila.u64)";
@@ -41,6 +46,8 @@ pub(crate) enum SessionProof {}
 pub(crate) enum ItemWriteProof {}
 // Fresh nonmutating replay authorization; no conversion from a prior writer.
 pub(crate) enum ItemReplayProof {}
+pub(crate) enum SelectionWriteProof {}
+pub(crate) enum SelectionReplayProof {}
 pub(crate) enum ReadProof {}
 
 pub(crate) struct Fenced<'a, P> {
@@ -55,6 +62,40 @@ pub(crate) struct Fenced<'a, P> {
 }
 
 impl Database {
+    pub(crate) async fn fenced_selection_write(
+        &mut self,
+        installation: &str,
+        runtime: u64,
+        authentication: u64,
+        deadline: Instant,
+    ) -> Result<Fenced<'_, SelectionWriteProof>, DbError> {
+        self.fenced(
+            Expected::Session {
+                installation,
+                runtime,
+                authentication,
+            },
+            deadline,
+        )
+        .await
+    }
+    pub(crate) async fn fenced_selection_replay(
+        &mut self,
+        installation: &str,
+        runtime: u64,
+        authentication: u64,
+        deadline: Instant,
+    ) -> Result<Fenced<'_, SelectionReplayProof>, DbError> {
+        self.fenced(
+            Expected::Session {
+                installation,
+                runtime,
+                authentication,
+            },
+            deadline,
+        )
+        .await
+    }
     pub(crate) async fn read_snapshot(
         &mut self,
         installation: &str,

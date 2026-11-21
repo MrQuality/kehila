@@ -28,6 +28,7 @@ pub(crate) enum Route {
     Item(crate::item_ingress::Route),
     ItemMutation(crate::item_mutation_ingress::Route),
     ItemPending(crate::item_pending::ingress::Route),
+    Selection(crate::selection_ingress::Route),
 }
 
 pub(crate) struct Admitted {
@@ -197,6 +198,14 @@ impl Profile {
                     true,
                 )
             }
+            (&Method::POST, path) if path.starts_with("/selection/") => (
+                Route::Selection(
+                    crate::selection_ingress::Route::from_path(path)
+                        .ok_or(StatusCode::NOT_FOUND)?,
+                ),
+                Kind::Browser,
+                true,
+            ),
             (&Method::POST, path) if path.starts_with("/items/pending/") => (
                 Route::ItemPending(
                     crate::item_pending::ingress::Route::from_path(path)
@@ -281,6 +290,7 @@ impl Profile {
                     | Route::Item(_)
                     | Route::ItemMutation(_)
                     | Route::ItemPending(_)
+                    | Route::Selection(_)
                         if cookies.session.is_some() => {}
                     _ => return Err(StatusCode::UNAUTHORIZED),
                 }

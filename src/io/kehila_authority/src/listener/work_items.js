@@ -1,6 +1,6 @@
 "use strict";
 // Current reads and explicit item saves; historical replay retains original identity.
-globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding,
+globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding, onCurrentItem = () => {},
   recovery = globalThis.KehilaEditRecovery(),
   randomBytes = count => globalThis.crypto.getRandomValues(new Uint8Array(count)), encode = JSON.stringify}) => {
   const el = id => document.getElementById(id);
@@ -44,6 +44,7 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
     creationControls(); mutationControls();
   }
   function clear(forget = false) {
+    onCurrentItem(null);
     if (forget) {
       recoveryEpoch++;
       recoverySession = null; restoringRecovery = false;
@@ -127,6 +128,7 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
     buttons.push(button); li.append(button); return li;
   }
   async function list(kind,cursor = null) {
+    if (kind !== "pending") onCurrentItem(null);
     const context = project, pending = kind === "pending";
     if (pending) { pendingBefore = null; pendingButtons = []; opened = null; openedFacts = null; openedInspected = false; hideConfirmation(); el("pending-detail").replaceChildren(); }
     else { itemsBefore = null; itemButtons = []; currentRead = null; editor = null; editFields = []; el("item-edit-form").hidden = true; el("item-detail").replaceChildren(); }
@@ -174,6 +176,7 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
     });
   }
   async function read(context,item) {
+    onCurrentItem(null);
     currentRead = null; editor = null; editFields = []; el("item-edit-form").hidden = true; controls();
     el("item-detail").replaceChildren();
     const data = await send(context,"/items/read",{project_id:context.id,item_id:item});
@@ -184,7 +187,8 @@ globalThis.KehilaWorkItems = ({document, request, requestWire, run, checkBinding
     const name = readable(data.readable_id,context,item);
     const values = fields(result.data.values,context.configuration);
     details("item-detail",[["Item",name],["Version",current.version],["Type",current.type_id],["Workflow",current.workflow_id],["Status",current.status_id],["Phase",result.phase],["Estimate",estimate(result.data.estimate,result.project.estimate_unit)],...values]);
-    currentRead = {context,result}; controls();
+    currentRead = {context,result};
+    onCurrentItem({project_id:context.id,item_id:current.id,archived:current.archived || context.archived}); controls();
     message("Current item read under fresh authority.");
   }
   async function inspect(context,selected) {

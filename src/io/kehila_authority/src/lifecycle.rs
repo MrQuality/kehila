@@ -13,6 +13,40 @@ pub(crate) mod probe;
 pub(crate) enum FatalCause {
     OwnedExecution,
     NativeIntegrity,
+    NativeRollback {
+        primary: Option<FailureDetail>,
+        cleanup: FailureDetail,
+    },
+}
+
+// Bounded internal diagnostics only: no SQL statements, messages or values.
+// Retain both error classifications before reducing the public response.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct FailureDetail {
+    pub(crate) kind: &'static str,
+    pub(crate) sql_state: Option<[u8; 5]>,
+    pub(crate) constraint: [u8; 32],
+    pub(crate) constraint_bytes: usize,
+    pub(crate) constraint_truncated: bool,
+}
+impl FailureDetail {
+    pub(crate) fn new(
+        kind: &'static str,
+        sql_state: Option<&str>,
+        constraint: Option<&str>,
+    ) -> Self {
+        let bytes = constraint.unwrap_or("").as_bytes();
+        let retained = bytes.len().min(32);
+        let mut prefix = [0; 32];
+        prefix[..retained].copy_from_slice(&bytes[..retained]);
+        Self {
+            kind,
+            sql_state: sql_state.and_then(|value| value.as_bytes().try_into().ok()),
+            constraint: prefix,
+            constraint_bytes: bytes.len(),
+            constraint_truncated: bytes.len() > retained,
+        }
+    }
 }
 
 pub(crate) struct RuntimeLiveness {

@@ -28,9 +28,17 @@ retained native evidence or explicitly retired protocols and records remaining
 qualification gates. Existing experimental records and retained volumes are
 preserved; no compatibility bridge or data import is provided.
 
+[PR #104](https://github.com/MrQuality/kehila/pull/104) adds persistent authenticated
+owner current-work selection, explicit clear and original-operation recovery.
+Its [delivery record](implementation/current-work-selection.md#qualification-on-2026-11-21)
+records selected native/browser qualification, independent changed-state SQL and
+owned cleanup. This is a bounded current-selection increment; the broader M1
+model, other browser journeys, populated upgrades and supported real-data use
+remain unqualified. The PR retains its own final review and merge status.
+
 | Current component | Implemented boundary |
 | --- | --- |
-| Rust/native PostgreSQL authority | Authenticated project creation, pending creation, cancellation/reconciliation, authorized project and WorkItem reads, bounded item lists, Task/Milestone creation and text/estimate edits |
+| Rust/native PostgreSQL authority | Authenticated project creation, pending creation, cancellation/reconciliation, authorized project and WorkItem reads, bounded item lists, Task/Milestone creation, text/estimate edits and versioned owner current-work read/set/reconciliation |
 | Pure project/WorkItem contracts and codecs | Typed model rules and frozen request/result/snapshot representations; the authority adopts the selected persistence slice, not every broader pure rule |
 | Go synchronization contracts | Retained independent pure module and its format/vet/test inventory |
 | NATS and OpenSearch | Independent broker/readiness checks; native authoritative operations do not require search/event delivery |

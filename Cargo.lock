@@ -583,6 +583,7 @@ dependencies = [
  "rustix",
  "rustls",
  "sec1",
+ "selection_codec",
  "serde",
  "serde_json",
  "subtle",
@@ -1045,6 +1046,15 @@ checksum = "f46b9a5ab87780a3189a1d704766579517a04ad59de653b7aad7d38e8a15f7dc"
 dependencies = [
  "der 0.8.3",
  "zeroize",
+]
+
+[[package]]
+name = "selection_codec"
+version = "0.1.0"
+dependencies = [
+ "project_create_codec",
+ "serde_json",
+ "task_contract",
 ]
 
 [[package]]

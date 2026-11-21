@@ -33,7 +33,8 @@
         body,
         credentials: "same-origin", cache: "no-store", redirect: "error", signal: controller.signal
       });
-      return {status: response.status, data: await jsonBody(response)};
+      const limit = ["/selection/read","/selection/set","/selection/reconcile"].includes(path) ? 4096 : undefined;
+      return {status: response.status, data: await jsonBody(response,limit)};
     } finally { clearTimeout(timer); }
   }
   const request = (path, data) => exchange(path, data === undefined ? undefined : JSON.stringify(data));
@@ -52,9 +53,9 @@
     if (!currentPage(epoch)) return;
     if (state.status === 200 && state.data.active) {
       mode("session"); status("Signed in.");
-      const restored = await workItems.restoreRecovery();
+      const restored = await restoreRecoveries();
       if (!currentPage(epoch)) return;
-      if (restored === false) status("Signed in. Edit recovery remains blocked; reload and check the same saved identity before another edit.");
+      if (restored === false) status("Signed in. Browser recovery remains blocked; reload and check each saved identity before another change.");
       try { await discover(); } catch (error) { projectStatus(error.message); }
     }
     else if (state.status === 200) { mode("retiring"); status("Signed out; the retained credential permits only sign-out audit retry."); }
@@ -73,8 +74,10 @@
     if ([401,403].includes(state.status)) { csrf = null; mode("login"); status("Sign in before restoring edit recovery."); return; }
     if (state.status !== 200) throw new Error("Session check unavailable.");
     if (!state.data.active) { mode("retiring"); status("Session unavailable for edit recovery. Sign in again."); return; }
-    signedIn = false;
-    const restored = await workItems.restoreRecovery();
+    // Journal storage may fail before either controller checks its owner.
+    // Establish read authority independently; recovery still gates mutations.
+    await checkBinding();
+    const restored = await restoreRecoveries();
     if (!currentPage(epoch)) return;
     if (!signedIn) {
       if (element("login").hidden) mode("resume");
@@ -82,7 +85,7 @@
       return;
     }
     mode("session");
-    status(restored === false ? "Edit recovery remains blocked; reload and check the same saved identity before another edit." : "Signed in; browser recovery authority checked.");
+    status(restored === false ? "Browser recovery remains blocked; reload and check the same saved identity before another change." : "Signed in; browser recovery authority checked.");
   }
   function resumeFailure() {
     if (element("login").hidden) mode("resume");
@@ -122,7 +125,7 @@
         csrf = pre.data.csrf;
       }
       const reply = await request("/auth/browser/login", {password: element("login-password").value});
-      if (reply.status === 200) { csrf = reply.data.csrf; clearProjects(); workItems.startSession(); await refresh(); }
+      if (reply.status === 200) { csrf = reply.data.csrf; clearProjects(); workItems.startSession(); currentWork.startSession(); await refresh(); }
       else {
         if (reply.status === 401) csrf = null;
         status(reply.status === 401 ? "Password was not accepted, or sign-in preparation expired. Try again to prepare a fresh attempt." : "Sign-in unavailable. Wait before trying again.");
@@ -140,8 +143,22 @@
   element("logout").addEventListener("click", () => action(logout));
   element("retry").addEventListener("click", () => action(logout));
   async function forgetRecovery(owner) {
-    try { await workItems.signOut(owner); recoveryClearNotice = ""; }
-    catch (_) { recoveryClearNotice = "Local edit recovery deletion could not be confirmed. Signout does not cancel a save or prove local data was erased."; }
+    const results = await Promise.allSettled([
+      Promise.resolve().then(() => workItems.signOut(owner)),
+      Promise.resolve().then(() => currentWork.signOut(owner))]);
+    recoveryClearNotice = results.map((result,index) => result.status === "rejected"
+      ? "Local " + (index === 0 ? "edit" : "current-work") + " recovery deletion could not be confirmed." : "").filter(Boolean).join(" ");
+    if (recoveryClearNotice) recoveryClearNotice += " Signout does not cancel work or prove local data was erased.";
+  }
+  async function restoreRecoveries() {
+    // Each controller validates the same owner binding. Complete a possible
+    // owner transition before the next validation can initiate its cleanup.
+    let complete = true;
+    for (const view of [workItems,currentWork]) {
+      try { if (await view.restoreRecovery() === false) complete = false; }
+      catch (_) { complete = false; }
+    }
+    return complete;
   }
   element("change").addEventListener("submit", event => {
     event.preventDefault();
@@ -175,6 +192,7 @@
     element("reconcile").disabled = busy || !signedIn || !selected;
     element("read-project").disabled = busy || !signedIn || !selected || !selected.project_id;
     workItems.controls(busy, signedIn);
+    currentWork.controls(busy, signedIn);
   }
   function clearProjects(forget = true) {
     workItems.clear(forget);
@@ -185,9 +203,9 @@
     show("selected", false); show("project-form", false); show("cancel-confirmation", false); show("identify-save", false);
     element("project-name").value = ""; element("project-prefix").value = "";
   }
-  async function jsonBody(response) {
+  async function jsonBody(response, limit = 1048576 + 8192) {
     if (!response.body) throw new Error("Missing response body");
-    const limit = 1048576 + 8192, reader = response.body.getReader();
+    const reader = response.body.getReader();
     let bytes = new Uint8Array(4096), size = 0;
     try {
       for (;;) {
@@ -342,10 +360,13 @@
     workItems.useProject(reply.data, projectId);
     projectStatus("Current project and configuration read under fresh server authority.");
   }));
-  const workItems = KehilaWorkItems({document, request, requestWire, run: projectAction, checkBinding});
+  const currentWork = KehilaCurrentWork({document, request, requestWire, run: projectAction, checkBinding});
+  const workItems = KehilaWorkItems({document, request, requestWire, run: projectAction, checkBinding,
+    onCurrentItem:currentWork.offerItem});
   function lifecycleChange() {
     authorityEpoch++;
     workItems.suspendRecovery();
+    currentWork.suspendRecovery();
     signedIn = false;
     show("session", false);
     resumeRequested = document.visibilityState !== "hidden";

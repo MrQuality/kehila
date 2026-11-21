@@ -20,15 +20,47 @@ struct Configuration {
     listen: std::net::Ipv4Addr,
     certificate_der: PathBuf,
     private_key_der: PathBuf,
+    #[serde(default)]
+    selection_demo: bool,
 }
 
 #[derive(Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 enum Command {
     Arm { wire: String },
+    ArmSelection { wire: String },
     Release {},
     Snapshot {},
     Stop {},
+}
+
+#[test]
+fn selection_demo_configuration_is_explicit_and_closed() {
+    let base = json!({"listen":"127.0.0.1", "certificate_der":"/work/leaf.der",
+        "private_key_der":"/work/leaf-key.der"});
+    assert!(
+        !serde_json::from_value::<Configuration>(base.clone())
+            .unwrap()
+            .selection_demo
+    );
+    for enabled in [false, true] {
+        let mut configured = base.clone();
+        configured["selection_demo"] = json!(enabled);
+        assert_eq!(
+            serde_json::from_value::<Configuration>(configured)
+                .unwrap()
+                .selection_demo,
+            enabled
+        );
+    }
+    for invalid in [Value::Null, json!("true"), json!(2)] {
+        let mut configured = base.clone();
+        configured["selection_demo"] = invalid;
+        assert!(serde_json::from_value::<Configuration>(configured).is_err());
+    }
+    let mut untrusted = base;
+    untrusted["owner"] = json!("caller");
+    assert!(serde_json::from_value::<Configuration>(untrusted).is_err());
 }
 
 fn read(path: &Path, limit: u64) -> io::Result<Vec<u8>> {
@@ -94,6 +126,30 @@ fn digest(bytes: &[u8]) -> String {
     String::from_utf8(encoded.to_vec()).unwrap()
 }
 
+fn canonical_selection(wire: &str, owner: &str) -> io::Result<Vec<u8>> {
+    use crate::selection_ingress::{decode, Input, Route};
+    let Input::Command {
+        reconcile: false,
+        token,
+        expected_version,
+        requested,
+    } = decode(Route::Set, wire.as_bytes())
+        .map_err(|_| crate::io_error("invalid browser fixture selection"))?
+    else {
+        return Err(crate::io_error("browser fixture expected a selection set"));
+    };
+    selection_codec::encode_request(
+        &task_contract::current_work::SelectionCommand {
+            user_id: task_contract::current_work::UserId(owner.into()),
+            operation_id: token,
+            expected_version,
+            requested,
+        },
+        1,
+    )
+    .map_err(|_| crate::io_error("browser selection canonicalization failed"))
+}
+
 struct Barrier {
     sequence: u32,
     gate: TransactionGate,
@@ -156,6 +212,7 @@ async fn controls(
     directory: &Path,
     handle: &Handle,
     admin: &Admin,
+    installed_owner: &str,
     deadline: Instant,
 ) -> io::Result<()> {
     let mut sequence = 1;
@@ -195,15 +252,24 @@ async fn controls(
             Err(error) => return Err(error),
         };
         let command: Command = serde_json::from_slice(&bytes)?;
+        let selection = matches!(&command, Command::ArmSelection { .. });
         let state = match command {
-            Command::Arm { wire } => {
+            Command::Arm { wire } | Command::ArmSelection { wire } => {
                 if barrier.is_some() {
                     return Err(crate::io_error("browser fixture barrier already armed"));
                 }
-                let canonical = canonical_edit(&wire)?;
+                let canonical = if selection {
+                    canonical_selection(&wire, installed_owner)?
+                } else {
+                    canonical_edit(&wire)?
+                };
                 let canonical_sha256 = digest(&canonical);
                 let wire_sha256 = digest(wire.as_bytes());
-                let gate = handle.live.probe.arm_item_commit(canonical);
+                let gate = if selection {
+                    handle.live.probe.arm_selection_commit(canonical)
+                } else {
+                    handle.live.probe.arm_item_commit(canonical)
+                };
                 barrier = Some(Barrier {
                     sequence,
                     gate,
@@ -263,7 +329,45 @@ async fn controls(
     }
 }
 
-async fn seed(handle: &Handle) -> Value {
+async fn seed_item(
+    handle: &Handle,
+    browser: &Browser,
+    project: &str,
+    type_id: &str,
+    title_field: &str,
+    title: &str,
+) -> String {
+    let (status, pending, _) = call(
+        handle,
+        Some(browser),
+        "/items/pending/register",
+        Some(json!({
+            "project_id":project, "type_id":type_id,
+            "workflow_id":null, "expected_configuration_revision":"1", "estimate":null,
+            "values":[{"id":title_field,"value":title}]
+        })),
+    )
+    .await;
+    assert_eq!(status, 201);
+    let (status, item, _) = call(
+        handle,
+        Some(browser),
+        "/items/pending/execute",
+        Some(json!({
+            "project_id":project, "intent_handle":pending["entry"]["intent_handle"]
+        })),
+    )
+    .await;
+    assert_eq!(status, 201);
+    let work_item_codec::SavedResult::Create(item) =
+        work_item_codec::decode_result(1, &serde_json::to_vec(&item["result"]).unwrap()).unwrap()
+    else {
+        panic!("fixture creation returned a different family")
+    };
+    item.item.id.0
+}
+
+async fn seed(handle: &Handle, selection_demo: bool) -> Value {
     let browser = login(handle).await;
     let (status, pending) = project(
         handle,
@@ -281,35 +385,29 @@ async fn seed(handle: &Handle) -> Value {
         project_create_codec::decode_result(1, &serde_json::to_vec(&created["result"]).unwrap())
             .unwrap();
     let task = &created.configuration.types[0];
-    let (status, pending, _) = call(
-        handle,
-        Some(&browser),
-        "/items/pending/register",
-        Some(json!({
-            "project_id":created.project.id.0, "type_id":task.id.0,
-            "workflow_id":null, "expected_configuration_revision":"1", "estimate":null,
-            "values":[{"id":task.title_field_id.as_ref().unwrap().0,"value":"Before recovery"}]
-        })),
-    )
-    .await;
-    assert_eq!(status, 201);
-    let (status, item, _) = call(
-        handle,
-        Some(&browser),
-        "/items/pending/execute",
-        Some(json!({
-            "project_id":created.project.id.0, "intent_handle":pending["entry"]["intent_handle"]
-        })),
-    )
-    .await;
-    assert_eq!(status, 201);
-    let work_item_codec::SavedResult::Create(item) =
-        work_item_codec::decode_result(1, &serde_json::to_vec(&item["result"]).unwrap()).unwrap()
-    else {
-        panic!("fixture creation returned a different family")
+    let project = &created.project.id.0;
+    let field = &task.title_field_id.as_ref().unwrap().0;
+    let title = if selection_demo {
+        "Current work A"
+    } else {
+        "Before recovery"
     };
-    json!({"project":created.project.id.0, "item":item.item.id.0,
-        "title_field":task.title_field_id.as_ref().unwrap().0})
+    let first = seed_item(handle, &browser, project, &task.id.0, field, title).await;
+    let mut result = json!({"project":project, "item":first, "title_field":field});
+    if selection_demo {
+        let second = seed_item(
+            handle,
+            &browser,
+            project,
+            &task.id.0,
+            field,
+            "Current work B",
+        )
+        .await;
+        assert_ne!(result["item"], json!(second));
+        result["second_item"] = json!(second);
+    }
+    result
 }
 
 #[test]
@@ -369,7 +467,11 @@ fn native_browser_recovery_fixture() {
                 if counts.get::<_, i64>(0) != 0 || counts.get::<_, i64>(1) != 0 {
                     return Err(crate::io_error("browser fixture database is not fresh"));
                 }
-                    let seeded = seed(&work_handle).await;
+                    let installed_owner: String = admin.client().query_one(
+                        "SELECT owner_actor_id::text FROM kehila_auth.installation WHERE installation_id=$1::text::kehila.ident",
+                        &[&installation],
+                    ).await.map_err(|_| crate::io_error("browser installed owner unavailable"))?.get(0);
+                    let seeded = seed(&work_handle, configuration.selection_demo).await;
                     ready_before(listener.ready, work_deadline).await?;
                     publish(
                         &work_directory,
@@ -378,7 +480,7 @@ fn native_browser_recovery_fixture() {
                     "origin":"https://127.0.0.1:16291", "seed":seeded,
                     "tables":evidence::snapshot(&admin).await, "protected_startup":false}),
                     )?;
-                    controls(&work_directory, &work_handle, &admin, work_deadline).await
+                    controls(&work_directory, &work_handle, &admin, &installed_owner, work_deadline).await
                 }
                 .await;
                 admin.close().await;
@@ -465,4 +567,37 @@ fn exact_edit_association_preserves_wire_digest_and_rejects_extra_keys() {
         );
     }
     assert!(serde_json::from_str::<Command>(r#"{"action":"release","action":"stop"}"#).is_err());
+}
+
+#[test]
+fn exact_selection_association_derives_owner_and_rejects_noncommands() {
+    let wire = r#"{"operation_token":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","expected_version":"1","requested":{"project_id":"project","item_id":"item"}}"#;
+    let canonical = canonical_selection(wire, "installed-owner").unwrap();
+    let decoded = selection_codec::decode_request(1, &canonical).unwrap();
+    assert_eq!(decoded.user_id.0, "installed-owner");
+    assert_ne!(digest(wire.as_bytes()), digest(&canonical));
+    assert_ne!(canonical, canonical_selection(wire, "other-owner").unwrap());
+    for invalid in [
+        wire.replace("\"expected_version\":\"1\"", "\"expected_version\":\"01\""),
+        wire.replacen('{', "{\"user_id\":\"caller\",", 1),
+        wire.replacen(
+            '{',
+            "{\"operation_token\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",",
+            1,
+        ),
+        "{}".into(),
+        " ".repeat(selection_codec::MAX_WIRE_BYTES + 1),
+    ] {
+        assert!(canonical_selection(&invalid, "installed-owner").is_err());
+    }
+    assert!(canonical_selection(wire, "").is_err());
+    assert!(
+        serde_json::from_value::<Command>(json!({"action":"arm_selection", "wire":wire})).is_ok()
+    );
+    for extra in [
+        json!({"action":"arm_selection", "wire":wire, "owner":"caller"}),
+        json!({"action":"arm_selection"}),
+    ] {
+        assert!(serde_json::from_value::<Command>(extra).is_err());
+    }
 }

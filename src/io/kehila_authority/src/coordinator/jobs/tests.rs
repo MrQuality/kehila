@@ -73,6 +73,8 @@ async fn request(handle: &Handle, operation: Operation) -> Response {
         Operation::Item { .. } => "item",
         Operation::ItemPending { .. } => "item_pending",
         Operation::ItemMutation { .. } => "item_mutation",
+        Operation::SelectionRead(_) => "selection",
+        Operation::SelectionCommand { .. } => "selection",
     };
     let started = Instant::now();
     let response =

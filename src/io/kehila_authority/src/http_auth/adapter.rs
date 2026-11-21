@@ -25,7 +25,9 @@ impl Exchange {
     pub(crate) fn check_outbound(&self) -> Result<(), coordinator::Error> {
         match self.0.as_ref().map(jobs::Response::result) {
             Some(Ok(Output::Issued(delivery))) => delivery.material().map(|_| ()),
-            Some(Ok(Output::Project(delivery) | Output::Item(delivery))) => delivery.check(),
+            Some(Ok(
+                Output::Project(delivery) | Output::Item(delivery) | Output::Selection(delivery),
+            )) => delivery.check(),
             None
             | Some(Ok(_))
             | Some(Err(
@@ -317,7 +319,8 @@ fn encode(
         (Route::Project(_), Ok(Output::Project(delivery)))
         | (Route::Item(_), Ok(Output::Item(delivery)))
         | (Route::ItemMutation(_), Ok(Output::Item(delivery)))
-        | (Route::ItemPending(_), Ok(Output::Item(delivery))) => {
+        | (Route::ItemPending(_), Ok(Output::Item(delivery)))
+        | (Route::Selection(_), Ok(Output::Selection(delivery))) => {
             let material = delivery.material()?;
             return Ok(response(
                 StatusCode::from_u16(material.status)
@@ -400,7 +403,8 @@ pub(crate) async fn handle<B: Body<Data = Bytes> + Unpin>(
 ) -> (Response<Full<Bytes>>, Exchange) {
     let browser = request.uri().path().starts_with("/auth/browser/")
         || request.uri().path().starts_with("/projects/")
-        || request.uri().path().starts_with("/items/");
+        || request.uri().path().starts_with("/items/")
+        || request.uri().path().starts_with("/selection/");
     if Instant::now() >= deadline {
         return failure(StatusCode::REQUEST_TIMEOUT, false);
     }
@@ -413,6 +417,29 @@ pub(crate) async fn handle<B: Body<Data = Bytes> + Unpin>(
         Err(status) => return failure(status, false),
     };
     let receiver = match admitted.route {
+        Route::Selection(route) => {
+            let input = match crate::selection_ingress::decode(route, &body) {
+                Ok(input) => input,
+                Err(_) => return failure(StatusCode::BAD_REQUEST, false),
+            };
+            drop(body);
+            let Some(bearer) = admitted.bearer else {
+                return failure(StatusCode::UNAUTHORIZED, false);
+            };
+            let credential = Credential {
+                bearer,
+                kind: Kind::Browser,
+                csrf: admitted.csrf,
+            };
+            let operation = match input {
+                crate::selection_ingress::Input::Read => Operation::SelectionRead(credential),
+                input => Operation::SelectionCommand { credential, input },
+            };
+            match jobs.submit(operation, deadline) {
+                Ok(receiver) => receiver,
+                Err(error) => return application_failure(error, true),
+            }
+        }
         Route::Item(route) => {
             let input = match crate::item_ingress::decode(route, &body) {
                 Ok(input) => input,

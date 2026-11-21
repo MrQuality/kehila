@@ -6,12 +6,24 @@ pub(super) fn response<B>(request: &Request<B>, authority: &str) -> Option<Respo
     let (content, content_type): (&'static [u8], &'static str) = match request.uri().path() {
         "/" => (include_bytes!("page.html"), "text/html; charset=utf-8"),
         "/owner.js" => (include_bytes!("page.js"), "text/javascript; charset=utf-8"),
+        "/recovery-journal.js" => (
+            include_bytes!("recovery_journal.js"),
+            "text/javascript; charset=utf-8",
+        ),
+        "/selection-recovery.js" => (
+            include_bytes!("selection_recovery.js"),
+            "text/javascript; charset=utf-8",
+        ),
         "/edit-recovery.js" => (
             include_bytes!("edit_recovery.js"),
             "text/javascript; charset=utf-8",
         ),
         "/work-items.js" => (
             include_bytes!("work_items.js"),
+            "text/javascript; charset=utf-8",
+        ),
+        "/current-work.js" => (
+            include_bytes!("current_work.js"),
             "text/javascript; charset=utf-8",
         ),
         _ => return None,

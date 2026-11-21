@@ -76,14 +76,23 @@ pub(super) async fn exercise(
             "corruption fixture did not restore exact domain state"
         );
     }
-    admin.client().batch_execute("CREATE TEMP TABLE native_migration_backup AS SELECT * FROM kehila.schema_migrations WHERE version=3").await.unwrap();
+    admin.client().batch_execute("CREATE TEMP TABLE native_migration_backup AS SELECT * FROM kehila.schema_migrations WHERE version=4").await.unwrap();
     for (index,(change,restore)) in [
-        ("DELETE FROM kehila.schema_migrations WHERE version=3", "INSERT INTO kehila.schema_migrations SELECT * FROM pg_temp.native_migration_backup"),
-        ("INSERT INTO kehila.schema_migrations(version,description) VALUES(4,'unsupported fixture')", "DELETE FROM kehila.schema_migrations WHERE version=4"),
+        ("DELETE FROM kehila.schema_migrations WHERE version=4", "INSERT INTO kehila.schema_migrations SELECT * FROM pg_temp.native_migration_backup"),
+        ("INSERT INTO kehila.schema_migrations(version,description) VALUES(5,'unsupported fixture')", "DELETE FROM kehila.schema_migrations WHERE version=5"),
         ("GRANT UPDATE ON kehila.items TO kehila_auth_runtime", "REVOKE UPDATE ON kehila.items FROM kehila_auth_runtime"),
         ("REVOKE SELECT ON kehila.items FROM kehila_auth_runtime", "GRANT SELECT ON kehila.items TO kehila_auth_runtime"),
         ("GRANT EXECUTE ON FUNCTION kehila_auth.item_write_fence(kehila_auth.authority,kehila.ident) TO kehila_auth_runtime", "REVOKE EXECUTE ON FUNCTION kehila_auth.item_write_fence(kehila_auth.authority,kehila.ident) FROM kehila_auth_runtime"),
         ("ALTER FUNCTION kehila_auth.item_read_authority(kehila_auth.authority,kehila.ident) OWNER TO kehila_auth_admin", "ALTER FUNCTION kehila_auth.item_read_authority(kehila_auth.authority,kehila.ident) OWNER TO kehila_owner"),
+        ("REVOKE SELECT ON kehila.selection_events FROM kehila_auth_runtime", "GRANT SELECT ON kehila.selection_events TO kehila_auth_runtime"),
+        ("REVOKE SELECT ON kehila.current_work_selections FROM kehila_auth_runtime", "GRANT SELECT ON kehila.current_work_selections TO kehila_auth_runtime"),
+        ("REVOKE EXECUTE ON FUNCTION kehila_auth.reconcile_selection(kehila_auth.authority,kehila.operation_token,bigint,bytea) FROM kehila_auth_runtime", "GRANT EXECUTE ON FUNCTION kehila_auth.reconcile_selection(kehila_auth.authority,kehila.operation_token,bigint,bytea) TO kehila_auth_runtime"),
+        ("REVOKE EXECUTE ON FUNCTION kehila_auth.save_selection(kehila_auth.authority,kehila.operation_token,kehila.u64,bytea,jsonb) FROM kehila_auth_runtime", "GRANT EXECUTE ON FUNCTION kehila_auth.save_selection(kehila_auth.authority,kehila.operation_token,kehila.u64,bytea,jsonb) TO kehila_auth_runtime"),
+        ("GRANT EXECUTE ON FUNCTION kehila_auth.selection_fence(kehila_auth.authority) TO kehila_auth_runtime", "REVOKE EXECUTE ON FUNCTION kehila_auth.selection_fence(kehila_auth.authority) FROM kehila_auth_runtime"),
+        ("ALTER FUNCTION kehila_auth.save_selection(kehila_auth.authority,kehila.operation_token,kehila.u64,bytea,jsonb) SECURITY INVOKER", "ALTER FUNCTION kehila_auth.save_selection(kehila_auth.authority,kehila.operation_token,kehila.u64,bytea,jsonb) SECURITY DEFINER"),
+        ("ALTER FUNCTION kehila_auth.save_selection(kehila_auth.authority,kehila.operation_token,kehila.u64,bytea,jsonb) SET search_path=public", "ALTER FUNCTION kehila_auth.save_selection(kehila_auth.authority,kehila.operation_token,kehila.u64,bytea,jsonb) SET search_path = pg_catalog, kehila_auth, kehila, pg_temp"),
+        ("ALTER TABLE kehila.selection_events DISABLE TRIGGER selection_success_mapping", "ALTER TABLE kehila.selection_events ENABLE TRIGGER selection_success_mapping"),
+        ("ALTER TABLE kehila.current_work_selections DISABLE TRIGGER selection_current_boundary", "ALTER TABLE kehila.current_work_selections ENABLE TRIGGER selection_current_boundary"),
     ].into_iter().enumerate() {
         admin.client().batch_execute(change).await.unwrap();
         let result=Database::start(endpoint,installation.into(),format!("{attempt}-profile-{index}"),Instant::now()+WORK_DEADLINE).await;

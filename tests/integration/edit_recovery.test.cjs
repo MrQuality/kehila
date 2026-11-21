@@ -9,6 +9,8 @@ const memoryStore = require('./journal_store.cjs');
 const context = {TextEncoder, TextDecoder, crypto:webcrypto, setTimeout, clearTimeout};
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(__dirname,
+  '../../src/io/kehila_authority/src/listener/recovery_journal.js'), 'utf8'), context);
+vm.runInContext(fs.readFileSync(path.join(__dirname,
   '../../src/io/kehila_authority/src/listener/edit_recovery.js'), 'utf8'), context);
 
 const owner = {installation_id:'installation', actor_id:'owner'};
@@ -25,6 +27,20 @@ function fixture(store = memoryStore()) {
   const journal = context.KehilaEditRecovery({store, now:() => clock.now});
   return {journal, store, clock};
 }
+
+test('malformed inner edit wire with a valid journal checksum is discarded as invalid data', async () => {
+  const f = fixture(), session = await f.journal.open(owner);
+  await session.retain(edit());
+  const root = JSON.parse(await f.store.read());
+  root.entry.retained.wire = '{broken';
+  const payload = JSON.stringify({schema:root.schema, generation:root.generation,
+    observed_ms:root.observed_ms, entry:root.entry});
+  root.checksum = Buffer.from(await webcrypto.subtle.digest('SHA-256', new TextEncoder().encode(payload))).toString('hex');
+  await f.store.corrupt(() => JSON.stringify(root));
+  const reopened = await f.journal.open(owner);
+  assert.match(reopened.notice, /invalid|unsupported/i);
+  assert.equal(await reopened.restore(), null);
+});
 
 test('durable commit is the retention barrier; abort after put preparation retains no edit', async () => {
   const f = fixture(), session = await f.journal.open(owner);
