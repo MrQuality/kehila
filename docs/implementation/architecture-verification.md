@@ -1,6 +1,7 @@
 # Architecture verification follow-up
 
-Status: implementation planned; no new qualification is established by this record.
+Status: implementation in progress. Component evidence below is bounded; final
+composition review and delivery qualification remain unfinished.
 
 This delivery strengthens regression protection around the current native path.
 It addresses verification gaps rather than asserting a demonstrated production
@@ -105,5 +106,23 @@ Excluded build-tag files, transitive library internals, new unlisted standard
 APIs and Go built-in `print`/`println` require review. This bounded guard does not
 establish whole-program determinism or replace dependency/semantic review.
 
-Minimum-compiler qualification, actual-browser additions, generated-property
-results, final composition review and the final PR summary remain unfinished.
+Three generated-property tests passed: 768 Unicode identity/result cases with
+accepted version mutations and explicit length/UTF-8/discriminant rejection
+oracles, 1,024 arbitrary-byte/unknown-JSON smoke cases, and 24,576 generated steps
+over one retained operation. These are bounded properties, not a general command
+model or full fuzz campaign. The initial arbitrary-byte generator never reached
+the binary decoder beyond its header; review corrected that weak coverage with
+valid-envelope perturbations. Earlier smoke results are not reclassified as deep
+decoder exploration.
+
+The declared compiler groups passed locked, offline, all-target checks: Rust
+1.75.0 for the seven non-authority workspace crates and Rust 1.88.0 for
+`kehila_authority`. The checks use explicit compiler identities without changing
+dependencies, declarations or the lockfile. The first 1.75 attempt failed during
+offline dependency resolution; matching-Cargo dependency preparation preceded the
+later offline pass. That initial failure was not a source incompatibility result.
+These observations bind the selected source/dependency/compiler inputs; changed
+inputs require affected qualification rather than a stable-only CI assumption.
+
+Actual-browser additions, final composition review and the final PR summary
+remain unfinished.

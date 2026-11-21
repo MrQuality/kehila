@@ -1189,6 +1189,31 @@ shared verification does not execute them or qualify native Linux-host behavior.
 
 ## Verification time budgets
 
+### Declared minimum Rust compilers
+
+`scripts/check_rust_minimum.py` groups workspace members using Cargo metadata's
+actual `rust-version` declarations. In a controlled verification container, use:
+
+```text
+python scripts/check_rust_minimum.py --list
+python scripts/check_rust_minimum.py --version 1.75.0 --toolchains-home /work/minimum-rust
+python scripts/check_rust_minimum.py --version 1.88.0 --toolchains-home /work/minimum-rust
+```
+
+Prepare the exact toolchains and matching-Cargo locked dependencies separately
+under the applicable resource policy. The command never installs a compiler,
+updates dependencies or changes support declarations. Metadata uses the original
+toolchain environment; the compiler check uses the explicitly selected home,
+verifies the compiler identity and binds Cargo to that compiler. Inherited
+compiler/wrapper overrides are rejected. Compilation is locked, offline and
+includes all targets in the selected declaration group.
+
+An unavailable compiler or dependency cache is not a source incompatibility
+result. Preserve acquisition, resolution and compilation failures separately.
+Passing current/stable CI alone does not qualify a declared older compiler.
+
+### Shared command budgets
+
 Shared verification commands have a 300-second deadline. Cargo verification on
 Windows has a 450-second deadline: observed workspace runs exceeded 300 seconds
 while individual tests passed. Linux retains the 300-second Cargo deadline. The
