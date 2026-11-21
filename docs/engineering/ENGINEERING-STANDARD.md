@@ -76,8 +76,9 @@ Kehila is **E0 — Experimental**. Source tests and the historical full-suite ev
 in [IMPLEMENTATION](../IMPLEMENTATION.md) support bounded task semantics. E1 is
 not yet qualified: final change/release assessment is missing. The dated main
 protection inspection is recorded in [the assessment](ASSESSMENT.md). The setup is documented, but not a supported
-installation. No authentication, real UI, production CDC/indexer, supported
-backup/restore or release qualification exists. This change does not broaden
+installation. An experimental local-owner authentication and UI slice exists;
+production CDC/indexer, supported backup/restore and release qualification remain
+unimplemented or unqualified. This change does not broaden
 SP-001's Python-adapter results into Go/Rust or production guarantees.
 
 E2 blockers include usable B-004/B-005/B-006/B-007 integration, identity/session

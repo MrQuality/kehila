@@ -214,3 +214,80 @@ The final review must assess the exact proposed head and these evidence limits.
 Related issues remain open for their broader obligations; completion of this
 verification increment does not close those parents or authorize merging or a
 PR status transition.
+
+## Review corrections and selected revalidation
+
+The review follow-up addresses bounded weaknesses in the verification mechanisms,
+not a demonstrated production integrity failure. The original observations above
+remain historical evidence for their original source inputs. Changed mechanisms
+require the selected checks below before a new completion claim.
+
+| Correction | Selected checks | Evidence affected |
+| --- | --- | --- |
+| Mixed-output seeded generator | Fixed SplitMix64 vectors and bounded low-byte/category controls; Selection codec properties and retained-operation properties | Earlier generated-input runs do not qualify the changed generator |
+| Replay precedence | Valid full-record and tombstone cases combining revoked authorization with changed requests, paired with authorized rejection controls | Existing timestamp, fingerprint and retirement tests remain relevant |
+| Recursive pure inventory and target admission | Nested workspace/missing-member controls; reject build-script, binary and proc-macro targets before compilation; allow ordinary library/test targets | Run actual Cargo inventory and compiler rejection controls after source checks |
+| Known external APIs and implicit hash seeding | DirBuilder, Unix-socket and randomized-collection compiler controls; relevant task-contract behavioral tests | Membership sets use deterministic storage; output vectors retain their traversal order; no general semantic purity proof |
+| Compiler wrappers and input admission | Reject invalid homes/ambient overrides before launching qualification; assert wrapper-neutralized commands; exact declared-compiler qualification | Earlier compiler observations retain their original environment; they do not exercise the revised checker |
+| SQL harness rejection branches | Controller cases for in-source diagnostics and each readiness-deadline location, preserving original failure and owned release | SQL and schema sources are unchanged; no unrelated full native campaign selected |
+| Browser protocol and cleanup | Oversized/non-string/error-response controls; surviving-context fallback and exhaustion controls; affected real-browser component run after harness review | Original storage observations remain source-bound; revised cleanup needs its own evidence |
+| Current standard wording | Regenerate the standard and run register synchronization/controller checks | Experimental local-owner authentication/UI remains distinct from wider release qualification |
+
+The focused Python/Node controllers and source checks precede compiler and browser
+qualification. Required commit/CI gates remain applicable and may execute broader
+mechanical/unit checks; their scope is reported separately. No new automatic MSRV
+or browser CI service, blanket mutation campaign, full Cartesian replay model,
+SQL schema change, release gate or PR status transition is part of this follow-up.
+
+### Correction evidence and retained limits
+
+The focused container run passed the updated pure inventory/API guard and its
+12 actual compiler controls, 159 task-contract tests, four Selection property
+tests, formatting and strict all-target Clippy for the affected crates. The shared
+generator controls execute in both property consumers. These finite checks do not
+establish statistical randomness, complete parser exploration or whole-program
+purity. The deterministic membership collections do not enumerate into domain
+outputs; existing source traversal still determines those vectors.
+
+Twenty focused Python controllers and 22 engineering-document controllers passed.
+The new rejection controls were also challenged in isolated copies: removing
+nested inventory, executable-target admission, diagnostic/source separation,
+readiness deadlines, toolchain/source separation or wrapper command overrides
+caused the selected tests to fail. Initial readiness/home experiments failed from
+inadequate mocks; their corrected affected reruns use explicit boundary assertions.
+The original failed observations are retained, not counted as clean first attempts
+or as a general mutation score.
+
+Rust 1.75.0 and 1.88.0 passed the revised locked, offline, all-target declaration
+groups. A configured rejecting wrapper was first reached by an intentional
+unneutralized Cargo command: it failed with the expected wrapper exit and marker.
+Both subsequent neutralized groups passed without invoking either configured
+wrapper. Compiler installation and matching-Cargo dependency preparation occurred
+separately in the disposable environment; no image, lockfile or declaration changed.
+A preparation failure occurred before compiler execution and was retained
+separately from compiler results.
+
+Thirteen Node protocol/cleanup controllers passed, including the actual fixture's
+cleanup before initialization. Chrome 157.0.8103.80 on Windows passed the normal
+storage component and the selected context-loss case: the first target was
+explicitly closed, an uninitialized surviving context deleted both known databases,
+and an independent database inventory confirmed absence. Known targets, whole
+browser Jobs and the disposable profile were released and absence checked.
+
+The initial context-loss attempt failed despite a successful normal component.
+A diagnostic repeat captured Chrome's root-level detached-session routing error,
+which omits the session identity. Applying the successful-reply session check to
+that routing error closed the shared client and prevented fallback. The correction rejects only that pending
+request for the observed unscoped routing error; successful replies, explicitly
+foreign sessions and other unscoped errors retain strict identity checks. New
+positive/negative controls and the affected fresh-profile run passed. Earlier
+failures and their owned cleanup remain separate evidence.
+
+The proportional closeout finding is specific: mocked evaluation alone did not
+exercise the browser's detached-session error envelope. The actual fault case and
+retained protocol packets now cover that interaction. This is not a measured
+general review effectiveness claim or a reason for a universal browser campaign.
+Compiler, test and cleanup observations are bounded spans, not total labor or
+demonstrated savings. The file-origin, injected-quota and wider release limitations
+above remain. Required staged gates and final hosted scope are reported by the PR;
+their successes do not turn skipped native execution into qualification.

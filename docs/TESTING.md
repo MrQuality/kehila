@@ -1208,6 +1208,11 @@ verifies the compiler identity and binds Cargo to that compiler. Inherited
 compiler/wrapper overrides are rejected. Compilation is locked, offline and
 includes all targets in the selected declaration group.
 
+Qualification input checks run before Cargo probes a compiler. Both Cargo
+`build.rustc-wrapper` and `build.rustc-workspace-wrapper` are explicitly cleared
+on metadata/check invocations, including settings inherited from configuration
+files. Metadata listing remains informational and does not qualify a compiler.
+
 An unavailable compiler or dependency cache is not a source incompatibility
 result. Preserve acquisition, resolution and compilation failures separately.
 Passing current/stable CI alone does not qualify a declared older compiler.
