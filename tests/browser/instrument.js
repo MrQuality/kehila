@@ -11,16 +11,18 @@ globalThis.instrumentStorage = () => {
   };
   function transaction(database, args) {
     const native = database.transaction(...args);
-    let finish;
+    // A terminal event may release only this transaction's optional hold.
+    let finish, hold = null;
     const trace = {mode:native.mode, durability:native.durability, reads:0, events:[], ended:false};
     const finished = new Promise(resolve => {finish = resolve;});
     transactions.push({trace, finished});
     for (const kind of ["abort","complete"]) native.addEventListener(kind, () => {
+      if (hold) {hold.released = true; clearTimeout(hold.timer);}
       trace.events.push(kind); trace.ended = true; finish();
     }, {once:true});
     if (nextHold && native.mode === "readwrite") {
       nextHold = false;
-      held = {released:false, expired:false};
+      hold = held = {released:false, expired:false};
       const current = held;
       current.timer = setTimeout(() => {current.expired = true; current.released = true;}, 2000);
       function keepalive() {
