@@ -1157,11 +1157,15 @@ records. These checks do not implement startup compatibility or compaction. It n
 resets an existing schema or manages container lifecycle. Clean up the disposable
 container after success or failure.
 
-The shared verification matrix runs the verifier's safety-gate unit tests, but
-does not execute its native SQL suite. Run that command separately after changes
-to storage/postgresql/, its SQL tests or verifier. Native evidence currently
-covers a Windows host and PostgreSQL 16.15 in a Linux container; native Linux-host
-execution and hosted CI remain unverified. Structural fixtures do not establish
+The shared unit matrix runs the verifier's safety-gate tests. Full native
+qualification additionally runs the foundation structural SQL controls and the
+composed WorkItem/Selection structural suite through `container_structure.py`,
+in two serial fresh, networkless PostgreSQL clusters. This includes deliberate
+guard mutations, actual-role assertions and independent committed-state checks;
+focused native-item selectors do not repeat these profiles. The standalone
+foundation command's additional codec bridge below remains a separate check.
+Selected structural evidence covers a Windows host and PostgreSQL 16.15 in Linux
+containers; new hosted execution must be recorded separately. Structural fixtures do not establish
 trusted M1 seed equality, application codecs, authorization, compaction or a
 supported native application route.
 

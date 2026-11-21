@@ -64,3 +64,46 @@ Completion requires implemented outcomes, actual selected evidence, independent
 review of the proposed head, related issue/documentation updates and a final PR
 summary. Unfinished outcomes remain explicit. No merge or PR status transition is
 part of this delivery.
+
+## Component evidence and remaining limits
+
+The documentation checkpoint corrected current boundary references and the two
+stale no-UI gap statements. Its 22 engineering-controller tests and required
+pure staged gate passed. That gate is not native SQL or browser evidence.
+
+The structural SQL implementation adds two serial, owned networkless clusters to
+full native qualification. The foundation profile executes installation rollback,
+reinstallation, real-role and payload-trigger mutation controls without compiling
+the standalone codec bridge. The Selection profile composes WorkItem checks once,
+then exercises Selection storage/authority, independent committed-state observers
+and the runtime-profile mutation controls. Focused native-item selectors do not
+repeat these profiles.
+
+Final-server readiness uses container-local TCP: the image entrypoint's temporary
+initialization server cannot satisfy that check. The container has no attached
+network or published ports. Startup calls share the remaining readiness deadline.
+Failures retain bounded server diagnostics outside source before owned release;
+diagnostic failures do not replace the original failure. Removal requires the
+original immutable identity/owner/name and a subsequent absence observation.
+
+The selected real SQL profiles passed on PostgreSQL 16.15 after the startup and
+diagnostic corrections. Controller evidence includes seven structural lifetime
+cases, existing foundation checks and native orchestration controls. This is
+structural SQL evidence, not a rerun of authenticated HTTP/browser qualification.
+
+The separately prepared pure regression guard uses Cargo/Go metadata and compiler-resolved Clippy
+checks rather than a custom Rust parser. It is not included in the structural SQL
+checkpoint. The dependency allowlists require review
+for additions. Renamed imports do not change the actual dependency name. Library
+API checks cover the configured filesystem, environment, clock, process, network
+and output paths while allowing in-memory writer traits and formatting. Compiler
+controls require both deterministic positive cases and specific lint rejections.
+
+Its limits remain explicit: Rust checks library targets under the active target
+and configuration; Go import metadata covers files selected by that toolchain.
+Excluded build-tag files, transitive library internals, new unlisted standard
+APIs and Go built-in `print`/`println` require review. This bounded guard does not
+establish whole-program determinism or replace dependency/semantic review.
+
+Minimum-compiler qualification, actual-browser additions, generated-property
+results, final composition review and the final PR summary remain unfinished.
