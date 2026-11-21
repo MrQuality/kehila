@@ -155,6 +155,16 @@ test('an explicit existing-item choice sends only user-context selection fields'
   assert.equal(f.calls.some(call => /^\/(items\/(edit|pending\/(register|execute|cancel))|projects\/(register|execute|cancel))$/.test(call.url)), false);
 });
 
+test('an archived offered item cannot create a selection request or recovery identity', async () => {
+  const f = fixture(); await ready(f);
+  f.view.offerItem({...item(), archived:true});
+  assert.equal(f.elements.get('item-select-current').disabled, true);
+  await f.fire('item-select-current');
+  assert.equal(mutations(f.calls).length, 0);
+  assert.equal(f.binding.seed, 1, 'no operation token was generated');
+  assert.equal(await (await f.recovery.open(owner)).restore(), null);
+});
+
 test('current-work identifiers are rendered as text rather than executable markup', async () => {
   const target = item('<script>private-item</script>', '<img onerror=private-project>');
   const f = fixture(); f.server.version = '4'; f.server.target = target;
@@ -255,6 +265,24 @@ test('lookup absence never executes automatically and explicit retry preserves o
   assert.equal(mutations(f.calls).at(-1).url, '/selection/set');
 });
 
+test('an incompatible absent lookup keeps the original request unconfirmed', async () => {
+  const f = fixture(url => {
+    if (url === '/selection/set') throw new Error('reply unknown');
+    if (url === '/selection/reconcile') return {status:200, data:{codec_version:2, outcome:'absent'}};
+  });
+  await ready(f); offer(f); await f.fire('item-select-current');
+  const original = mutations(f.calls)[0];
+  await f.fire('selection-check');
+  assert.deepEqual(mutations(f.calls).map(call => call.url), ['/selection/set','/selection/reconcile']);
+  assert.equal(mutations(f.calls).at(-1).wire, original.wire);
+  const saved = await (await f.recovery.open(owner)).restore();
+  assert.equal(saved.retained.wire, original.wire);
+  assert.equal(f.elements.get('selection-retry').disabled, false);
+  assert.equal(f.binding.seed, 2);
+  assert.match(f.text('selection-recovery-status'), /unconfirmed/i);
+  assert.doesNotMatch(f.text('selection-recovery-status'), /absent at this lookup/i);
+});
+
 test('a replay receipt remains original while a separate current read shows a later item', async () => {
   const store = memoryStore();
   const original = item('original-item-31415','original-project');
@@ -342,6 +370,7 @@ test('a mismatched successful receipt cannot settle the retained identity', asyn
     data => { data.selection.user_id = 'different-owner'; },
     data => { data.selection.requested = item('another-item'); },
     data => { data.selection.version = '99'; },
+    data => { data.selection.version = '0'; },
     data => { data.codec_version = 2; },
     data => { data.unexpected = true; },
   ]) {
@@ -498,8 +527,55 @@ for (const kind of ['settle','discard','close']) {
     await f.fire('selection-retry');
     assert.equal(mutations(f.calls).length,1,'a failed cleanup cannot enable transmission');
     assert.match(f.text('selection-recovery-status'),/cleanup|deletion|reload/i);
+    f.view.suspendRecovery();
+    assert.equal(await f.view.restoreRecovery(),false,'lifecycle resume cannot clear the cleanup latch');
+    const reads = f.calls.filter(call => call.url === '/selection/read').length;
+    const bindingChecks = f.binding.checks;
+    assert.equal(f.elements.get('current-work-refresh').disabled,false,'journal failure must not block an authoritative read');
+    await f.fire('current-work-refresh');
+    assert.equal(f.calls.filter(call => call.url === '/selection/read').length,reads + 1);
+    assert.equal(f.binding.checks,bindingChecks + 1,'the read requires a fresh owner check');
+    offer(f, item('b'));
+    for (const control of ['item-select-current','current-work-clear','selection-check','selection-retry','selection-forget']) {
+      assert.equal(f.elements.get(control).disabled,true,control + ' remains blocked');
+      await f.fire(control);
+    }
+    assert.equal(mutations(f.calls).length,1,'reading cannot release another mutation or reconciliation');
+    assert.equal(f.binding.seed,2,'reading cannot generate a replacement operation identity');
+    assert.equal(await store.read(),JSON.stringify(durable),'reading cannot alter the durable recovery record');
     const reloaded = fixture(undefined,store);
     reloaded.view.controls(false,true);
     assert.equal(await reloaded.view.restoreRecovery(),true,'a fresh page can inspect the actual durable journal');
   });
 }
+
+test('unavailable recovery storage permits current reads but no new selection', async () => {
+  const store = {...memoryStore(), async read() { throw new Error('recovery storage unavailable'); }};
+  const f = fixture(undefined,store);
+  f.view.controls(false,true);
+  assert.equal(await f.view.restoreRecovery(),false);
+  const bindingChecks = f.binding.checks;
+  await f.fire('current-work-refresh');
+  assert.equal(f.calls.filter(call => call.url === '/selection/read').length,1);
+  assert.equal(f.binding.checks,bindingChecks + 1);
+  assert.match(f.text('current-work-detail'),/no current/i);
+  offer(f);
+  await f.fire('item-select-current');
+  assert.equal(mutations(f.calls).length,0);
+  assert.equal(f.binding.seed,1);
+});
+
+test('independent current reads still require fresh owner authority and respect signout', async () => {
+  const store = {...memoryStore(), async read() { throw new Error('recovery storage unavailable'); }};
+  const f = fixture(undefined,store);
+  f.view.controls(false,true);
+  assert.equal(await f.view.restoreRecovery(),false);
+  f.binding.failed = true;
+  await f.fire('current-work-refresh');
+  assert.equal(f.binding.checks,1,'the read reached fresh owner validation');
+  assert.equal(f.calls.length,0,'failed authority prevents even the read request');
+  f.binding.failed = false;
+  await f.view.signOut(owner).catch(() => {});
+  await f.fire('current-work-refresh');
+  assert.equal(f.calls.length,0,'signout cannot enable an independent read');
+});

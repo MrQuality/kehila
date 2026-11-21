@@ -60,6 +60,13 @@ coordinate edit and selection journal cleanup, retaining independent identities
 and visible cleanup failures. Page visibility changes suspend callbacks and
 restore retained records when the page resumes; they do not silently resend them.
 
+Recovery-storage failure blocks preparation, retry, reconciliation and forgetting
+of selection commands until recovery is usable again or the page is reloaded as
+instructed. It does not block reading the server's current selection. Refresh
+still requires a fresh owner-binding check and rejects superseded callbacks or a
+signed-out session. Reading current work neither changes the local journal nor
+releases a failed-cleanup latch, including after a visibility change.
+
 ## Native boundary
 
 All three routes require the existing browser session, origin, client marker and

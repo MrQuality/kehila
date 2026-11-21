@@ -55,7 +55,7 @@
       mode("session"); status("Signed in.");
       const restored = await restoreRecoveries();
       if (!currentPage(epoch)) return;
-      if (restored === false) status("Signed in. Browser recovery remains blocked; reload and check each saved identity before another request.");
+      if (restored === false) status("Signed in. Browser recovery remains blocked; reload and check each saved identity before another change.");
       try { await discover(); } catch (error) { projectStatus(error.message); }
     }
     else if (state.status === 200) { mode("retiring"); status("Signed out; the retained credential permits only sign-out audit retry."); }
@@ -74,7 +74,9 @@
     if ([401,403].includes(state.status)) { csrf = null; mode("login"); status("Sign in before restoring edit recovery."); return; }
     if (state.status !== 200) throw new Error("Session check unavailable.");
     if (!state.data.active) { mode("retiring"); status("Session unavailable for edit recovery. Sign in again."); return; }
-    signedIn = false;
+    // Journal storage may fail before either controller checks its owner.
+    // Establish read authority independently; recovery still gates mutations.
+    await checkBinding();
     const restored = await restoreRecoveries();
     if (!currentPage(epoch)) return;
     if (!signedIn) {
@@ -83,7 +85,7 @@
       return;
     }
     mode("session");
-    status(restored === false ? "Browser recovery remains blocked; reload and check the same saved identity before another request." : "Signed in; browser recovery authority checked.");
+    status(restored === false ? "Browser recovery remains blocked; reload and check the same saved identity before another change." : "Signed in; browser recovery authority checked.");
   }
   function resumeFailure() {
     if (element("login").hidden) mode("resume");

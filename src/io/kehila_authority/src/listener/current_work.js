@@ -24,14 +24,15 @@ globalThis.KehilaCurrentWork = ({document, request, requestWire, run, checkBindi
   const recoveryMessage = value => { el("selection-recovery-status").textContent = value; };
   function controls(nextBusy = busy, nextActive = active) {
     busy = nextBusy; active = nextActive;
-    const unavailable = busy || working || restoring || !active || suspended || signedOut;
-    const mutation = unavailable || blocked || !session || retained !== null || current === null;
+    const unavailable = busy || working || restoring || !active || signedOut;
+    const recoveryUnavailable = unavailable || suspended || blocked;
+    const mutation = recoveryUnavailable || !session || retained !== null || current === null;
     el("current-work-refresh").disabled = unavailable;
     el("item-select-current").disabled = mutation || offered === null;
     el("current-work-clear").disabled = mutation || current?.target.state === "none";
-    el("selection-check").disabled = unavailable || blocked || retained === null;
-    el("selection-retry").disabled = unavailable || blocked || retained === null || retryClosed;
-    el("selection-forget").disabled = unavailable || blocked || retained === null;
+    el("selection-check").disabled = recoveryUnavailable || retained === null;
+    el("selection-retry").disabled = recoveryUnavailable || retained === null || retryClosed;
+    el("selection-forget").disabled = recoveryUnavailable || retained === null;
     el("selection-recovery").hidden = retained === null && !blocked;
   }
   function clearView() {
@@ -218,8 +219,8 @@ globalThis.KehilaCurrentWork = ({document, request, requestWire, run, checkBindi
     const notice = "Stopped tracking this request. This does not cancel it or prove rollback; it may have committed. Refresh before a separate choice.";
     message(notice); recoveryMessage(notice);
   }
-  const action = work => {
-    if (working || busy || !active || suspended || signedOut) return;
+  const action = (name, work) => {
+    if (working || busy || !active || signedOut || el(name).disabled) return;
     return run(async () => {
       const observed = epoch; working = true; controls();
       try { await work(); }
@@ -236,7 +237,7 @@ globalThis.KehilaCurrentWork = ({document, request, requestWire, run, checkBindi
   for (const [name,work] of [["current-work-refresh",refresh],["item-select-current",() => offered && choose({...offered})],
     ["current-work-clear",() => choose(null)],["selection-check",() => transmit("check")],
     ["selection-retry",() => transmit("retry")],["selection-forget",forget]]) {
-    el(name).addEventListener("click",() => action(work));
+    el(name).addEventListener("click",() => action(name,work));
   }
   clearView(); controls();
   return {controls,offerItem,restoreRecovery,startSession,suspendRecovery,signOut};

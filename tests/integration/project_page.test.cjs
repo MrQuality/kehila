@@ -292,11 +292,12 @@ test('suspension after failed cleanup keeps visible reload guidance and the same
   const before = await f.store.read();
   f.store.hook(() => { throw new Error('cleanup aborted'); });
   await f.fire('logout'); await f.visibility('hidden'); await f.visibility('visible');
-  assert.equal(f.visible('session-resume'),true);
-  assert.equal(f.visible('session'),false);
+  assert.equal(f.visible('session-resume'),false);
+  assert.equal(f.visible('session'),true,'fresh authority permits reads despite failed journal cleanup');
   assert.match(f.elements.get('status').textContent,/reload.*same saved identity/i);
   assert.match(f.elements.get('status').textContent,/does not cancel|may have committed/i);
-  await f.fire('session-resume'); await f.fire('item-edit-retry');
+  assert.equal(f.elements.get('item-edit-retry').disabled,true);
+  await f.fire('item-edit-retry');
   assert.equal(await f.store.read(),before);
   assert.equal(f.calls.some(call => /\/items\/(edit|reconcile)$/.test(call.url)),false);
 });
@@ -384,6 +385,31 @@ test('a hidden page rejects old binding and journal restoration completions', as
     assert.equal(f.visible('session'),true,stage);
     assert.equal(f.calls.some(call => /\/items\/(edit|reconcile)$/.test(call.url)),false);
   }
+});
+
+test('both failed recovery journals still expose an independently authorized current read after resume', async () => {
+  const store = memoryStore();
+  const f = await fixture(url => url === '/selection/read' ? [200,
+    {codec_version:1,outcome:'read',version:'3',target:{state:'available',project_id:'p',item_id:'current-a'}}] : undefined,
+    store,{realSelection:true});
+  const readEdit = store.read, readSelection = f.selectionStore.read;
+  const editRecord = await readEdit(), selectionRecord = await readSelection();
+  store.read = async () => { throw new Error('edit recovery storage unavailable'); };
+  f.selectionStore.read = async () => { throw new Error('selection recovery storage unavailable'); };
+  await f.visibility('hidden'); await f.visibility('visible');
+  assert.equal(f.visible('current-work-refresh'),true,'journal failure must not hide the current-read control');
+  const checks = f.calls.filter(call => call.url === '/projects/binding').length;
+  await f.fire('current-work-refresh');
+  assert.equal(f.calls.filter(call => call.url === '/projects/binding').length,checks + 1);
+  assert.equal(f.calls.filter(call => call.url === '/selection/read').length,1);
+  assert.match(f.elements.get('current-work-detail').textContent,/current-a/);
+  for (const name of ['item-select-current','current-work-clear','selection-check','selection-retry','selection-forget']) {
+    assert.equal(f.elements.get(name).disabled,true,name + ' cannot be enabled by the current read');
+    await f.fire(name);
+  }
+  assert.equal(f.calls.some(call => ['/selection/set','/selection/reconcile'].includes(call.url)),false);
+  assert.equal(await readEdit(),editRecord);
+  assert.equal(await readSelection(),selectionRecord);
 });
 
 test('storage failure after fresh resume binding exposes safe recovery controls outside the hidden payload', async () => {
