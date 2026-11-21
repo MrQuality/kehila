@@ -41,6 +41,36 @@ fn generated_replay_retirement_and_clock_sequences_never_resurrect_original_iden
                 recorded_at_ms: 100,
                 request_fingerprint: fingerprint,
             };
+            // Keep the identity valid and vary authorization independently of
+            // request reuse for both retained representations.
+            let mut changed_fingerprint = fingerprint;
+            changed_fingerprint.sha256[0] ^= 1;
+            for retained in [
+                OperationRecord::Full(full.clone()),
+                OperationRecord::Tombstone(compact_expired(&full, 100 + REPLAY_PERIOD_MS).unwrap()),
+            ] {
+                for authorized in [false, true] {
+                    assert_eq!(
+                        decide_replay(
+                            &key,
+                            &(original_request ^ 1),
+                            Some(&retained),
+                            &99,
+                            changed_fingerprint,
+                            100,
+                            |scope| {
+                                assert_eq!(*scope, 17);
+                                authorized
+                            },
+                        ),
+                        ReplayDecision::Reject(if authorized {
+                            OperationError::OperationIdReused
+                        } else {
+                            OperationError::Unauthorized
+                        }),
+                    );
+                }
+            }
             let mut record = OperationRecord::Full(full.clone());
             let mut retired = false;
             for step in 0..64 {
