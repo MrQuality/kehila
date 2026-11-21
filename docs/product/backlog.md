@@ -777,6 +777,13 @@ not activate an initiative or move it ahead of product delivery.
 **Traceability:** GOV-001/GOV-002, ARC-001, TEST-001, DOC-001, CODE-001.
 **Deliverable:** Standards/register, ADR boundary, Definition of Done, shared
 metadata validation and useful language checks.
+
+**Bounded verification follow-up:** [#106](https://github.com/MrQuality/kehila/issues/106)
+and [PR #107](https://github.com/MrQuality/kehila/pull/107) add selected structural
+SQL profiles, a pure dependency/resolved-API guard and explicit minimum-compiler
+checks. The [delivery record](../implementation/architecture-verification.md)
+retains actual evidence and limits. These controls do not establish semantic
+architecture acceptance or close the broader governance initiative.
 The maintainer-authorized [framing/relevance pilot](../procedures/work-framing.md)
 adds manual early and publication gates, separate-context challenge and bounded
 [pilot observations](../postmortems/2026-10-21-framing-validation-pilot.md),
@@ -866,6 +873,13 @@ they are already a supported API. Actual route integration remains B-004/B-005.
 **Deliverable:** Seeded properties/parser fuzz corpus, deterministic/model and
 sustained concurrency campaigns, critical-path E2E and hypothesis-driven fault
 matrix from QUALIFICATION.md.
+
+**Current bounded increment:** [#106](https://github.com/MrQuality/kehila/issues/106)
+tracks fresh-cluster SQL integrity controls, seeded Selection codec and retained
+operation properties, and selected real-browser journal checks. The
+[test-selection/evidence record](../implementation/architecture-verification.md)
+distinguishes prepared, executed and unfinished work. Broader model/fuzz/event,
+sustained-concurrency and supported-environment obligations remain open.
 **Acceptance:** Detect duplicate effects, stale acceptance/projection, acknowledged
 loss and partial cross-record acceptance under explicit interruption barriers;
 test malformed/duplicate/reordered/delayed events and dependency/resource failures.

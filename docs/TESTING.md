@@ -1212,6 +1212,14 @@ An unavailable compiler or dependency cache is not a source incompatibility
 result. Preserve acquisition, resolution and compilation failures separately.
 Passing current/stable CI alone does not qualify a declared older compiler.
 
+### Real browser journal component
+
+The standalone [IndexedDB component fixture](../tests/browser/README.md) adds
+bounded actual-browser contention, injected-error abort and generation checks.
+Its protocol-controller tests run in the shared non-documentation Node matrix;
+the actual browser is caller-owned and requires its separate bounded execution
+approval. Component success does not replace the native/HTTPS owner journey.
+
 ### Shared command budgets
 
 Shared verification commands have a 300-second deadline. Cargo verification on

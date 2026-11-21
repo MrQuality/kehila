@@ -1,7 +1,8 @@
 # Architecture verification follow-up
 
-Status: implementation in progress. Component evidence below is bounded; final
-composition review and delivery qualification remain unfinished.
+Status: selected implementation and component evidence are recorded below. Final
+delivery status belongs to [PR #107](https://github.com/MrQuality/kehila/pull/107);
+component passes alone do not establish completion or wider qualification.
 
 This delivery strengthens regression protection around the current native path.
 It addresses verification gaps rather than asserting a demonstrated production
@@ -28,11 +29,21 @@ qualification also tests actual permissions, altered function properties and
 disabled Selection triggers. Those controls remain useful and must not be
 described as absent.
 
-Candidate additional assertions include foundation installation rollback and
+The integrated assertions include foundation installation rollback and
 reinstallation rejection, deliberate payload-trigger mutation controls, and
 Selection readiness rejection after replacing a trigger with an inert
-`WHEN (false)` trigger. Complete the assertion comparison before choosing the
-integrated set; filename counts do not establish coverage.
+`WHEN (false)` trigger. Final coverage review also moved SQL-only zero-version,
+zero-sequence, revision-attribution and JSONB NUL rejection controls from the
+standalone snapshot-bridge coverage into the structural foundation fixture.
+The valid attributed-revision and Unicode-escape controls keep unrelated inputs
+valid before their paired rejections.
+
+The remaining standalone snapshot bridge is a separate representation contract:
+Rust fixture/codec reconstruction through JSONB, exact read expansion/overflow and
+stored/decoded identity/version/coherence checks. Its compiler/process bridge is
+not invoked by the structural profiles. Native typed routes and pure codec tests
+retain their own evidence; this delivery does not claim automatic qualification
+of the entire standalone bridge or broader storage-format compatibility.
 
 The standalone checkers require a fresh cluster as well as a fresh database:
 their admission predicates reject existing cluster-global product roles. Native
@@ -92,13 +103,16 @@ diagnostic corrections. Controller evidence includes seven structural lifetime
 cases, existing foundation checks and native orchestration controls. This is
 structural SQL evidence, not a rerun of authenticated HTTP/browser qualification.
 
-The separately prepared pure regression guard uses Cargo/Go metadata and compiler-resolved Clippy
-checks rather than a custom Rust parser. It is not included in the structural SQL
-checkpoint. The dependency allowlists require review
+The pure regression guard uses Cargo/Go metadata and compiler-resolved Clippy
+checks rather than a custom Rust parser. It was delivered in a separate focused
+checkpoint after the structural SQL changes. The dependency allowlists require review
 for additions. Renamed imports do not change the actual dependency name. Library
 API checks cover the configured filesystem, environment, clock, process, network
 and output paths while allowing in-memory writer traits and formatting. Compiler
 controls require both deterministic positive cases and specific lint rejections.
+Those controls and the required staged development gate passed after fixing a
+test import that had depended on an ambient `PYTHONPATH`. The failed attempt
+remains separate from the later pass.
 
 Its limits remain explicit: Rust checks library targets under the active target
 and configuration; Go import metadata covers files selected by that toolchain.
@@ -124,5 +138,79 @@ later offline pass. That initial failure was not a source incompatibility result
 These observations bind the selected source/dependency/compiler inputs; changed
 inputs require affected qualification rather than a stable-only CI assumption.
 
-Actual-browser additions, final composition review and the final PR summary
-remain unfinished.
+## Selected real browser storage component
+
+Chrome 157.0.8103.80 on Windows passed the new file-origin IndexedDB component
+fixture using the shipped journal scripts and two test target contexts:
+
+- The first strict readwrite transaction remained active with its application
+  read observed; the second was created but its read stayed queued. Explicit
+  release occurred before the safety timer expired. The first compare had not
+  settled before transaction completion; it then won and the queued compare lost.
+- Throwing an injected `QuotaExceededError` at the actual admission callback
+  produced a native transaction `abort` event, no `complete` event, and unchanged
+  state visible through the other context. This does not establish actual quota
+  exhaustion.
+- A valid retained handle admitted its original wire before another context
+  cleared the journal. The old handle then rejected as stale, and a fresh session
+  restored no entry.
+- Both synthetic databases and known targets were released. The caller observed
+  normal whole-browser Job release, verified the original profile identity, then
+  deleted the profile and checked absence. Ordinary deletion is not secure erasure.
+
+The first component pass was retained separately. A stronger assertion requiring
+the held first writer specifically to win was added, and the affected fresh-profile
+run passed. Four protocol-controller cases cover session/response identity,
+out-of-order replies, close, timeout and malformed-response failure behavior.
+
+The fixture, instrumentation, production scripts and archived source identity are
+bound in the retained run inputs. The test uses a file origin and synthetic data;
+it does not replace prior HTTPS/native/UI evidence, qualify profile eviction,
+power loss or actual quota exhaustion, resolve aggregate qualification memory
+pressure, or establish a supported browser matrix. See the
+[component invocation and limits](../../tests/browser/README.md).
+
+## Delivery review and evidence validity
+
+The original outcome was stronger verification of the current architecture,
+without treating future capabilities or absent general automation as demonstrated
+P0 defects. The delivered components preserve that scope: selected SQL controls,
+bounded dependency/API regression checks, reproducible properties, explicit
+compiler qualification, real storage-component cases and corrected current
+documentation. Populated upgrades, events, disaster recovery, release scanners,
+general browser support and semantic architecture acceptance remain separate.
+
+Source-first review found consequential harness assumptions: cluster-global roles
+require fresh clusters; whole-byte generation did not reach the binary decoder;
+unchanged storage alone did not prove abort; concurrent requests alone did not
+prove contention; and a stale-handle rejection needed a valid admission control.
+The corresponding admission, reachability, event and control oracles were corrected
+and exercised. This shows those particular corrections, not a measured general
+review effectiveness or detection rate.
+
+Initial gate configuration/image admission, Go package selection, test-import and
+offline dependency-resolution failures retain their original stages and outcomes.
+Later passes do not convert them into successful first attempts or establish
+unobserved causes. No product integrity failure was inferred from those harness
+and environment failures. The stronger first-writer browser assertion has its own
+affected rerun rather than being attributed to the earlier pass.
+
+Evidence reuse is conditional on relevant byte identities: SQL source/checkers
+and isolation policy; pure manifests, configured APIs and compiler controls;
+codec/replay code and seeded inputs; compiler, locked dependencies and selected
+crate sets; browser fixture/instrumentation/client and production journal scripts.
+Changes to those contracts need affected revalidation. Prose/register closeout
+does not reattribute the original runtime observations to a later executed head.
+The final PR identifies the composed head and its required checks/review.
+
+Build, test, cleanup and controller spans are retained separately where observed.
+Preparation, review and waiting overlapped or were not measured as distinct labor;
+there is no defensible total engineering duration or claimed time/memory saving.
+Observed owned cluster, Job and profile release is bounded cleanup evidence,
+not secure erasure or disaster recovery. Wider capacity and operational claims
+retain their existing decisions, owners and qualification gates.
+
+The final review must assess the exact proposed head and these evidence limits.
+Related issues remain open for their broader obligations; completion of this
+verification increment does not close those parents or authorize merging or a
+PR status transition.

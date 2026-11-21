@@ -427,8 +427,8 @@ High-risk parsers and mutation contracts MUST have property/fuzz coverage for va
 - **Sources:** ISO25010, SSDF.
 - **Required evidence:** Seeded bounded PR properties, retained regression corpus and separate time-bounded Rust fuzz campaigns.
 - **Enforcement:** Deterministic CI properties and scheduled qualification; fuzz discovery must become regression tests.
-- **Current status:** partial. Example/boundary tests exist; systematic properties/fuzzing and parser complexity bounds are incomplete.
-- **Current evidence:** [src/pure/kehila_query/src/lib.rs](../../src/pure/kehila_query/src/lib.rs), [src/pure/task_contract/tests/operation.rs](../../src/pure/task_contract/tests/operation.rs)
+- **Current status:** partial. Example/boundary tests and bounded seeded Selection-codec/retained-replay properties exist; broader parser/mutation/projection properties, fuzz campaigns and parser complexity bounds remain incomplete.
+- **Current evidence:** [src/pure/kehila_query/src/lib.rs](../../src/pure/kehila_query/src/lib.rs), [src/pure/task_contract/tests/operation.rs](../../src/pure/task_contract/tests/operation.rs), [src/pure/selection_codec/tests/properties.rs](../../src/pure/selection_codec/tests/properties.rs), [src/pure/task_contract/tests/replay_properties.rs](../../src/pure/task_contract/tests/replay_properties.rs)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-023](../../docs/product/backlog.md#b-023)
 
 <a id="test-003"></a>
@@ -742,6 +742,6 @@ New and materially changed code MUST apply the Coding Standard with scoped revie
 - **Sources:** ISO25010, SSDF.
 - **Required evidence:** PR scope and applicable-rule assessment, relevant compiler/format/lint and behavioral results, and existing gap or exception dispositions with backlog references.
 - **Enforcement:** Existing Rust/Go format/lint and unsafe checks, shared register validation, and maintainer assessment using the contribution policy, Definition of Done and PR template. Semantic conformance remains a review obligation.
-- **Current status:** partial. The scoped coding baseline and existing checks are documented; conformance across future material changes needs actual PR evidence. Architecture-boundary, Python/TypeScript and minimum-Rust-version qualification remain incomplete; no full legacy audit is claimed.
-- **Current evidence:** [docs/engineering/CODING-STANDARD.md](../../docs/engineering/CODING-STANDARD.md), [CONTRIBUTING.md](../../CONTRIBUTING.md), [docs/engineering/DEFINITION-OF-DONE.md](../../docs/engineering/DEFINITION-OF-DONE.md), [.github/pull_request_template.md](../../.github/pull_request_template.md), [.github/workflows/ci.yml](../../.github/workflows/ci.yml)
+- **Current status:** partial. Bounded pure dependency/resolved-API checks and source-bound declared-compiler qualification exist. Broader architecture, Python/TypeScript and future-change conformance still require scoped evidence; no full legacy audit or semantic purity proof is claimed.
+- **Current evidence:** [docs/engineering/CODING-STANDARD.md](../../docs/engineering/CODING-STANDARD.md), [CONTRIBUTING.md](../../CONTRIBUTING.md), [docs/engineering/DEFINITION-OF-DONE.md](../../docs/engineering/DEFINITION-OF-DONE.md), [.github/pull_request_template.md](../../.github/pull_request_template.md), [.github/workflows/ci.yml](../../.github/workflows/ci.yml), [scripts/check_architecture.py](../../scripts/check_architecture.py), [scripts/check_rust_minimum.py](../../scripts/check_rust_minimum.py), [docs/implementation/architecture-verification.md](../../docs/implementation/architecture-verification.md)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-019](../../docs/product/backlog.md#b-019), [docs/product/backlog.md#b-022](../../docs/product/backlog.md#b-022), [docs/product/backlog.md#b-023](../../docs/product/backlog.md#b-023)

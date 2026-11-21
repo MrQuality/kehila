@@ -574,9 +574,11 @@
       "status": "partial",
       "evidence": [
         "src/pure/kehila_query/src/lib.rs",
-        "src/pure/task_contract/tests/operation.rs"
+        "src/pure/task_contract/tests/operation.rs",
+        "src/pure/selection_codec/tests/properties.rs",
+        "src/pure/task_contract/tests/replay_properties.rs"
       ],
-      "gap": "Example/boundary tests exist; systematic properties/fuzzing and parser complexity bounds are incomplete.",
+      "gap": "Example/boundary tests and bounded seeded Selection-codec/retained-replay properties exist; broader parser/mutation/projection properties, fuzz campaigns and parser complexity bounds remain incomplete.",
       "work": [
         "docs/product/backlog.md#b-023"
       ],
@@ -1041,9 +1043,12 @@
         "CONTRIBUTING.md",
         "docs/engineering/DEFINITION-OF-DONE.md",
         ".github/pull_request_template.md",
-        ".github/workflows/ci.yml"
+        ".github/workflows/ci.yml",
+        "scripts/check_architecture.py",
+        "scripts/check_rust_minimum.py",
+        "docs/implementation/architecture-verification.md"
       ],
-      "gap": "The scoped coding baseline and existing checks are documented; conformance across future material changes needs actual PR evidence. Architecture-boundary, Python/TypeScript and minimum-Rust-version qualification remain incomplete; no full legacy audit is claimed.",
+      "gap": "Bounded pure dependency/resolved-API checks and source-bound declared-compiler qualification exist. Broader architecture, Python/TypeScript and future-change conformance still require scoped evidence; no full legacy audit or semantic purity proof is claimed.",
       "work": [
         "docs/product/backlog.md#b-019",
         "docs/product/backlog.md#b-022",
