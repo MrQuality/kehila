@@ -4,7 +4,7 @@
 //! operation lookup, and atomic persistence. `authorized` is the result of
 //! the caller's access check and is deliberately checked before replay.
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crate::field::FieldUsage;
 use crate::field::{FieldDefinition, FieldId, FieldKind};
@@ -190,7 +190,7 @@ impl Configuration {
         if self.project_id.0.is_empty() || self.revision == 0 || !self.within_limits() {
             return Err(Error::InvalidConfiguration);
         }
-        let mut relationship_ids = HashSet::new();
+        let mut relationship_ids = BTreeSet::new();
         for relationship_type in &self.relationship_types {
             if relationship_type.owner_project_id != self.project_id
                 || relationship_type.id.0.is_empty()
@@ -202,7 +202,7 @@ impl Configuration {
                 return Err(Error::InvalidConfiguration);
             }
         }
-        let mut ids = HashSet::new();
+        let mut ids = BTreeSet::new();
         for group in &self.status_groups {
             if group.id.0.is_empty()
                 || group.name.trim().is_empty()
@@ -213,7 +213,7 @@ impl Configuration {
                 return Err(Error::InvalidConfiguration);
             }
         }
-        let mut ids = HashSet::new();
+        let mut ids = BTreeSet::new();
         for status in &self.statuses {
             if status.id.0.is_empty()
                 || status.name.trim().is_empty()
@@ -227,7 +227,7 @@ impl Configuration {
                 return Err(Error::InvalidConfiguration);
             }
         }
-        let mut ids = HashSet::new();
+        let mut ids = BTreeSet::new();
         for workflow in &self.workflows {
             if workflow.id.0.is_empty() || !ids.insert(&workflow.id) {
                 return Err(Error::InvalidConfiguration);
@@ -242,7 +242,7 @@ impl Configuration {
             if initial.archived || initial.phase != Phase::New {
                 return Err(Error::InvalidConfiguration);
             }
-            let mut members = HashSet::new();
+            let mut members = BTreeSet::new();
             for member in &workflow.status_ids {
                 if !members.insert(member)
                     || !self.statuses.iter().any(|status| status.id == *member)
@@ -253,14 +253,15 @@ impl Configuration {
             if !members.contains(&workflow.initial_status_id) {
                 return Err(Error::InvalidConfiguration);
             }
-            let mut changes = HashSet::new();
+            let mut changes = Vec::new();
             for change in &workflow.permitted_phase_changes {
-                if !changes.insert((change.from, change.to)) || !change.is_system_allowed() {
+                if changes.contains(change) || !change.is_system_allowed() {
                     return Err(Error::InvalidConfiguration);
                 }
+                changes.push(*change);
             }
         }
-        let mut ids = HashSet::new();
+        let mut ids = BTreeSet::new();
         for item_type in &self.types {
             if item_type.id.0.is_empty() || !ids.insert(&item_type.id) {
                 return Err(Error::InvalidConfiguration);
@@ -281,7 +282,7 @@ impl Configuration {
             if !item_type.archived && default_workflow.archived {
                 return Err(Error::InvalidConfiguration);
             }
-            let mut permitted = HashSet::new();
+            let mut permitted = BTreeSet::new();
             for workflow_id in &item_type.permitted_workflows {
                 if !permitted.insert(workflow_id)
                     || !self
@@ -302,9 +303,9 @@ impl Configuration {
                 }
             }
         }
-        let mut field_ids = HashSet::new();
+        let mut field_ids = BTreeSet::new();
         for field in &self.fields {
-            if !field_ids.insert(&field.id)
+            if !field_ids.insert(&field.id.0)
                 || field.validate().is_err()
                 || !self
                     .types

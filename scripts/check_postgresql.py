@@ -66,8 +66,9 @@ def validate_container(info):
 
 
 class DatabaseCheck:
-    def __init__(self, podman, container):
+    def __init__(self, podman, container, source=ROOT):
         self.podman, self.container = podman, container
+        self.source = source
 
     def command(self, *args, input=None, timeout=60):
         return subprocess.run(self.podman + list(args), input=input, capture_output=True,
@@ -109,10 +110,10 @@ class DatabaseCheck:
                  "OR EXISTS (SELECT FROM pg_roles WHERE rolname IN "
                  "('kehila_owner','kehila_creator','foundation_serving','foundation_untrusted')) "
                  "THEN RAISE EXCEPTION 'fresh database required'; END IF; END $$;")
-        copied = self.command('cp', str(ROOT / 'storage/postgresql'),
+        copied = self.command('cp', str(self.source / 'storage/postgresql'),
                               self.container + ':' + DESTINATION)
         require(copied.returncode == 0, copied.stderr)
-        installer = (ROOT / 'storage/postgresql/install.sql').read_text(encoding='utf-8')
+        installer = (self.source / 'storage/postgresql/install.sql').read_text(encoding='utf-8')
         # Fail after all DDL, before COMMIT, to prove roles/schema roll back together.
         failed = installer.replace('COMMIT;', 'SELECT 1/0;\nCOMMIT;')
         self.sql("\\cd " + DESTINATION + "\n" + failed, expected_state='22012')
@@ -122,13 +123,14 @@ class DatabaseCheck:
         self.sql(file=DESTINATION + '/install.sql')
         self.sql(file=DESTINATION + '/install.sql', expected_state='P0001',
                  expected_message='fresh dedicated database')
-        tests = ROOT / 'tests/integration'
+        tests = self.source / 'tests/integration'
         self.sql((tests / 'postgresql_foundation.sql').read_text(encoding='utf-8') + '\n' +
                  (tests / 'postgresql_creation.sql').read_text(encoding='utf-8'))
 
-    def run(self):
+    def structural_integrity(self):
+        """Real SQL controls without compiling the separate codec bridge."""
         self.prepare_structure()
-        tests = ROOT / 'tests/integration'
+        tests = self.source / 'tests/integration'
         # Use a genuinely separate serving connection, with no administrator session state.
         self.sql("DO $$ BEGIN IF (SELECT array_agg(version ORDER BY version) FROM "
                  "kehila.schema_migrations) IS DISTINCT FROM ARRAY[1] THEN "
@@ -155,10 +157,13 @@ class DatabaseCheck:
                  expected_message='identity regression did not reject reassignment')
         # Session termination rolls back the disabled trigger. Prove restoration explicitly.
         self.sql('BEGIN;\n' + regression + '\nROLLBACK;')
-        from postgresql_snapshots import run as check_snapshots
-        check_snapshots(self)
         print('PASS: atomic installation/rollback, reinstall rejection, scalar/core/creation '
               'integrity, role separation and payload mutation detection (PostgreSQL 16)')
+
+    def run(self):
+        self.structural_integrity()
+        from postgresql_snapshots import run as check_snapshots
+        check_snapshots(self)
 
 
 def main():

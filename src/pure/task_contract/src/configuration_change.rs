@@ -1,6 +1,6 @@
 //! Pure compatibility rules for one project-configuration revision change.
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crate::field::{apply_edit, FieldEdit, FieldEntry, FieldId, FieldOrigin, FieldUsage};
 use crate::relationship::RelationshipTypeId;
@@ -256,7 +256,7 @@ pub fn validate_change(
     {
         return Err(ConfigurationChangeError::InvalidConfiguration);
     }
-    let mut item_ids = HashSet::new();
+    let mut item_ids = BTreeSet::new();
     for group_id in snapshot.historically_used_status_group_ids.iter().chain(
         previous
             .statuses
@@ -294,8 +294,12 @@ pub fn validate_change(
             return Err(ConfigurationChangeError::InvalidConfiguration);
         }
     }
-    let historical_ids: HashSet<_> = snapshot.historically_used_field_ids.iter().collect();
-    let used_relationship_ids: HashSet<_> = snapshot
+    let historical_ids: BTreeSet<_> = snapshot
+        .historically_used_field_ids
+        .iter()
+        .map(|id| &id.0)
+        .collect();
+    let used_relationship_ids: BTreeSet<_> = snapshot
         .historically_used_relationship_type_ids
         .iter()
         .collect();
@@ -364,7 +368,7 @@ pub fn validate_change(
             Some(field) => field.kind != old_field.kind,
             None => true,
         };
-        if historical_ids.contains(&old_field.id) && changes_historical_kind {
+        if historical_ids.contains(&old_field.id.0) && changes_historical_kind {
             return Err(ConfigurationChangeError::FieldMigrationRequired {
                 field_id: old_field.id.clone(),
             });
@@ -374,12 +378,12 @@ pub fn validate_change(
                 return Err(ConfigurationChangeError::InvalidConfiguration);
             }
             if field.kind == old_field.kind && !old_field.options.is_empty() {
-                let retained_ids: HashSet<_> =
-                    field.options.iter().map(|option| &option.id).collect();
+                let retained_ids: BTreeSet<_> =
+                    field.options.iter().map(|option| &option.id.0).collect();
                 if old_field
                     .options
                     .iter()
-                    .any(|option| !retained_ids.contains(&option.id))
+                    .any(|option| !retained_ids.contains(&option.id.0))
                 {
                     return Err(ConfigurationChangeError::InvalidConfiguration);
                 }
@@ -439,9 +443,9 @@ pub fn validate_change(
                 item_id: item.id.clone(),
             });
         }
-        let mut value_ids = HashSet::new();
+        let mut value_ids = BTreeSet::new();
         for entry in &snapshot_item.field_values {
-            if !value_ids.insert(&entry.id)
+            if !value_ids.insert(&entry.id.0)
                 || !previous
                     .fields
                     .iter()

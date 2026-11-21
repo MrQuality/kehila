@@ -58,6 +58,36 @@ SELECT pg_temp.reject($q$UPDATE kehila.project_grants SET active = false$q$, '42
 SELECT pg_temp.reject($q$DELETE FROM kehila.configuration_revisions$q$, '42501');
 RESET SESSION AUTHORIZATION;
 
+-- These native SQL boundaries were also exercised by the standalone codec
+-- bridge. Keep their structural proof in the automatically selected SQL profile.
+SELECT pg_temp.reject($q$UPDATE kehila.projects SET configuration_revision = 0
+  WHERE project_id = 'created'$q$, '23514', 'projects_configuration_revision_check');
+SELECT pg_temp.reject($q$UPDATE kehila.projects SET next_sequence = 0
+  WHERE project_id = 'created'$q$, '23514', 'projects_next_sequence_check');
+
+SET SESSION AUTHORIZATION foundation_serving;
+BEGIN;
+INSERT INTO kehila.configuration_revisions
+SELECT 'created',2,1,'{}','{}','actor',creation_operation_row_id,'project_create','project'
+  FROM kehila.projects WHERE project_id = 'created';
+SET CONSTRAINTS ALL IMMEDIATE;
+ROLLBACK;
+SELECT pg_temp.reject($q$INSERT INTO kehila.configuration_revisions
+  SELECT 'created',0,1,'{}','{}','actor',creation_operation_row_id,'project_create','project'
+    FROM kehila.projects WHERE project_id = 'created'$q$,
+  '23514', 'configuration_revisions_revision_check');
+-- The successful revision-2 insert above keeps every unrelated input valid.
+-- Vary only the attributed actor for this operation/project binding.
+SELECT pg_temp.reject($q$INSERT INTO kehila.configuration_revisions
+  SELECT 'created',2,1,'{}','{}','absent',creation_operation_row_id,'project_create','project'
+    FROM kehila.projects WHERE project_id = 'created'$q$, '23503');
+SELECT pg_temp.require(jsonb_typeof('"\u0001"'::jsonb) = 'string',
+                       'JSONB accepts an otherwise valid Unicode escape');
+SELECT pg_temp.reject($q$SELECT '"\u0000"'::jsonb$q$, '22P05');
+RESET SESSION AUTHORIZATION;
+SELECT pg_temp.require((SELECT count(*) = 1 FROM kehila.configuration_revisions),
+                       'structural rejection controls preserve revision history');
+
 SELECT pg_temp.reject($q$UPDATE kehila.configuration_revisions SET revision = 2$q$,
                        '23514', 'creation_history_immutable');
 SELECT pg_temp.reject($q$TRUNCATE kehila.project_grant_events$q$,

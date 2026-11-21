@@ -22,6 +22,7 @@ from storage_growth_plan import select as storage_samples
 from storage_growth_results import validate_sample_observations
 from native_database_limits import DEFAULT_LIMITS, storage_limits
 from native_fixture_environment import NativeEnvironment
+from container_structure import check as structure_checks
 
 
 @dataclass(frozen=True)
@@ -92,6 +93,8 @@ def check(executor, *, item_cases=None, evidence_directory=None, reset_assets=Fa
         selected_storage = storage_samples([storage_sample])[0]
     limits = DEFAULT_LIMITS if selected_storage is None else storage_limits(storage_sample, storage_profile)
     full = item_cases is None and selected_cell is None and selected_storage is None
+    if full:
+        structure_checks(executor)
     items = ({STORAGE_MODE: STORAGE_DATABASE} if selected_storage is not None else
              {CAPACITY_MODE: CAPACITY_DATABASE} if selected_cell is not None else
              {**ITEM_DATABASES, SELECTION_MODE: SELECTION_DATABASE, SELECTION_CLOCK_MODE: SELECTION_CLOCK_DATABASE} if full else

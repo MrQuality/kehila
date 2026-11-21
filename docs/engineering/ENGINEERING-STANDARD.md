@@ -76,8 +76,9 @@ Kehila is **E0 — Experimental**. Source tests and the historical full-suite ev
 in [IMPLEMENTATION](../IMPLEMENTATION.md) support bounded task semantics. E1 is
 not yet qualified: final change/release assessment is missing. The dated main
 protection inspection is recorded in [the assessment](ASSESSMENT.md). The setup is documented, but not a supported
-installation. No authentication, real UI, production CDC/indexer, supported
-backup/restore or release qualification exists. This change does not broaden
+installation. An experimental local-owner authentication and UI slice exists;
+production CDC/indexer, supported backup/restore and release qualification remain
+unimplemented or unqualified. This change does not broaden
 SP-001's Python-adapter results into Go/Rust or production guarantees.
 
 E2 blockers include usable B-004/B-005/B-006/B-007 integration, identity/session
@@ -427,8 +428,8 @@ High-risk parsers and mutation contracts MUST have property/fuzz coverage for va
 - **Sources:** ISO25010, SSDF.
 - **Required evidence:** Seeded bounded PR properties, retained regression corpus and separate time-bounded Rust fuzz campaigns.
 - **Enforcement:** Deterministic CI properties and scheduled qualification; fuzz discovery must become regression tests.
-- **Current status:** partial. Example/boundary tests exist; systematic properties/fuzzing and parser complexity bounds are incomplete.
-- **Current evidence:** [src/pure/kehila_query/src/lib.rs](../../src/pure/kehila_query/src/lib.rs), [src/pure/task_contract/tests/operation.rs](../../src/pure/task_contract/tests/operation.rs)
+- **Current status:** partial. Example/boundary tests and bounded seeded Selection-codec/retained-replay properties exist; broader parser/mutation/projection properties, fuzz campaigns and parser complexity bounds remain incomplete.
+- **Current evidence:** [src/pure/kehila_query/src/lib.rs](../../src/pure/kehila_query/src/lib.rs), [src/pure/task_contract/tests/operation.rs](../../src/pure/task_contract/tests/operation.rs), [src/pure/selection_codec/tests/properties.rs](../../src/pure/selection_codec/tests/properties.rs), [src/pure/task_contract/tests/replay_properties.rs](../../src/pure/task_contract/tests/replay_properties.rs)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-023](../../docs/product/backlog.md#b-023)
 
 <a id="test-003"></a>
@@ -457,7 +458,7 @@ Beta MUST exercise critical supported user paths through client, API, worker, pe
 - **Sources:** ISO25010.
 - **Required evidence:** Selective deterministic actual-stack E2E with bounded waits and final-state oracles.
 - **Enforcement:** Future system test suite and release qualification.
-- **Current status:** planned. No application UI or complete production event path exists.
+- **Current status:** planned. Bounded native owner and browser journeys exist; a complete production event path and broader critical-path qualification remain incomplete.
 - **Current evidence:** None yet.
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-006](../../docs/product/backlog.md#b-006), [docs/product/backlog.md#b-018](../../docs/product/backlog.md#b-018), [docs/product/backlog.md#b-023](../../docs/product/backlog.md#b-023)
 
@@ -712,7 +713,7 @@ The supported web UI MUST meet WCAG 2.2 AA, including keyboard operation, semant
 - **Sources:** WCAG, ISO25010.
 - **Required evidence:** Scoped automated accessibility checks plus manual keyboard/screen-reader evaluation across supported browsers.
 - **Enforcement:** UI acceptance and Production qualification; automation cannot replace manual testing.
-- **Current status:** planned. No real application UI exists; no browser tooling is introduced for an absent UI.
+- **Current status:** planned. A native owner browser UI exists; scoped accessibility checks and manual keyboard/screen-reader evaluation across supported browsers remain unqualified.
 - **Current evidence:** None yet.
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-006](../../docs/product/backlog.md#b-006), [docs/product/backlog.md#b-018](../../docs/product/backlog.md#b-018), [docs/product/backlog.md#b-027](../../docs/product/backlog.md#b-027)
 
@@ -742,6 +743,6 @@ New and materially changed code MUST apply the Coding Standard with scoped revie
 - **Sources:** ISO25010, SSDF.
 - **Required evidence:** PR scope and applicable-rule assessment, relevant compiler/format/lint and behavioral results, and existing gap or exception dispositions with backlog references.
 - **Enforcement:** Existing Rust/Go format/lint and unsafe checks, shared register validation, and maintainer assessment using the contribution policy, Definition of Done and PR template. Semantic conformance remains a review obligation.
-- **Current status:** partial. The scoped coding baseline and existing checks are documented; conformance across future material changes needs actual PR evidence. Architecture-boundary, Python/TypeScript and minimum-Rust-version qualification remain incomplete; no full legacy audit is claimed.
-- **Current evidence:** [docs/engineering/CODING-STANDARD.md](../../docs/engineering/CODING-STANDARD.md), [CONTRIBUTING.md](../../CONTRIBUTING.md), [docs/engineering/DEFINITION-OF-DONE.md](../../docs/engineering/DEFINITION-OF-DONE.md), [.github/pull_request_template.md](../../.github/pull_request_template.md), [.github/workflows/ci.yml](../../.github/workflows/ci.yml)
+- **Current status:** partial. Bounded pure dependency/resolved-API checks and source-bound declared-compiler qualification exist. Broader architecture, Python/TypeScript and future-change conformance still require scoped evidence; no full legacy audit or semantic purity proof is claimed.
+- **Current evidence:** [docs/engineering/CODING-STANDARD.md](../../docs/engineering/CODING-STANDARD.md), [CONTRIBUTING.md](../../CONTRIBUTING.md), [docs/engineering/DEFINITION-OF-DONE.md](../../docs/engineering/DEFINITION-OF-DONE.md), [.github/pull_request_template.md](../../.github/pull_request_template.md), [.github/workflows/ci.yml](../../.github/workflows/ci.yml), [scripts/check_architecture.py](../../scripts/check_architecture.py), [scripts/check_rust_minimum.py](../../scripts/check_rust_minimum.py), [docs/implementation/architecture-verification.md](../../docs/implementation/architecture-verification.md)
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-019](../../docs/product/backlog.md#b-019), [docs/product/backlog.md#b-022](../../docs/product/backlog.md#b-022), [docs/product/backlog.md#b-023](../../docs/product/backlog.md#b-023)
