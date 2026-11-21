@@ -185,3 +185,43 @@ pass do not retrospectively supply missing original observations or establish th
 cause of every earlier visibility/resource problem. The
 [delivery retrospective](../postmortems/2026-11-21-current-work-selection-delivery.md)
 records the proportionality and resource follow-up.
+
+## Review follow-up on 2026-11-21
+
+Current reads now remain available when browser recovery storage cannot be read
+or cleanup cannot be confirmed. The resumed page establishes fresh owner binding
+before restoring either journal. Neither a successful read nor that binding check
+creates a recovery session, changes the journal or releases a failed-cleanup latch.
+Mutations and recovery actions remain blocked until their own admission succeeds.
+
+Historical replay and retained-event reads share the same structural validator.
+Replay still independently compares its decoded result with recorded history;
+retained-event verification still binds the owner and request fingerprint, without
+constructing a discarded replay response. Read rollback handling reuses the
+existing helpers with the same cleanup-before-release and fatal-failure behavior.
+SQL authority, storage constraints, codec versions and transaction policy are unchanged.
+
+| Selected follow-up check | Observation | Scope |
+| --- | --- | --- |
+| Controller and selection journal | 39 passed | Storage/lifecycle failure, fresh owner checks, blocked mutations and malformed replies at their ports |
+| Page lifecycle with existing controllers | 41 passed | Includes both journals failing before their own owner lookup; an independently authorized current read remains reachable |
+| Three isolated client guard controls | Each intended mutation failed its matching test; restored controller passed all 29 tests and copied-source equality | Archived offered item, unsupported absence codec and impossible version-zero non-null receipt; shared source unchanged by experiments |
+| Authority history units | 10 passed | Original identity/result/transition predicates, retained fingerprint and structural rejection |
+| Selected native selection/recovery fixture | Passed, with a separate SQL observation and completed evidence/reset receipt | Existing real PostgreSQL and HTTP/TLS selection case, including read composition; no new read-specific cleanup injection is claimed |
+
+The availability regressions first failed on the old controller/page paths. An
+earlier page rerun failed an old assertion requiring the entire authenticated
+view to remain hidden; the corrected assertion preserves visible reload guidance,
+the durable identity, disabled retry and no mutation/reconciliation. Those earlier
+failures remain separate from later passes.
+
+These selected observations remain applicable to the implementation tree committed at
+`f980e331f26bd904678013135d82b1bb97b9f7db`. Normal commit hooks and final hosted results are
+tracked in PR #104. Earlier actual-browser observations retain their original
+`771d5bdb` attribution and limits; the new availability paths were checked through
+controller/page tests, with no new actual-browser campaign. No throughput or
+resource saving is inferred from the refactoring.
+
+[Issue #105](https://github.com/MrQuality/kehila/issues/105) tracks the original
+combined-workload memory concern under B-025. Smaller follow-up checks are different
+workloads and do not demonstrate that the original pressure has been resolved.

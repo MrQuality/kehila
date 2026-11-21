@@ -896,6 +896,10 @@ migration framework; backup existence alone is not recovery evidence.
 
 **Status:** Needs decisions and measurement. **Dependencies:** B-005/B-022, Q-022.
 **Traceability:** PERF-001/PERF-002, LIMIT-001.
+**Bounded follow-up:** [#105](https://github.com/MrQuality/kehila/issues/105)
+tracks attribution and proportionate reduction of the current-work qualification
+workload's narrow memory margin. It does not establish a cause, an authority RSS
+measurement, a larger supported workload or approval of a new capacity campaign.
 **Deliverable:** Repeatable Go/Rust workload baseline and later published envelope,
 including history growth, fields, clients, throughput, rebuild and startup.
 **Acceptance:** p50/p95/p99, errors, saturation, CPU/memory/disk and propagation

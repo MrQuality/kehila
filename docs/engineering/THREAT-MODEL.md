@@ -108,3 +108,28 @@ or data access; encrypted per-user storage cannot contain malware controlling th
 same account. Throttle saturation can deny local login availability. Browser XSS
 can act with a session despite HttpOnly. Keep these residual risks and prove the
 specific controls rather than describing loopback or framework defaults as trust.
+
+## Current-work selection boundary update — 2026-11-21
+
+This update covers [ADR-112](../architecture/ADR-112-current-work-selection.md)
+and the bounded native/browser current-work capability. The initial tables and
+authentication-stage notes above retain their historical scope. This section does
+not refresh every older surface or establish supported real-data deployment,
+ASVS compliance, a performance envelope or general recovery qualification.
+
+| Surface / threat | Implemented boundary and control | Residual risk / limit |
+| --- | --- | --- |
+| Authenticated `POST /selection/read`, `/selection/set`, `/selection/reconcile`; forged owner or target access | Existing session, browser origin/client marker and CSRF admission; subject comes from the installed owner, never a caller actor field. Current original-target authority precedes replay, expiry or reused-identity disclosure; clear needs independent self authority | Local callers remain adversaries. Shared admission can deny availability; loopback and browser headers are not authority |
+| Fresh schema v4 selection head, permanent success events and operation bindings; duplicate or inconsistent acceptance | Atomic operation/payload/event/head agreement, immutable original attribution, version-conflict checks, no-op success history and exact-identity reconciliation | Every success, including unchanged choices, adds permanent history and retains target identifiers after payload retirement. No populated upgrade, compaction or general archive route is introduced |
+| Same-profile IndexedDB selection recovery journal; lost replies, stale callbacks or replacement by another tab | Strict transaction completion before send; installation/owner/family binding; bounded exact wire and metadata; generation comparison; seven-day eligibility; no automatic execution on restore; mutation cleanup failures remain latched | The unkeyed SHA-256 checksum detects corruption, not malicious rewriting. Normal OS/profile and same-origin isolation apply; XSS or malware controlling that profile can read or alter metadata. No application encryption or forensic-erasure guarantee |
+| Current-read availability during journal failure | A current read independently checks fresh owner binding and lifecycle identity; journal failure does not authorize mutation, retry, reconciliation or forgetting | Reading does not settle an unknown operation, prove an empty journal, cancel a request or clear an unconfirmed-cleanup latch |
+| Restore, archival and resource exhaustion | Authoritative selection/events/operations must remain coherent. Future archive exposure requires atomic affected-user selection clearing; future supported restore must preserve history and identity | Those broader mechanisms remain outside this increment. Aggregate qualification memory approached its configured bound; the cause and a larger supported workload remain unqualified |
+
+The [qualification record](../implementation/current-work-selection.md#qualification-on-2026-11-21)
+distinguishes actual native, visible-browser and independent SQL observations from
+transactional-port tests. Historical failures, the reserve warning and the narrow
+sampled memory margin remain recorded. The measurement covers the combined test
+workload, not the authority process's RSS; it does not identify a cause or justify
+changing worker pools, validation, keep-alive, retention or security policy.
+[Issue #105](https://github.com/MrQuality/kehila/issues/105) tracks the bounded
+resource-attribution follow-up under B-025; it does not activate a capacity test.

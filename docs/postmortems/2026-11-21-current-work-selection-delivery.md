@@ -78,3 +78,22 @@ The resource-pressure cause, broader platform/lifecycle coverage and supported
 installation/restore remain scoped follow-up work. Recommendations here do not
 approve exact SOP codification, automated semantic enforcement or shared-skill
 changes. Longer-term effectiveness has not been established.
+
+## Review follow-up
+
+Subsequent review identified current-read availability coupled to browser journal
+readiness and three missing client negative cases. The follow-up separates read
+authority from journal admission, including the outer resumed page when both
+journals fail before owner lookup. Targeted red/green checks preserve mutation
+blocking, fresh owner checks, durable identity and callback fencing; isolated guard
+controls confirm the new negatives reject their intended changes. An earlier page
+rerun failed the old whole-view-lockout expectation and remains retained separately.
+
+A small shared-validator extraction removes discarded response construction while
+preserving historical predicates; existing rollback helpers remove duplicated
+classification. Ten history units and the selected real native selection/SQL case
+passed. The [implementation record](../implementation/current-work-selection.md#review-follow-up-on-2026-11-21)
+distinguishes these checks from the original visible-browser qualification. No new
+capacity campaign or measured performance improvement is claimed. The bounded
+[resource investigation](https://github.com/MrQuality/kehila/issues/105) remains
+future work with an unknown cause, rather than an invented target or deadline.
