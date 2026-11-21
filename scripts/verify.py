@@ -100,6 +100,7 @@ def check_commands(args):
                 [sys.executable, "scripts/check_engineering.py"]]
     if not args.docs:
         commands.append([sys.executable, "scripts/go_static.py"])
+        commands.append([sys.executable, "scripts/check_architecture.py"])
         if args.pure:
             commands.append(['cargo', 'test', '--locked', '-p', 'kehila_query', '-p', 'task_contract',
                              '-p', 'project_create_codec', '-p', 'work_item_codec', '-p', 'selection_codec'])
