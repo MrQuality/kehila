@@ -12,7 +12,19 @@ untrusted local programs/users, unauthorized authenticated users, network peers,
 malformed input producers and compromised dependencies/services. Workstation
 trust is a development assumption, not an authentication control.
 
-## Trust boundaries and current evidence
+## Current native boundary references
+
+The active owner interface uses the authenticated Rust authority and PostgreSQL;
+the Go API/worker/FerretDB rows below describe the October prototype. Current
+contracts and bounded evidence are recorded in
+[native WorkItems](../implementation/native-work-items.md),
+[browser edit recovery](../implementation/browser-edit-recovery.md) and
+[current-work selection](../implementation/current-work-selection.md).
+The selection-specific threat update below describes its additional surfaces.
+These records do not establish supported real-data deployment or qualify the
+future event, search, backup and remote-deployment paths.
+
+## Historical prototype trust boundaries — 2026-10-02
 
 | Boundary | Current implementation | Planned control / verification destination |
 | --- | --- | --- |

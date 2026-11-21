@@ -620,7 +620,7 @@
       "enforcement": "Future system test suite and release qualification.",
       "status": "planned",
       "evidence": [],
-      "gap": "No application UI or complete production event path exists.",
+      "gap": "Bounded native owner and browser journeys exist; a complete production event path and broader critical-path qualification remain incomplete.",
       "work": [
         "docs/product/backlog.md#b-006",
         "docs/product/backlog.md#b-018",
@@ -993,7 +993,7 @@
       "enforcement": "UI acceptance and Production qualification; automation cannot replace manual testing.",
       "status": "planned",
       "evidence": [],
-      "gap": "No real application UI exists; no browser tooling is introduced for an absent UI.",
+      "gap": "A native owner browser UI exists; scoped accessibility checks and manual keyboard/screen-reader evaluation across supported browsers remain unqualified.",
       "work": [
         "docs/product/backlog.md#b-006",
         "docs/product/backlog.md#b-018",

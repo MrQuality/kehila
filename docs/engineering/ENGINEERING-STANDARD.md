@@ -457,7 +457,7 @@ Beta MUST exercise critical supported user paths through client, API, worker, pe
 - **Sources:** ISO25010.
 - **Required evidence:** Selective deterministic actual-stack E2E with bounded waits and final-state oracles.
 - **Enforcement:** Future system test suite and release qualification.
-- **Current status:** planned. No application UI or complete production event path exists.
+- **Current status:** planned. Bounded native owner and browser journeys exist; a complete production event path and broader critical-path qualification remain incomplete.
 - **Current evidence:** None yet.
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-006](../../docs/product/backlog.md#b-006), [docs/product/backlog.md#b-018](../../docs/product/backlog.md#b-018), [docs/product/backlog.md#b-023](../../docs/product/backlog.md#b-023)
 
@@ -712,7 +712,7 @@ The supported web UI MUST meet WCAG 2.2 AA, including keyboard operation, semant
 - **Sources:** WCAG, ISO25010.
 - **Required evidence:** Scoped automated accessibility checks plus manual keyboard/screen-reader evaluation across supported browsers.
 - **Enforcement:** UI acceptance and Production qualification; automation cannot replace manual testing.
-- **Current status:** planned. No real application UI exists; no browser tooling is introduced for an absent UI.
+- **Current status:** planned. A native owner browser UI exists; scoped accessibility checks and manual keyboard/screen-reader evaluation across supported browsers remain unqualified.
 - **Current evidence:** None yet.
 - **Implementation / backlog / decisions:** [docs/product/backlog.md#b-006](../../docs/product/backlog.md#b-006), [docs/product/backlog.md#b-018](../../docs/product/backlog.md#b-018), [docs/product/backlog.md#b-027](../../docs/product/backlog.md#b-027)
 
