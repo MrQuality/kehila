@@ -58,6 +58,13 @@ oracles and [DEPENDENCIES.md](DEPENDENCIES.md) for dependency/security exception
 
 ### Rust
 
+- Pure library code under `src/pure/` MUST NOT use `std::collections::HashSet`
+  or `HashMap`, including aliases and explicit deterministic custom hashers.
+  Use `BTreeSet`/`BTreeMap` or another suitable deterministic representation.
+  This accepted collection policy is deliberately stricter than semantic purity:
+  it makes the default-hasher constructor paths subject to a simple type guard.
+  A new hash-collection use requires maintainer review of both this policy and
+  its guard; an ordinary lint allowance cannot override the forbidden checks.
 - MUST inherit the workspace unsafe-code prohibition and retain rustfmt/Clippy
   checks. A new crate MUST join the appropriate workspace verification path.
 - MUST use explicit outcomes for expected user/dependency failures. Production

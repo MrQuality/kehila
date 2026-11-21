@@ -25,6 +25,30 @@ def lint_arguments():
     return [argument for lint in LINTS for argument in ('--forbid', lint)]
 
 
+def hash_collection_controls():
+    """Exercise constructor paths and the intentionally stricter type policy."""
+    for collection, types, values in (
+            ('HashSet', 'u8', '[1u8]'), ('HashMap', 'u8,u8', '[(1u8,2u8)]')):
+        path = 'std::collections::' + collection
+        programs = {
+            'new': f'pub fn value() -> usize {{ let values: {path}<{types}> = {path}::new(); values.len() }}',
+            'from': f'pub fn value() -> usize {{ let values = {path}::from({values}); values.len() }}',
+            'default': f'pub fn value() -> usize {{ let values: {path}<{types}> = Default::default(); values.len() }}',
+            'collect': f'pub fn value() -> usize {{ {values}.into_iter().collect::<{path}<{types}>>().len() }}',
+            'explicit-deterministic': f'pub fn value() -> usize {{ type Values = {path}<{types}, '
+                'std::hash::BuildHasherDefault<std::collections::hash_map::DefaultHasher>>; '
+                'let values = Values::default(); values.len() }',
+        }
+        for name, program in programs.items():
+            yield collection + '-' + name, program, LINTS[0] if name == 'new' else LINTS[1]
+    for collection, types, values in (
+            ('BTreeSet', 'u8', '[1u8]'), ('BTreeMap', 'u8,u8', '[(1u8,2u8)]')):
+        path = 'std::collections::' + collection
+        yield collection, (f'pub fn value() -> usize {{ let a: {path}<{types}> = Default::default(); '
+            f'let b = {path}::from({values}); let c = {values}.into_iter().collect::<{path}<{types}>>(); '
+            'a.len()+b.len()+c.len() }'), None
+
+
 def compiler_controls(environment):
     """Prove alias rejection and deterministic allowances with the actual compiler."""
     cases = (
@@ -44,10 +68,10 @@ def compiler_controls(environment):
          'pub fn value() { let _ = Work::new("never executed"); }', LINTS[0]),
         ('output-macro', 'pub fn value() { println!("unreachable: only compiled"); }', LINTS[2]),
         ('directory-builder', 'pub fn value() { let _ = std::fs::DirBuilder::new(); }', LINTS[0]),
-        ('randomized-set', 'pub fn value() { let _ = std::collections::HashSet::<u8>::new(); }', LINTS[0]),
         ('unix-socket', '#[cfg(unix)] pub fn value() { '
          'let _ = std::os::unix::net::UnixStream::pair(); }', LINTS[0]) if os.name == 'posix'
          else ('directory-create', 'pub fn value() { let _ = std::fs::create_dir("unused"); }', LINTS[0]),
+        *hash_collection_controls(),
         ('memory-again', 'pub fn value() -> String { format!("{}", 42) }', None),
     )
     with owned_directory('kehila-purity-controls-') as directory:

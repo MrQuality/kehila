@@ -1,6 +1,8 @@
 # Compiler-resolved guard, deliberately scoped to pure library targets.
 # In-memory Read/Write traits and deterministic formatting are allowed.
+# The pure-library collection policy also excludes deterministic custom hashers.
 disallowed-types = [
+  "std::collections::HashSet", "std::collections::HashMap",
   "std::fs::File", "std::fs::OpenOptions", "std::fs::ReadDir",
   "std::net::TcpStream", "std::net::TcpListener", "std::net::UdpSocket",
   "std::process::Command", "std::process::Child", "std::thread::Builder",
