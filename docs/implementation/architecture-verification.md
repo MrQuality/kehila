@@ -291,3 +291,51 @@ Compiler, test and cleanup observations are bounded spans, not total labor or
 demonstrated savings. The file-origin, injected-quota and wider release limitations
 above remain. Required staged gates and final hosted scope are reported by the PR;
 their successes do not turn skipped native execution into qualification.
+
+### Follow-up lifecycle controls and constructor coverage
+
+The bounded follow-up finalizes the optional hold on native transaction
+termination and handles early WebSocket connection closure. Focused fake-timer,
+transaction and socket controls cover completion, abort, unsuppressed request
+failure, unrelated-transaction ownership, genuine safety expiry, open/error/close/
+deadline setup paths and listener transfer to the connected protocol client.
+The test runner includes these controls; they do not launch a browser or service.
+
+An isolated Rust 1.99.1 / Clippy 0.1.99 matrix established the constructor gap:
+`from`, `default` and `collect` passed for both default-hasher HashSet and HashMap
+under the earlier guard. Existing `new` rejections and explicit deterministic
+hasher controls behaved as expected. A separate candidate with both collection
+types prohibited rejected all six alternatives and both deterministic-hasher
+controls; BTreeSet and BTreeMap controls passed.
+
+The maintainer explicitly approved this stricter pure-library collection policy,
+including rejection of explicit deterministic custom hashers. It is recorded in
+the [coding standard](../engineering/CODING-STANDARD.md#rust) and implemented by
+two type restrictions. Deterministic hash collections are not inherently impure;
+the accepted restriction trades that flexibility for a simple conservative guard.
+No custom compiler plugin, generic trait ban or collection rewrite was introduced.
+
+The compiler controls now include both collections' `new`, `from`, `default`,
+`collect` and explicit deterministic-hasher alias paths, paired with BTree
+default/from/collect positive controls. All twelve program inputs match the
+isolated candidate observations. Together with existing non-collection cases,
+the guard has 23 compiler controls. These remain bounded active-target checks,
+not a proof of whole-program purity or arbitrary inferred/transitive type use.
+
+The initial seven intended lifecycle-controller failures are retained separately;
+the corrected 22 protocol/cleanup/instrumentation controllers and 22 engineering
+controllers passed. The three code commits passed their required staged gates,
+including the final guard's 23 compiler controls. Final-head review and hosted
+checks are reported separately in the PR.
+Existing real-browser and compiler results above retain their original source
+identities and are not reattributed to these changes. No unrelated native SQL,
+full browser campaign, declared-compiler campaign or new CI service is selected
+for this follow-up.
+
+The closeout lesson is bounded: constructor-method restrictions left confirmed
+implicit-seeding paths open. The isolated compiler matrix separated that defect
+from the policy choice to exclude deterministic hashers as well. The maintainer
+accepted the stricter policy explicitly; passing experiments alone did not make
+that decision. Lifecycle controls exercise timer and listener ownership with
+fakes and do not establish revised live-browser qualification. No general
+detection coverage, execution-time saving or process effectiveness is inferred.
