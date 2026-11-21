@@ -1,8 +1,11 @@
 # Persistent owner current work
 
-This capability is under qualification. The contract is accepted in
-[ADR-112](../architecture/ADR-112-current-work-selection.md); source presence and
-component tests do not establish complete native/browser qualification.
+The native capability and selected browser journey have passed bounded
+qualification in the disposable local-owner profile. The contract is accepted in
+[ADR-112](../architecture/ADR-112-current-work-selection.md).
+[PR #104](https://github.com/MrQuality/kehila/pull/104) records source checks,
+independent review and remaining delivery status; merging remains with the
+maintainer. This does not qualify the full configurable M1 model or real-data use.
 
 ## Owner journey
 
@@ -135,3 +138,43 @@ Node interface tests use ports and a simulated DOM. They do not establish real
 IndexedDB durability, browser lifecycle or the visible owner journey. Actual
 browser evidence, required checks and exact-head review remain distinct delivery
 gates. Historical failures remain separate from later affected reruns.
+
+## Qualification on 2026-11-21
+
+The measured native/browser observations use implementation commit
+`771d5bdb5c87b4c0155fdabf4d74c58205df0124`. Subsequent documentation-only closeout
+changes retain that attribution; they do not turn old observations into a new
+runtime execution. PR #104 tracks final publication checks and committed-head
+review, which remain required before review readiness.
+
+| Boundary | Actual observation | Limit |
+| --- | --- | --- |
+| Native authority, storage and transport | Real PostgreSQL 16.15, HTTP and verified TLS exercised set/clear/no-op, original replay, conflicts, rejected targets and revoked authority, rollback, uncertain commit, native runtime reconstruction within the test process and reconciliation, with independent state observers | These are selected disposable-owner cases, not OS-process restart, populated upgrade, general archival or disaster-recovery qualification |
+| Visible browser journey | Windows Chrome 157.0.8103.80 selected A, retained A after reload and fresh login, selected B, cleared the choice and observed a competing authenticated client's version conflict | Two authenticated browser contexts exercise the server conflict; this is not an exhaustive real-browser multi-tab journal campaign |
+| Unknown reply and persisted identity | A committed B/version5 reply was deliberately lost. Reload restored the original identity without automatically sending a selection request. After a later accepted A/version6 choice, explicit reconciliation returned original B/version5 while a separate read/display showed current A/version6 | Same-profile recovery only; this does not discover unknown operations in another profile or establish power-loss durability |
+| Independent durable state | After normal native release, a separate SQL observation of all 24 tables in the same original database matched the final native observation: six accepted selection operations, no duplicate acceptance and unchanged unrelated state | A response or normal process exit alone would not establish these storage facts |
+| Release and cleanup | Browser, action and native processes exited normally with joins and native EOF; owned runtime resources were removed, the provider stopped, temporary trust entries and successful test profiles were removed, and absence was checked | Failed evidence is retained separately; filesystem absence is not secure erasure |
+
+The complete browser/SQL/Root-cleanup command took 394.203 seconds. Separate exact
+certificate cleanup took 6.485 seconds. The earlier required full local check took
+620.297 seconds including cleanup at the same implementation commit; its full
+hosted qualification also passed. These command spans are not total engineering
+effort or an end-user latency promise.
+
+The browser run's sampled aggregate memory peak was 5.999596 GiB under the 6 GiB
+limit. Available memory fell to 0.276310 GiB, producing one 2 GiB reserve warning;
+there were no recorded resource alerts or sampled Windows low-memory signals.
+This narrow margin does not establish comfortable headroom, exclude peaks between
+samples or explain earlier resource-pressure failures.
+
+Transactional port and controlled adapter tests cover additional replacement,
+late-callback, binding/signout, transaction-completion and failure cases. They
+remain tests at those boundaries, not claims that every such combination was
+executed through a real browser. The selected browser observations establish the
+strict transaction-completion and same-profile restoration path used above.
+
+Earlier failed attempts remain failed. Their later corrections and the final
+pass do not retrospectively supply missing original observations or establish the
+cause of every earlier visibility/resource problem. The
+[delivery retrospective](../postmortems/2026-11-21-current-work-selection-delivery.md)
+records the proportionality and resource follow-up.

@@ -117,6 +117,14 @@ applicable API, storage, access, and interface integration through its parents.
 | [M1-07](https://github.com/MrQuality/kehila/issues/32) | B-007/B-006; B-003, Q-014 | Configuration permissions and delegated administration, including status-group administration. Implement the accepted group-scoped status grants and project administration boundary; provision initial project access, define revocation, and verify authoritative allow/deny behavior across all slices. Initial access enforcement is required before dependent routes are exposed. |
 | [M1-08](https://github.com/MrQuality/kehila/issues/33) | B-006 with B-004/B-005/B-007; M1-01–M1-07 | Integrate the full configurable model into the local interface. Demonstrate administration, edits, conversion, migration, knowledge, relationships, reload, conflict recovery, and archival. Retain B-005 durability and authenticated-access gates before real data. |
 
+The bounded current-selection increment in
+[PR #104](https://github.com/MrQuality/kehila/pull/104) implements owner set/clear,
+persisted reads and original-operation recovery. Its
+[qualification record](../implementation/current-work-selection.md#qualification-on-2026-11-21)
+separates selected native/browser evidence from broader obligations. It does not
+complete M1-02, M1-07 or M1-01; general archive/restore and coordinated archival
+selection clearing remain unfinished and are not exposed by this increment.
+
 M1-07's initial access boundary accompanies the early slices; its delegated
 administration surface expands with them. Q-016 is resolved for M1; Q-014 grant
 assignment and revocation remain B-007 work. Resource reservations, costs, and
