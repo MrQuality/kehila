@@ -15,6 +15,8 @@ import sys
 from cleanup_errors import run_main
 
 ROOT = Path(__file__).resolve().parents[1]
+WRAPPER_CONFIG = ['--config', 'build.rustc-wrapper=""',
+                  '--config', 'build.rustc-workspace-wrapper=""']
 
 
 def normalized(version):
@@ -36,25 +38,41 @@ def minimum_groups(metadata):
     return {version: sorted(packages) for version, packages in sorted(groups.items())}
 
 
-def compiler_environment(environment, rustc):
+def qualification_environment(environment, toolchains_home=None):
     overrides = ('RUSTC', 'RUSTC_WRAPPER', 'RUSTC_WORKSPACE_WRAPPER',
                  'CARGO_BUILD_RUSTC', 'CARGO_BUILD_RUSTC_WRAPPER',
                  'CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER')
     if any(environment.get(key) for key in overrides):
         raise ValueError('Compiler or wrapper override would invalidate minimum qualification')
-    return dict(environment, CARGO_NET_OFFLINE='true', RUSTC=str(rustc))
+    selected = dict(environment)
+    if toolchains_home is not None:
+        if not toolchains_home.is_absolute():
+            raise ValueError('Toolchain home must be absolute')
+        home = toolchains_home.resolve()
+        if home == ROOT or ROOT in home.parents:
+            raise ValueError('Toolchains must remain outside source')
+        selected['RUSTUP_HOME'] = str(home)
+    return selected
 
 
-def main():
+def compiler_environment(environment, rustc):
+    return dict(qualification_environment(environment), CARGO_NET_OFFLINE='true', RUSTC=str(rustc))
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--list', action='store_true', help='List declared groups without compiling')
     parser.add_argument('--version', help='Explicit installed compiler version to qualify')
     parser.add_argument('--toolchains-home', type=Path,
                         help='Explicit separate installed-toolchain home; metadata uses the original environment')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.list == bool(args.version):
         parser.error('Select exactly one of --list or --version')
-    metadata = subprocess.run(['cargo', 'metadata', '--locked', '--no-deps', '--format-version', '1'],
+    # Reject invalid qualification inputs before Cargo can probe a compiler.
+    # Metadata listing is informational, not a minimum-compiler qualification.
+    environment = (dict(os.environ) if args.list else
+                   qualification_environment(os.environ, args.toolchains_home))
+    metadata = subprocess.run(['cargo', *WRAPPER_CONFIG, 'metadata', '--locked', '--no-deps', '--format-version', '1'],
                               cwd=ROOT, capture_output=True, text=True, check=True, timeout=60)
     groups = minimum_groups(json.loads(metadata.stdout))
     if args.list:
@@ -63,14 +81,6 @@ def main():
     version = normalized(args.version)
     if version not in groups:
         raise ValueError('Compiler does not match a declared workspace minimum')
-    environment = dict(os.environ)
-    if args.toolchains_home is not None:
-        if not args.toolchains_home.is_absolute():
-            raise ValueError('Toolchain home must be absolute')
-        home = args.toolchains_home.resolve()
-        if home == ROOT or ROOT in home.parents:
-            raise ValueError('Toolchains must remain outside source')
-        environment['RUSTUP_HOME'] = str(home)
     # `rustup run` refuses an absent toolchain instead of provisioning it.
     compiler = subprocess.run(['rustup', 'run', version, 'rustc', '--version'],
                              env=environment, capture_output=True, text=True, check=True, timeout=30)
@@ -82,7 +92,8 @@ def main():
     if not rustc.is_absolute() or not rustc.is_file():
         raise ValueError('Selected compiler executable unavailable')
     environment = compiler_environment(environment, rustc)
-    command = ['rustup', 'run', version, 'cargo', 'check', '--locked', '--offline', '--all-targets']
+    command = ['rustup', 'run', version, 'cargo', *WRAPPER_CONFIG,
+               'check', '--locked', '--offline', '--all-targets']
     for package in groups[version]:
         command += ['-p', package]
     print('MINIMUM RUST:', version, ', '.join(groups[version]), flush=True)
