@@ -270,3 +270,30 @@ fn retained_zero_version_target_is_not_validated_by_matching_payload_alone() {
         .reconstruct(1, &history, 1, &result)
         .is_err());
 }
+
+#[test]
+fn retained_event_checks_structure_even_with_a_matching_request_fingerprint() {
+    let endpoint = target("a");
+    let original = command(1, Some(endpoint.identity()))
+        .prepare(&current(1, Some(endpoint.identity())), 8, Some(&endpoint))
+        .unwrap()
+        .event;
+    for changed in 0..3 {
+        let mut event = original.clone();
+        match changed {
+            0 => event.ordinal = event.before.version,
+            1 => event.result.next.version = 2, // An unchanged choice cannot advance the version.
+            2 => {
+                event.before.version = 0;
+                event.result.next.version = 0;
+            }
+            _ => unreachable!(),
+        }
+        let canonical = command(event.before.version, event.result.next.selected.clone());
+        let history = selection_codec::encode_event(&event, 1).unwrap();
+        assert!(
+            verify_retained_event("installation", "owner", 1, &history, &canonical.digest).is_err(),
+            "invalid retained structure {changed} cannot be admitted by a matching fingerprint"
+        );
+    }
+}

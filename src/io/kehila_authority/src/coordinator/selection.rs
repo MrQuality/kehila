@@ -522,36 +522,14 @@ impl Engine {
             .map_err(fence_error)?;
         let fresh = snapshot(transaction.authority());
         if let Err(primary) = self.project_eligibility(&entry, &credential, &fresh) {
-            if let Err(cleanup) = transaction.rollback().await {
-                self.live.fail(FatalCause::NativeRollback {
-                    primary: Some(FailureDetail::new(
-                        if primary == Error::Unauthorized {
-                            "session unauthorized"
-                        } else {
-                            "session eligibility rejected"
-                        },
-                        None,
-                        None,
-                    )),
-                    cleanup: database_detail(&cleanup),
-                });
-                return Err(Error::Unavailable);
-            }
-            return Err(primary);
+            return Err(self.selection_eligibility_cleanup(primary, transaction.rollback().await));
         }
         let outcome = transaction.selection_read().await;
         // A target-specific grant denial has already ended the snapshot's SQL
         // work. Redacted data cannot leave until rollback is confirmed as well.
         let cleanup = transaction.rollback().await;
         drop(database);
-        if let Err(cleanup) = cleanup {
-            self.live.fail(FatalCause::NativeRollback {
-                primary: outcome.as_ref().err().map(native_detail),
-                cleanup: database_detail(&cleanup),
-            });
-            return Err(Error::Unavailable);
-        }
-        let draft = outcome.map_err(|error| super::project::native_error(&self.live, error))?;
+        let draft = self.selection_result(outcome, cleanup)?;
         let live = self.live.clone();
         let permit = execution.admission();
         let encoded = self

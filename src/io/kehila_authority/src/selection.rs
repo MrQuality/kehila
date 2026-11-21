@@ -119,7 +119,16 @@ impl Canonical {
     ) -> Result<Historical> {
         let event = selection_codec::decode_event(history_codec, history)?;
         let result = selection_codec::decode_result(result_codec, result)?;
-        let after = &result.next;
+        if result != event.result {
+            return Err(PreparationError::InvalidProof);
+        }
+        self.verify_event(&event)?;
+        let reply = response("replayed", &selection_codec::encode_result(&result, 1)?)?;
+        Ok(Historical { event, reply })
+    }
+
+    fn verify_event(&self, event: &selection_codec::Event) -> Result<()> {
+        let after = &event.result.next;
         let before = &event.before;
         let expected_version = before
             .version
@@ -135,12 +144,10 @@ impl Canonical {
             || after.user_id != self.request.user_id
             || after.selected != self.request.requested
             || expected_version != Some(after.version)
-            || result != event.result
         {
             return Err(PreparationError::InvalidProof);
         }
-        let reply = response("replayed", &selection_codec::encode_result(&result, 1)?)?;
-        Ok(Historical { event, reply })
+        Ok(())
     }
 }
 
@@ -210,10 +217,8 @@ pub(crate) fn verify_retained_event(
     if canonical.digest.as_slice() != digest {
         return Err(PreparationError::InvalidProof);
     }
-    let result = selection_codec::encode_result(&event.result, 1)?;
-    Ok(canonical
-        .reconstruct(history_codec, history, 1, &result)?
-        .event)
+    canonical.verify_event(&event)?;
+    Ok(event)
 }
 
 #[cfg(test)]
