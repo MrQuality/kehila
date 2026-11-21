@@ -2,12 +2,82 @@
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
 const {Protocol} = require("./protocol.cjs");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
 
 class Socket extends EventTarget {
   sent = [];
   send(text) { this.sent.push(JSON.parse(text)); }
   close() { this.dispatchEvent(new Event("close")); }
   response(message) { this.dispatchEvent(new MessageEvent("message", {data:JSON.stringify(message)})); }
+}
+
+function connectionFixture() {
+  const timers = new Map();
+  let nextTimer = 0, socket;
+  class ConnectingSocket extends Socket {
+    listeners = new Map();
+    closeCalls = 0;
+    constructor() { super(); socket = this; }
+    addEventListener(kind, callback, options) {
+      if (!this.listeners.has(kind)) this.listeners.set(kind, new Set());
+      this.listeners.get(kind).add(callback);
+      super.addEventListener(kind, callback, options);
+    }
+    removeEventListener(kind, callback, options) {
+      this.listeners.get(kind)?.delete(callback);
+      super.removeEventListener(kind, callback, options);
+    }
+    close() { this.closeCalls++; super.close(); }
+    listenerCount(kind) { return this.listeners.get(kind)?.size || 0; }
+  }
+  const context = vm.createContext({module:{exports:{}}, WebSocket:ConnectingSocket,
+    setTimeout:(callback, delay) => {const id = ++nextTimer; timers.set(id, {callback, delay}); return id;},
+    clearTimeout:id => timers.delete(id)});
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "protocol.cjs"), "utf8"), context);
+  const expire = () => {
+    for (const [id, timer] of [...timers]) {
+      assert.equal(timer.delay, 5000);
+      timers.delete(id);
+      timer.callback();
+    }
+  };
+  return {connect:context.module.exports.connect, timers, get socket() {return socket;}, expire};
+}
+
+test("successful connection releases handshake ownership and transfers close handling", async () => {
+  const fixture = connectionFixture();
+  const pending = fixture.connect("ws://controlled.invalid");
+  fixture.socket.dispatchEvent(new Event("open"));
+  const client = await pending;
+  assert.equal(fixture.timers.size, 0);
+  assert.equal(fixture.socket.listenerCount("open"), 0);
+  assert.equal(fixture.socket.listenerCount("error"), 1);
+  assert.equal(fixture.socket.listenerCount("close"), 1);
+  fixture.socket.close();
+  assert.equal(client.closed, true);
+});
+
+for (const [kind, expected] of [["close", "closed"], ["error", "failed"], ["deadline", "deadline"]]) {
+  test("connection " + kind + " releases the socket, timer and handshake listeners", async () => {
+    const fixture = connectionFixture();
+    let outcome;
+    const pending = fixture.connect("ws://controlled.invalid").then(
+      () => {outcome = "unexpected success";}, error => {outcome = error.message;});
+    try {
+      if (kind === "deadline") fixture.expire();
+      else fixture.socket.dispatchEvent(new Event(kind));
+      await new Promise(setImmediate);
+      assert.match(outcome || "pending", new RegExp(expected));
+      assert.equal(fixture.timers.size, 0);
+      assert.equal(fixture.socket.closeCalls, 1);
+      for (const event of ["open", "error", "close"]) assert.equal(fixture.socket.listenerCount(event), 0);
+    } finally {
+      fixture.expire();
+      await pending;
+    }
+  });
 }
 
 test("responses are matched by identity across sessions and out-of-order delivery", async () => {

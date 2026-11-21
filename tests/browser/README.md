@@ -11,7 +11,7 @@ The test client requires Node 22 or later with built-in WebSocket/fetch. It adds
 no package dependency. Run the client controls without launching a browser:
 
 ```text
-node --test tests/browser/protocol.test.cjs tests/browser/cleanup.test.cjs
+node --test tests/browser/protocol.test.cjs tests/browser/cleanup.test.cjs tests/browser/instrument.test.cjs
 ```
 
 For a real component run, the caller must first own a disposable Chrome/Chromium
@@ -32,6 +32,14 @@ holds the first real readwrite transaction alive for at most two seconds, observ
 the second transaction queued without a successful read, then releases the first
 and checks both results. A missing/expired witness fails the case. Protocol calls,
 database cleanup and target release have separate finite allowances.
+
+The hold timer is released on the transaction's native `abort` or `complete`
+event as well as explicit release. A real safety expiry stays marked expired;
+terminal cleanup cannot turn it into a successful contention witness. Request
+errors retain their native abort behavior. Connection setup handles early close,
+error and deadline failure and releases its handshake listeners before handing
+the open socket to the protocol client. The lightweight controller cases use
+fake native transactions, timers and sockets; they do not launch a browser.
 
 Both database deletions are attempted even if one fails. A passing result is
 printed only after the known targets and databases are released. A lost target

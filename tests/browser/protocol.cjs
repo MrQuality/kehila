@@ -67,9 +67,21 @@ async function connect(url) {
   const socket = new WebSocket(url);
   try {
     await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("Browser protocol connection deadline")), 5000);
-      socket.addEventListener("open", () => { clearTimeout(timer); resolve(); }, {once:true});
-      socket.addEventListener("error", () => { clearTimeout(timer); reject(new Error("Browser connection failed")); }, {once:true});
+      const finish = error => {
+        clearTimeout(timer);
+        socket.removeEventListener("open", opened);
+        socket.removeEventListener("error", failed);
+        socket.removeEventListener("close", closed);
+        if (error) reject(error);
+        else resolve();
+      };
+      const opened = () => finish();
+      const failed = () => finish(new Error("Browser connection failed"));
+      const closed = () => finish(new Error("Browser connection closed"));
+      const timer = setTimeout(() => finish(new Error("Browser protocol connection deadline")), 5000);
+      socket.addEventListener("open", opened, {once:true});
+      socket.addEventListener("error", failed, {once:true});
+      socket.addEventListener("close", closed, {once:true});
     });
     return new Protocol(socket);
   } catch (error) { socket.close(); throw error; }
