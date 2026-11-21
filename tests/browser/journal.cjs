@@ -6,6 +6,7 @@ const path = require("node:path");
 const {pathToFileURL} = require("node:url");
 const {randomUUID} = require("node:crypto");
 const {connect} = require("./protocol.cjs");
+const {releaseDatabases} = require("./cleanup.cjs");
 
 async function run(endpoint) {
   const base = new URL(endpoint);
@@ -21,6 +22,7 @@ async function run(endpoint) {
   const client = await connect(websocket.href), targets = [], sessions = [];
   const fixture = pathToFileURL(path.join(__dirname, "journal.html")).href;
   let primary;
+  let databaseNames = [], databaseRelease;
   async function evaluate(sessionId, expression, timeout = 5000) {
     const reply = await client.call("Runtime.evaluate", {expression, awaitPromise:true, returnByValue:true}, sessionId, timeout);
     if (reply.exceptionDetails) throw new Error(JSON.stringify(reply.exceptionDetails));
@@ -39,6 +41,7 @@ async function run(endpoint) {
       }
     }
     const name = "kehila-component-" + randomUUID();
+    databaseNames = [name + "-raw", name + "-policy"];
     for (const sessionId of sessions) {
       const capability = await evaluate(sessionId, `fixture.initialize(${JSON.stringify(name)})`);
       assert.equal(capability.indexedDB, true);
@@ -93,10 +96,8 @@ async function run(endpoint) {
     assert.equal(await evaluate(sessions[1], "fixture.freshRestore()"), null);
   } catch (error) { primary = error; }
   finally {
-    if (sessions.length) {
-      try { await evaluate(sessions[0], "fixture.cleanup()", 7000); }
-      catch (error) { primary = primary ? new AggregateError([primary,error], "Test and database release failed") : error; }
-    }
+    try { databaseRelease = await releaseDatabases(evaluate, sessions, databaseNames); }
+    catch (error) { primary = primary ? new AggregateError([primary,error], "Test and database release failed") : error; }
     for (const targetId of targets) {
       try { assert.equal((await client.call("Target.closeTarget", {targetId})).success, true); }
       catch (error) { primary = primary ? new AggregateError([primary,error], "Test and target release failed") : error; }
@@ -107,7 +108,7 @@ async function run(endpoint) {
   console.log(JSON.stringify({browser:description.Browser, scope:"file-origin IndexedDB component",
     crossTabCAS:true, injectedQuotaAbort:true, crossTabGenerationInvalidation:true,
     queuedWriteWitness:true, actualAbortEvent:true, validAdmitControl:true,
-    databaseRelease:true, targetRelease:true}));
+    databaseRelease:true, databaseCleanupRecoveredFailures:databaseRelease.recoveredFailures, targetRelease:true}));
 }
 
 if (require.main === module) {

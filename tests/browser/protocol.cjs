@@ -16,7 +16,12 @@ class Protocol {
         if (!Number.isSafeInteger(message.id)) return; // Unsolicited event.
         const request = this.pending.get(message.id);
         if (!request) return;
-        if (message.sessionId !== request.sessionId) throw new Error("Browser response session mismatch");
+        // Chrome reports a detached flattened session as a root-level routing
+        // error, without sessionId. Reject only that request by its unique id;
+        // successful replies still require their exact session identity.
+        const missingSession = message.sessionId === undefined && request.sessionId !== undefined
+          && message.error?.code === -32001;
+        if (message.sessionId !== request.sessionId && !missingSession) throw new Error("Browser response session mismatch");
         this.pending.delete(message.id);
         clearTimeout(request.timer);
         if (message.error) request.reject(new Error(JSON.stringify(message.error)));

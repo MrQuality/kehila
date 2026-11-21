@@ -11,7 +11,7 @@ The test client requires Node 22 or later with built-in WebSocket/fetch. It adds
 no package dependency. Run the client controls without launching a browser:
 
 ```text
-node --test tests/browser/protocol.test.cjs
+node --test tests/browser/protocol.test.cjs tests/browser/cleanup.test.cjs
 ```
 
 For a real component run, the caller must first own a disposable Chrome/Chromium
@@ -39,6 +39,12 @@ creation reply can leave an unknown target; caller-owned browser shutdown and
 profile cleanup remain the final reconciliation boundary on every outcome.
 The protocol response-size check is after WebSocket materialization, so process
 resource containment is still necessary.
+
+The controller retains the synthetic database identities before initialization.
+Cleanup passes those identities explicitly and tries a surviving context if the
+first context fails; successful receipts count recovered cleanup failures. If all
+known contexts fail, their errors are retained together with any primary test
+failure. Caller-owned profile shutdown/deletion remains necessary on every outcome.
 
 These are selected file-origin storage-component checks. They do not qualify the
 deployed HTTPS origin, cookie/TLS policy, visible owner journey, profile eviction,
