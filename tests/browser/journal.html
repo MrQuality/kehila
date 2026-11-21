@@ -1,0 +1,74 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Recovery storage component fixture</title>
+<p>This fixture uses isolated synthetic databases, not application credentials.</p>
+<script src="../../src/io/kehila_authority/src/listener/recovery_journal.js"></script>
+<script src="../../src/io/kehila_authority/src/listener/selection_recovery.js"></script>
+<script src="instrument.js"></script>
+<script>
+"use strict";
+const owner = {installation_id:"component-installation", actor_id:"component-owner"};
+let rawStore, journal, session, handle, databaseNames, observer;
+globalThis.fixture = {
+  async initialize(name) {
+    if (!/^kehila-component-[a-f0-9-]+$/.test(name)) throw new Error("Invalid isolated database name");
+    databaseNames = [name + "-raw", name + "-policy"];
+    const store = databaseName => KehilaRecoveryStore({databaseName, unavailableMessage:"Component storage unavailable"});
+    observer = instrumentStorage();
+    rawStore = KehilaRecoveryStore({databaseName:databaseNames[0], indexedDB:observer.factory,
+      unavailableMessage:"Component storage unavailable"});
+    journal = KehilaSelectionRecovery({store:store(databaseNames[1])});
+    session = await journal.open(owner);
+    return {secureContext:isSecureContext, indexedDB:typeof indexedDB === "object"};
+  },
+  compare: (expected, next) => rawStore.compare(expected, next),
+  read: () => rawStore.read(),
+  holdNext: () => observer.holdNext(),
+  release: () => observer.release(),
+  status: () => observer.status(),
+  async abort(expected) {
+    let observed;
+    try {
+      await rawStore.compare(expected, "must-not-commit", () => {
+        throw new DOMException("Injected quota control", "QuotaExceededError");
+      });
+      throw new Error("Aborted write unexpectedly succeeded");
+    } catch (error) {
+      if (error.name !== "QuotaExceededError") throw error;
+      observed = error.name;
+    }
+    const transaction = observer.transactions.at(-1);
+    await transaction.finished;
+    return {observed, events:transaction.trace.events, value:await rawStore.read()};
+  },
+  async retain(token) {
+    handle = await session.retain({binding:{...owner}, family:"selection", wire:JSON.stringify({
+      operation_token:token, expected_version:"7", requested:{project_id:"p", item_id:"a"}})});
+    return handle.retained.wire;
+  },
+  async restore() { handle = await session.restore(); return handle ? handle.retained.wire : null; },
+  async freshRestore() { session = await journal.open(owner); return this.restore(); },
+  clear: () => journal.clear(owner),
+  async admit() {
+    try { return {wire:(await session.admit(handle, owner, "retry")).wire}; }
+    catch (error) { return {rejected:error.message}; }
+  },
+  async cleanup(names) {
+    if (!Array.isArray(names) || names.length !== 2 || new Set(names).size !== 2 ||
+        !names.every(name => /^kehila-component-[a-f0-9-]+-(raw|policy)$/.test(name))) {
+      throw new Error("Invalid cleanup database identities");
+    }
+    observer?.release();
+    const results = await Promise.allSettled(names.map(name =>
+      new Promise((resolve,reject) => {
+        const timer = setTimeout(() => reject(new Error("Database release deadline")), 5000);
+        const request = indexedDB.deleteDatabase(name);
+        request.onsuccess = () => {clearTimeout(timer); resolve();};
+        request.onerror = request.onblocked = () => {clearTimeout(timer); reject(new Error("Database release failed"));};
+      })));
+    const failures = results.flatMap((result,index) => result.status === "rejected"
+      ? ["database " + index + ": " + String(result.reason)] : []);
+    if (failures.length) throw new Error(failures.join("; "));
+  }
+};
+</script>

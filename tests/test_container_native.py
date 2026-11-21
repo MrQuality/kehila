@@ -186,12 +186,27 @@ class Executor:
 
 class CleanupTests(unittest.TestCase):
     def setUp(self):
+        structure = patch.object(native, 'structure_checks')
+        self.structure = structure.start()
+        self.addCleanup(structure.stop)
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         temporary = patch.object(environment.tempfile, 'gettempdir', return_value=directory.name)
         temporary.start()
         self.addCleanup(temporary.stop)
+
+    def test_structural_failure_stops_before_native_fixture_creation(self):
+        executor = Executor()
+        self.structure.side_effect = ValueError('structural assertion failed')
+        with self.assertRaisesRegex(ValueError, 'structural assertion failed'):
+            native.check(executor)
+        self.structure.assert_called_once_with(executor)
+        self.assertEqual(executor.events, [])
+
+    def test_focused_items_do_not_repeat_structural_profiles(self):
+        native.check(Executor(), item_cases=('item-read',))
+        self.structure.assert_not_called()
 
     def test_completed_case_retirement_preserves_copy_and_all_later_native_phases(self):
         executor = Executor()

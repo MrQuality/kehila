@@ -1,6 +1,6 @@
 //! Versioned project and WorkItem archival decisions without lifecycle effects.
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crate::current_work::CurrentWork;
 use crate::project::{decide_project_archive, ArchiveAction, ArchiveEffect, Project, ProjectError};
@@ -266,10 +266,10 @@ fn plan_selection_clears(
     selections: &[CurrentWork],
     affected: impl Fn(&EndpointIdentity) -> bool,
 ) -> Result<Vec<SelectionClear>, ArchiveCommandError> {
-    let mut user_ids = HashSet::new();
+    let mut user_ids = BTreeSet::new();
     let mut clears = Vec::new();
     for current in selections {
-        if current.user_id.0.is_empty() || !user_ids.insert(&current.user_id) {
+        if current.user_id.0.is_empty() || !user_ids.insert(&current.user_id.0) {
             return Err(ArchiveCommandError::InvalidReference);
         }
         if current.selected.as_ref().is_some_and(&affected) {

@@ -1157,11 +1157,15 @@ records. These checks do not implement startup compatibility or compaction. It n
 resets an existing schema or manages container lifecycle. Clean up the disposable
 container after success or failure.
 
-The shared verification matrix runs the verifier's safety-gate unit tests, but
-does not execute its native SQL suite. Run that command separately after changes
-to storage/postgresql/, its SQL tests or verifier. Native evidence currently
-covers a Windows host and PostgreSQL 16.15 in a Linux container; native Linux-host
-execution and hosted CI remain unverified. Structural fixtures do not establish
+The shared unit matrix runs the verifier's safety-gate tests. Full native
+qualification additionally runs the foundation structural SQL controls and the
+composed WorkItem/Selection structural suite through `container_structure.py`,
+in two serial fresh, networkless PostgreSQL clusters. This includes deliberate
+guard mutations, actual-role assertions and independent committed-state checks;
+focused native-item selectors do not repeat these profiles. The standalone
+foundation command's additional codec bridge below remains a separate check.
+Selected structural evidence covers a Windows host and PostgreSQL 16.15 in Linux
+containers; new hosted execution must be recorded separately. Structural fixtures do not establish
 trusted M1 seed equality, application codecs, authorization, compaction or a
 supported native application route.
 
@@ -1184,6 +1188,44 @@ acceptance. These native checks remain separate required PR evidence; hosted
 shared verification does not execute them or qualify native Linux-host behavior.
 
 ## Verification time budgets
+
+### Declared minimum Rust compilers
+
+`scripts/check_rust_minimum.py` groups workspace members using Cargo metadata's
+actual `rust-version` declarations. In a controlled verification container, use:
+
+```text
+python scripts/check_rust_minimum.py --list
+python scripts/check_rust_minimum.py --version 1.75.0 --toolchains-home /work/minimum-rust
+python scripts/check_rust_minimum.py --version 1.88.0 --toolchains-home /work/minimum-rust
+```
+
+Prepare the exact toolchains and matching-Cargo locked dependencies separately
+under the applicable resource policy. The command never installs a compiler,
+updates dependencies or changes support declarations. Metadata uses the original
+toolchain environment; the compiler check uses the explicitly selected home,
+verifies the compiler identity and binds Cargo to that compiler. Inherited
+compiler/wrapper overrides are rejected. Compilation is locked, offline and
+includes all targets in the selected declaration group.
+
+Qualification input checks run before Cargo probes a compiler. Both Cargo
+`build.rustc-wrapper` and `build.rustc-workspace-wrapper` are explicitly cleared
+on metadata/check invocations, including settings inherited from configuration
+files. Metadata listing remains informational and does not qualify a compiler.
+
+An unavailable compiler or dependency cache is not a source incompatibility
+result. Preserve acquisition, resolution and compilation failures separately.
+Passing current/stable CI alone does not qualify a declared older compiler.
+
+### Real browser journal component
+
+The standalone [IndexedDB component fixture](../tests/browser/README.md) adds
+bounded actual-browser contention, injected-error abort and generation checks.
+Its protocol-controller tests run in the shared non-documentation Node matrix;
+the actual browser is caller-owned and requires its separate bounded execution
+approval. Component success does not replace the native/HTTPS owner journey.
+
+### Shared command budgets
 
 Shared verification commands have a 300-second deadline. Cargo verification on
 Windows has a 450-second deadline: observed workspace runs exceeded 300 seconds
