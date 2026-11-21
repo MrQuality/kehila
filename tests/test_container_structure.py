@@ -5,6 +5,7 @@ import tempfile
 import sys
 from types import SimpleNamespace
 import unittest
+from itertools import chain, repeat
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
@@ -12,6 +13,53 @@ import container_structure as structure
 
 
 class StructuralLifetime(unittest.TestCase):
+    def test_diagnostics_inside_source_are_refused_without_creating_a_directory(self):
+        executor, _ = self.fixture()
+        executor.inspect_container.side_effect = None
+        executor.inspect_container.return_value = {
+            'Id': '1' * 64, 'Name': 'owned',
+            'Config': {'Labels': {structure.LABEL: executor.owner}}}
+        error = ValueError('original SQL failure')
+        for parent in (executor.source, executor.source / 'nested'):
+            with self.subTest(parent=parent), \
+                    patch.object(structure.tempfile, 'gettempdir', return_value=str(parent)), \
+                    patch.object(structure.tempfile, 'mkdtemp') as create:
+                structure.retain_failure(executor, '1' * 64, 'owned', 'foundation', 'sql', error)
+                create.assert_not_called()
+        self.assertEqual(str(error), 'original SQL failure')
+        self.assertEqual(len(error._cleanup_failures), 2)
+        self.assertTrue(all('outside source' in str(failure)
+                            for _, failure in error._cleanup_failures))
+
+    def test_readiness_deadline_rejects_and_releases_before_sql(self):
+        for ticks in ([0, 61], [0, 0, 61], [0, 0, 0, 1, 61]):
+            executor, database = self.fixture()
+            engine = executor.engine.side_effect
+
+            def bounded_engine(*arguments, **kwargs):
+                if 'timeout' in kwargs:
+                    self.assertGreater(kwargs['timeout'], 0, 'non-positive readiness inspect timeout')
+                return engine(*arguments, **kwargs)
+
+            def probe(*arguments, **kwargs):
+                if 'pg_isready' in arguments:
+                    self.assertGreater(kwargs['timeout'], 0, 'non-positive readiness probe timeout')
+                return SimpleNamespace(returncode=1)
+
+            executor.engine.side_effect = bounded_engine
+            database.command.side_effect = probe
+            with self.subTest(ticks=ticks), \
+                    patch.object(structure, 'EngineDatabase', return_value=database), \
+                    patch.object(structure, 'validate_container'), \
+                    patch.object(structure, 'retain_failure'), \
+                    patch.object(structure, 'command_timeout', side_effect=lambda limit: limit), \
+                    patch.object(structure.time, 'monotonic', side_effect=chain(ticks, repeat(ticks[-1]))), \
+                    patch.object(structure.time, 'sleep'):
+                with self.assertRaisesRegex(ValueError, 'readiness deadline exceeded'):
+                    structure.check(executor)
+            database.structural_integrity.assert_not_called()
+            executor.engine.assert_any_call('rm', '-f', '1' * 64)
+
     def fixture(self):
         executor = Mock(owner='a' * 32, source=Path('/exported/source'))
         identities = iter(('1' * 64, '2' * 64))
