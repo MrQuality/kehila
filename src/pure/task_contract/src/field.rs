@@ -1,6 +1,6 @@
 //! Typed value and usage rules for project-defined WorkItem fields.
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crate::work_item::WorkItemTypeId;
 
@@ -64,13 +64,13 @@ impl FieldDefinition {
         if self.kind != FieldKind::SingleChoice && !self.options.is_empty() {
             return Err(FieldError::InvalidDefinition);
         }
-        let mut ids = HashSet::new();
+        let mut ids = BTreeSet::new();
         for option in &self.options {
             if option.id.0.is_empty()
                 || option.name.trim().is_empty()
                 || option.name.len() > 256
                 || option.name.chars().any(char::is_control)
-                || !ids.insert(&option.id)
+                || !ids.insert(&option.id.0)
             {
                 return Err(FieldError::InvalidDefinition);
             }

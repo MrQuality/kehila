@@ -43,6 +43,11 @@ def compiler_controls(environment):
         ('process-constructor-alias', 'use std::process::Command as Work; '
          'pub fn value() { let _ = Work::new("never executed"); }', LINTS[0]),
         ('output-macro', 'pub fn value() { println!("unreachable: only compiled"); }', LINTS[2]),
+        ('directory-builder', 'pub fn value() { let _ = std::fs::DirBuilder::new(); }', LINTS[0]),
+        ('randomized-set', 'pub fn value() { let _ = std::collections::HashSet::<u8>::new(); }', LINTS[0]),
+        ('unix-socket', '#[cfg(unix)] pub fn value() { '
+         'let _ = std::os::unix::net::UnixStream::pair(); }', LINTS[0]) if os.name == 'posix'
+         else ('directory-create', 'pub fn value() { let _ = std::fs::create_dir("unused"); }', LINTS[0]),
         ('memory-again', 'pub fn value() -> String { format!("{}", 42) }', None),
     )
     with owned_directory('kehila-purity-controls-') as directory:
@@ -70,7 +75,7 @@ def compiler_controls(environment):
 
 def rust_packages(metadata, root):
     pure = (root / 'src/pure').resolve()
-    expected = {path.resolve() for path in pure.glob('*/Cargo.toml')}
+    expected = {path.resolve() for path in pure.rglob('Cargo.toml')}
     packages = [package for package in metadata['packages']
                 if Path(package['manifest_path']).resolve() in expected]
     if not packages or {Path(p['manifest_path']).resolve() for p in packages} != expected:
@@ -79,6 +84,9 @@ def rust_packages(metadata, root):
     for package in packages:
         if package['id'] not in members:
             raise ValueError('Pure crate is outside the verified workspace')
+        for target in package.get('targets', []):
+            if {'custom-build', 'bin', 'proc-macro'} & set(target['kind']):
+                raise ValueError(package['name'] + ': unsupported pure target ' + target['kind'][0])
         for dependency in package['dependencies']:
             name = dependency['name']  # Cargo supplies the actual name, not its rename.
             if name not in RUST_DEPENDENCIES:

@@ -1,6 +1,6 @@
 //! Pure creation and field/estimate editing against one project configuration.
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crate::field::{apply_edit, FieldEdit, FieldEntry, FieldError, FieldId, FieldValue};
 use crate::payload::within_field_payload_limit;
@@ -369,9 +369,9 @@ fn decide_values(
     updates: &[FieldUpdate],
 ) -> Result<Vec<FieldEntry>, ItemMutationError> {
     use ItemMutationError as E;
-    let mut ids = HashSet::new();
+    let mut ids = BTreeSet::new();
     for entry in current.iter().chain(initial) {
-        if !ids.insert(&entry.id) {
+        if !ids.insert(&entry.id.0) {
             return Err(E::DuplicateField);
         }
         if !configuration
@@ -384,7 +384,7 @@ fn decide_values(
     }
     ids.clear();
     for update in updates {
-        if !ids.insert(&update.id) {
+        if !ids.insert(&update.id.0) {
             return Err(E::DuplicateField);
         }
         if !configuration

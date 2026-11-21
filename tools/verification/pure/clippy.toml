@@ -6,6 +6,9 @@ disallowed-types = [
   "std::process::Command", "std::process::Child", "std::thread::Builder",
   "std::time::SystemTime", "std::time::Instant",
   "std::thread::Thread", "std::thread::JoinHandle",
+  "std::os::unix::net::UnixStream", "std::os::unix::net::UnixListener",
+  "std::os::unix::net::UnixDatagram", "std::fs::DirBuilder",
+  "std::collections::hash_map::RandomState",
 ]
 disallowed-methods = [
   "std::path::Path::exists", "std::path::Path::try_exists",
@@ -25,6 +28,13 @@ disallowed-methods = [
   "std::fs::remove_file", "std::fs::remove_dir", "std::fs::remove_dir_all",
   "std::fs::create_dir", "std::fs::create_dir_all", "std::fs::set_permissions",
   "std::fs::hard_link", "std::fs::read_link",
+  "std::fs::DirBuilder::new", "std::fs::DirBuilder::create",
+  "std::os::unix::net::UnixStream::connect", "std::os::unix::net::UnixStream::pair",
+  "std::os::unix::net::UnixListener::bind", "std::os::unix::net::UnixDatagram::bind",
+  "std::os::unix::net::UnixDatagram::unbound", "std::os::unix::net::UnixDatagram::pair",
+  "std::collections::hash_map::RandomState::new",
+  "std::collections::HashSet::new", "std::collections::HashSet::with_capacity",
+  "std::collections::HashMap::new", "std::collections::HashMap::with_capacity",
   "std::env::var", "std::env::var_os", "std::env::vars", "std::env::vars_os",
   "std::env::args", "std::env::args_os", "std::env::current_dir",
   "std::env::current_exe", "std::env::temp_dir", "std::env::set_var",

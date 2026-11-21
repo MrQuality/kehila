@@ -1,6 +1,6 @@
 //! Complete destination validation for one WorkItem type conversion.
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 pub use crate::field::FieldEntry;
 use crate::field::{apply_edit, FieldEdit, FieldError, FieldId};
@@ -228,15 +228,15 @@ pub fn decide_conversion(
     let Some(version) = item.version.checked_add(1) else {
         return Reject(C::VersionOverflow);
     };
-    let mut ids = HashSet::new();
+    let mut ids = BTreeSet::new();
     for field in definitions {
-        if !ids.insert(&field.id) || field.validate().is_err() {
+        if !ids.insert(&field.id.0) || field.validate().is_err() {
             return Reject(C::InvalidConfiguration);
         }
     }
     ids.clear();
     for entry in source_values {
-        if !ids.insert(&entry.id) {
+        if !ids.insert(&entry.id.0) {
             return Reject(C::DuplicateField);
         }
         let Some(field) = definitions.iter().find(|field| field.id == entry.id) else {
@@ -269,7 +269,7 @@ pub fn decide_conversion(
     }
     ids.clear();
     for entry in &command.destination_values {
-        if !ids.insert(&entry.id) {
+        if !ids.insert(&entry.id.0) {
             return Reject(C::DuplicateField);
         }
         if !definitions

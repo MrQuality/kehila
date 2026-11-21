@@ -9,6 +9,37 @@ from check_architecture import check_go, documents, rust_packages
 
 
 class DependencyBoundaries(unittest.TestCase):
+    def test_nested_pure_manifests_must_be_verified_workspace_members(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packages = []
+            for name, relative in [('outer', 'outer'), ('inner', 'outer/domain')]:
+                manifest = root / 'src/pure' / relative / 'Cargo.toml'
+                manifest.parent.mkdir(parents=True)
+                manifest.touch()
+                packages.append({'id': name, 'name': name, 'manifest_path': str(manifest),
+                                 'dependencies': []})
+            metadata = {'packages': packages, 'workspace_members': ['outer', 'inner']}
+            self.assertEqual(rust_packages(metadata, root), ['inner', 'outer'])
+            with self.assertRaisesRegex(ValueError, 'inventory'):
+                rust_packages(dict(metadata, packages=packages[:1]), root)
+            with self.assertRaisesRegex(ValueError, 'outside the verified workspace'):
+                rust_packages(dict(metadata, workspace_members=['outer']), root)
+
+    def test_pure_executable_targets_are_rejected_before_compilation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / 'src/pure/model/Cargo.toml'
+            manifest.parent.mkdir(parents=True)
+            manifest.touch()
+            package = {'id': 'model', 'name': 'model', 'manifest_path': str(manifest),
+                       'dependencies': [], 'targets': [{'kind': ['lib']}, {'kind': ['test']}]}
+            metadata = {'packages': [package], 'workspace_members': ['model']}
+            self.assertEqual(rust_packages(metadata, root), ['model'])
+            for kind in ('custom-build', 'bin', 'proc-macro'):
+                with self.subTest(kind=kind), self.assertRaisesRegex(ValueError, 'pure target'):
+                    rust_packages(dict(metadata, packages=[dict(package, targets=[{'kind': [kind]}])]), root)
+
     def test_cargo_actual_names_paths_and_workspace_membership(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
